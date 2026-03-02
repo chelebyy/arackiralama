@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${ALLOW_MAIN_PUSH:-0}" == "1" ]]; then
+  exit 0
+fi
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/main" ]]; then
+    echo "Direct push to main is blocked by repository policy." >&2
+    echo "Use a feature branch + pull request." >&2
+    echo "Emergency override (temporary): ALLOW_MAIN_PUSH=1 git push origin HEAD:main" >&2
+    exit 1
+  fi
+done
