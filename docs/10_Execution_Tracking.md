@@ -135,7 +135,7 @@
 | 1.7.1 | GitHub Actions workflow - Build & Test | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
 | 1.7.2 | GitHub Actions workflow - Docker image build | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
 | 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/docker-push-ghcr.yml eklendi |
-| 1.7.4 | Branch protection rules | ⬜ | AI | 02.03.2026 | | `.github/scripts/apply-branch-protection.sh` auth/repo/branch on-kontrolu ile sertlestirildi; GitHub yetkisi bekleniyor |
+| 1.7.4 | Branch protection rules | ✅ | AI | 02.03.2026 | 02.03.2026 | Private repo plan kisiti nedeniyle soft koruma aktive edildi: `.github/workflows/soft-main-guard.yml` + `.githooks/pre-push` |
 
 ### ✅ Faz 1 Kabul Kriterleri
 
@@ -1046,6 +1046,8 @@ GENEL İLERLEME: [█         ] 11%
 
 | Tarih | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
 |-------|------------|---------------------|-----------------|--------|-------|
+| 02.03.2026 | Soft protection sureci kalici dokumana kaydedildi | Dokumantasyon | Soft guard workflow runlarinin izlenmesi | `docs/11_Private_Repo_Soft_Protection_Policy.md` eklendi | AI |
+| 02.03.2026 | Private repo icin soft main koruma aktif edildi (auto-revert workflow + local pre-push hook) | 1.7.4 | CI run sonuclarinin dogrulanmasi ve ekipte hook aktivasyonu | Gercek branch protection plan kisiti nedeniyle kullanilamadi | AI |
 | 02.03.2026 | Branch protection script auth/repo/branch dogrulamasi ile guncellendi ve required CI workflow'lar path filtresiz hale getirildi | 1.7.1-1.7.2 hardening | 1.7.4 policy'nin gerçek repoda uygulanmasi ve CI run dogrulama | `gh auth login` + remote tanimi olmadan policy apply edilemez | AI |
 | 02.03.2026 | Admin JWT login/me/logout endpointleri ve GHCR push workflow tamamlandi | Auth endpointleri, 1.7.3 | 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortaminda dogrulanmasi | `dotnet restore/build/test` lokalde basarili; NU1903 bagimlilik uyarilari devam ediyor | AI |
 | 02.03.2026 | Faz 1.5 guvenlik altyapisi ve Faz 1.7 temel CI workflow'lari tamamlandi | 1.5.1-1.5.4, 1.7.1-1.7.2 | 1.7.3 registry push, 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortaminda dogrulanmasi | `dotnet restore/build/test` lokalde basarili; NU1903 bagimlilik uyarilari mevcut | AI |
