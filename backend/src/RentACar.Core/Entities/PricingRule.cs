@@ -1,0 +1,12 @@
+namespace RentACar.Core.Entities;
+
+public class PricingRule : BaseEntity
+{
+    public Guid VehicleGroupId { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    public decimal DailyPrice { get; set; }
+    public decimal Multiplier { get; set; } = 1m;
+
+    public VehicleGroup? VehicleGroup { get; set; }
+}

@@ -1,0 +1,60 @@
+name: Docker Push to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/docker-push-ghcr.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Convert owner to lowercase
+        id: owner
+        shell: bash
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "value=${OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/src/RentACar.API/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.value }}/rentacar-api:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.value }}/rentacar-api:latest
+
+      - name: Build and push Worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/src/RentACar.Worker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.value }}/rentacar-worker:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.value }}/rentacar-worker:latest

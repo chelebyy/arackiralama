@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: rentacar-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rentacar
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rentacar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4
+    container_name: rentacar-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/RentACar.API/Dockerfile
+    container_name: rentacar-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
+      Redis__ConnectionString: redis:6379
+    ports:
+      - "5000:8080"
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/RentACar.Worker/Dockerfile
+    container_name: rentacar-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
+      Redis__ConnectionString: redis:6379
+
+volumes:
+  postgres_data:
+  redis_data:
