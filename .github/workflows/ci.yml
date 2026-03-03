@@ -50,9 +50,9 @@ jobs:
           dotnet tool install -g dotnet-reportgenerator-globaltool
           # Find all coverage files and join them with commas
           coverage_files=$(find ./coverage -name "coverage.cobertura.xml" | tr '\n' ',')
-          reportgenerator -reports:"${coverage_files%,}" -targetdir:./coverage-report -reporttypes:SummaryGithubMarkdown
+          reportgenerator -reports:"${coverage_files%,}" -targetdir:./coverage-report -reporttypes:MarkdownSummaryGithub
           echo "### Backend Coverage Report" >> $GITHUB_STEP_SUMMARY
-          cat ./coverage-report/SummaryGithubMarkdown.md >> $GITHUB_STEP_SUMMARY
+          cat ./coverage-report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
 
       - name: No tests detected
         if: steps.test-projects.outputs.count == '0'
