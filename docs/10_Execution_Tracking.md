@@ -149,13 +149,15 @@
 
 ### ✅ Faz 1 Kabul Kriterleri
 
-- [x] `docker-compose up` komutu ile tüm servisler başlıyor
-- [x] Database migration'lar hatasız çalışıyor
-- [x] API health check endpoint (`/health`) 200 OK dönüyor
-- [x] Swagger UI erişilebilir ve dokümante edilmiş
-- [x] CI pipeline başarıyla tamamlanıyor
-- [x] Backend test coverage report oluşturuluyor (22 test)
-- [x] Frontend test coverage report oluşturuluyor (13 test)
+| # | Kriter | Durum |
+|---|--------|-------|
+| 1 | `docker-compose up` komutu ile tüm servisler başlıyor | ✅ |
+| 2 | Database migration'lar hatasız çalışıyor | ✅ |
+| 3 | API health check endpoint (`/health`) 200 OK dönüyor | ✅ |
+| 4 | Swagger UI erişilebilir ve dokümante edilmiş | ✅ |
+| 5 | CI pipeline başarıyla tamamlanıyor | ✅ |
+| 6 | Backend test coverage report oluşturuluyor (22 test) | ✅ |
+| 7 | Frontend test coverage report oluşturuluyor (13 test) | ✅ |
 
 ---
 
