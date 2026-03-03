@@ -83,7 +83,6 @@ Thumbs.db
 # Local tooling
 .claude/
 .serena/
-.worktrees/
 
 # Logs
 logs/
