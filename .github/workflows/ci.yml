@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-          include-prerelease: true
+          dotnet-quality: "preview"
 
       - name: Restore
         run: dotnet restore RentACar.sln
@@ -48,7 +48,9 @@ jobs:
         if: steps.test-projects.outputs.count != '0'
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool
-          reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:SummaryGithubMarkdown
+          # Find all coverage files and join them with commas
+          coverage_files=$(find ./coverage -name "coverage.cobertura.xml" | tr '\n' ',')
+          reportgenerator -reports:"${coverage_files%,}" -targetdir:./coverage-report -reporttypes:SummaryGithubMarkdown
           echo "### Backend Coverage Report" >> $GITHUB_STEP_SUMMARY
           cat ./coverage-report/SummaryGithubMarkdown.md >> $GITHUB_STEP_SUMMARY
 
