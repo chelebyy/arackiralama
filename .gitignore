@@ -80,6 +80,11 @@ out/
 .DS_Store
 Thumbs.db
 
+# Local tooling
+.claude/
+.serena/
+.worktrees/
+
 # Logs
 logs/
 *.log
