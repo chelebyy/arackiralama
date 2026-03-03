@@ -13,7 +13,7 @@ import {
   Reminders,
   SuccessMetrics,
   Reports
-} from "@/app/dashboard/(auth)/project-management/components";
+} from "@/app/(admin)/dashboard/(auth)/project-management/components";
 
 export async function generateMetadata() {
   return generateMeta({

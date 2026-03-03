@@ -11,7 +11,7 @@ import {
   SubscriptionsCard,
   TeamMembersCard,
   TotalRevenueCard
-} from "@/app/dashboard/(auth)/default/components";
+} from "@/app/(admin)/dashboard/(auth)/default/components";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 

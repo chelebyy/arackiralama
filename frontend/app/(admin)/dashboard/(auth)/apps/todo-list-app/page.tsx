@@ -3,7 +3,7 @@ import { generateMeta } from "@/lib/utils";
 import { promises as fs } from "fs";
 import path from "path";
 
-import Tasks from "@/app/dashboard/(auth)/apps/todo-list-app/tasks";
+import Tasks from "@/app/(admin)/dashboard/(auth)/apps/todo-list-app/tasks";
 
 async function getTasks() {
   const data = await fs.readFile(

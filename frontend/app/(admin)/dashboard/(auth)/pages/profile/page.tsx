@@ -5,11 +5,11 @@ import { generateMeta } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CardSkills } from "@/app/dashboard/(auth)/pages/profile/card-skills";
-import { LatestActivity } from "@/app/dashboard/(auth)/pages/profile/latest-activity";
-import { AboutMe } from "@/app/dashboard/(auth)/pages/profile/about-me";
-import { Connections } from "@/app/dashboard/(auth)/pages/profile/connections";
-import { ProfileCard } from "@/app/dashboard/(auth)/pages/profile/profile-card";
+import { CardSkills } from "@/app/(admin)/dashboard/(auth)/pages/profile/card-skills";
+import { LatestActivity } from "@/app/(admin)/dashboard/(auth)/pages/profile/latest-activity";
+import { AboutMe } from "@/app/(admin)/dashboard/(auth)/pages/profile/about-me";
+import { Connections } from "@/app/(admin)/dashboard/(auth)/pages/profile/connections";
+import { ProfileCard } from "@/app/(admin)/dashboard/(auth)/pages/profile/profile-card";
 
 export async function generateMetadata() {
   return generateMeta({

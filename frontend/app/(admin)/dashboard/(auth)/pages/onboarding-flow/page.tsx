@@ -1,4 +1,4 @@
-import Onboarding from "@/app/dashboard/(auth)/pages/onboarding-flow/components/onboarding";
+import Onboarding from "@/app/(admin)/dashboard/(auth)/pages/onboarding-flow/components/onboarding";
 import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {

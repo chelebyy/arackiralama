@@ -5,7 +5,7 @@ import ApiKeysDataTable from "./datatable";
 import UpgradePlanCard from "./upgrade-plan-card";
 import SuccessfulConversionsCard from "./successful-conversions-card";
 import FailedConversionsCard from "./failed-conversions-card";
-import ApiCallsCard from "@/app/dashboard/(auth)/apps/api-keys/api-calls-card";
+import ApiCallsCard from "@/app/(admin)/dashboard/(auth)/apps/api-keys/api-calls-card";
 
 export async function generateMetadata() {
   return generateMeta({

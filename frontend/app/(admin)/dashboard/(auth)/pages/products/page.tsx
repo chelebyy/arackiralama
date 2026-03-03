@@ -8,7 +8,7 @@ import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import ProductList from "@/app/dashboard/(auth)/pages/products/product-list";
+import ProductList from "@/app/(admin)/dashboard/(auth)/pages/products/product-list";
 
 export async function generateMetadata(): Promise<Metadata> {
   return generateMeta({

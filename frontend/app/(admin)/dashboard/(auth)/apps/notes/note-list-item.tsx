@@ -6,8 +6,8 @@ import Image from "next/image";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Note } from "@/app/dashboard/(auth)/apps/notes/types";
-import { noteLabels } from "@/app/dashboard/(auth)/apps/notes/data";
+import { Note } from "@/app/(admin)/dashboard/(auth)/apps/notes/types";
+import { noteLabels } from "@/app/(admin)/dashboard/(auth)/apps/notes/data";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function NoteListItem({ note }: { note: Note }) {

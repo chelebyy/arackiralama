@@ -21,9 +21,9 @@ import {
   CommandItem,
   CommandList
 } from "@/components/ui/command";
-import { NoteLabel } from "@/app/dashboard/(auth)/apps/notes/types";
+import { NoteLabel } from "@/app/(admin)/dashboard/(auth)/apps/notes/types";
 import { Badge } from "@/components/ui/badge";
-import { noteLabels } from "@/app/dashboard/(auth)/apps/notes/data";
+import { noteLabels } from "@/app/(admin)/dashboard/(auth)/apps/notes/data";
 
 export function AddNoteModal() {
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);

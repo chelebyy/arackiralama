@@ -10,7 +10,7 @@ import {
   TotalDeals,
   TotalRevenueCard,
   RecentTasks
-} from "@/app/dashboard/(auth)/crm/components";
+} from "@/app/(admin)/dashboard/(auth)/crm/components";
 
 export async function generateMetadata() {
   return generateMeta({

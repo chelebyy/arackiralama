@@ -3,7 +3,7 @@ import path from "path";
 import { promises as fs } from "fs";
 import { ChatItemProps, UserPropsTypes } from "./types";
 
-import { ChatSidebar, ChatContent } from "@/app/dashboard/(auth)/apps/chat/components";
+import { ChatSidebar, ChatContent } from "@/app/(admin)/dashboard/(auth)/apps/chat/components";
 
 export async function generateMetadata() {
   return generateMeta({

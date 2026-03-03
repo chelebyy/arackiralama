@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import useChatStore from "@/app/dashboard/(auth)/apps/chat/useChatStore";
+import useChatStore from "@/app/(admin)/dashboard/(auth)/apps/chat/useChatStore";
 import { ChatMessageProps } from "../types";
 
 import {
@@ -9,7 +9,7 @@ import {
   ChatBubble,
   ChatFooter,
   UserDetailSheet
-} from "@/app/dashboard/(auth)/apps/chat/components";
+} from "@/app/(admin)/dashboard/(auth)/apps/chat/components";
 import Image from "next/image";
 
 export function ChatContent() {

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MessageStatusIcon } from "@/app/dashboard/(auth)/apps/chat/components";
+import { MessageStatusIcon } from "@/app/(admin)/dashboard/(auth)/apps/chat/components";
 import Image from "next/image";
 
 function TextChatBubble({ message }: { message: ChatMessageProps }) {

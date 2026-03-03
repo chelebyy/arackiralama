@@ -4,11 +4,11 @@ import { FileSearchIcon, LayoutGridIcon, ListIcon, MenuIcon, Search } from "luci
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AddNoteModal } from "@/app/dashboard/(auth)/apps/notes/add-note-modal";
-import { Note } from "@/app/dashboard/(auth)/apps/notes/types";
-import NoteListItem from "@/app/dashboard/(auth)/apps/notes/note-list-item";
-import { notes } from "@/app/dashboard/(auth)/apps/notes/data";
-import { NoteMobileSidebar } from "@/app/dashboard/(auth)/apps/notes/note-sidebar";
+import { AddNoteModal } from "@/app/(admin)/dashboard/(auth)/apps/notes/add-note-modal";
+import { Note } from "@/app/(admin)/dashboard/(auth)/apps/notes/types";
+import NoteListItem from "@/app/(admin)/dashboard/(auth)/apps/notes/note-list-item";
+import { notes } from "@/app/(admin)/dashboard/(auth)/apps/notes/data";
+import { NoteMobileSidebar } from "@/app/(admin)/dashboard/(auth)/apps/notes/note-sidebar";
 
 export default function NoteContent() {
   const [searchQuery, setSearchQuery] = useState("");

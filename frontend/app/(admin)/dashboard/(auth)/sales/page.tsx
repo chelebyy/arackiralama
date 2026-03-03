@@ -9,7 +9,7 @@ import {
   BestSellingProducts,
   TableOrderStatus,
   RevenueChart
-} from "@/app/dashboard/(auth)/sales/components";
+} from "@/app/(admin)/dashboard/(auth)/sales/components";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 

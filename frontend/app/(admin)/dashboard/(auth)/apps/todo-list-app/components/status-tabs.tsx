@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FilterTab } from "@/app/dashboard/(auth)/apps/todo-list-app/types";
-import { EnumTodoStatus, todoStatusNamed } from "@/app/dashboard/(auth)/apps/todo-list-app/enum";
+import { FilterTab } from "@/app/(admin)/dashboard/(auth)/apps/todo-list-app/types";
+import { EnumTodoStatus, todoStatusNamed } from "@/app/(admin)/dashboard/(auth)/apps/todo-list-app/enum";
 
 interface StatusTabsProps {
   onTabChange: (tab: FilterTab) => void;

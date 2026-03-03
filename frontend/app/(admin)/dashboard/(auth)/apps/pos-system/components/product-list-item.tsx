@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ShoppingCartIcon } from "lucide-react";
 
-import { Product, useStore } from "@/app/dashboard/(auth)/apps/pos-system/store";
+import { Product, useStore } from "@/app/(admin)/dashboard/(auth)/apps/pos-system/store";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";

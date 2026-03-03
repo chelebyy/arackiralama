@@ -1,7 +1,7 @@
 import { generateMeta } from "@/lib/utils";
 import { promises as fs } from "fs";
 import path from "path";
-import PosSystemTableRender from "@/app/dashboard/(auth)/apps/pos-system/tables/tables-render";
+import PosSystemTableRender from "@/app/(admin)/dashboard/(auth)/apps/pos-system/tables/tables-render";
 
 export async function generateMetadata() {
   return generateMeta({

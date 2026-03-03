@@ -14,9 +14,9 @@ import { MailDisplay } from "./mail-display";
 import { MailList } from "./mail-list";
 import { type Mail } from "../data";
 import { useMailStore } from "../use-mail";
-import { NavDesktop } from "@/app/dashboard/(auth)/apps/mail/components/nav-desktop";
-import { NavMobile } from "@/app/dashboard/(auth)/apps/mail/components/nav-mobile";
-import { MailDisplayMobile } from "@/app/dashboard/(auth)/apps/mail/components/mail-display-mobile";
+import { NavDesktop } from "@/app/(admin)/dashboard/(auth)/apps/mail/components/nav-desktop";
+import { NavMobile } from "@/app/(admin)/dashboard/(auth)/apps/mail/components/nav-mobile";
+import { MailDisplayMobile } from "@/app/(admin)/dashboard/(auth)/apps/mail/components/mail-display-mobile";
 
 interface MailProps {
   accounts: {

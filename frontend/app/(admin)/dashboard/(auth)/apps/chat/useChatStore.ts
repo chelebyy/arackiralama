@@ -1,4 +1,4 @@
-import { ChatItemProps } from "@/app/dashboard/(auth)/apps/chat/types";
+import { ChatItemProps } from "@/app/(admin)/dashboard/(auth)/apps/chat/types";
 import { create, StateCreator } from "zustand";
 
 interface UseChatStore {

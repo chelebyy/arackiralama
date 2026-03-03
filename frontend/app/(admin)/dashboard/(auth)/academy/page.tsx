@@ -9,7 +9,7 @@ import {
   StudentSuccessCard,
   CourseProgressByMonth,
   CoursesListTable
-} from "@/app/dashboard/(auth)/academy/components";
+} from "@/app/(admin)/dashboard/(auth)/academy/components";
 
 export async function generateMetadata() {
   return generateMeta({

@@ -3,11 +3,11 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-import { Table, TableCategory, useStore } from "@/app/dashboard/(auth)/apps/pos-system/store";
+import { Table, TableCategory, useStore } from "@/app/(admin)/dashboard/(auth)/apps/pos-system/store";
 import {
   EnumTableStatus,
   EnumTableStatusColor
-} from "@/app/dashboard/(auth)/apps/pos-system/enums";
+} from "@/app/(admin)/dashboard/(auth)/apps/pos-system/enums";
 
 import {
   Dialog,

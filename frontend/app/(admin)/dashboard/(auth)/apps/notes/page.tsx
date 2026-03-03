@@ -1,5 +1,5 @@
 import { generateMeta } from "@/lib/utils";
-import NotesApp from "@/app/dashboard/(auth)/apps/notes/note-app";
+import NotesApp from "@/app/(admin)/dashboard/(auth)/apps/notes/note-app";
 
 export async function generateMetadata() {
   return generateMeta({

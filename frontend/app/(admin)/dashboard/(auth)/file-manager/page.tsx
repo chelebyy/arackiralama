@@ -7,7 +7,7 @@ import {
   StorageStatusCard,
   ChartFileTransfer,
   FolderListCards
-} from "@/app/dashboard/(auth)/file-manager/components";
+} from "@/app/(admin)/dashboard/(auth)/file-manager/components";
 
 export async function generateMetadata() {
   return generateMeta({

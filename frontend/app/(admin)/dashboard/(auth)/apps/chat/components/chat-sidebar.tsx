@@ -2,11 +2,11 @@
 
 import React from "react";
 import { Search } from "lucide-react";
-import useChatStore from "@/app/dashboard/(auth)/apps/chat/useChatStore";
-import { ChatItemProps } from "@/app/dashboard/(auth)/apps/chat/types";
+import useChatStore from "@/app/(admin)/dashboard/(auth)/apps/chat/useChatStore";
+import { ChatItemProps } from "@/app/(admin)/dashboard/(auth)/apps/chat/types";
 
 import { Input } from "@/components/ui/input";
-import { ChatListItem } from "@/app/dashboard/(auth)/apps/chat/components/chat-list-item";
+import { ChatListItem } from "@/app/(admin)/dashboard/(auth)/apps/chat/components/chat-list-item";
 import {
   Card,
   CardAction,
@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { ActionDropdown } from "@/app/dashboard/(auth)/apps/chat/components/action-dropdown";
+import { ActionDropdown } from "@/app/(admin)/dashboard/(auth)/apps/chat/components/action-dropdown";
 
 export function ChatSidebar({ chats }: { chats: ChatItemProps[] }) {
   const { selectedChat } = useChatStore();

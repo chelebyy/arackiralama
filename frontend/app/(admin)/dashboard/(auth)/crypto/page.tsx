@@ -7,7 +7,7 @@ import {
   DigitalWallets,
   TradingCard,
   BalanceSummeryChart
-} from "@/app/dashboard/(auth)/crypto/components";
+} from "@/app/(admin)/dashboard/(auth)/crypto/components";
 
 export async function generateMetadata() {
   return generateMeta({

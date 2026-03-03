@@ -2,7 +2,7 @@ import { generateMeta } from "@/lib/utils";
 import { promises as fs } from "fs";
 import path from "path";
 
-import PosSystemMenu from "@/app/dashboard/(auth)/apps/pos-system/pos-system-menu";
+import PosSystemMenu from "@/app/(admin)/dashboard/(auth)/apps/pos-system/pos-system-menu";
 
 export async function generateMetadata() {
   return generateMeta({
