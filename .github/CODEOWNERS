@@ -1,0 +1,61 @@
+# CODEOWNERS - Review Sorumlulukları
+#
+# Bu dosya, hangi dosya/dizinlerin kimler tarafından review edilmesi
+# gerektiğini tanımlar. Branch protection'da "Require review from Code Owners"
+# aktif edildiğinde bu dosya kullanılır.
+#
+# Format: directory/file pattern @username @team
+
+# =====================
+# Backend (.NET)
+# =====================
+/backend/ @backend-team
+/backend/src/**/*.cs @backend-team
+/backend/**/*.csproj @backend-team
+/backend/**/*.sln @backend-team
+
+# =====================
+# Frontend (Next.js)
+# =====================
+/frontend/ @frontend-team
+/frontend/app/**/*.tsx @frontend-team
+/frontend/components/**/*.tsx @frontend-team
+/frontend/lib/**/*.ts @frontend-team
+
+# =====================
+# CI/CD & Infrastructure
+# =====================
+/.github/workflows/ @devops-team
+/.github/dependabot.yml @devops-team
+/.github/CODEOWNERS @devops-team
+/Dockerfile @devops-team
+/docker-compose*.yml @devops-team
+
+# =====================
+# Database & Migrations
+# =====================
+/backend/**/Migrations/ @backend-team @database-team
+/backend/**/Data/ @backend-team @database-team
+
+# =====================
+# Documentation
+# =====================
+/docs/ @documentation-team
+/README.md @documentation-team
+/CODEBASE.md @documentation-team
+
+# =====================
+# Configuration
+# =====================
+/.gitignore @devops-team
+/.editorconfig @devops-team
+/frontend/tailwind.config.* @frontend-team
+/frontend/next.config.* @frontend-team
+/backend/appsettings*.json @backend-team
+
+# =====================
+# Root Files (Default)
+# =====================
+# Yukarıdaki kurallara uymayan tüm dosyalar
+# Not: En alttaki kural en düşük önceliklidir
+/ @org-admins
