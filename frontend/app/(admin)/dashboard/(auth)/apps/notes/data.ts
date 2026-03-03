@@ -61,7 +61,7 @@ export const notes: Note[] = [
   }
 ];
 
-export let noteLabels: NoteLabel[] = [
+export const noteLabels: NoteLabel[] = [
   {
     id: 1,
     title: "Family",

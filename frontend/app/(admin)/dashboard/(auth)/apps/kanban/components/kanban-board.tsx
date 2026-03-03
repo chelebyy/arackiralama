@@ -326,7 +326,7 @@ export default function KanbanBoard() {
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const filterTasks = React.useCallback(() => {
-    let filtered: Record<string, Task[]> = { ...columns };
+    const filtered: Record<string, Task[]> = { ...columns };
 
     Object.keys(filtered).forEach((columnKey) => {
       filtered[columnKey] = columns[columnKey].filter((task) => {
