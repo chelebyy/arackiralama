@@ -44,3 +44,4 @@ Local hook'u aktif etmek icin bir kez calistir:
 ```bash
 git config core.hooksPath .githooks
 ```
+
