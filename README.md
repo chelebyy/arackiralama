@@ -2,7 +2,7 @@
 
 Bu repository iki ana bolum icerir:
 
-- `Admin_Dashboard/`: Next.js tabanli dashboard arayuzu
+- `frontend/`: Next.js tabanli dashboard arayuzu
 - `backend/`: .NET 10 backend (API, Worker, Core, Infrastructure)
 
 ## Dokumanlar

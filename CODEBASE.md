@@ -29,7 +29,7 @@
 .serena/
   .gitignore
   project.yml
-Admin_Dashboard/
+frontend/
   .eslintrc
   .gitignore
   .prettierrc
