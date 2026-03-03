@@ -90,3 +90,9 @@ logs/
 
 # Redis dump
 dump.rdb
+
+# Project docs (local only)
+CODEBASE.md
+docs/
+postgrebilgiler.txt
+actions_github.jpg
