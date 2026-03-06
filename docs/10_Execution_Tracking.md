@@ -208,15 +208,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`1/10 = 10%`). Toplam görev sayıs�
 | 2.2.4 | Vehicle status management (Available, Maintenance, Retired) | ✅ | AI | 06.03.2026 | 06.03.2026 | `PATCH /vehicles/{id}/status` endpointi eklendi |
 | 2.2.5 | Vehicle transfer between offices | ✅ | AI | 06.03.2026 | 06.03.2026 | `POST /vehicles/{id}/transfer` endpointi eklendi |
 | 2.2.6 | Vehicle maintenance scheduling | ✅ | AI | 06.03.2026 | 06.03.2026 | `POST /vehicles/{id}/maintenance` endpointi eklendi |
-| 2.2.7 | Photo upload (local storage for MVP) | ⬜ | | | | |
+| 2.2.7 | Photo upload (local storage for MVP) | ✅ | AI | 06.03.2026 | 06.03.2026 | `POST /vehicles/{id}/photo` endpointi, local storage servisi ve static file serving tamamlandi |
 
 #### 2.3 Office Management
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
 | 2.3.1 | Office CRUD operations | ✅ | AI | 06.03.2026 | 06.03.2026 | GET/POST/PUT admin endpointleri ve service/repository tamamlandi |
-| 2.3.2 | Office hours configuration | ⬜ | | | | |
-| 2.3.3 | Airport vs City office distinction | ⬜ | | | | |
+| 2.3.2 | Office hours configuration | ✅ | AI | 06.03.2026 | 06.03.2026 | OpeningHours alanlari entity/contracts/service/controller/test katmanlarinda zaten uygulandi, tracking guncellendi |
+| 2.3.3 | Airport vs City office distinction | ✅ | AI | 06.03.2026 | 06.03.2026 | IsAirport alanlari entity/contracts/service/controller/test katmanlarinda zaten uygulandi, tracking guncellendi |
 
 #### 2.4 Admin API Endpoints
 

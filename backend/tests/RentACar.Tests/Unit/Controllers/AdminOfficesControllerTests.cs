@@ -103,7 +103,10 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         var vehicleGroupRepository = new VehicleGroupRepository(dbContext);
         var vehicleRepository = new VehicleRepository(dbContext);
         var officeRepository = new OfficeRepository(dbContext);
-        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository);
+        var photoStorage = new LocalVehiclePhotoStorage(Path.Combine(Path.GetTempPath(), "rentacar-test-wwwroot"));
+        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, photoStorage);
         return new AdminOfficesController(fleetService);
     }
 }
+
+

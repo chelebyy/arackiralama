@@ -1,4 +1,4 @@
-﻿using RentACar.Core.Enums;
+using RentACar.Core.Enums;
 
 namespace RentACar.Core.Entities;
 
@@ -12,6 +12,7 @@ public class Vehicle : BaseEntity
     public Guid GroupId { get; set; }
     public Guid OfficeId { get; set; }
     public VehicleStatus Status { get; set; } = VehicleStatus.Available;
+    public string? PhotoUrl { get; set; }
 
     public VehicleGroup? Group { get; set; }
     public Office? Office { get; set; }

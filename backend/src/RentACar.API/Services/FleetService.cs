@@ -8,7 +8,8 @@ namespace RentACar.API.Services;
 public sealed class FleetService(
     IVehicleGroupRepository vehicleGroupRepository,
     IVehicleRepository vehicleRepository,
-    IOfficeRepository officeRepository) : IFleetService
+    IOfficeRepository officeRepository,
+    IVehiclePhotoStorage vehiclePhotoStorage) : IFleetService
 {
     public async Task<IReadOnlyList<VehicleGroupDto>> GetVehicleGroupsAsync(CancellationToken cancellationToken = default)
     {
@@ -116,6 +117,7 @@ public sealed class FleetService(
             return false;
         }
 
+        await vehiclePhotoStorage.DeleteAsync(existingVehicle.PhotoUrl, cancellationToken);
         vehicleRepository.Remove(existingVehicle);
         await vehicleRepository.SaveChangesAsync(cancellationToken);
         return true;
@@ -169,6 +171,27 @@ public sealed class FleetService(
 
         existingVehicle.Status = VehicleStatus.Maintenance;
         await vehicleRepository.SaveChangesAsync(cancellationToken);
+
+        return MapToDto(existingVehicle);
+    }
+
+    public async Task<VehicleDto?> UploadVehiclePhotoAsync(Guid id, IFormFile file, CancellationToken cancellationToken = default)
+    {
+        var existingVehicle = await vehicleRepository.GetByIdAsync(id, cancellationToken);
+        if (existingVehicle is null)
+        {
+            return null;
+        }
+
+        var previousPhotoUrl = existingVehicle.PhotoUrl;
+        var photoUrl = await vehiclePhotoStorage.SaveAsync(id, file, cancellationToken);
+        existingVehicle.PhotoUrl = photoUrl;
+        await vehicleRepository.SaveChangesAsync(cancellationToken);
+
+        if (!string.Equals(previousPhotoUrl, photoUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            await vehiclePhotoStorage.DeleteAsync(previousPhotoUrl, cancellationToken);
+        }
 
         return MapToDto(existingVehicle);
     }
@@ -256,7 +279,8 @@ public sealed class FleetService(
             vehicle.Color,
             vehicle.GroupId,
             vehicle.OfficeId,
-            vehicle.Status);
+            vehicle.Status,
+            vehicle.PhotoUrl);
     }
 
     private static OfficeDto MapToDto(Office office)

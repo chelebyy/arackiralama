@@ -16,6 +16,7 @@ public interface IFleetService
     Task<VehicleDto?> UpdateVehicleStatusAsync(Guid id, VehicleStatus status, CancellationToken cancellationToken = default);
     Task<VehicleDto?> TransferVehicleAsync(Guid id, Guid targetOfficeId, VehicleStatus? status, CancellationToken cancellationToken = default);
     Task<VehicleDto?> ScheduleVehicleMaintenanceAsync(Guid id, DateTime startDateUtc, DateTime endDateUtc, CancellationToken cancellationToken = default);
+    Task<VehicleDto?> UploadVehiclePhotoAsync(Guid id, IFormFile file, CancellationToken cancellationToken = default);
 
     Task<bool> IsVehiclePlateAvailableAsync(string plate, Guid? excludeVehicleId = null, CancellationToken cancellationToken = default);
     Task<bool> VehicleGroupExistsAsync(Guid groupId, CancellationToken cancellationToken = default);

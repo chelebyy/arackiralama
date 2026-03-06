@@ -1,4 +1,6 @@
+using System.IO;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
@@ -112,6 +114,7 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         response.Success.Should().BeTrue();
         response.Data.Should().NotBeNull();
         response.Data!.Plate.Should().Be("07ABC999");
+        response.Data.PhotoUrl.Should().BeNull();
     }
 
     [Fact]
@@ -276,12 +279,94 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         response.Data!.Status.Should().Be(VehicleStatus.Maintenance);
     }
 
-    private static AdminVehiclesController CreateController(RentACarDbContext dbContext)
+    [Fact]
+    public async Task UploadPhoto_WhenExtensionInvalid_ReturnsBadRequest()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (groupId, officeId) = await SeedGroupAndOfficeAsync(dbContext);
+
+        var vehicle = new Vehicle
+        {
+            Plate = "07IMG001",
+            Brand = "Skoda",
+            Model = "Fabia",
+            Year = 2021,
+            Color = "Green",
+            GroupId = groupId,
+            OfficeId = officeId,
+            Status = VehicleStatus.Available
+        };
+        dbContext.Vehicles.Add(vehicle);
+        await dbContext.SaveChangesAsync();
+
+        using var stream = new MemoryStream([1, 2, 3, 4]);
+        IFormFile file = new FormFile(stream, 0, stream.Length, "file", "vehicle.gif");
+
+        var controller = CreateController(dbContext);
+        var result = await controller.UploadPhoto(vehicle.Id, file, CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task UploadPhoto_WhenValidFile_SavesPhotoAndReturnsVehicle()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (groupId, officeId) = await SeedGroupAndOfficeAsync(dbContext);
+        var storageRoot = Path.Combine(Path.GetTempPath(), "rentacar-photo-tests", Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var vehicle = new Vehicle
+            {
+                Plate = "07IMG002",
+                Brand = "Citroen",
+                Model = "C3",
+                Year = 2022,
+                Color = "Orange",
+                GroupId = groupId,
+                OfficeId = officeId,
+                Status = VehicleStatus.Available
+            };
+            dbContext.Vehicles.Add(vehicle);
+            await dbContext.SaveChangesAsync();
+
+            using var stream = new MemoryStream([10, 20, 30, 40, 50]);
+            IFormFile file = new FormFile(stream, 0, stream.Length, "file", "vehicle.jpg")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            var controller = CreateController(dbContext, storageRoot);
+            var result = await controller.UploadPhoto(vehicle.Id, file, CancellationToken.None);
+
+            var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+            var response = okResult.Value.Should().BeOfType<ApiResponse<VehicleDto>>().Subject;
+            response.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.PhotoUrl.Should().NotBeNullOrWhiteSpace();
+
+            var savedPath = Path.Combine(storageRoot, response.Data.PhotoUrl!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            File.Exists(savedPath).Should().BeTrue();
+            dbContext.Vehicles.Single(v => v.Id == vehicle.Id).PhotoUrl.Should().Be(response.Data.PhotoUrl);
+        }
+        finally
+        {
+            if (Directory.Exists(storageRoot))
+            {
+                Directory.Delete(storageRoot, recursive: true);
+            }
+        }
+    }
+
+    private static AdminVehiclesController CreateController(RentACarDbContext dbContext, string? webRootPath = null)
     {
         var vehicleGroupRepository = new VehicleGroupRepository(dbContext);
         var vehicleRepository = new VehicleRepository(dbContext);
         var officeRepository = new OfficeRepository(dbContext);
-        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository);
+        var photoStorage = new LocalVehiclePhotoStorage(webRootPath ?? Path.Combine(Path.GetTempPath(), "rentacar-test-wwwroot"));
+        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, photoStorage);
         return new AdminVehiclesController(fleetService);
     }
 

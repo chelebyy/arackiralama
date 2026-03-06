@@ -11,4 +11,5 @@ public sealed record VehicleDto(
     string Color,
     Guid GroupId,
     Guid OfficeId,
-    VehicleStatus Status);
+    VehicleStatus Status,
+    string? PhotoUrl);

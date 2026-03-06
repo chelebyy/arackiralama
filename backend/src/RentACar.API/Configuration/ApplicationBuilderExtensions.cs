@@ -19,6 +19,7 @@ public static class ApplicationBuilderExtensions
         app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<CultureMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
+        app.UseStaticFiles();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseRateLimiter();
@@ -29,4 +30,3 @@ public static class ApplicationBuilderExtensions
         return app;
     }
 }
-

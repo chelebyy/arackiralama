@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,6 +14,9 @@ namespace RentACar.API.Controllers;
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
 public sealed class AdminVehiclesController(IFleetService fleetService) : BaseApiController
 {
+    private static readonly string[] AllowedPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+    private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
+
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -144,6 +148,25 @@ public sealed class AdminVehiclesController(IFleetService fleetService) : BaseAp
         return OkResponse(updatedVehicle, "Arac bakima alindi.");
     }
 
+    [HttpPost("{id:guid}/photo")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadPhoto(Guid id, [FromForm] IFormFile? file, CancellationToken cancellationToken)
+    {
+        var validationError = ValidatePhotoFile(file);
+        if (validationError is not null)
+        {
+            return BadRequestResponse(validationError);
+        }
+
+        var updatedVehicle = await fleetService.UploadVehiclePhotoAsync(id, file!, cancellationToken);
+        if (updatedVehicle is null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
+        }
+
+        return OkResponse(updatedVehicle, "Arac gorseli yuklendi.");
+    }
+
     private static string? ValidateVehicleInput(string plate, string brand, string model, int year, string color)
     {
         if (string.IsNullOrWhiteSpace(plate) ||
@@ -157,6 +180,27 @@ public sealed class AdminVehiclesController(IFleetService fleetService) : BaseAp
         if (year < 1990 || year > DateTime.UtcNow.Year + 1)
         {
             return "Arac yili gecersiz.";
+        }
+
+        return null;
+    }
+
+    private static string? ValidatePhotoFile(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return "Arac gorseli zorunludur.";
+        }
+
+        if (file.Length > MaxPhotoSizeBytes)
+        {
+            return "Gorsel dosya boyutu izin verilen maksimumu asiyor (5MB).";
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedPhotoExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        {
+            return "Gecersiz gorsel formati. Izin verilen: JPG, PNG, WEBP.";
         }
 
         return null;

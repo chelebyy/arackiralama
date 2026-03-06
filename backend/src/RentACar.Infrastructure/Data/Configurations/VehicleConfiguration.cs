@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -21,6 +21,7 @@ public sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.Property(x => x.Color).HasColumnName("color").HasMaxLength(40).IsRequired();
         builder.Property(x => x.GroupId).HasColumnName("group_id");
         builder.Property(x => x.OfficeId).HasColumnName("office_id");
+        builder.Property(x => x.PhotoUrl).HasColumnName("photo_url").HasMaxLength(512);
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()

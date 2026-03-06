@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddHealthChecks();
         services.AddInfrastructure(configuration);
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddJwtAuthentication(configuration);
         services.AddAdminAuthorization();
