@@ -4,7 +4,7 @@ Date: 2026-02-25 Status: Accepted
 
 ## 1. Backend Technology
 
-Chosen: .NET 10.0.3 (LTS) Reason: - Long-term support - Strong transaction &
+Chosen: .NET SDK 10.0.103 + ASP.NET Core 10.0.3 (LTS) Reason: - Long-term support - Strong transaction &
 concurrency handling - Mature ecosystem - Suitable for financial
 integrations
 
@@ -60,7 +60,7 @@ C# Chosen: Docker + VPS (PostgreSQL inside VPS)
 ## Architecture:
 
 - Nginx (reverse proxy)
-- API container (.NET 10.0.3)
+- API container (ASP.NET Core 10.0.3)
 - Background Worker container
 - Single Next.js container (public + admin)
 - Redis container
@@ -138,8 +138,9 @@ If admin traffic or operational complexity increases:
 
 | Component | Version | LTS/Status | Justification |
 |-----------|---------|------------|---------------|
-| .NET | 10.0.3 | LTS (Nov 2028) | Strong transaction support, mature ecosystem |
-| Entity Framework Core | 10.0.3 | LTS | Native .NET 10 support, performance improvements |
+| .NET SDK | 10.0.103 | Stable SDK | Locked SDK feature band for local dev and CI |
+| ASP.NET Core | 10.0.3 | LTS (Nov 2028) | Strong transaction support, mature ecosystem |
+| Entity Framework Core | 10.0.0 | LTS | Native .NET 10 support, performance improvements |
 | PostgreSQL | 18.3 | Stable | JSONB support, advanced indexing, ACID compliance |
 | Redis | 7.4.x | Stable | Better clustering, improved ACL, hold TTL support |
 | Next.js | 16.1.6 | Stable | App Router, Server Actions, SSR for SEO |
@@ -222,7 +223,7 @@ CREATE TABLE reservation_holds (
 CREATE INDEX idx_holds_expires ON reservation_holds(expires_at);
 ```
 
-Backend: .NET 10.0.3 (LTS)
+Backend: .NET SDK 10.0.103 / ASP.NET Core 10.0.3 (LTS)
 Database: PostgreSQL 18.3
 Cache: Redis 7.4.x
 Frontend: Next.js 16.1.6 (App Router) + React 19.2.0

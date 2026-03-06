@@ -23,13 +23,13 @@ Bu doküman, docs klasöründeki PRD, ADR, TDD, IDD, Runbook, Security, API Cont
 ### Teknoloji Stack
 | Katman | Teknoloji | Versiyon |
 |--------|-----------|----------|
-| **Backend** | .NET | 10.0.3 (LTS) |
+| **Backend** | .NET SDK / ASP.NET Core | 10.0.103 / 10.0.3 |
 | **Database** | PostgreSQL | 18.3 |
 | **Cache** | Redis | 7.4.x |
 | **Frontend** | Next.js + React | 16.1.6 / 19.2.0 |
 | **UI** | Tailwind CSS | 3.4+ |
 | **i18n** | next-intl | 3.5+ |
-| **ORM** | Entity Framework Core | 10.0.3 |
+| **ORM** | Entity Framework Core | 10.0.0 |
 | **Runtime** | Node.js | 25.6.1 |
 | **Container** | Docker | 29.2.1 |
 | **Reverse Proxy** | Nginx | 1.28.2 |

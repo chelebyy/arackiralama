@@ -16,7 +16,7 @@ pre-authorization - Admin operational control - Multi-language public
 interface - Android-ready API architecture
 
 Architecture decisions:
-- Backend: .NET 10.0.3 (LTS)
+- Backend: .NET SDK 10.0.103 + ASP.NET Core 10.0.3 (LTS)
 - Database: PostgreSQL 18.3
 - Cache: Redis 7.4.x (with DB fallback)
 - Async Processing: .NET Background Worker
