@@ -1,11 +1,7 @@
-using RentACar.Core.Entities;
+﻿using RentACar.Core.Entities;
 
 namespace RentACar.Core.Interfaces;
 
-public interface IVehicleGroupRepository
+public interface IVehicleGroupRepository : IRepository<VehicleGroup>
 {
-    Task<IReadOnlyList<VehicleGroup>> ListAsync(CancellationToken cancellationToken = default);
-    Task<VehicleGroup?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task AddAsync(VehicleGroup vehicleGroup, CancellationToken cancellationToken = default);
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

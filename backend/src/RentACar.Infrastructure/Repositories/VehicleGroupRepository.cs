@@ -1,32 +1,15 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces;
 
 namespace RentACar.Infrastructure.Repositories;
 
-public sealed class VehicleGroupRepository(IApplicationDbContext dbContext) : IVehicleGroupRepository
+public sealed class VehicleGroupRepository(IApplicationDbContext dbContext) : Repository<VehicleGroup>(dbContext, dbContext.VehicleGroups), IVehicleGroupRepository
 {
-    public async Task<IReadOnlyList<VehicleGroup>> ListAsync(CancellationToken cancellationToken = default)
+    protected override IQueryable<VehicleGroup> BuildListQuery()
     {
-        return await dbContext.VehicleGroups
+        return Entities
             .AsNoTracking()
-            .OrderBy(group => group.NameTr)
-            .ToListAsync(cancellationToken);
-    }
-
-    public Task<VehicleGroup?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return dbContext.VehicleGroups
-            .FirstOrDefaultAsync(group => group.Id == id, cancellationToken);
-    }
-
-    public Task AddAsync(VehicleGroup vehicleGroup, CancellationToken cancellationToken = default)
-    {
-        return dbContext.VehicleGroups.AddAsync(vehicleGroup, cancellationToken).AsTask();
-    }
-
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return dbContext.SaveChangesAsync(cancellationToken);
+            .OrderBy(group => group.NameTr);
     }
 }

@@ -1,4 +1,4 @@
-using RentACar.API.Contracts.Fleet;
+﻿using RentACar.API.Contracts.Fleet;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
@@ -9,6 +9,7 @@ public sealed class FleetService(
     IVehicleGroupRepository vehicleGroupRepository,
     IVehicleRepository vehicleRepository,
     IOfficeRepository officeRepository,
+    IUnitOfWork unitOfWork,
     IVehiclePhotoStorage vehiclePhotoStorage) : IFleetService
 {
     public async Task<IReadOnlyList<VehicleGroupDto>> GetVehicleGroupsAsync(CancellationToken cancellationToken = default)
@@ -33,7 +34,7 @@ public sealed class FleetService(
         };
 
         await vehicleGroupRepository.AddAsync(vehicleGroup, cancellationToken);
-        await vehicleGroupRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(vehicleGroup);
     }
@@ -56,7 +57,7 @@ public sealed class FleetService(
         existingVehicleGroup.MinLicenseYears = request.MinLicenseYears;
         existingVehicleGroup.Features = NormalizeFeatures(request.Features);
 
-        await vehicleGroupRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicleGroup);
     }
@@ -82,7 +83,7 @@ public sealed class FleetService(
         };
 
         await vehicleRepository.AddAsync(vehicle, cancellationToken);
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(vehicle);
     }
@@ -104,7 +105,7 @@ public sealed class FleetService(
         existingVehicle.OfficeId = request.OfficeId;
         existingVehicle.Status = request.Status;
 
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicle);
     }
@@ -119,7 +120,7 @@ public sealed class FleetService(
 
         await vehiclePhotoStorage.DeleteAsync(existingVehicle.PhotoUrl, cancellationToken);
         vehicleRepository.Remove(existingVehicle);
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -132,7 +133,7 @@ public sealed class FleetService(
         }
 
         existingVehicle.Status = status;
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicle);
     }
@@ -151,7 +152,7 @@ public sealed class FleetService(
             existingVehicle.Status = status.Value;
         }
 
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicle);
     }
@@ -170,7 +171,7 @@ public sealed class FleetService(
         }
 
         existingVehicle.Status = VehicleStatus.Maintenance;
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicle);
     }
@@ -186,7 +187,7 @@ public sealed class FleetService(
         var previousPhotoUrl = existingVehicle.PhotoUrl;
         var photoUrl = await vehiclePhotoStorage.SaveAsync(id, file, cancellationToken);
         existingVehicle.PhotoUrl = photoUrl;
-        await vehicleRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (!string.Equals(previousPhotoUrl, photoUrl, StringComparison.OrdinalIgnoreCase))
         {
@@ -229,7 +230,7 @@ public sealed class FleetService(
         };
 
         await officeRepository.AddAsync(office, cancellationToken);
-        await officeRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(office);
     }
@@ -248,7 +249,7 @@ public sealed class FleetService(
         existingOffice.IsAirport = request.IsAirport;
         existingOffice.OpeningHours = request.OpeningHours.Trim();
 
-        await officeRepository.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingOffice);
     }

@@ -1,11 +1,7 @@
-using RentACar.Core.Entities;
+﻿using RentACar.Core.Entities;
 
 namespace RentACar.Core.Interfaces;
 
-public interface IOfficeRepository
+public interface IOfficeRepository : IRepository<Office>
 {
-    Task<IReadOnlyList<Office>> ListAsync(CancellationToken cancellationToken = default);
-    Task<Office?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task AddAsync(Office office, CancellationToken cancellationToken = default);
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

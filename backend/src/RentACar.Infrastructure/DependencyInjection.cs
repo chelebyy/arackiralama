@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<RentACarDbContext>());
 
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IVehicleGroupRepository, VehicleGroupRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();

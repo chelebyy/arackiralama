@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +6,7 @@ using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
+using RentACar.Core.Interfaces;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Infrastructure.Data;
@@ -365,8 +366,9 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         var vehicleGroupRepository = new VehicleGroupRepository(dbContext);
         var vehicleRepository = new VehicleRepository(dbContext);
         var officeRepository = new OfficeRepository(dbContext);
+        var unitOfWork = new EfUnitOfWork(dbContext);
         var photoStorage = new LocalVehiclePhotoStorage(webRootPath ?? Path.Combine(Path.GetTempPath(), "rentacar-test-wwwroot"));
-        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, photoStorage);
+        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, unitOfWork, photoStorage);
         return new AdminVehiclesController(fleetService);
     }
 
@@ -400,3 +402,4 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         return (vehicleGroup.Id, office.Id);
     }
 }
+
