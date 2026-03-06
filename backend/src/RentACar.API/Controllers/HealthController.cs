@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RentACar.API.Configuration;
 
 namespace RentACar.API.Controllers;
 
@@ -9,7 +10,7 @@ public class HealthController : BaseApiController
 {
     [HttpGet]
     [AllowAnonymous]
-    [EnableRateLimiting("Health")]
+    [EnableRateLimiting(RateLimitPolicyNames.Health)]
     public IActionResult Get() =>
         OkResponse(new
         {

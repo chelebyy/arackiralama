@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: postgres:18
     container_name: rentacar-postgres
@@ -43,6 +43,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
       Redis__ConnectionString: redis:6379
+      Jwt__Secret: local-dev-only-jwt-secret-change-me-12345
     ports:
       - "5000:8080"
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using RentACar.API.Configuration;
 using RentACar.API.Contracts.Auth;
 using RentACar.API.Services;
 using RentACar.Core.Interfaces;
@@ -16,7 +17,7 @@ public sealed class AdminAuthController(
 {
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("Strict")]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
     public async Task<IActionResult> Login([FromBody] AdminLoginRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -24,9 +25,9 @@ public sealed class AdminAuthController(
             return BadRequestResponse("Email ve parola zorunludur.");
         }
 
-        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var email = request.Email.Trim();
         var adminUser = await dbContext.AdminUsers
-            .FirstOrDefaultAsync(user => user.Email.ToLower() == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(user => user.Email == email, cancellationToken);
 
         if (adminUser is null || !adminUser.IsActive)
         {
@@ -48,12 +49,12 @@ public sealed class AdminAuthController(
             FullName: adminUser.FullName,
             Email: adminUser.Email);
 
-        return OkResponse(response, "GiriÅŸ baÅŸarÄ±lÄ±.");
+        return OkResponse(response, "Giriþ baþarýlý.");
     }
 
     [HttpGet("me")]
-    [Authorize(Policy = "AdminOnly")]
-    [EnableRateLimiting("Standard")]
+    [Authorize(Policy = AuthPolicyNames.AdminOnly)]
+    [EnableRateLimiting(RateLimitPolicyNames.Standard)]
     public IActionResult Me()
     {
         return OkResponse(new
@@ -65,10 +66,10 @@ public sealed class AdminAuthController(
     }
 
     [HttpPost("logout")]
-    [Authorize(Policy = "AdminOnly")]
-    [EnableRateLimiting("Standard")]
+    [Authorize(Policy = AuthPolicyNames.AdminOnly)]
+    [EnableRateLimiting(RateLimitPolicyNames.Standard)]
     public IActionResult Logout()
     {
-        return OkResponse(new { success = true }, "Ã‡Ä±kÄ±ÅŸ baÅŸarÄ±lÄ±.");
+        return OkResponse(new { success = true }, "Çýkýþ baþarýlý.");
     }
 }

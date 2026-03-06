@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+﻿import { Metadata } from "next";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -35,10 +35,9 @@ export function generateMeta({
   };
 }
 
-// a function to get the first letter of the first and last name of names
 export const getInitials = (fullName: string) => {
-  const nameParts = fullName.split(" ");
-  const firstNameInitial = nameParts[0].charAt(0).toUpperCase();
-  const lastNameInitial = nameParts[1].charAt(0).toUpperCase();
+  const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
+  const firstNameInitial = nameParts[0]?.charAt(0).toUpperCase() ?? "";
+  const lastNameInitial = nameParts[1]?.charAt(0).toUpperCase() ?? "";
   return `${firstNameInitial}${lastNameInitial}`;
 };

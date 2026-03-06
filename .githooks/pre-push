@@ -1,0 +1,16 @@
+#!/bin/sh
+
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+if [ "$branch" != "main" ]; then
+  exit 0
+fi
+
+message=$(git log -1 --pretty=%B)
+case "$message" in
+  *"[main-guard:allow]"*)
+    exit 0
+    ;;
+esac
+
+echo "Direct pushes to main are blocked. Open a PR or add [main-guard:allow] to the latest commit message for an explicit override." >&2
+exit 1

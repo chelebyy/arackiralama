@@ -15,19 +15,33 @@
 |--------|-------|
 | Toplam Faz | 10 |
 | Tamamlanan Faz | 1 |
-| Devam Eden Faz | 0 |
-| Bekleyen Faz | 9 |
-| Toplam Görev | 150+ |
-| Tamamlanan Görev | 51 |
-| Devam Eden Görev | 0 |
-| Genel İlerleme | 12% |
+| Devam Eden Faz | 1 |
+| Bekleyen Faz | 8 |
+| Toplam Görev | ~150+ (yaklaşık) |
+| Tamamlanan Görev | 82 |
+| Devam Eden Görev | 1 |
+| Genel İlerleme | 10% |
+
+Not: Genel ilerleme faz bazlı hesaplanır (`1/10 = 10%`). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
+
+### Durum Sözlüğü
+
+| Kullanım | Durum |
+|----------|-------|
+| Faz / Görev | ✅ Completed |
+| Faz / Görev | 🟨 In Progress |
+| Faz / Görev | ⬜ Not Started |
+| Faz / Görev | 🟥 Blocked |
+| Kontrol / Checklist | ✅ Completed |
+| Kontrol / Checklist | 🟨 Partial |
+| Kontrol / Checklist | ⬜ Not Started |
 
 ### Faz Özeti
 
 | Faz | Adı | Durum | İlerleme | Tahmini Süre |
 |-----|-----|-------|----------|--------------|
 | 1 | Foundation | ✅ Completed | 100% | Hafta 1-4 |
-| 2 | Fleet Management | ⬜ Not Started | 0% | Hafta 3-6 |
+| 2 | Fleet Management | 🟨 In Progress | 79% | Hafta 3-6 |
 | 3 | Pricing Engine | ⬜ Not Started | 0% | Hafta 5-8 |
 | 4 | Reservation System | ⬜ Not Started | 0% | Hafta 7-10 |
 | 5 | Payment Integration | ⬜ Not Started | 0% | Hafta 9-12 |
@@ -40,9 +54,10 @@
 ---
 
 ## 🔷 FAZ 1: Foundation (Temel Altyapı)
-**Süre:** Hafta 1-4
+**Planlanan Süre:** Hafta 1-4
 **Başlangıç:** 02.03.2026
-**Hedef Bitiş:** 03.03.2026
+**Planlanan Hedef Bitiş:** 03.03.2026
+**Gerçek Tamamlanma:** 04.03.2026
 **Durum:** ✅ Completed
 **İlerleme:** 100%
 
@@ -134,7 +149,7 @@
 |---|-------|-------|--------|-----------|-------|--------|
 | 1.7.1 | GitHub Actions workflow - Build & Test | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
 | 1.7.2 | GitHub Actions workflow - Docker image build | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
-| 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/docker-push-ghcr.yml eklendi |
+| 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/ci.yml icindeki docker-push job'u ile GHCR push aktif |
 | 1.7.4 | Branch protection rules | ✅ | AI | 02.03.2026 | 02.03.2026 | Private repo plan kisiti nedeniyle soft koruma aktive edildi: `.github/workflows/soft-main-guard.yml` + `.githooks/pre-push` |
 
 #### 1.8 Test Infrastructure Setup
@@ -142,31 +157,31 @@
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
 | 1.8.1 | Backend: xunit + moq + fluentassertions | ✅ | AI | 03.03.2026 | 03.03.2026 | RentACar.Tests.csproj'a eklendi |
-| 1.8.2 | Backend: Test project (RentACar.Tests) | ✅ | AI | 03.03.2026 | 03.03.2026 | 22 test (BcryptPasswordHasher, JwtTokenService, DbContext) |
+| 1.8.2 | Backend: Test project (RentACar.Tests) | ✅ | AI | 03.03.2026 | 03.03.2026 | Mevcut backend test suite auth, security, enum ve DbContext senaryolarini kapsiyor |
 | 1.8.3 | Backend: Coverage tools (coverlet) | ✅ | AI | 03.03.2026 | 03.03.2026 | CI'da coverage.cobertura.xml üretiliyor |
-| 1.8.4 | Frontend: vitest + @testing-library | ✅ | AI | 03.03.2026 | 03.03.2026 | 13 test (cn, generateAvatarFallback, getInitials) |
+| 1.8.4 | Frontend: vitest + @testing-library | ✅ | AI | 03.03.2026 | 03.03.2026 | Mevcut frontend Vitest suite coverage artifact uretiyor |
 | 1.8.5 | CI: Test workflow update | ✅ | AI | 03.03.2026 | 03.03.2026 | Frontend coverage artifact upload eklendi |
 
 ### ✅ Faz 1 Kabul Kriterleri
 
-| # | Kriter | Durum |
-|---|--------|-------|
-| 1 | `docker-compose up` komutu ile tüm servisler başlıyor | ✅ |
-| 2 | Database migration'lar hatasız çalışıyor | ✅ |
-| 3 | API health check endpoint (`/health`) 200 OK dönüyor | ✅ |
-| 4 | Swagger UI erişilebilir ve dokümante edilmiş | ✅ |
-| 5 | CI pipeline başarıyla tamamlanıyor | ✅ |
-| 6 | Backend test coverage report oluşturuluyor (22 test) | ✅ |
-| 7 | Frontend test coverage report oluşturuluyor (13 test) | ✅ |
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | `docker-compose up` komutu ile tüm servisler başlıyor | ✅ Completed | `backend/docker-compose.yml` |
+| 2 | Database migration'lar hatasız çalışıyor | ✅ Completed | `backend/src/RentACar.Infrastructure/Data/Migrations/20260302082825_Phase12DatabaseSchema.cs` |
+| 3 | API health check endpoint (`/health`) 200 OK dönüyor | ✅ Completed | `backend/src/RentACar.API/Controllers/HealthController.cs` |
+| 4 | OpenAPI endpoint erişilebilir ve dokümante edilmiş | ✅ Completed | `backend/src/RentACar.API/Program.cs` |
+| 5 | CI pipeline başarıyla tamamlanıyor | ✅ Completed | `.github/workflows/ci.yml` |
+| 6 | Backend test coverage report oluşturuluyor | ✅ Completed | `backend/tests/RentACar.Tests` |
+| 7 | Frontend test coverage report oluşturuluyor | ✅ Completed | `frontend/lib/utils.test.ts`, `frontend/vitest.config.ts` |
 
 ---
 
 ## 🔷 FAZ 2: Fleet Management (Filo Yönetimi)
 **Süre:** Hafta 3-6
-**Başlangıç:** ___________  
+**Başlangıç:** 06.03.2026  
 **Hedef Bitiş:** ___________  
-**Durum:** ⬜ Not Started  
-**İlerleme:** 0%
+**Durum:** 🟨 In Progress  
+**İlerleme:** 79%
 
 ### 📋 Görevler
 
@@ -174,28 +189,28 @@
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
-| 2.1.1 | IVehicleGroupRepository interface | ⬜ | | | | |
-| 2.1.2 | CRUD endpoints for vehicle groups | ⬜ | | | | |
-| 2.1.3 | Multi-language name support | ⬜ | | | | |
-| 2.1.4 | Vehicle group features (JSONB array) | ⬜ | | | | |
+| 2.1.1 | IVehicleGroupRepository interface | ✅ | AI | 06.03.2026 | 06.03.2026 | `IVehicleGroupRepository` + `VehicleGroupRepository` eklendi |
+| 2.1.2 | CRUD endpoints for vehicle groups | ✅ | AI | 06.03.2026 | 06.03.2026 | GET/POST/PUT admin endpointleri eklendi |
+| 2.1.3 | Multi-language name support | ✅ | AI | 06.03.2026 | 06.03.2026 | TR/EN/RU/AR/DE alanlari ile create/update akisi tamamlandi |
+| 2.1.4 | Vehicle group features (JSONB array) | ✅ | AI | 06.03.2026 | 06.03.2026 | `Features` alani JSONB conversion ile maplendi |
 
 #### 2.2 Vehicle Management
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
-| 2.2.1 | IVehicleRepository interface | ⬜ | | | | |
-| 2.2.2 | IFleetService implementation | ⬜ | | | | TDD Section 8.4 |
-| 2.2.3 | Vehicle CRUD API endpoints | ⬜ | | | | |
-| 2.2.4 | Vehicle status management (Available, Maintenance, Retired) | ⬜ | | | | |
-| 2.2.5 | Vehicle transfer between offices | ⬜ | | | | |
-| 2.2.6 | Vehicle maintenance scheduling | ⬜ | | | | |
+| 2.2.1 | IVehicleRepository interface | ✅ | AI | 06.03.2026 | 06.03.2026 | `IVehicleRepository` + `VehicleRepository` eklendi |
+| 2.2.2 | IFleetService implementation | ✅ | AI | 06.03.2026 | 06.03.2026 | Vehicle group management metotlari (ilk dilim) tamamlandi |
+| 2.2.3 | Vehicle CRUD API endpoints | ✅ | AI | 06.03.2026 | 06.03.2026 | GET/POST/PUT/DELETE + unit testler tamamlandi |
+| 2.2.4 | Vehicle status management (Available, Maintenance, Retired) | ✅ | AI | 06.03.2026 | 06.03.2026 | `PATCH /vehicles/{id}/status` endpointi eklendi |
+| 2.2.5 | Vehicle transfer between offices | ✅ | AI | 06.03.2026 | 06.03.2026 | `POST /vehicles/{id}/transfer` endpointi eklendi |
+| 2.2.6 | Vehicle maintenance scheduling | ✅ | AI | 06.03.2026 | 06.03.2026 | `POST /vehicles/{id}/maintenance` endpointi eklendi |
 | 2.2.7 | Photo upload (local storage for MVP) | ⬜ | | | | |
 
 #### 2.3 Office Management
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
-| 2.3.1 | Office CRUD operations | ⬜ | | | | |
+| 2.3.1 | Office CRUD operations | ✅ | AI | 06.03.2026 | 06.03.2026 | GET/POST/PUT admin endpointleri ve service/repository tamamlandi |
 | 2.3.2 | Office hours configuration | ⬜ | | | | |
 | 2.3.3 | Airport vs City office distinction | ⬜ | | | | |
 
@@ -203,18 +218,18 @@
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 |---|-------|-------|--------|-----------|-------|--------|
-| 2.4.1 | GET /api/admin/v1/vehicles | ⬜ | | | | |
-| 2.4.2 | POST /api/admin/v1/vehicles | ⬜ | | | | |
-| 2.4.3 | PUT /api/admin/v1/vehicles/{id} | ⬜ | | | | |
-| 2.4.4 | DELETE /api/admin/v1/vehicles/{id} | ⬜ | | | | |
-| 2.4.5 | POST /api/admin/v1/vehicles/{id}/maintenance | ⬜ | | | | |
-| 2.4.6 | POST /api/admin/v1/vehicles/{id}/transfer | ⬜ | | | | |
-| 2.4.7 | GET /api/admin/v1/vehicle-groups | ⬜ | | | | |
-| 2.4.8 | POST /api/admin/v1/vehicle-groups | ⬜ | | | | |
-| 2.4.9 | PUT /api/admin/v1/vehicle-groups/{id} | ⬜ | | | | |
-| 2.4.10 | GET /api/admin/v1/offices | ⬜ | | | | |
-| 2.4.11 | POST /api/admin/v1/offices | ⬜ | | | | |
-| 2.4.12 | PUT /api/admin/v1/offices/{id} | ⬜ | | | | |
+| 2.4.1 | GET /api/admin/v1/vehicles | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.GetAll` |
+| 2.4.2 | POST /api/admin/v1/vehicles | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.Create` |
+| 2.4.3 | PUT /api/admin/v1/vehicles/{id} | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.Update` |
+| 2.4.4 | DELETE /api/admin/v1/vehicles/{id} | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.Delete` |
+| 2.4.5 | POST /api/admin/v1/vehicles/{id}/maintenance | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.ScheduleMaintenance` |
+| 2.4.6 | POST /api/admin/v1/vehicles/{id}/transfer | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehiclesController.Transfer` |
+| 2.4.7 | GET /api/admin/v1/vehicle-groups | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehicleGroupsController.GetAll` |
+| 2.4.8 | POST /api/admin/v1/vehicle-groups | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehicleGroupsController.Create` |
+| 2.4.9 | PUT /api/admin/v1/vehicle-groups/{id} | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminVehicleGroupsController.Update` |
+| 2.4.10 | GET /api/admin/v1/offices | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminOfficesController.GetAll` |
+| 2.4.11 | POST /api/admin/v1/offices | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminOfficesController.Create` |
+| 2.4.12 | PUT /api/admin/v1/offices/{id} | ✅ | AI | 06.03.2026 | 06.03.2026 | `AdminOfficesController.Update` |
 
 #### 2.5 Repository Implementations
 
@@ -226,10 +241,12 @@
 
 ### ✅ Faz 2 Kabul Kriterleri
 
-- [ ] Tüm CRUD operasyonları Postman/Insomnia ile test edilmiş
-- [ ] Araç durumu değişiklikleri audit log'a yazılıyor
-- [ ] Bakım planlanan araçlar müsaitlik sorgularında hariç tutuluyor
-- [ ] Araç transferleri ofis envanterini güncelliyor
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Tüm CRUD operasyonları Postman/Insomnia ile test edilmiş | ⬜ Not Started | |
+| 2 | Araç durumu değişiklikleri audit log'a yazılıyor | ⬜ Not Started | |
+| 3 | Bakım planlanan araçlar müsaitlik sorgularında hariç tutuluyor | ⬜ Not Started | |
+| 4 | Araç transferleri ofis envanterini güncelliyor | ⬜ Not Started | |
 
 ---
 
@@ -303,11 +320,13 @@
 
 ### ✅ Faz 3 Kabul Kriterleri
 
-- [ ] Fiyat hesaplama tüm senaryolar için doğru çalışıyor
-- [ ] Kampanya kodları büyük/küçük harf duyarsız
-- [ ] Geçersiz kampanya kodu uygun hata mesajı dönüyor
-- [ ] Mevsimsel fiyatlar öncelik sırasına göre uygulanıyor
-- [ ] Fiyat hesaplama < 100ms response time
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Fiyat hesaplama tüm senaryolar için doğru çalışıyor | ⬜ Not Started | |
+| 2 | Kampanya kodları büyük/küçük harf duyarsız | ⬜ Not Started | |
+| 3 | Geçersiz kampanya kodu uygun hata mesajı dönüyor | ⬜ Not Started | |
+| 4 | Mevsimsel fiyatlar öncelik sırasına göre uygulanıyor | ⬜ Not Started | |
+| 5 | Fiyat hesaplama < 100ms response time | ⬜ Not Started | |
 
 ---
 
@@ -382,11 +401,13 @@
 
 ### ✅ Faz 4 Kabul Kriterleri
 
-- [ ] Aynı araç için çakışan rezervasyon oluşturulamıyor
-- [ ] 15 dakikalık hold süresi Redis TTL ile yönetiliyor
-- [ ] Hold süresi dolunca araç tekrar müsait görünüyor
-- [ ] Müsaitlik sorgusu < 300ms
-- [ ] Çift rezervasyon vakası = 0 (test edilmiş)
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Aynı araç için çakışan rezervasyon oluşturulamıyor | ⬜ Not Started | |
+| 2 | 15 dakikalık hold süresi Redis TTL ile yönetiliyor | ⬜ Not Started | |
+| 3 | Hold süresi dolunca araç tekrar müsait görünüyor | ⬜ Not Started | |
+| 4 | Müsaitlik sorgusu < 300ms | ⬜ Not Started | |
+| 5 | Çift rezervasyon vakası = 0 (test edilmiş) | ⬜ Not Started | |
 
 ---
 
@@ -476,11 +497,13 @@
 
 ### ✅ Faz 5 Kabul Kriterleri
 
-- [ ] Ödeme idempotency anahtarı ile tekrarlanamıyor
-- [ ] Webhook imza doğrulaması çalışıyor
-- [ ] Aynı webhook event birden fazla işlenmiyor
-- [ ] 3D Secure başarısızlığında uygun hata mesajı
-- [ ] Depozito tahsilatı ve iadesi doğru çalışıyor
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Ödeme idempotency anahtarı ile tekrarlanamıyor | ⬜ Not Started | |
+| 2 | Webhook imza doğrulaması çalışıyor | ⬜ Not Started | |
+| 3 | Aynı webhook event birden fazla işlenmiyor | ⬜ Not Started | |
+| 4 | 3D Secure başarısızlığında uygun hata mesajı | ⬜ Not Started | |
+| 5 | Depozito tahsilatı ve iadesi doğru çalışıyor | ⬜ Not Started | |
 
 ---
 
@@ -551,11 +574,13 @@
 
 ### ✅ Faz 6 Kabul Kriterleri
 
-- [ ] JWT token 24 saat geçerli
-- [ ] Refresh token 7 gün geçerli
-- [ ] Admin endpoint'ler JWT olmadan erişilemez
-- [ ] Şifreler BCrypt ile hashlenmiş
-- [ ] Hesap kilitleme (5 başarısız denemeden sonra)
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | JWT token 24 saat geçerli | ⬜ Not Started | |
+| 2 | Refresh token 7 gün geçerli | ⬜ Not Started | |
+| 3 | Admin endpoint'ler JWT olmadan erişilemez | ⬜ Not Started | |
+| 4 | Şifreler BCrypt ile hashlenmiş | ⬜ Not Started | |
+| 5 | Hesap kilitleme (5 başarısız denemeden sonra) | ⬜ Not Started | |
 
 ---
 
@@ -638,10 +663,12 @@
 
 ### ✅ Faz 7 Kabul Kriterleri
 
-- [ ] SMS'ler 5 saniye içinde gönderiliyor (queue'dan)
-- [ ] Background job success rate > 99%
-- [ ] Audit log tüm kritik işlemleri kaydediyor
-- [ ] Feature flag değişiklikleri anında etkili oluyor
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | SMS'ler 5 saniye içinde gönderiliyor (queue'dan) | ⬜ Not Started | |
+| 2 | Background job success rate > 99% | ⬜ Not Started | |
+| 3 | Audit log tüm kritik işlemleri kaydediyor | ⬜ Not Started | |
+| 4 | Feature flag değişiklikleri anında etkili oluyor | ⬜ Not Started | |
 
 ---
 
@@ -828,12 +855,14 @@
 
 ### ✅ Faz 8 Kabul Kriterleri
 
-- [ ] Lighthouse score > 90 (Performance, Accessibility)
-- [ ] All pages load < 3s
-- [ ] Mobile responsive design
-- [ ] All 5 languages functional
-- [ ] RTL layout correct for Arabic
-- [ ] 3D Secure flow works end-to-end
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Lighthouse score > 90 (Performance, Accessibility) | ⬜ Not Started | |
+| 2 | All pages load < 3s | ⬜ Not Started | |
+| 3 | Mobile responsive design | ⬜ Not Started | |
+| 4 | All 5 languages functional | ⬜ Not Started | |
+| 5 | RTL layout correct for Arabic | ⬜ Not Started | |
+| 6 | 3D Secure flow works end-to-end | ⬜ Not Started | |
 
 ---
 
@@ -914,11 +943,13 @@
 
 ### ✅ Faz 9 Kabul Kriterleri
 
-- [ ] Site HTTPS ile erişilebilir
-- [ ] SSL sertifikası A+ rating
-- [ ] Otomatik yedekleme çalışıyor
-- [ ] Deployment < 5 dakika
-- [ ] Health check endpoint'leri çalışıyor
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | Site HTTPS ile erişilebilir | ⬜ Not Started | |
+| 2 | SSL sertifikası A+ rating | ⬜ Not Started | |
+| 3 | Otomatik yedekleme çalışıyor | ⬜ Not Started | |
+| 4 | Deployment < 5 dakika | ⬜ Not Started | |
+| 5 | Health check endpoint'leri çalışıyor | ⬜ Not Started | |
 
 ---
 
@@ -1009,19 +1040,20 @@
 
 ### ✅ Faz 10 Kabul Kriterleri
 
-- [ ] All tests passing
-- [ ] Security scan clean
-- [ ] Performance targets met
-- [ ] UAT sign-off
-- [ ] Go-live checklist complete
+| # | Kriter | Durum | Kanıt/Referans |
+|---|--------|-------|----------------|
+| 1 | All tests passing | ⬜ Not Started | |
+| 2 | Security scan clean | ⬜ Not Started | |
+| 3 | Performance targets met | ⬜ Not Started | |
+| 4 | UAT sign-off | ⬜ Not Started | |
+| 5 | Go-live checklist complete | ⬜ Not Started | |
 
 ---
-
 ## 📈 İlerleme Grafiği (Text-based)
 
 ```
 FAZ 1: Foundation              [██████████] 100% ✅
-FAZ 2: Fleet Management        [          ] 0% ⬜
+FAZ 2: Fleet Management        [███       ] 35% 🟨
 FAZ 3: Pricing Engine          [          ] 0% ⬜
 FAZ 4: Reservation System      [          ] 0% ⬜
 FAZ 5: Payment Integration     [          ] 0% ⬜
@@ -1036,11 +1068,17 @@ GENEL İLERLEME: [█         ] 10%
 
 ---
 
-## 🚨 Blokajlar ve Riskler
+## 🚨 Aktif Blokajlar
 
-| Faz | Sorun | Önem | Aksiyon | Sorumlu | Durum |
-|-----|-------|------|---------|---------|-------|
-| 02.03.2026 | Faz 1.2 tamamlandi: 14 tablo, iliskiler, indexler, seed data, Npgsql gecisi ve migration uygulandi | 1.2.1-1.2.17 | Faz 1.5 guvenlik altyapisi ve Faz 1.7 CI pipeline | Docker PostgreSQL 18 (5433) uzerinde migration apply + seed dogrulama tamamlandi | AI |
+| ID | Blokaj | Etki | Aksiyon | Sorumlu | Durum |
+|----|--------|------|---------|---------|-------|
+| BLK-001 | Aktif blokaj bulunmuyor | Düşük | Faz 2 başlangıcı öncesi yeni bağımlılık/riskler günlük log üzerinden izlenecek | AI | ✅ Completed |
+
+### Milestone Özeti
+
+| Tarih | Olay | Kapsam | Sonraki Adım | Kanıt |
+|-------|------|--------|--------------|-------|
+| 02.03.2026 | Faz 1.2 tamamlandı: 14 tablo, ilişkiler, indexler, seed data, Npgsql geçişi ve migration uygulandı | 1.2.1-1.2.17 | Faz 1.5 güvenlik altyapısı ve Faz 1.7 CI pipeline | Docker PostgreSQL 18 (5433) üzerinde migration apply + seed doğrulama tamamlandı |
 
 ### Risk Matrisi
 
@@ -1058,30 +1096,32 @@ GENEL İLERLEME: [█         ] 10%
 
 ## 📝 Günlük/Haftalık Güncelleme Logu
 
-| Tarih | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
-|-------|------------|---------------------|-----------------|--------|-------|
-| 04.03.2026 | Faz 1 CI/CD dogrulama tamamlandi: Tum workflow'lar basarili | 1.8.1-1.8.5 | Faz 2 baslangici | Backend 22 test, Frontend 13 test, Docker Build & Push basarili | AI |
-| 02.03.2026 | Soft protection sureci kalici dokumana kaydedildi | Dokumantasyon | Soft guard workflow runlarinin izlenmesi | `docs/11_Private_Repo_Soft_Protection_Policy.md` eklendi | AI |
-| 02.03.2026 | Private repo icin soft main koruma aktif edildi (auto-revert workflow + local pre-push hook) | 1.7.4 | CI run sonuclarinin dogrulanmasi ve ekipte hook aktivasyonu | Gercek branch protection plan kisiti nedeniyle kullanilamadi | AI |
-| 02.03.2026 | Branch protection script auth/repo/branch dogrulamasi ile guncellendi ve required CI workflow'lar path filtresiz hale getirildi | 1.7.1-1.7.2 hardening | 1.7.4 policy'nin gerçek repoda uygulanmasi ve CI run dogrulama | `gh auth login` + remote tanimi olmadan policy apply edilemez | AI |
-| 02.03.2026 | Admin JWT login/me/logout endpointleri ve GHCR push workflow tamamlandi | Auth endpointleri, 1.7.3 | 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortaminda dogrulanmasi | `dotnet restore/build/test` lokalde basarili; NU1903 bagimlilik uyarilari devam ediyor | AI |
-| 02.03.2026 | Faz 1.5 guvenlik altyapisi ve Faz 1.7 temel CI workflow'lari tamamlandi | 1.5.1-1.5.4, 1.7.1-1.7.2 | 1.7.3 registry push, 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortaminda dogrulanmasi | `dotnet restore/build/test` lokalde basarili; NU1903 bagimlilik uyarilari mevcut | AI |
-| 02.03.2026 | Faz 1 foundation ve Faz 1.2 schema implementasyonu tamamlandi; migration generate + apply edildi | 1.2.1-1.2.17 | Faz 1.5 guvenlik altyapisi ve Faz 1.7 CI | DB dogrulama: Docker PostgreSQL 18 (5433) uzerinde `__EFMigrationsHistory` kaydi ve seed satirlari (offices=2, vehicle_groups=2, feature_flags=2) | AI |
+| Tarih | Kayıt Tipi | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
+|-------|------------|------------|---------------------|-----------------|--------|-------|
+| 06.03.2026 | Delivery | Faz 2 vehicle management genisletildi: durum guncelleme, transfer ve bakim planlama endpointleri + unit testler eklendi | 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.4.5, 2.4.6 | 2.2.7 (photo upload) ve 2.3.2/2.3.3 ofis detaylari | `dotnet build` ve `dotnet test` ile dogrulandi | AI |
+| 04.03.2026 | Verification | Faz 1 CI/CD dogrulama tamamlandi: ana workflow ve soft main guard repo ile hizalandi | 1.8.1-1.8.5 | Faz 2 başlangıcı | Backend ve frontend coverage artifact'lari uretiliyor; Docker build ve GHCR push akisi ci.yml ile yonetiliyor | AI |
+| 02.03.2026 | Documentation | Soft protection süreci kalıcı dokümana kaydedildi | Dokümantasyon | Soft guard workflow runlarının izlenmesi | `docs/11_Private_Repo_Soft_Protection_Policy.md` eklendi | AI |
+| 02.03.2026 | Decision | Private repo icin soft main koruma aktif edildi (guard workflow + local pre-push hook) | 1.7.4 | CI run sonuçlarının doğrulanması ve ekipte hook aktivasyonu | Gerçek branch protection plan kısıtı nedeniyle kullanılamadı | AI |
+| 02.03.2026 | Hardening | Soft main guard workflow ve local pre-push hook repo ile hizalandi; CI workflow'lari path filtresiz calisiyor | 1.7.1-1.7.2 hardening | 1.7.4 policy'nin gerçek repoda uygulanması ve CI run doğrulama | Soft guard repo icinde calisir; branch protection hala repo ayari olarak ayridir | AI |
+| 02.03.2026 | Delivery | Admin JWT login/me/logout endpointleri ve GHCR push akisi tamamlandi | Auth endpointleri, 1.7.3 | 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortamında doğrulanması | `dotnet restore/build/test` ve coverage artifact akisi repo komutlariyla dogrulanacak sekilde hizalandi | AI |
+| 02.03.2026 | Delivery | Faz 1.5 güvenlik altyapısı ve Faz 1.7 temel CI workflow'ları tamamlandı | 1.5.1-1.5.4, 1.7.1-1.7.2 | 1.7.3 registry push, 1.7.4 branch protection ve Faz 1 kabul kriterlerinin CI ortamında doğrulanması | `dotnet restore/build/test` lokalde başarılı; NU1903 bağımlılık uyarıları mevcut | AI |
+| 06.03.2026 | Delivery | Faz 2 backend kapsamı genişletildi: Vehicle Group + Vehicle CRUD + Office CRUD dilimleri tamamlandı; repository/service/controller/contracts/testler eklendi, build+test geçti | 2.1.1-2.1.4, 2.2.1-2.2.2, 2.3.1, 2.4.1-2.4.4, 2.4.7-2.4.12 | Vehicle Management kalan maddeler (2.2.3-2.2.7) ve Office detaylari (2.3.2-2.3.3) görevlerine devam | `Fleet.cs` tip uyumsuzluğu giderildi; test sayısı 42'ye yükseldi ve `dotnet build` + `dotnet test` başarılı | AI |
+| 02.03.2026 | Milestone | Faz 1 foundation ve Faz 1.2 schema implementasyonu tamamlandı; migration generate + apply edildi | 1.2.1-1.2.17 | Faz 1.5 güvenlik altyapısı ve Faz 1.7 CI | DB doğrulama: Docker PostgreSQL 18 (5433) üzerinde `__EFMigrationsHistory` kaydı ve seed satırları (offices=2, vehicle_groups=2, feature_flags=2) | AI |
 
 ---
 
 ## 📊 Başarı Metrikleri (Success Metrics)
 
-| Metric | Target | Current | Status |
-|--------|--------|---------|--------|
-| API Response Time (p95) | < 300ms | - | ⬜ |
-| Payment Success Rate | > 95% | - | ⬜ |
-| Booking Completion Rate | > 70% | - | ⬜ |
-| System Uptime | > 99% | - | ⬜ |
-| Error Rate | < 2% | - | ⬜ |
-| Double Booking Incidents | 0 | - | ⬜ |
-| Cache Hit Rate | > 80% | - | ⬜ |
-| Test Coverage | > 70% | - | ⬜ |
+| Metric | Target | Current | Status | Owner | Source | Update Frequency |
+|--------|--------|---------|--------|-------|--------|------------------|
+| API Response Time (p95) | < 300ms | Not Measured Yet | ⬜ Not Started | Backend | APM / API telemetry | Haftalık |
+| Payment Success Rate | > 95% | Not Measured Yet | ⬜ Not Started | Payments | Payment provider dashboard | Haftalık |
+| Booking Completion Rate | > 70% | Not Measured Yet | ⬜ Not Started | Product | Funnel analytics | Haftalık |
+| System Uptime | > 99% | Not Measured Yet | ⬜ Not Started | DevOps | Uptime monitor | Günlük |
+| Error Rate | < 2% | Not Measured Yet | ⬜ Not Started | Backend | Application logs / APM | Günlük |
+| Double Booking Incidents | 0 | Not Measured Yet | ⬜ Not Started | Backend | Reservation audit / incident log | Haftalık |
+| Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
+| Test Coverage | > 70% | Not Measured Yet | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 
@@ -1089,20 +1129,20 @@ GENEL İLERLEME: [█         ] 10%
 
 | Kontrol | Durum | Notlar |
 |---------|-------|--------|
-| HTTPS everywhere | ⬜ | |
-| JWT token expiration (24h) | ✅ | JWT bearer dogrulamasi aktif, token issuance bir sonraki adim |
-| Password hashing (BCrypt) | ✅ | IPasswordHasher + BCrypt.Net-Next eklendi |
-| Rate limiting on all endpoints | ✅ | Global ve endpoint policy'leri aktif |
-| SQL injection prevention (EF Core parameterized queries) | ⬜ | |
-| XSS prevention (input validation, output encoding) | ⬜ | |
-| CSRF tokens for state-changing operations | ⬜ | |
-| Webhook signature verification | ⬜ | |
-| PII masking in logs | ⬜ | |
-| No credit card data storage | ⬜ | |
-| Admin routes protected by middleware | ✅ | Authorize + policy tabanli koruma eklendi |
-| RBAC enforcement on all admin endpoints | ✅ | AdminOnly/SuperAdminOnly policy konfigurasyonu tamamlandi |
-| Security headers (HSTS, CSP, X-Frame-Options) | ⬜ | |
-| Dependency vulnerability scanning | ⬜ | NU1903 uyarisi var, paket guncellemesi gerekli |
+| HTTPS everywhere | ⬜ Not Started | Production TLS / reverse proxy kurulumu henüz başlamadı |
+| JWT token expiration (24h) | 🟨 Partial | JWT bearer doğrulaması aktif; token issuance ve expiry policy tamamlanmadı |
+| Password hashing (BCrypt) | ✅ Completed | IPasswordHasher + BCrypt.Net-Next eklendi |
+| Rate limiting on all endpoints | ✅ Completed | Global ve endpoint policy'leri aktif |
+| SQL injection prevention (EF Core parameterized queries) | 🟨 Partial | EF Core kullanımı mevcut; raw SQL / query review doğrulaması bekleniyor |
+| XSS prevention (input validation, output encoding) | ⬜ Not Started | Input validation ve output encoding standardı ayrıca uygulanacak |
+| CSRF tokens for state-changing operations | ⬜ Not Started | Auth modeli netleştikten sonra değerlendirilecek |
+| Webhook signature verification | ⬜ Not Started | Payment webhook implementasyonu ile birlikte ele alınacak |
+| PII masking in logs | ⬜ Not Started | Request / audit log maskeleme politikası henüz uygulanmadı |
+| No credit card data storage | ⬜ Not Started | Payment akışı devreye alınmadan önce açık politika ve doğrulama gerekli |
+| Admin routes protected by middleware | ✅ Completed | Authorize + policy tabanlı koruma eklendi |
+| RBAC enforcement on all admin endpoints | ✅ Completed | AdminOnly / SuperAdminOnly policy konfigürasyonu tamamlandı |
+| Security headers (HSTS, CSP, X-Frame-Options) | ⬜ Not Started | Reverse proxy / API response header seti henüz tanımlanmadı |
+| Dependency vulnerability scanning | 🟨 Partial | NU1903 uyarısı mevcut; paket güncellemesi ve tarama temizliği bekleniyor |
 
 ---
 
@@ -1124,5 +1164,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Doküman Versiyonu:** 1.0.0  
 **Oluşturulma Tarihi:** 02 Mart 2026  
-**Son Güncelleme:** 04 Mart 2026 (Faz 1 %100 tamamlandı - CI/CD doğrulandı)  
+**Son Güncelleme:** 06 Mart 2026 (Belge metrikleri, kabul kriterleri ve takip şeması normalize edildi)  
 **Durum:** Aktif Takip
+

@@ -1,0 +1,51 @@
+name: Soft Main Guard
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Allow override token
+        id: override
+        shell: bash
+        run: |
+          set -euo pipefail
+          message=$(git log -1 --pretty=%B)
+          if [[ "$message" == *"[main-guard:allow]"* ]]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check PR association
+        if: steps.override.outputs.allowed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const commit_sha = context.sha;
+            const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha,
+            });
+
+            if (response.data.length > 0) {
+              core.info(`Commit ${commit_sha} is associated with PR(s): ${response.data.map(pr => `#${pr.number}`).join(', ')}`);
+              return;
+            }
+
+            core.setFailed('Direct pushes to main are blocked by soft guard. Use a PR or add [main-guard:allow] to the commit message for an explicit override.');

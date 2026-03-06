@@ -1,8 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
+using RentACar.Infrastructure.Repositories;
 using RentACar.Infrastructure.Security;
 
 namespace RentACar.Infrastructure;
@@ -11,9 +12,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString =
-            configuration.GetConnectionString("DefaultConnection") ??
-            "Host=localhost;Port=5432;Database=rentacar;Username=postgres;Password=postgres";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("Connection string 'DefaultConnection' must be configured.");
+        }
 
         services.AddDbContext<RentACarDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -23,6 +27,9 @@ public static class DependencyInjection
             provider.GetRequiredService<RentACarDbContext>());
 
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IVehicleGroupRepository, VehicleGroupRepository>();
+        services.AddScoped<IVehicleRepository, VehicleRepository>();
+        services.AddScoped<IOfficeRepository, OfficeRepository>();
 
         services.AddSingleton(new DatabaseSettings(connectionString));
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import { cn, generateAvatarFallback, getInitials } from './utils'
 
 describe('cn', () => {
@@ -59,7 +59,18 @@ describe('getInitials', () => {
   })
 
   it('should take first and second name initials', () => {
-    // Note: getInitials takes nameParts[0] and nameParts[1], not first and last
     expect(getInitials('John Michael Doe')).toBe('JM')
+  })
+
+  it('should handle a single name without crashing', () => {
+    expect(getInitials('John')).toBe('J')
+  })
+
+  it('should return empty string for empty input', () => {
+    expect(getInitials('')).toBe('')
+  })
+
+  it('should ignore extra spaces', () => {
+    expect(getInitials('  John   Doe  ')).toBe('JD')
   })
 })

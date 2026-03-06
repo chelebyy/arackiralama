@@ -1,15 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RentACar.API.Configuration;
 
 namespace RentACar.API.Controllers;
 
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthPolicyNames.AdminOnly)]
 [Route("api/admin/v1/security")]
 public sealed class AdminSecurityController : BaseApiController
 {
     [HttpGet("ping")]
-    [EnableRateLimiting("Strict")]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
     public IActionResult Ping()
     {
         return OkResponse(new

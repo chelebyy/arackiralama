@@ -1,6 +1,5 @@
-version: 2
+﻿version: 2
 updates:
-  # Frontend dependencies (npm/pnpm)
   - package-ecosystem: 'npm'
     directory: '/frontend'
     schedule:
@@ -30,7 +29,6 @@ updates:
           - 'tailwindcss'
           - '@tailwindcss/*'
 
-  # Backend dependencies (NuGet)
   - package-ecosystem: 'nuget'
     directory: '/backend'
     schedule:
@@ -45,12 +43,43 @@ updates:
     commit-message:
       prefix: 'deps(backend)'
     groups:
-      dotnet-aspire:
+      dotnet:
         patterns:
-          - 'Aspire*'
-          - 'Microsoft.Extensions.ServiceDiscovery*'
+          - 'Microsoft.*'
+          - 'System.*'
+      data-access:
+        patterns:
+          - 'Npgsql*'
+          - 'BCrypt.Net-Next'
 
-  # GitHub Actions
+  - package-ecosystem: 'docker'
+    directory: '/backend/src/RentACar.API'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Europe/Istanbul'
+    open-pull-requests-limit: 2
+    labels:
+      - 'dependencies'
+      - 'docker'
+    commit-message:
+      prefix: 'deps(docker-api)'
+
+  - package-ecosystem: 'docker'
+    directory: '/backend/src/RentACar.Worker'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Europe/Istanbul'
+    open-pull-requests-limit: 2
+    labels:
+      - 'dependencies'
+      - 'docker'
+    commit-message:
+      prefix: 'deps(docker-worker)'
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
