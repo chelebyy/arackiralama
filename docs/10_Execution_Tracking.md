@@ -150,7 +150,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`1/10 = 10%`). Toplam görev sayıs�
 | 1.7.1 | GitHub Actions workflow - Build & Test | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
 | 1.7.2 | GitHub Actions workflow - Docker image build | ✅ | AI | 02.03.2026 | 02.03.2026 | Workflow PR/push icin path filtre olmadan calisacak sekilde guncellendi |
 | 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/ci.yml icindeki docker-push job'u ile GHCR push aktif |
-| 1.7.4 | Branch protection rules | ✅ | AI | 02.03.2026 | 02.03.2026 | Private repo plan kisiti nedeniyle soft koruma aktive edildi: `.github/workflows/soft-main-guard.yml` + `.githooks/pre-push` |
+| 1.7.4 | Branch protection rules | ⬜ | | | | Soft main guard kaldirildi; native branch protection aktif degil |
 
 #### 1.8 Test Infrastructure Setup
 

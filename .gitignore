@@ -95,3 +95,8 @@ dump.rdb
 # Project docs (local only)
 CODEBASE.md
 postgrebilgiler.txt
+
+# Local-only agent/workspace files
+CLAUDE.md
+codex-temp/
+.maestro/

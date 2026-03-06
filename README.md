@@ -42,18 +42,3 @@ docker compose up --build
 - Backend build/test, frontend lint/test/build ve Docker image build ayni workflow icinde calisir.
 - GHCR push adimi yalnizca `main` branch push'larinda `ci.yml` icindeki `docker-push` job'u ile calisir.
 
-## Soft Main Koruma
-
-Private repo senaryosu icin soft koruma kullanilir:
-
-- GitHub Action: `.github/workflows/soft-main-guard.yml`
-  - `main` branch'e gelen commit bir PR ile iliskili degilse workflow fail olur.
-  - Acik override: commit mesajina `[main-guard:allow]` eklenebilir.
-- Local hook: `.githooks/pre-push`
-  - Gelistirici tarafinda `main` branch'e direkt push'u engeller.
-
-Local hook'u aktif etmek icin bir kez calistir:
-
-```bash
-git config core.hooksPath .githooks
-```
