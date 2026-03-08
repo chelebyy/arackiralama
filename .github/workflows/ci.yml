@@ -48,6 +48,8 @@ jobs:
 
       - name: Test
         if: steps.test-projects.outputs.count != '0'
+        # Keep CI unit tests free of cold-start wall-clock assertions.
+        # Use warm-path averages or dedicated benchmarks for perf checks.
         run: dotnet test RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./coverage
 
       - name: Generate Coverage Report
