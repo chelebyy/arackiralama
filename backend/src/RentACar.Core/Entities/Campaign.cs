@@ -8,4 +8,6 @@ public class Campaign : BaseEntity
     public int MinDays { get; set; }
     public DateOnly ValidFrom { get; set; }
     public DateOnly ValidUntil { get; set; }
+    public bool IsActive { get; set; } = true;
+    public List<Guid> AllowedVehicleGroupIds { get; set; } = new();
 }

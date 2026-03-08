@@ -84,6 +84,9 @@ Thumbs.db
 .claude/
 .serena/
 .dotnet-home/
+.localappdata/
+.appdata/
+.nuget/
 
 # Logs
 logs/

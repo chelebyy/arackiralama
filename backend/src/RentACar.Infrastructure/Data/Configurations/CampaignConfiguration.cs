@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RentACar.Core.Entities;
 
@@ -19,6 +21,20 @@ public sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         builder.Property(x => x.MinDays).HasColumnName("min_days");
         builder.Property(x => x.ValidFrom).HasColumnName("valid_from");
         builder.Property(x => x.ValidUntil).HasColumnName("valid_until");
+        builder.Property(x => x.IsActive).HasColumnName("is_active");
+        builder
+            .Property(x => x.AllowedVehicleGroupIds)
+            .HasColumnName("allowed_vehicle_group_ids")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                vehicleGroupIds => JsonSerializer.Serialize(vehicleGroupIds, (JsonSerializerOptions?)null),
+                json => string.IsNullOrWhiteSpace(json)
+                    ? new List<Guid>()
+                    : JsonSerializer.Deserialize<List<Guid>>(json, (JsonSerializerOptions?)null) ?? new List<Guid>())
+            .Metadata.SetValueComparer(new ValueComparer<List<Guid>>(
+                (left, right) => left!.SequenceEqual(right!),
+                vehicleGroupIds => vehicleGroupIds.Aggregate(0, (hash, value) => HashCode.Combine(hash, value.GetHashCode())),
+                vehicleGroupIds => vehicleGroupIds.ToList()));
 
         builder.HasIndex(x => x.Code).IsUnique();
     }

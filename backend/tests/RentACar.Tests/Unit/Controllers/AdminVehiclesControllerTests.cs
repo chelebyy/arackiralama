@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,6 @@ using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
-using RentACar.Core.Interfaces;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Infrastructure.Data;
@@ -173,6 +173,37 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         response.Success.Should().BeTrue();
         response.Data.Should().NotBeNull();
         response.Data!.Status.Should().Be(VehicleStatus.OutOfService);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenVehicleExists_WritesAuditLog()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (groupId, officeId) = await SeedGroupAndOfficeAsync(dbContext);
+
+        var vehicle = new Vehicle
+        {
+            Plate = "07AUD001",
+            Brand = "Ford",
+            Model = "Focus",
+            Year = 2022,
+            Color = "Black",
+            GroupId = groupId,
+            OfficeId = officeId,
+            Status = VehicleStatus.Available
+        };
+        dbContext.Vehicles.Add(vehicle);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, userId: "admin-1");
+        await controller.UpdateStatus(vehicle.Id, new UpdateVehicleStatusRequest(VehicleStatus.Maintenance), CancellationToken.None);
+
+        var auditLog = dbContext.AuditLogs.Should().ContainSingle(log => log.Action == "VehicleStatusUpdated").Subject;
+        auditLog.EntityType.Should().Be(nameof(Vehicle));
+        auditLog.EntityId.Should().Be(vehicle.Id.ToString());
+        auditLog.UserId.Should().Be("admin-1");
+        auditLog.Details.Should().Contain("Available");
+        auditLog.Details.Should().Contain("Maintenance");
     }
 
     [Fact]
@@ -361,15 +392,58 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         }
     }
 
-    private static AdminVehiclesController CreateController(RentACarDbContext dbContext, string? webRootPath = null)
+    private static AdminVehiclesController CreateController(RentACarDbContext dbContext, string? webRootPath = null, string? userId = null)
+    {
+        var httpContext = userId is null ? null : CreateAuthenticatedHttpContext(userId);
+        var httpContextAccessor = httpContext is null ? null : new HttpContextAccessor { HttpContext = httpContext };
+        var fleetService = CreateFleetService(dbContext, webRootPath, httpContextAccessor);
+        var controller = new AdminVehiclesController(fleetService);
+
+        if (httpContext is not null)
+        {
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+        }
+
+        return controller;
+    }
+
+    private static IFleetService CreateFleetService(
+        RentACarDbContext dbContext,
+        string? webRootPath = null,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         var vehicleGroupRepository = new VehicleGroupRepository(dbContext);
         var vehicleRepository = new VehicleRepository(dbContext);
         var officeRepository = new OfficeRepository(dbContext);
         var unitOfWork = new EfUnitOfWork(dbContext);
         var photoStorage = new LocalVehiclePhotoStorage(webRootPath ?? Path.Combine(Path.GetTempPath(), "rentacar-test-wwwroot"));
-        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, unitOfWork, photoStorage);
-        return new AdminVehiclesController(fleetService);
+
+        return new FleetService(
+            vehicleGroupRepository,
+            vehicleRepository,
+            officeRepository,
+            unitOfWork,
+            photoStorage,
+            dbContext,
+            httpContextAccessor);
+    }
+
+    private static DefaultHttpContext CreateAuthenticatedHttpContext(string userId)
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Name, userId),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+
+        return new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"))
+        };
     }
 
     private static async Task<(Guid GroupId, Guid OfficeId)> SeedGroupAndOfficeAsync(RentACarDbContext dbContext)
@@ -402,4 +476,3 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         return (vehicleGroup.Id, office.Id);
     }
 }
-

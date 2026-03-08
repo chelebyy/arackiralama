@@ -15,10 +15,12 @@ public static class ServiceCollectionExtensions
         services.AddOpenApi();
         services.AddControllers();
         services.AddHealthChecks();
+        services.AddHttpContextAccessor();
         services.AddInfrastructure(configuration);
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
+        services.AddScoped<IPricingService, PricingService>();
         services.AddJwtAuthentication(configuration);
         services.AddAdminAuthorization();
         services.AddApiRateLimiting();

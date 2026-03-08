@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
@@ -170,10 +170,11 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
         var officeRepository = new OfficeRepository(dbContext);
         var unitOfWork = new EfUnitOfWork(dbContext);
         var photoStorage = new LocalVehiclePhotoStorage(Path.Combine(Path.GetTempPath(), "rentacar-test-wwwroot"));
-        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, unitOfWork, photoStorage);
+        var fleetService = new FleetService(vehicleGroupRepository, vehicleRepository, officeRepository, unitOfWork, photoStorage, dbContext);
         return new AdminVehicleGroupsController(fleetService);
     }
 }
+
 
 
 

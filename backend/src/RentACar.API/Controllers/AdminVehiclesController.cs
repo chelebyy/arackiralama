@@ -139,7 +139,7 @@ public sealed class AdminVehiclesController(IFleetService fleetService) : BaseAp
             return BadRequestResponse("Bakim bitis tarihi gelecekte olmalidir.");
         }
 
-        var updatedVehicle = await fleetService.ScheduleVehicleMaintenanceAsync(id, request.StartDateUtc, request.EndDateUtc, cancellationToken);
+        var updatedVehicle = await fleetService.ScheduleVehicleMaintenanceAsync(id, request.StartDateUtc, request.EndDateUtc, request.Notes, cancellationToken);
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
