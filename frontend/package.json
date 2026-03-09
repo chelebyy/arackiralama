@@ -100,7 +100,7 @@
     "react-world-flags": "^1.6.0",
     "recharts": "^2.15.4",
     "remark-gfm": "^4.0.1",
-    "shiki": "^3.20.0",
+    "shiki": "^4.0.2",
     "sonner": "^2.0.7",
     "swiper": "^11.2.10",
     "tailwind-merge": "^3.4.0",
