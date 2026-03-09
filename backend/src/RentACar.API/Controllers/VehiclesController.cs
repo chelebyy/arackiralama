@@ -11,6 +11,13 @@ namespace RentACar.API.Controllers;
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
 public sealed class VehiclesController(IFleetService fleetService) : BaseApiController
 {
+    [HttpGet("groups")]
+    public async Task<IActionResult> GetGroups(CancellationToken cancellationToken)
+    {
+        var groups = await fleetService.GetVehicleGroupsAsync(cancellationToken);
+        return OkResponse(groups);
+    }
+
     [HttpGet("available")]
     public async Task<IActionResult> GetAvailable(
         [FromQuery(Name = "office_id")] Guid officeId,

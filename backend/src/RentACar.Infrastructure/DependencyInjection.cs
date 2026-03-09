@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Repositories;
 using RentACar.Infrastructure.Security;
+using RentACar.Infrastructure.Services;
+using StackExchange.Redis;
 
 namespace RentACar.Infrastructure;
 
@@ -31,6 +33,13 @@ public static class DependencyInjection
         services.AddScoped<IVehicleGroupRepository, VehicleGroupRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<IOfficeRepository, OfficeRepository>();
+        services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
+
+        // Add Redis
+        var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        services.AddSingleton<IConnectionMultiplexer>(
+            ConnectionMultiplexer.Connect(redisConnectionString));
 
         services.AddSingleton(new DatabaseSettings(connectionString));
 
