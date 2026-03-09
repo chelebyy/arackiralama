@@ -41,4 +41,9 @@ public abstract class Repository<TEntity>(IApplicationDbContext dbContext, DbSet
     {
         return Entities.AsNoTracking();
     }
+
+    public virtual IQueryable<TEntity> GetQueryable()
+    {
+        return Entities.AsQueryable();
+    }
 }

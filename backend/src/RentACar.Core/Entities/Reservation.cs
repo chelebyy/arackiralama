@@ -11,6 +11,7 @@ public class Reservation : BaseEntity
     public DateTime ReturnDateTime { get; set; }
     public ReservationStatus Status { get; set; } = ReservationStatus.Draft;
     public decimal TotalAmount { get; set; }
+    public uint Version { get; set; }
 
     public Customer? Customer { get; set; }
     public Vehicle? Vehicle { get; set; }

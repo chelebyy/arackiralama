@@ -25,6 +25,9 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
             .HasMaxLength(32)
             .IsRequired();
         builder.Property(x => x.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+        builder.Property(x => x.Version)
+            .HasColumnName("xmin")
+            .IsRowVersion();
 
         builder.HasIndex(x => x.PublicCode).IsUnique();
         builder.HasIndex(x => new { x.VehicleId, x.PickupDateTime, x.ReturnDateTime })
