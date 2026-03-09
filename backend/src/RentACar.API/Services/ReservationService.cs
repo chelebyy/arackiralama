@@ -339,9 +339,10 @@ public sealed class ReservationService : IReservationService
         await _holdService.ReleaseHoldAsync(id, cancellationToken);
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
 
+        var sanitizedReason = SanitizeForLog(reason);
         _logger.LogInformation(
             "Cancelled reservation {ReservationId}. Reason: {Reason}",
-            id, reason ?? "Not specified");
+            id, sanitizedReason ?? "Not specified");
 
         return true;
     }
@@ -814,9 +815,10 @@ public sealed class ReservationService : IReservationService
         await _holdService.ReleaseHoldAsync(reservationId, cancellationToken);
         await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
 
+        var sanitizedReason = SanitizeForLog(reason);
         _logger.LogInformation(
             "Admin cancelled reservation {ReservationId}. Reason: {Reason}",
-            reservationId, reason ?? "Not specified");
+            reservationId, sanitizedReason ?? "Not specified");
 
         return MapToDto(reservation);
     }
@@ -1075,6 +1077,16 @@ public sealed class ReservationService : IReservationService
         }
 
         return await dbContext.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Sanitizes user input for safe logging by removing newline characters
+    /// that could be used for log injection attacks (CWE-117).
+    /// </summary>
+    private static string? SanitizeForLog(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return input.Replace("\r", "").Replace("\n", "");
     }
 
     #endregion
