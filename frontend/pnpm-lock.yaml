@@ -279,8 +279,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       swiper:
-        specifier: ^11.2.10
-        version: 11.2.10
+        specifier: ^12.1.2
+        version: 12.1.2
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -4798,8 +4798,8 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  swiper@11.2.10:
-    resolution: {integrity: sha512-RMeVUUjTQH+6N3ckimK93oxz6Sn5la4aDlgPzB+rBrG/smPdCTicXyhxa+woIpopz+jewEloiEE3lKo1h9w2YQ==}
+  swiper@12.1.2:
+    resolution: {integrity: sha512-4gILrI3vXZqoZh71I1PALqukCFgk+gpOwe1tOvz5uE9kHtl2gTDzmYflYCwWvR4LOvCrJi6UEEU+gnuW5BtkgQ==}
     engines: {node: '>= 4.7.0'}
 
   symbol-tree@3.2.4:
@@ -10069,7 +10069,7 @@ snapshots:
       csso: 5.0.5
       picocolors: 1.1.1
 
-  swiper@11.2.10: {}
+  swiper@12.1.2: {}
 
   symbol-tree@3.2.4: {}
 
