@@ -519,6 +519,71 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task CancelReservationAsync_WhenReasonContainsNewlines_DoesNotLogRawReason()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var rawReason = "Customer requested cancellation\r\nForged entry";
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Draft,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            TotalAmount = 1500
+        };
+
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _holdServiceMock.Setup(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.CancelReservationAsync(reservationId, rawReason);
+
+        // Assert
+        result.Should().BeTrue();
+        VerifyLogDoesNotContain(rawReason, "Cancelled reservation", "HasReason: True");
+    }
+
+    [Fact]
+    public async Task AdminCancelReservationAsync_WhenReasonContainsNewlines_DoesNotLogRawReason()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var rawReason = "Admin note\r\nForged entry";
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-001",
+            Status = ReservationStatus.Paid,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            TotalAmount = 1500,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _holdServiceMock.Setup(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.AdminCancelReservationAsync(reservationId, rawReason);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(ReservationStatus.Cancelled.ToString());
+        VerifyLogDoesNotContain(rawReason, "Admin cancelled reservation", "HasReason: True");
+    }
+
+    [Fact]
     public async Task CheckInAsync_WhenReservationPaid_TransitionsToActive()
     {
         // Arrange
@@ -600,6 +665,21 @@ public sealed class ReservationServiceTests
 
         // Assert
         result.Should().Be(expected);
+    }
+
+    private void VerifyLogDoesNotContain(string forbiddenText, string requiredPrefix, string requiredMetadata)
+    {
+        _loggerMock.Verify(
+            x => x.Log(
+                It.Is<LogLevel>(level => level == LogLevel.Information),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    state.ToString()!.Contains(requiredPrefix, StringComparison.Ordinal) &&
+                    state.ToString()!.Contains(requiredMetadata, StringComparison.Ordinal) &&
+                    !state.ToString()!.Contains(forbiddenText, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     private static CreateReservationRequest CreateValidReservationRequest() => new()
