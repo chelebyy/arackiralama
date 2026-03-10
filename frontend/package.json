@@ -144,7 +144,8 @@
       "markdown-it": "14.1.1",
       "lodash": "4.17.23",
       "minimatch": "3.1.4",
-      "ajv": "6.14.0"
+      "ajv": "6.14.0",
+      "test-exclude": "6.0.0"
     }
   }
 }
