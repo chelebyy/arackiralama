@@ -28,13 +28,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Skip major updates
-        if: steps.metadata.outputs.update-type != 'version-update:semver-patch' && steps.metadata.outputs.update-type != 'version-update:semver-minor'
+      - name: Skip major version updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         run: |
-          echo "Skipping auto-merge for update type: ${{ steps.metadata.outputs.update-type }}"
+          echo "Skipping auto-merge for major version update. Manual review required."
 
       - name: Approve PR if needed
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -50,7 +50,7 @@ jobs:
           gh pr review "$PR_NUMBER" --repo "$REPOSITORY" --approve --body "Auto-approved for safe Dependabot update (${{ steps.metadata.outputs.update-type }})."
 
       - name: Enable auto-merge if needed
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
