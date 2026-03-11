@@ -30,6 +30,23 @@ interface MailProps {
   navCollapsedSize: number;
 }
 
+function isPanelCollapsed(panelSize: unknown, navCollapsedSize: number): boolean {
+  if (typeof panelSize === "number") {
+    return panelSize <= navCollapsedSize;
+  }
+
+  if (
+    typeof panelSize === "object" &&
+    panelSize !== null &&
+    "inPixels" in panelSize &&
+    typeof (panelSize as { inPixels?: unknown }).inPixels === "number"
+  ) {
+    return (panelSize as { inPixels: number }).inPixels <= navCollapsedSize;
+  }
+
+  return false;
+}
+
 export function Mail({
   mails,
   defaultLayout = [20, 32, 48],
@@ -56,13 +73,10 @@ export function Mail({
           collapsible={true}
           minSize={15}
           maxSize={20}
-          onCollapse={() => {
-            setIsCollapsed(true);
-            document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(true)}`;
-          }}
-          onResize={() => {
-            setIsCollapsed(false);
-            document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(false)}`;
+          onResize={(panelSize: unknown) => {
+            const collapsed = isPanelCollapsed(panelSize, navCollapsedSize);
+            setIsCollapsed(collapsed);
+            document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(collapsed)}`;
           }}
           className={cn(isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}>
           <NavDesktop isCollapsed={isCollapsed} />

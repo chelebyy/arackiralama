@@ -96,7 +96,7 @@
     "react-hook-form": "^7.69.0",
     "react-markdown": "^10.1.0",
     "react-medium-image-zoom": "^5.4.0",
-    "react-resizable-panels": "^3.0.6",
+    "react-resizable-panels": "^4.7.2",
     "react-world-flags": "^1.6.0",
     "recharts": "^2.15.4",
     "remark-gfm": "^4.0.1",
