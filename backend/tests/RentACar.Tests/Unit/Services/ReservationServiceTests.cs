@@ -288,7 +288,7 @@ public sealed class ReservationServiceTests
 
         // Setup customer repository mock - no existing customer
         _customerRepositoryMock.Setup(x => x.GetQueryable())
-            .Returns(new List<Customer>().AsQueryable().BuildMock());
+            .Returns(new List<Customer>().BuildMock());
 
         // Act
         var result = await _sut.CreateDraftReservationAsync(request, CancellationToken.None);
@@ -346,7 +346,7 @@ public sealed class ReservationServiceTests
 
         _vehicleRepositoryMock
             .Setup(x => x.GetQueryable())
-            .Returns(new List<Vehicle> { availableVehicle }.AsQueryable().BuildMock());
+            .Returns(new List<Vehicle> { availableVehicle }.BuildMock());
 
         _reservationRepositoryMock
             .Setup(x => x.HasOverlappingReservationsAsync(
