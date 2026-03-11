@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace RentACar.API.Middleware;
 
@@ -11,11 +11,26 @@ public class RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggi
         await next(context);
 
         stopwatch.Stop();
+        var method = SanitizeForLog(context.Request.Method);
+        var path = SanitizeForLog(context.Request.Path.Value);
+
         logger.LogInformation(
             "{Method} {Path} -> {StatusCode} in {ElapsedMs} ms",
-            context.Request.Method,
-            context.Request.Path,
+            method,
+            path,
             context.Response.StatusCode,
             stopwatch.ElapsedMilliseconds);
+    }
+
+    private static string SanitizeForLog(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value
+            .Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal);
     }
 }
