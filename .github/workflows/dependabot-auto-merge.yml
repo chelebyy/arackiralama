@@ -1,4 +1,4 @@
-name: Dependabot Auto Merge
+﻿name: Dependabot Auto Merge (Bot Only)
 
 on:
   pull_request_target:
@@ -13,8 +13,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  auto-approve-and-enable-merge:
-    name: Approve and Enable Auto-Merge
+  auto-enable-merge:
+    name: Dependabot Auto-Merge Decision
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     concurrency:
@@ -28,13 +28,32 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Skip unsupported updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+      - name: Decide merge policy
+        id: policy
+        shell: bash
         run: |
-          echo "Skipping auto-merge for major version update. Manual review required."
+          set -euo pipefail
+          update_type="${{ steps.metadata.outputs.update-type }}"
+          case "$update_type" in
+            version-update:semver-patch|version-update:semver-minor)
+              echo "auto_merge=true" >> "$GITHUB_OUTPUT"
+              echo "reason=patch-or-minor" >> "$GITHUB_OUTPUT"
+              echo "Auto-merge enabled candidate: $update_type"
+              ;;
+            *)
+              echo "auto_merge=false" >> "$GITHUB_OUTPUT"
+              echo "reason=manual-review-required" >> "$GITHUB_OUTPUT"
+              echo "Manual review required for update type: $update_type"
+              ;;
+          esac
 
-      - name: Enable auto-merge if needed
-        if: steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch'
+      - name: Manual review required
+        if: steps.policy.outputs.auto_merge != 'true'
+        run: |
+          echo "Skipping auto-merge. Reason: ${{ steps.policy.outputs.reason }}"
+
+      - name: Enable auto-merge
+        if: steps.policy.outputs.auto_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
