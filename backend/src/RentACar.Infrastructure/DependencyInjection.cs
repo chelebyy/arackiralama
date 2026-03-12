@@ -43,7 +43,11 @@ public static class DependencyInjection
             redisConnectionString = configuration["Redis:ConnectionString"];
         }
 
-        redisConnectionString ??= "localhost:6379";
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            redisConnectionString = "localhost:6379";
+        }
+
         services.AddSingleton<IConnectionMultiplexer>(
             ConnectionMultiplexer.Connect(redisConnectionString));
 
