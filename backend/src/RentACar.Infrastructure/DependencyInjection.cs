@@ -37,7 +37,13 @@ public static class DependencyInjection
         services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
 
         // Add Redis
-        var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            redisConnectionString = configuration["Redis:ConnectionString"];
+        }
+
+        redisConnectionString ??= "localhost:6379";
         services.AddSingleton<IConnectionMultiplexer>(
             ConnectionMultiplexer.Connect(redisConnectionString));
 
