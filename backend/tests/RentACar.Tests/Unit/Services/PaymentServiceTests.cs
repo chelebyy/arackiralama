@@ -192,16 +192,17 @@ public sealed class PaymentServiceTests : IDisposable
     {
         var vehicleGroup = new VehicleGroup
         {
-            Name = "Test Group",
+            NameTr = "Test Group",
             DepositAmount = depositAmount
         };
         var vehicle = new Vehicle
         {
-            PlateNumber = $"34TST{Random.Shared.Next(1000, 9999)}",
+            Plate = $"34TST{Random.Shared.Next(1000, 9999)}",
             Brand = "Test",
             Model = "Car",
             Year = 2024,
-            DailyRate = 1500,
+            Color = "White",
+            OfficeId = Guid.NewGuid(),
             Group = vehicleGroup
         };
         var reservation = new Reservation
