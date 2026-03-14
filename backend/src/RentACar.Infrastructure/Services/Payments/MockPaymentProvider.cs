@@ -14,14 +14,18 @@ public sealed class MockPaymentProvider(
 
     private static string SanitizeForLog(string? value)
     {
-        if (string.IsNullOrEmpty(value))
-        {
+        if (string.IsNullOrWhiteSpace(value))
             return string.Empty;
-        }
 
-        // Remove line breaks and other control characters to prevent log forging.
-        var sanitizedChars = value.Where(c => !char.IsControl(c)).ToArray();
-        return new string(sanitizedChars);
+        // Replace control characters with space to prevent log forging
+        return string.Create(value.Length, value, (span, src) =>
+        {
+            for (int i = 0; i < src.Length; i++)
+            {
+                var c = src[i];
+                span[i] = char.IsControl(c) ? ' ' : c;
+            }
+        });
     }
 
     public Task<PaymentIntentProviderResult> CreatePaymentIntentAsync(
@@ -48,7 +52,7 @@ public sealed class MockPaymentProvider(
 
         _logger.LogInformation(
             "Mock payment intent created for reservation {ReservationId} with idempotency {IdempotencyKey}",
-            request.ReservationId,
+            request.ReservationId.ToString(),
             SanitizeForLog(request.IdempotencyKey));
 
         return Task.FromResult(result);
