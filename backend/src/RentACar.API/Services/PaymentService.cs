@@ -332,12 +332,12 @@ public sealed class PaymentService(
         var depositIntent = await GetLatestDepositIntentAsync(reservationId, cancellationToken);
         if (depositIntent == null)
         {
-            if (await GetReservationDepositAmountAsync(reservationId, cancellationToken) <= 0)
-            {
-                return BuildSkippedDepositOperation(reservationId, "ReleaseDeposit", note);
-            }
-
-            throw new InvalidOperationException("Depozito bırakma işlemi için ön provizyon bulunamadı.");
+            return BuildSkippedDepositOperation(
+                reservationId,
+                "ReleaseDeposit",
+                string.IsNullOrWhiteSpace(note)
+                    ? "Depozito ön provizyon kaydı bulunamadığı için bırakma işlemi atlandı."
+                    : note);
         }
 
         var providerResult = await _paymentProvider.ReleaseDepositAsync(
@@ -948,7 +948,6 @@ public sealed class PaymentService(
         public string RawPayload { get; init; } = string.Empty;
     }
 }
-
 
 
 

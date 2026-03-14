@@ -135,6 +135,19 @@ public sealed class PaymentServiceTests : IDisposable
         _dbContext.PaymentWebhookEvents.Single(x => x.ProviderEventId == "evt-unmatched").Processed.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenNoDepositIntentExists_ReturnsSkippedOperation()
+    {
+        var reservation = await SeedReservationWithDepositAmountAsync(500m);
+
+        var result = await _sut.ReleaseDepositAsync(reservation.Id, "checkout");
+
+        result.Should().NotBeNull();
+        result!.Operation.Should().Be("ReleaseDeposit");
+        result.Status.Should().Be("Skipped");
+        result.PaymentIntentId.Should().Be(Guid.Empty);
+    }
+
     private void SeedFeatureFlag()
     {
         _dbContext.FeatureFlags.Add(new FeatureFlag
@@ -173,6 +186,38 @@ public sealed class PaymentServiceTests : IDisposable
         _dbContext.PaymentIntents.Add(paymentIntent);
         await _dbContext.SaveChangesAsync();
         return paymentIntent;
+    }
+
+    private async Task<Reservation> SeedReservationWithDepositAmountAsync(decimal depositAmount)
+    {
+        var vehicleGroup = new VehicleGroup
+        {
+            Name = "Test Group",
+            DepositAmount = depositAmount
+        };
+        var vehicle = new Vehicle
+        {
+            PlateNumber = $"34TST{Random.Shared.Next(1000, 9999)}",
+            Brand = "Test",
+            Model = "Car",
+            Year = 2024,
+            DailyRate = 1500,
+            Group = vehicleGroup
+        };
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-DEP",
+            CustomerId = Guid.NewGuid(),
+            Vehicle = vehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(-3),
+            ReturnDateTime = DateTime.UtcNow.AddDays(-1),
+            Status = ReservationStatus.Active,
+            TotalAmount = 1500m
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        await _dbContext.SaveChangesAsync();
+        return reservation;
     }
 
     public void Dispose()
