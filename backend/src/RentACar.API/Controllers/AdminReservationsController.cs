@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts;
+using RentACar.API.Contracts.Payments;
 using RentACar.API.Contracts.Reservations;
 using RentACar.API.Services;
 using RentACar.Core.Enums;
@@ -12,7 +13,9 @@ namespace RentACar.API.Controllers;
 [Route("api/admin/v1/reservations")]
 [Authorize(Policy = AuthPolicyNames.AdminOnly)]
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
-public sealed class AdminReservationsController(IReservationService reservationService) : BaseApiController
+public sealed class AdminReservationsController(
+    IReservationService reservationService,
+    IPaymentService paymentService) : BaseApiController
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(
@@ -206,6 +209,50 @@ public sealed class AdminReservationsController(IReservationService reservationS
             }
 
             return OkResponse(reservation, "Rezervasyon yönetici tarafından iptal edildi.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/refund")]
+    public async Task<IActionResult> Refund(
+        Guid id,
+        [FromBody] AdminRefundApiRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await paymentService.RefundReservationAsync(id, request, cancellationToken);
+            if (result == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+            }
+
+            return OkResponse(result, "İade işlemi tamamlandı.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/release-deposit")]
+    public async Task<IActionResult> ReleaseDeposit(
+        Guid id,
+        [FromBody] AdminReleaseDepositApiRequest? request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await paymentService.ReleaseDepositAsync(id, request?.Note, cancellationToken);
+            if (result == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+            }
+
+            return OkResponse(result, "Depozito bırakma işlemi tamamlandı.");
         }
         catch (InvalidOperationException ex)
         {

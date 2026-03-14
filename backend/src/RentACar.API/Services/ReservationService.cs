@@ -19,6 +19,7 @@ public sealed class ReservationService : IReservationService
     private readonly IApplicationDbContext _applicationDbContext;
     private readonly IFleetService _fleetService;
     private readonly IPricingService _pricingService;
+    private readonly IPaymentService _paymentService;
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger<ReservationService> _logger;
     private readonly TimeSpan _defaultHoldDuration = TimeSpan.FromMinutes(15);
@@ -35,6 +36,7 @@ public sealed class ReservationService : IReservationService
         IApplicationDbContext applicationDbContext,
         IFleetService fleetService,
         IPricingService pricingService,
+        IPaymentService paymentService,
         IMemoryCache memoryCache,
         ILogger<ReservationService> logger)
     {
@@ -47,6 +49,7 @@ public sealed class ReservationService : IReservationService
         _applicationDbContext = applicationDbContext;
         _fleetService = fleetService;
         _pricingService = pricingService;
+        _paymentService = paymentService;
         _memoryCache = memoryCache;
         _logger = logger;
     }
@@ -576,28 +579,90 @@ public sealed class ReservationService : IReservationService
         return MapToDto(reservation);
     }
 
-    public Task<ReservationDto?> ProcessPaymentAsync(
+    public async Task<ReservationDto?> ProcessPaymentAsync(
         Guid reservationId,
         PaymentInfoRequest paymentInfo,
         CancellationToken cancellationToken = default)
     {
-        // Payment processing will be implemented in Faz 5
+        var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
+        if (reservation == null)
+        {
+            return null;
+        }
+
+        if (reservation.Status is not (ReservationStatus.Hold or ReservationStatus.PendingPayment))
+        {
+            throw new InvalidOperationException($"Cannot process payment for reservation in {reservation.Status} status");
+        }
+
+        var hasPaymentIntent = await _applicationDbContext.PaymentIntents
+            .AnyAsync(x => x.ReservationId == reservationId, cancellationToken);
+
+        if (!hasPaymentIntent)
+        {
+            await _applicationDbContext.PaymentIntents.AddAsync(new PaymentIntent
+            {
+                ReservationId = reservationId,
+                Amount = reservation.TotalAmount,
+                Status = PaymentStatus.Pending,
+                Provider = string.IsNullOrWhiteSpace(paymentInfo.PaymentMethod)
+                    ? "Manual"
+                    : paymentInfo.PaymentMethod,
+                IdempotencyKey = $"reservation-{reservationId:N}-{Guid.NewGuid():N}"
+            }, cancellationToken);
+        }
+
+        reservation.Status = ReservationStatus.PendingPayment;
+        reservation.UpdatedAt = DateTime.UtcNow;
+        await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
         _logger.LogInformation(
             "Payment processing requested for reservation {ReservationId}",
             reservationId);
-        return Task.FromResult<ReservationDto?>(null);
+        return MapToDto(reservation);
     }
 
-    public Task<ReservationDto?> ConfirmPaymentAsync(
+    public async Task<ReservationDto?> ConfirmPaymentAsync(
         Guid reservationId,
         string transactionId,
         CancellationToken cancellationToken = default)
     {
-        // Payment confirmation will be implemented in Faz 5
+        var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
+        if (reservation == null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(transactionId))
+        {
+            throw new InvalidOperationException("Geçerli bir ödeme referansı gereklidir.");
+        }
+
+        var latestIntent = await _applicationDbContext.PaymentIntents
+            .Where(x => x.ReservationId == reservationId)
+            .Where(x => x.ProviderTransactionId == transactionId || x.ProviderIntentId == transactionId)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestIntent == null)
+        {
+            throw new InvalidOperationException("Bu rezervasyon için doğrulanmış ödeme referansı bulunamadı.");
+        }
+
+        if (latestIntent.Status is not (PaymentStatus.Succeeded or PaymentStatus.Authorized))
+        {
+            throw new InvalidOperationException("Ödeme doğrulanmadan rezervasyon paid durumuna alınamaz.");
+        }
+
+        reservation.Status = ReservationStatus.Paid;
+        reservation.UpdatedAt = DateTime.UtcNow;
+        latestIntent.UpdatedAt = DateTime.UtcNow;
+        await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
         _logger.LogInformation(
-            "Payment confirmation requested for reservation {ReservationId}, tx: {TransactionId}",
+            "Payment confirmation accepted for reservation {ReservationId}, tx: {TransactionId}",
             reservationId, transactionId);
-        return Task.FromResult<ReservationDto?>(null);
+        return MapToDto(reservation);
     }
 
     public async Task<ReservationDto?> CheckInAsync(
@@ -616,6 +681,7 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException($"Cannot check in reservation in {reservation.Status} status");
         }
 
+        await _paymentService.CreateDepositPreAuthorizationAsync(reservationId, cancellationToken);
         reservation.Status = ReservationStatus.Active;
         reservation.UpdatedAt = DateTime.UtcNow;
         await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
@@ -641,6 +707,19 @@ public sealed class ReservationService : IReservationService
         if (reservation.Status != ReservationStatus.Active)
         {
             throw new InvalidOperationException($"Cannot check out reservation in {reservation.Status} status");
+        }
+
+        if (request.IsDamaged && request.DamageFee.GetValueOrDefault() > 0)
+        {
+            await _paymentService.CaptureDepositAsync(
+                reservationId,
+                request.DamageFee!.Value,
+                request.Notes,
+                cancellationToken);
+        }
+        else
+        {
+            await _paymentService.ReleaseDepositAsync(reservationId, request.Notes, cancellationToken);
         }
 
         reservation.Status = ReservationStatus.Completed;

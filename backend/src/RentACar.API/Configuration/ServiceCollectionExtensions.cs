@@ -3,8 +3,11 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using RentACar.API.Services;
+using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure;
+using RentACar.Infrastructure.Services.Payments;
 
 namespace RentACar.API.Configuration;
 
@@ -23,9 +26,29 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();
         services.AddScoped<IReservationService, ReservationService>();
+        services.AddScoped<PaymentService>();
+        services.AddScoped<IPaymentService>(serviceProvider => serviceProvider.GetRequiredService<PaymentService>());
+        services.AddPaymentIntegration(configuration);
+        services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration);
         services.AddAdminAuthorization();
         services.AddApiRateLimiting();
+
+        return services;
+    }
+
+    private static IServiceCollection AddPaymentIntegration(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<PaymentOptions>(configuration.GetSection("Payment"));
+        services.AddScoped<MockPaymentProvider>();
+        services.AddScoped<IyzicoPaymentProvider>();
+        services.AddScoped<IPaymentProvider>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<PaymentOptions>>().Value;
+            return options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase)
+                ? serviceProvider.GetRequiredService<IyzicoPaymentProvider>()
+                : serviceProvider.GetRequiredService<MockPaymentProvider>();
+        });
 
         return services;
     }
