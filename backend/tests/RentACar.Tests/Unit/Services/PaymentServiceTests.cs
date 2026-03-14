@@ -108,6 +108,33 @@ public sealed class PaymentServiceTests : IDisposable
         _dbContext.BackgroundJobs.Single().Status.Should().Be(BackgroundJobStatus.Completed);
     }
 
+    [Fact]
+    public async Task ProcessPendingWebhookJobsAsync_WhenWebhookCannotBeMatched_KeepsJobPendingForRetry()
+    {
+        _dbContext.PaymentWebhookEvents.Add(new PaymentWebhookEvent
+        {
+            ProviderEventId = "evt-unmatched",
+            Payload = "{}",
+            Processed = false
+        });
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = "payment-webhook-process",
+            Payload = """{"ProviderEventId":"evt-unmatched","EventType":"payment.succeeded","ProviderIntentId":"missing-intent","ProviderTransactionId":"missing-tx","RawPayload":"{}"}""",
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var processedCount = await _sut.ProcessPendingWebhookJobsAsync();
+
+        processedCount.Should().Be(0);
+        var job = _dbContext.BackgroundJobs.Single();
+        job.Status.Should().Be(BackgroundJobStatus.Pending);
+        job.RetryCount.Should().Be(1);
+        _dbContext.PaymentWebhookEvents.Single(x => x.ProviderEventId == "evt-unmatched").Processed.Should().BeFalse();
+    }
+
     private void SeedFeatureFlag()
     {
         _dbContext.FeatureFlags.Add(new FeatureFlag
@@ -229,4 +256,3 @@ public sealed class PaymentServiceTests : IDisposable
         }
     }
 }
-

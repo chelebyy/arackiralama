@@ -656,6 +656,46 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task CheckInAsync_WhenDepositPreAuthorizationIsSkipped_StillTransitionsToActive()
+    {
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Paid,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3)
+        };
+
+        var request = new CheckInRequest
+        {
+            ActualMileage = 5000,
+            ActualFuelLevel = 100
+        };
+
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        _paymentServiceMock
+            .Setup(x => x.CreateDepositPreAuthorizationAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationApiDto
+            {
+                ReservationId = reservationId,
+                PaymentIntentId = Guid.Empty,
+                PaymentKind = "DepositPreAuthorization",
+                Operation = "CreatePreAuthorization",
+                Status = "Skipped",
+                Reason = "Depozito ön provizyonu için başarılı online ödeme kaydı bulunamadı."
+            });
+
+        var result = await _sut.CheckInAsync(reservationId, request);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("Active");
+    }
+
+    [Fact]
     public async Task CheckOutAsync_WhenReservationActive_TransitionsToCompleted()
     {
         // Arrange
@@ -779,5 +819,4 @@ public sealed class ReservationServiceTests
         }
     };
 }
-
 

@@ -385,7 +385,10 @@ public sealed class PaymentService(
         var mainPaymentIntent = await GetLatestRentalPaymentIntentAsync(reservationId, cancellationToken);
         if (mainPaymentIntent == null || mainPaymentIntent.Status != PaymentStatus.Succeeded)
         {
-            throw new InvalidOperationException("Depozito ön provizyonu için başarılı ödeme bulunamadı.");
+            return BuildSkippedDepositOperation(
+                reservationId,
+                "CreatePreAuthorization",
+                "Depozito ön provizyonu için başarılı online ödeme kaydı bulunamadı.");
         }
 
         var depositIntent = await EnsureDepositPreAuthorizationAsync(
@@ -567,7 +570,7 @@ public sealed class PaymentService(
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                     ?? throw new InvalidOperationException("Webhook job payload çözümlenemedi.");
 
-                await ApplyWebhookEventAsync(
+                var isMatched = await ApplyWebhookEventAsync(
                     new ParsedWebhookEvent
                     {
                         ProviderEventId = payload.ProviderEventId,
@@ -577,6 +580,11 @@ public sealed class PaymentService(
                         RawPayload = payload.RawPayload
                     },
                     cancellationToken);
+
+                if (!isMatched)
+                {
+                    throw new InvalidOperationException($"Webhook event {payload.ProviderEventId} could not be matched to any payment intent.");
+                }
 
                 var webhookEvent = await _dbContext.PaymentWebhookEvents
                     .FirstOrDefaultAsync(x => x.ProviderEventId == payload.ProviderEventId, cancellationToken);
@@ -693,7 +701,7 @@ public sealed class PaymentService(
         return depositIntent;
     }
 
-    private async Task ApplyWebhookEventAsync(ParsedWebhookEvent parsedEvent, CancellationToken cancellationToken)
+    private async Task<bool> ApplyWebhookEventAsync(ParsedWebhookEvent parsedEvent, CancellationToken cancellationToken)
     {
         var intent = await ResolvePaymentIntentAsync(parsedEvent, cancellationToken);
         if (intent == null)
@@ -703,7 +711,7 @@ public sealed class PaymentService(
                 parsedEvent.ProviderEventId,
                 parsedEvent.ProviderIntentId,
                 parsedEvent.ProviderTransactionId);
-            return;
+            return false;
         }
 
         if (!string.IsNullOrWhiteSpace(parsedEvent.ProviderTransactionId))
@@ -738,6 +746,7 @@ public sealed class PaymentService(
         }
 
         intent.UpdatedAt = DateTime.UtcNow;
+        return true;
     }
 
     private async Task<decimal> GetReservationDepositAmountAsync(Guid reservationId, CancellationToken cancellationToken)
