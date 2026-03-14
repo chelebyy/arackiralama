@@ -12,6 +12,18 @@ public sealed class MockPaymentProvider(
     private readonly PaymentOptions _options = paymentOptions.Value;
     private readonly ILogger<MockPaymentProvider> _logger = logger;
 
+    private static string SanitizeForLog(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        // Remove line breaks and other control characters to prevent log forging.
+        var sanitizedChars = value.Where(c => !char.IsControl(c)).ToArray();
+        return new string(sanitizedChars);
+    }
+
     public Task<PaymentIntentProviderResult> CreatePaymentIntentAsync(
         CreatePaymentIntentProviderRequest request,
         CancellationToken cancellationToken = default)
@@ -37,7 +49,7 @@ public sealed class MockPaymentProvider(
         _logger.LogInformation(
             "Mock payment intent created for reservation {ReservationId} with idempotency {IdempotencyKey}",
             request.ReservationId,
-            request.IdempotencyKey);
+            SanitizeForLog(request.IdempotencyKey));
 
         return Task.FromResult(result);
     }
