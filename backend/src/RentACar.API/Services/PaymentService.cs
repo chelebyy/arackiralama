@@ -205,6 +205,24 @@ public sealed class PaymentService(
 
         if (existingEvent != null)
         {
+            if (!existingEvent.Processed)
+            {
+                var providerEventMarker = $"\"ProviderEventId\":\"{parsedEvent.ProviderEventId}\"";
+                var hasRunnableJob = await _dbContext.BackgroundJobs
+                    .AsNoTracking()
+                    .AnyAsync(
+                        x => x.Type == WebhookProcessingJobType
+                            && x.Payload.Contains(providerEventMarker)
+                            && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing),
+                        cancellationToken);
+
+                if (!hasRunnableJob)
+                {
+                    await _dbContext.BackgroundJobs.AddAsync(CreateWebhookProcessingJob(parsedEvent), cancellationToken);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+
             return new WebhookProcessApiDto
             {
                 ProviderEventId = parsedEvent.ProviderEventId,
@@ -221,20 +239,7 @@ public sealed class PaymentService(
             Processed = false
         }, cancellationToken);
 
-        await _dbContext.BackgroundJobs.AddAsync(new BackgroundJob
-        {
-            Type = WebhookProcessingJobType,
-            Payload = JsonSerializer.Serialize(new QueuedWebhookPayload
-            {
-                ProviderEventId = parsedEvent.ProviderEventId,
-                EventType = parsedEvent.EventType,
-                ProviderIntentId = parsedEvent.ProviderIntentId,
-                ProviderTransactionId = parsedEvent.ProviderTransactionId,
-                RawPayload = parsedEvent.RawPayload
-            }),
-            Status = BackgroundJobStatus.Pending,
-            ScheduledAt = DateTime.UtcNow
-        }, cancellationToken);
+        await _dbContext.BackgroundJobs.AddAsync(CreateWebhookProcessingJob(parsedEvent), cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -287,10 +292,7 @@ public sealed class PaymentService(
             throw new InvalidOperationException(providerResult.FailureMessage ?? "İade işlemi başarısız.");
         }
 
-        if (refundAmount == intent.Amount)
-        {
-            intent.Status = PaymentStatus.Refunded;
-        }
+        intent.Status = PaymentStatus.Refunded;
 
         if (reservation.Status is ReservationStatus.Paid or ReservationStatus.PendingPayment or ReservationStatus.Hold)
         {
@@ -806,6 +808,24 @@ public sealed class PaymentService(
         return totalAmount;
     }
 
+    private static BackgroundJob CreateWebhookProcessingJob(ParsedWebhookEvent parsedEvent)
+    {
+        return new BackgroundJob
+        {
+            Type = WebhookProcessingJobType,
+            Payload = JsonSerializer.Serialize(new QueuedWebhookPayload
+            {
+                ProviderEventId = parsedEvent.ProviderEventId,
+                EventType = parsedEvent.EventType,
+                ProviderIntentId = parsedEvent.ProviderIntentId,
+                ProviderTransactionId = parsedEvent.ProviderTransactionId,
+                RawPayload = parsedEvent.RawPayload
+            }),
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow
+        };
+    }
+
     private async Task<T> ExecuteWithTimeoutRetryAsync<T>(
         Func<Task<T>> operation,
         string operationName,
@@ -948,6 +968,5 @@ public sealed class PaymentService(
         public string RawPayload { get; init; } = string.Empty;
     }
 }
-
 
 

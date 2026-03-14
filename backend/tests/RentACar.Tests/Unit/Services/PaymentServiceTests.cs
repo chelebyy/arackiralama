@@ -58,6 +58,43 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessWebhookAsync_WhenDuplicateWebhookHasFailedJob_QueuesReplacementJob()
+    {
+        var paymentIntent = await SeedSucceededPaymentIntentAsync();
+        _dbContext.PaymentWebhookEvents.Add(new PaymentWebhookEvent
+        {
+            ProviderEventId = "evt-1",
+            Payload = "{}",
+            Processed = false
+        });
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = "payment-webhook-process",
+            Payload = $$"""{"ProviderEventId":"evt-1","EventType":"payment.succeeded","ProviderIntentId":"{{paymentIntent.ProviderIntentId}}","ProviderTransactionId":"{{paymentIntent.ProviderTransactionId}}","RawPayload":"{}"}""",
+            Status = BackgroundJobStatus.Failed,
+            RetryCount = 3,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-5)
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.ProcessWebhookAsync(
+            "Mock",
+            $$"""{"provider_event_id":"evt-1","payment_intent_id":"{{paymentIntent.ProviderIntentId}}","provider_transaction_id":"{{paymentIntent.ProviderTransactionId}}","event_type":"payment.succeeded"}""",
+            "valid-signature",
+            null,
+            "payment.succeeded",
+            CancellationToken.None);
+
+        result.Duplicate.Should().BeTrue();
+        _dbContext.BackgroundJobs
+            .Count(x => x.Type == "payment-webhook-process" && x.Payload.Contains("\"ProviderEventId\":\"evt-1\""))
+            .Should().Be(2);
+        _dbContext.BackgroundJobs
+            .Any(x => x.Type == "payment-webhook-process" && x.Status == BackgroundJobStatus.Pending && x.Payload.Contains("\"ProviderEventId\":\"evt-1\""))
+            .Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ProcessPendingWebhookJobsAsync_WhenQueuedWebhookExists_UpdatesPaymentAndReservation()
     {
         var reservation = new Reservation
@@ -146,6 +183,80 @@ public sealed class PaymentServiceTests : IDisposable
         result!.Operation.Should().Be("ReleaseDeposit");
         result.Status.Should().Be("Skipped");
         result.PaymentIntentId.Should().Be(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task RefundReservationAsync_WhenIntentAlreadyRefunded_Throws()
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-REFUND-1",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            Status = ReservationStatus.Cancelled,
+            TotalAmount = 1000m
+        };
+        var refundedIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = 1000m,
+            Status = PaymentStatus.Refunded,
+            Provider = "Mock",
+            IdempotencyKey = "refund-intent",
+            ProviderIntentId = "provider-intent-refund",
+            ProviderTransactionId = "provider-tx-refund"
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(refundedIntent);
+        await _dbContext.SaveChangesAsync();
+
+        var action = () => _sut.RefundReservationAsync(
+            reservation.Id,
+            new AdminRefundApiRequest { Amount = 100m, Reason = "manual" },
+            CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("İade işlemi için başarılı bir ödeme bulunamadı.");
+    }
+
+    [Fact]
+    public async Task RefundReservationAsync_WhenRefundSucceeds_MarksIntentAsRefunded()
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-REFUND-2",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            Status = ReservationStatus.Paid,
+            TotalAmount = 1000m
+        };
+        var successfulIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = 1000m,
+            Status = PaymentStatus.Succeeded,
+            Provider = "Mock",
+            IdempotencyKey = "refund-intent-2",
+            ProviderIntentId = "provider-intent-refund-2",
+            ProviderTransactionId = "provider-tx-refund-2"
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(successfulIntent);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.RefundReservationAsync(
+            reservation.Id,
+            new AdminRefundApiRequest { Amount = 600m, Reason = "manual" },
+            CancellationToken.None);
+
+        result.Should().NotBeNull();
+        successfulIntent.Status.Should().Be(PaymentStatus.Refunded);
     }
 
     private void SeedFeatureFlag()
