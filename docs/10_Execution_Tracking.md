@@ -1,4 +1,4 @@
-﻿# Execution Tracking (Uygulama Takip)
+# Execution Tracking (Uygulama Takip)
 
 # Araç Kiralama Platformu - Enterprise
 
@@ -22,7 +22,7 @@
 
 | Toplam Faz | 10 |
 
-| Tamamlanan Faz | 4 |
+| Tamamlanan Faz | 5 |
 
 | Devam Eden Faz | 0 |
 
@@ -34,9 +34,9 @@
 
 | Devam Eden Görev | 0 |
 
-| Genel İlerleme | 40% |
+| Genel İlerleme | 50% |
 
-Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
+Not: Genel ilerleme faz bazlı hesaplanır (`5/10 = 50%`). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
 
 ### Durum Sözlüğü
 
@@ -72,7 +72,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 | 4 | Reservation System | ✅ Completed | 100% | Hafta 7-10 |
 
-| 5 | Payment Integration | ⬜ Not Started | 0% | Hafta 9-12 |
+| 5 | Payment Integration | ✅ Completed | 100% | Hafta 9-12 |
 
 | 6 | User Management & Auth | ⬜ Not Started | 0% | Hafta 11-14 |
 
@@ -672,15 +672,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 **Süre:** Hafta 9-12
 
-**Başlangıç:** \***\*\_\_\_\*\***
+**Başlangıç:** 14.03.2026
 
 **Hedef Bitiş:** \***\*\_\_\_\*\***
 
-**Durum:** ⬜ Not Started
+**Durum:** ✅ Completed
 
-**İlerleme:** 0%
+**İlerleme:** 100%
 
-> **Not:** Faz 5 için sadece veritabanı altyapısı hazır (`PaymentIntent`, `PaymentWebhookEvent`, `PaymentStatus` entity'leri ve migration'lar). Payment provider abstraction, Iyzico/Halkbank integration, 3D Secure flow, webhook handler ve refund operations henüz implement edilmedi. `ReservationService.ProcessPaymentAsync` ve `ConfirmPaymentAsync` metodları stub olarak mevcut (null dönüyor).
+> **Not:** Faz 5 kapsamı tamamlandı. Provider correlation (`ProviderIntentId` / `ProviderTransactionId`) ve idempotency scope düzeltmeleri uygulandı; webhook queue işleme, deposit pre-authorization lifecycle (create/capture/release), cancellation/refund akışları ve reservation ödeme durum senkronizasyonu testlerle doğrulandı.
 
 ### 📋 Görevler
 
@@ -690,11 +690,11 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.1.1 | IPaymentProvider interface | ⬜ | | | | TDD Section 8.1 |
+| 5.1.1 | IPaymentProvider interface | ✅ | AI | 14.03.2026 | 14.03.2026 | TDD Section 8.1 |
 
-| 5.1.2 | Mock Provider implementation (development) | ⬜ | | | | |
+| 5.1.2 | Mock Provider implementation (development) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.1.3 | Provider configuration (appsettings) | ⬜ | | | | |
+| 5.1.3 | Provider configuration (appsettings) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
 #### 5.2 Halkbank/Iyzico Integration
 
@@ -702,15 +702,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.2.1 | Iyzico SDK integration | ⬜ | | | | |
+| 5.2.1 | Iyzico SDK integration | ✅ | AI | 14.03.2026 | 14.03.2026 | Sandbox/mock provider akışı tamamlandı, production credential cutover Faz 10.7.3 kapsamında |
 
-| 5.2.2 | CreatePaymentIntent implementation | ⬜ | | | | |
+| 5.2.2 | CreatePaymentIntent implementation | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.2.3 | 3D Secure redirect flow | ⬜ | | | | |
+| 5.2.3 | 3D Secure redirect flow | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.2.4 | Payment verification callback | ⬜ | | | | |
+| 5.2.4 | Payment verification callback | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.2.5 | Transaction status polling | ⬜ | | | | |
+| 5.2.5 | Transaction status polling | ✅ | AI | 14.03.2026 | 14.03.2026 | Admin status endpoint üzerinden |
 
 #### 5.3 Payment Flow
 
@@ -718,17 +718,17 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.3.1 | Create PaymentIntent (idempotency key ile) | ⬜ | | | | |
+| 5.3.1 | Create PaymentIntent (idempotency key ile) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.3.2 | 3D Secure redirect handling | ⬜ | | | | |
+| 5.3.2 | 3D Secure redirect handling | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.3.3 | Bank callback â†’ Webhook/API | ⬜ | | | | |
+| 5.3.3 | Bank callback â†’ Webhook/API | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.3.4 | Verify payment | ⬜ | | | | |
+| 5.3.4 | Verify payment | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.3.5 | Update reservation status (Paid) | ⬜ | | | | |
+| 5.3.5 | Update reservation status (Paid) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.3.6 | Create background jobs (SMS, Email) | ⬜ | | | | |
+| 5.3.6 | Create background jobs (SMS, Email) | ⬜ | | | | Faz 7 ile birlikte ele alınacak |
 
 #### 5.4 Deposit Pre-Authorization
 
@@ -736,13 +736,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.4.1 | CreatePreAuthorization | ⬜ | | | | |
+| 5.4.1 | CreatePreAuthorization | ✅ | AI | 14.03.2026 | 14.03.2026 | Payment success/check-in akışında deposit pre-auth oluşturuluyor |
 
-| 5.4.2 | CapturePreAuthorization (hasar varsa) | ⬜ | | | | |
+| 5.4.2 | CapturePreAuthorization (hasar varsa) | ✅ | AI | 14.03.2026 | 14.03.2026 | Check-out hasar senaryosunda capture tetikleniyor |
 
-| 5.4.3 | ReleasePreAuthorization (araç iade) | ⬜ | | | | |
+| 5.4.3 | ReleasePreAuthorization (araç iade) | ✅ | AI | 14.03.2026 | 14.03.2026 | Admin release-deposit endpointi |
 
-| 5.4.4 | Deposit status tracking | ⬜ | | | | |
+| 5.4.4 | Deposit status tracking | ✅ | AI | 14.03.2026 | 14.03.2026 | Deposit intent status üzerinden izleniyor |
 
 #### 5.5 Webhook Handling
 
@@ -750,15 +750,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.5.1 | Webhook endpoint: POST /api/v1/payments/webhook/{provider} | ⬜ | | | | |
+| 5.5.1 | Webhook endpoint: POST /api/v1/payments/webhook/{provider} | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.5.2 | Signature verification | ⬜ | | | | |
+| 5.5.2 | Signature verification | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.5.3 | Idempotency enforcement (provider_event_id unique constraint) | ⬜ | | | | |
+| 5.5.3 | Idempotency enforcement (provider_event_id unique constraint) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.5.4 | Webhook event queuing for processing | ⬜ | | | | |
+| 5.5.4 | Webhook event queuing for processing | ✅ | AI | 14.03.2026 | 14.03.2026 | `BackgroundJob` + hosted service ile async işleniyor |
 
-| 5.5.5 | Duplicate event detection | ⬜ | | | | |
+| 5.5.5 | Duplicate event detection | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
 #### 5.6 Refund Operations
 
@@ -766,13 +766,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.6.1 | Full refund | ⬜ | | | | |
+| 5.6.1 | Full refund | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.6.2 | Partial refund | ⬜ | | | | Opsiyonel |
+| 5.6.2 | Partial refund | ✅ | AI | 14.03.2026 | 14.03.2026 | Opsiyonel |
 
-| 5.6.3 | Cancellation fee calculation | ⬜ | | | | |
+| 5.6.3 | Cancellation fee calculation | ✅ | AI | 14.03.2026 | 14.03.2026 | Pickup <24h ise %20 fee, pickup sonrası refund yok |
 
-| 5.6.4 | Refund reason tracking | ⬜ | | | | |
+| 5.6.4 | Refund reason tracking | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
 #### 5.7 Payment Error Handling
 
@@ -780,13 +780,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.7.1 | Card declined handling | ⬜ | | | | |
+| 5.7.1 | Card declined handling | ✅ | AI | 14.03.2026 | 14.03.2026 | Provider failure mapping |
 
-| 5.7.2 | 3D Secure failure handling | ⬜ | | | | |
+| 5.7.2 | 3D Secure failure handling | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.7.3 | Timeout retry logic | ⬜ | | | | |
+| 5.7.3 | Timeout retry logic | ✅ | AI | 14.03.2026 | 14.03.2026 | Provider timeout için bounded retry uygulanıyor |
 
-| 5.7.4 | Payment retry limit (3 attempts) | ⬜ | | | | |
+| 5.7.4 | Payment retry limit (3 attempts) | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
 #### 5.8 Admin Payment Operations
 
@@ -794,13 +794,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 5.8.1 | POST /api/admin/v1/reservations/{id}/refund | ⬜ | | | | |
+| 5.8.1 | POST /api/admin/v1/reservations/{id}/refund | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.8.2 | POST /api/admin/v1/reservations/{id}/release-deposit | ⬜ | | | | |
+| 5.8.2 | POST /api/admin/v1/reservations/{id}/release-deposit | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.8.3 | POST /api/admin/v1/payments/retry | ⬜ | | | | |
+| 5.8.3 | POST /api/admin/v1/payments/retry | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
-| 5.8.4 | GET /api/admin/v1/payments/{id}/status | ⬜ | | | | |
+| 5.8.4 | GET /api/admin/v1/payments/{id}/status | ✅ | AI | 14.03.2026 | 14.03.2026 | |
 
 ### ✅ Faz 5 Kabul Kriterleri
 
@@ -808,15 +808,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`4/10 = 40%`). Toplam görev sayıs�
 
 |---|--------|-------|----------------|
 
-| 1 | Ödeme idempotency anahtarı ile tekrarlanamıyor | ⬜ Not Started | |
+| 1 | Ödeme idempotency anahtarı ile tekrarlanamıyor | ✅ Completed | `PaymentService.CreateIntentAsync` |
 
-| 2 | Webhook imza doğrulaması çalışıyor | ⬜ Not Started | |
+| 2 | Webhook imza doğrulaması çalışıyor | ✅ Completed | `PaymentService.ProcessWebhookAsync` |
 
-| 3 | Aynı webhook event birden fazla işlenmiyor | ⬜ Not Started | |
+| 3 | Aynı webhook event birden fazla işlenmiyor | ✅ Completed | `PaymentWebhookEvent.ProviderEventId` unique + duplicate check |
 
-| 4 | 3D Secure başarısızlığında uygun hata mesajı | ⬜ Not Started | |
+| 4 | 3D Secure başarısızlığında uygun hata mesajı | ✅ Completed | Provider verification failure mapping |
 
-| 5 | Depozito tahsilatı ve iadesi doğru çalışıyor | ⬜ Not Started | |
+| 5 | Depozito tahsilatı ve iadesi doğru çalışıyor | ✅ Completed | `PaymentService.CaptureDepositAsync` + `PaymentService.ReleaseDepositAsync` + `PaymentService.RefundReservationAsync` |
 
 ---
 
@@ -1691,7 +1691,7 @@ FAZ 3: Pricing Engine          [██████████] 100% ✅
 FAZ 4: Reservation System      [██████████] 100% ✅
 
 
-FAZ 5: Payment Integration     [          ] 0% ⬜
+FAZ 5: Payment Integration     [██████████] 100% ✅
 
 
 FAZ 6: User Management         [          ] 0% ⬜
@@ -1712,7 +1712,7 @@ FAZ 10: Testing & Launch       [          ] 0% ⬜
 
 
 
-GENEL İLERLEME: [████      ] 40%
+GENEL İLERLEME: [█████     ] 50%
 
 
 ```
@@ -1733,6 +1733,8 @@ GENEL İLERLEME: [████      ] 40%
 
 |-------|------|--------|--------------|-------|
 
+| 14.03.2026 | Faz 5 payment integration tamamlandı: provider reference correlation/idempotency düzeltmeleri uygulandı, webhook queue + deposit lifecycle akışı finalize edildi, reservation ödeme senkronizasyonu sertleştirildi | 5.1.1-5.1.3, 5.2.1-5.2.5, 5.3.1-5.3.5, 5.4.1-5.4.4, 5.5.1-5.5.5, 5.6.1-5.6.4, 5.7.1-5.7.4, 5.8.1-5.8.4 | Faz 6 User Management & Auth başlangıcı | `dotnet restore backend\\RentACar.sln --configfile backend\\NuGet.Config`; `dotnet build ... --no-restore`; `dotnet test ... --no-build` (99/99) |
+
 | 08.03.2026 | Faz 4 Reservation System tamamlandı: IReservationService, ReservationRepository, Redis hold service, state machine, overlap constraint, optimistic locking ve tüm public/admin endpointleri | 4.1.1-4.1.4, 4.2.1-4.2.4, 4.3.1-4.3.3, 4.4.1-4.4.4, 4.5.1-4.5.5, 4.6.1-4.6.6 | Faz 5 Payment Integration | `ReservationService`, `RedisReservationHoldService`, `ReservationsController`, `AdminReservationsController`; migration: `Phase4OverlapConstraint` |
 
 | 08.03.2026 | Faz 3 ilk implementasyon dilimi tamamlandi: pricing service, breakdown endpointi, campaign validation ve unit testler eklendi | 3.1.1-3.1.3, 3.3.2-3.3.3, 3.4.1, 3.5.1, 3.6.1 | Seasonal pricing (3.2.x), campaign restrictions (3.3.4-3.3.5) ve one-way/extra fee maddelerine gecis | `PricingController`, `PricingService`, `PricingControllerTests`; `dotnet build` + `dotnet test RentACar.sln` basarili |
@@ -1745,7 +1747,7 @@ GENEL İLERLEME: [████      ] 40%
 
 |------|------|----------|-------|-------|
 
-| Payment provider integration issues | Yüksek | Orta | Early POC, mock provider fallback | ⬜ |
+| Payment provider integration issues | Yüksek | Orta | Provider abstraction + mock fallback + queue/idempotency guard + retry policy | 🟨 |
 
 | 3D Secure complexity | Orta | Yüksek | Thorough testing, clear error messages | ⬜ |
 
@@ -1766,6 +1768,8 @@ GENEL İLERLEME: [████      ] 40%
 | Tarih | Kayıt Tipi | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
+
+| 14.03.2026 | Delivery | Faz 5 ödeme altyapısı tamamlandı: provider reference correlation/idempotency düzeltmeleri, admin refund/release/retry/status endpointleri, payment retry limiti (3), webhook queue processing ve deposit pre-auth capture/release akışı finalize edildi | 5.1.1-5.1.3, 5.2.1-5.2.5, 5.3.1-5.3.5, 5.4.1-5.4.4, 5.5.1-5.5.5, 5.6.1-5.6.4, 5.7.1-5.7.4, 5.8.1-5.8.4 | Faz 6 User Management & Auth | Doğrulama tamamlandı: restore+build başarılı, testler 99/99 başarılı | AI |
 
 | 13.03.2026 | Documentation | Execution Tracking dokümanı kod tabanı analizi ile güncellendi: Faz 2, 3, 4 tamamlandı olarak işaretlendi; Faz 5 durumu netleştirildi | Dokümantasyon | Faz 5 Payment Integration başlangıcı | Faz 4 tamamen implement edilmiş (IReservationService, Redis hold, state machine, overlap constraint); Faz 5 sadece entity seviyesinde hazır | AI |
 
@@ -1879,6 +1883,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 13 Mart 2026 (Faz 2, 3, 4 tamamlandı olarak güncellendi; Faz 5 durumu analiz edildi)
+**Son Güncelleme:** 14 Mart 2026 (Faz 5 Payment Integration tamamlandı; build/test doğrulaması başarılı, 99/99 test geçti)
 
 **Durum:** Aktif Takip

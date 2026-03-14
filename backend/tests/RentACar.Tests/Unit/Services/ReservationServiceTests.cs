@@ -5,6 +5,7 @@ using MockQueryable.Moq;
 using Moq;
 using System.Diagnostics;
 using FleetContracts = RentACar.API.Contracts.Fleet;
+using RentACar.API.Contracts.Payments;
 using RentACar.API.Contracts.Pricing;
 using RentACar.API.Contracts.Reservations;
 using RentACar.API.Services;
@@ -26,6 +27,7 @@ public sealed class ReservationServiceTests
     private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
     private readonly Mock<IFleetService> _fleetServiceMock;
     private readonly Mock<IPricingService> _pricingServiceMock;
+    private readonly Mock<IPaymentService> _paymentServiceMock;
     private readonly IMemoryCache _memoryCache;
     private readonly Mock<ILogger<ReservationService>> _loggerMock;
     private readonly ReservationService _sut;
@@ -41,6 +43,7 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock = new Mock<IApplicationDbContext>();
         _fleetServiceMock = new Mock<IFleetService>();
         _pricingServiceMock = new Mock<IPricingService>();
+        _paymentServiceMock = new Mock<IPaymentService>();
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
         _loggerMock = new Mock<ILogger<ReservationService>>();
 
@@ -52,6 +55,39 @@ public sealed class ReservationServiceTests
             .Setup(x => x.GetHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ReservationHoldSnapshot?)null);
 
+        _paymentServiceMock
+            .Setup(x => x.CreateDepositPreAuthorizationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationApiDto
+            {
+                ReservationId = Guid.NewGuid(),
+                PaymentIntentId = Guid.NewGuid(),
+                PaymentKind = "DepositPreAuthorization",
+                Operation = "CreatePreAuthorization",
+                Status = "Succeeded"
+            });
+
+        _paymentServiceMock
+            .Setup(x => x.ReleaseDepositAsync(It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationApiDto
+            {
+                ReservationId = Guid.NewGuid(),
+                PaymentIntentId = Guid.NewGuid(),
+                PaymentKind = "DepositPreAuthorization",
+                Operation = "ReleaseDeposit",
+                Status = "Succeeded"
+            });
+
+        _paymentServiceMock
+            .Setup(x => x.CaptureDepositAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationApiDto
+            {
+                ReservationId = Guid.NewGuid(),
+                PaymentIntentId = Guid.NewGuid(),
+                PaymentKind = "DepositPreAuthorization",
+                Operation = "CapturePreAuthorization",
+                Status = "Succeeded"
+            });
+
         _sut = new ReservationService(
             _reservationRepositoryMock.Object,
             _customerRepositoryMock.Object,
@@ -62,6 +98,7 @@ public sealed class ReservationServiceTests
             _applicationDbContextMock.Object,
             _fleetServiceMock.Object,
             _pricingServiceMock.Object,
+            _paymentServiceMock.Object,
             _memoryCache,
             _loggerMock.Object);
     }
@@ -613,6 +650,9 @@ public sealed class ReservationServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Status.Should().Be("Active");
+        _paymentServiceMock.Verify(
+            x => x.CreateDepositPreAuthorizationAsync(reservationId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -645,6 +685,47 @@ public sealed class ReservationServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Status.Should().Be("Completed");
+        _paymentServiceMock.Verify(
+            x => x.ReleaseDepositAsync(reservationId, request.Notes, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CheckOutAsync_WhenReservationHasDamage_CapturesDeposit()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Active,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(-2),
+            ReturnDateTime = DateTime.UtcNow
+        };
+
+        var request = new CheckOutRequest
+        {
+            ReturnMileage = 5600,
+            ReturnFuelLevel = 70,
+            IsDamaged = true,
+            DamageFee = 750,
+            Notes = "Front bumper scratch"
+        };
+
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.CheckOutAsync(reservationId, request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("Completed");
+        _paymentServiceMock.Verify(
+            x => x.CaptureDepositAsync(reservationId, 750, request.Notes, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Theory]

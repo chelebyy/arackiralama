@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RentACar.Core.Entities;
 
@@ -22,10 +22,16 @@ public sealed class PaymentIntentConfiguration : IEntityTypeConfiguration<Paymen
             .IsRequired();
         builder.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(50).IsRequired();
         builder.Property(x => x.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(120).IsRequired();
+        builder.Property(x => x.ProviderIntentId).HasColumnName("provider_intent_id").HasMaxLength(120);
+        builder.Property(x => x.ProviderTransactionId).HasColumnName("provider_transaction_id").HasMaxLength(160);
 
-        builder.HasIndex(x => x.IdempotencyKey)
-            .HasDatabaseName("idx_payment_idempotency")
+        builder.HasIndex(x => new { x.Provider, x.IdempotencyKey })
+            .HasDatabaseName("idx_payment_provider_idempotency")
             .IsUnique();
+        builder.HasIndex(x => x.ProviderIntentId)
+            .HasDatabaseName("idx_payment_provider_intent_id");
+        builder.HasIndex(x => x.ProviderTransactionId)
+            .HasDatabaseName("idx_payment_provider_transaction_id");
 
         builder.HasOne(x => x.Reservation)
             .WithMany(x => x.PaymentIntents)
