@@ -83,6 +83,36 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenSessionIsReplaced_ReturnsSessionRevoked()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customerId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        dbContext.Customers.Add(new Customer
+        {
+            Id = customerId,
+            Email = "customer@test.com",
+            TokenVersion = 4
+        });
+
+        dbContext.AuthSessions.Add(CreateSession(
+            AuthPrincipalType.Customer,
+            customerId,
+            sessionId,
+            DateTime.UtcNow.AddDays(1),
+            replacedBySessionId: Guid.NewGuid()));
+        await dbContext.SaveChangesAsync();
+
+        var validator = CreateValidator(dbContext);
+        var principal = CreatePrincipal(AuthPrincipalType.Customer, customerId, sessionId, 4);
+
+        var result = await validator.ValidateAsync(principal);
+
+        result.Should().Be(AccessTokenSessionValidationFailure.SessionRevoked);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenSessionIsExpired_ReturnsSessionExpired()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -198,7 +228,8 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
         Guid principalId,
         Guid sessionId,
         DateTime refreshTokenExpiresAtUtc,
-        DateTime? revokedAtUtc = null)
+        DateTime? revokedAtUtc = null,
+        Guid? replacedBySessionId = null)
     {
         return new AuthSession
         {
@@ -208,6 +239,7 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
             RefreshTokenHash = $"sha256:{Guid.NewGuid():N}",
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             RevokedAtUtc = revokedAtUtc,
+            ReplacedBySessionId = replacedBySessionId,
             LastSeenAtUtc = DateTime.UtcNow
         };
     }

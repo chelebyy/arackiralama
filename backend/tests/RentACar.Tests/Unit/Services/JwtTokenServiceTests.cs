@@ -262,6 +262,20 @@ public class JwtTokenServiceTests
     }
 
     [Fact]
+    public void IsRefreshTokenReplay_WhenUsingActiveToken_ReturnsFalse()
+    {
+        // Arrange
+        var activeToken = _service.CreateRefreshToken(out _);
+        var activeHash = _service.HashRefreshToken(activeToken);
+
+        // Act
+        var replayDetected = _service.IsRefreshTokenReplay(activeToken, activeHash);
+
+        // Assert
+        replayDetected.Should().BeFalse();
+    }
+
+    [Fact]
     public void HashRefreshToken_WithEmptyToken_ThrowsArgumentException()
     {
         // Act

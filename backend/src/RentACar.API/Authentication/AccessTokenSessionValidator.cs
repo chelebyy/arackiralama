@@ -37,7 +37,7 @@ public sealed class AccessTokenSessionValidator(
             return AccessTokenSessionValidationFailure.SessionNotFound;
         }
 
-        if (authSession.RevokedAtUtc.HasValue)
+        if (authSession.RevokedAtUtc.HasValue || authSession.ReplacedBySessionId.HasValue)
         {
             LogFailure(AccessTokenSessionValidationFailure.SessionRevoked, claims);
             return AccessTokenSessionValidationFailure.SessionRevoked;

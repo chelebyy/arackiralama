@@ -42,6 +42,8 @@ public class PrincipalAuthStateTests
         var admin = new AdminUser();
 
         // Assert
+        customer.PasswordHash.Should().BeNull();
+        customer.HasPassword.Should().BeFalse();
         customer.FailedLoginCount.Should().Be(0);
         customer.LockoutEndUtc.Should().BeNull();
         customer.LastLoginAtUtc.Should().BeNull();
@@ -51,6 +53,24 @@ public class PrincipalAuthStateTests
         admin.LockoutEndUtc.Should().BeNull();
         admin.LastLoginAtUtc.Should().BeNull();
         admin.TokenVersion.Should().Be(0);
+    }
+
+    [Fact]
+    public void Customer_HasPassword_ShouldTrackCredentialPresence()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            PasswordHash = "   "
+        };
+
+        // Act
+        var hasPasswordWithWhitespace = customer.HasPassword;
+        customer.PasswordHash = "bcrypt-hash";
+
+        // Assert
+        hasPasswordWithWhitespace.Should().BeFalse();
+        customer.HasPassword.Should().BeTrue();
     }
 
     [Theory]

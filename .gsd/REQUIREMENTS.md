@@ -1,13 +1,14 @@
 # Requirements
 
-## Status Buckets (M001/S02 update)
+## Status Buckets (M001/S03 update)
 
 ### Active
-- AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, AUTH-10
-  - S02 completed JWT/session infrastructure prerequisites: shared 15-minute access-token issuance with `sid`/`ver`, 7-day refresh-token primitives (rotation/replay helpers), DB-backed session validation in bearer pipeline, and secure refresh-cookie conventions. End-to-end customer/admin auth flows remain pending S03/S04.
+- AUTH-06, AUTH-07, AUTH-08, AUTH-09
+  - S03 validated customer register/login/refresh/logout + lockout flows on top of S02 session primitives. Remaining auth scope is password reset (AUTH-06) and admin/full RBAC closure (S04).
 
 ### Validated
-- None
+- AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-10
+  - Proven by S03 controller/service verification: customer register/login, 15-minute access token issuance, refresh rotation/replay handling, logout revocation, and 5-attempt lockout enforcement.
 
 ### Deferred
 - None
@@ -21,16 +22,16 @@
 ## v1: Core Platform
 
 ### AUTH: Authentication & Authorization
-- [ ] **AUTH-01**: User can register with email and password
-- [ ] **AUTH-02**: User can login with email and password
-- [ ] **AUTH-03**: User receives JWT token valid for 15 minutes
-- [ ] **AUTH-04**: User can refresh token within 7 days
-- [ ] **AUTH-05**: User can logout (token revocation)
+- [x] **AUTH-01**: User can register with email and password
+- [x] **AUTH-02**: User can login with email and password
+- [x] **AUTH-03**: User receives JWT token valid for 15 minutes
+- [x] **AUTH-04**: User can refresh token within 7 days
+- [x] **AUTH-05**: User can logout (token revocation)
 - [ ] **AUTH-06**: User can reset password via email link
 - [ ] **AUTH-07**: Admin can login with email and password
 - [ ] **AUTH-08**: SuperAdmin can manage admin users
 - [ ] **AUTH-09**: System enforces RBAC (Guest, Customer, Admin, SuperAdmin)
-- [ ] **AUTH-10**: Account locks after 5 failed login attempts
+- [x] **AUTH-10**: Account locks after 5 failed login attempts
 
 ### NOTF: Notifications & Background Jobs
 - [ ] **NOTF-01**: Customer receives SMS on reservation confirmation

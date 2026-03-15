@@ -20,8 +20,8 @@ Kullanıcıların 15 dakikalık rezervasyon tutma, 3D Secure ödeme ve çok dill
 
 ### Active
 
-- [ ] Kullanıcı yönetimi ve kimlik doğrulama (JWT, RBAC) — S01 (domain+persistence) ve S02 (JWT/session altyapısı) tamamlandı; S03/S04 ile müşteri/admin uçtan uca auth API davranışları tamamlanacak
-- [ ] Müşteri kayıt/giriş sistemi
+- [ ] Kullanıcı yönetimi ve kimlik doğrulama (JWT, RBAC) — S01/S02/S03 tamamlandı; S04 (admin auth + RBAC closure) ve S05 (frontend entegrasyonu) beklemede
+- [x] Müşteri kayıt/giriş sistemi (register/login/me/refresh/logout + 5 deneme lockout)
 - [ ] Admin kullanıcı yönetimi
 - [ ] SMS ve E-posta bildirimleri
 - [ ] Background job işleme
@@ -66,4 +66,4 @@ Mevcut kod tabanı:
 | Single Next.js app | Public + Admin aynı deploy | — Pending |
 
 ---
-*Last updated: 2026-03-15 after completing M001/S02 (JWT & Session Infrastructure)*
+*Last updated: 2026-03-15 after completing M001/S03 (Customer Auth API)*

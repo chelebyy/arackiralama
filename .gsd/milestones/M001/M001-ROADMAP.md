@@ -15,7 +15,7 @@
   > After this: principal entities and migration are ready
 - [x] **S02: JWT & Session Infrastructure** `risk:medium` `depends:[S01]`
   > After this: token generation and refresh logic implemented
-- [ ] **S03: Customer Auth API** `risk:medium` `depends:[S02]`
+- [x] **S03: Customer Auth API** `risk:medium` `depends:[S02]`
   > After this: register/login/refresh/logout endpoints for customers
 - [ ] **S04: Admin Auth & RBAC** `risk:medium` `depends:[S03]`
   > After this: admin authentication and role-based policies

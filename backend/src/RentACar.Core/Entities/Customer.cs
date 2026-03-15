@@ -18,6 +18,8 @@ public class Customer : BaseEntity
     }
 
     public string NormalizedEmail { get; private set; } = string.Empty;
+    public string? PasswordHash { get; set; }
+    public bool HasPassword => !string.IsNullOrWhiteSpace(PasswordHash);
     public DateOnly? BirthDate { get; set; }
     public int LicenseYear { get; set; }
     public string IdentityNumber { get; set; } = string.Empty;
