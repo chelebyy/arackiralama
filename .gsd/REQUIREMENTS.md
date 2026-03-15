@@ -1,13 +1,14 @@
 # Requirements
 
-## Status Buckets (M001/S03 update)
+## Status Buckets (M001/S05 update)
 
 ### Active
 - None
 
 ### Validated
 - AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, AUTH-10
-  - S04 verification now proves password reset request/confirm lifecycle (non-enumeration, token hash-at-rest, single-use consume, token-version/session invalidation), admin auth lifecycle parity (normalized-email login, lockout, refresh rotation, logout revocation), and SuperAdmin-only management/RBAC policy closure.
+  - S04 verification proves password reset request/confirm lifecycle (non-enumeration, token hash-at-rest, single-use consume, token-version/session invalidation), admin auth lifecycle parity (normalized-email login, lockout, refresh rotation, logout revocation), and SuperAdmin-only management/RBAC policy closure.
+  - S05 verification proves frontend integration closure: customer/admin login UX wired to real backend contracts via Next.js BFF handlers, forgot/reset password UX completion, proxy-level RBAC route gating (Guest/Customer/Admin/SuperAdmin), refresh continuity via cookie-backed rotation, and logout cleanup of frontend+backend session state.
 
 ### Deferred
 - None
