@@ -17,12 +17,10 @@ Kullanıcıların 15 dakikalık rezervasyon tutma, 3D Secure ödeme ve çok dill
 - ✓ Fiyatlandırma motoru (Seasonal pricing, Campaigns, Deposit) — Phase 3
 - ✓ Rezervasyon sistemi (Availability, Hold, Lifecycle) — Phase 4
 - ✓ Ödeme entegrasyonu (Iyzico/Mock, 3D Secure, Webhook) — Phase 5
+- ✓ Kullanıcı yönetimi ve kimlik doğrulama (JWT, RBAC) — **M001 tamamlandı** (S01/S02/S03/S04/S05)
 
 ### Active
 
-- [x] Kullanıcı yönetimi ve kimlik doğrulama (JWT, RBAC) — S01/S02/S03/S04/S05 tamamlandı
-- [x] Müşteri kayıt/giriş sistemi (frontend + backend register/login/me/refresh/logout + 5 deneme lockout)
-- [x] Admin giriş, forgot/reset password ve route-level RBAC entegrasyonu (Next.js proxy + BFF auth handlers)
 - [ ] SMS ve E-posta bildirimleri
 - [ ] Background job işleme
 - [ ] Audit logging
@@ -45,8 +43,8 @@ Mevcut kod tabanı:
 - Backend: .NET 10 Clean Architecture (Core, Infrastructure, API, Worker)
 - Frontend: Next.js 16 App Router + React 19 + Tailwind CSS
 - Database: PostgreSQL 18 + Redis 7.4
-- 5 faz tamamlandı: Foundation, Fleet, Pricing, Reservation, Payment
-- Kalan 5 faz: User Management, Notifications, Frontend, Infrastructure, Testing
+- 6 faz tamamlandı: Foundation, Fleet, Pricing, Reservation, Payment, User Management & Auth (M001)
+- Kalan 4 ana faz: Notifications, Frontend (public site), Infrastructure, Testing & Launch
 
 ## Constraints
 
@@ -66,4 +64,4 @@ Mevcut kod tabanı:
 | Single Next.js app | Public + Admin aynı deploy | — Pending |
 
 ---
-*Last updated: 2026-03-15 after completing M001/S05 (Auth Frontend Integration)*
+*Last updated: 2026-03-15 after completing Milestone M001 (User Management & Auth closure)*

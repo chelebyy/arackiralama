@@ -1,6 +1,6 @@
 # Requirements
 
-## Status Buckets (M001/S05 update)
+## Status Buckets (M001 complete verification)
 
 ### Active
 - None
