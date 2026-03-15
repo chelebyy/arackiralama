@@ -22,6 +22,32 @@ function createRequest(url: string, cookie?: string) {
 describe("proxy auth guard", () => {
   const originalFetch = global.fetch;
 
+  function mockMeValidation(scope: "Admin" | "Customer", role: string) {
+    global.fetch = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.endsWith(`/api/${scope.toLowerCase()}/v1/auth/me`)) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              message: "ok",
+              data: { id: "1", email: "test@example.com", role }
+            }),
+            { status: 200, headers: { "content-type": "application/json" } }
+          )
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: false, message: "unauthorized", data: null }), {
+          status: 401,
+          headers: { "content-type": "application/json" }
+        })
+      );
+    }) as typeof fetch;
+  }
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -41,6 +67,8 @@ describe("proxy auth guard", () => {
   });
 
   it("allows customer scope on customer portal route", async () => {
+    mockMeValidation("Customer", "Customer");
+
     const token = createToken({
       sub: "customer-1",
       role: "Customer",
@@ -60,6 +88,8 @@ describe("proxy auth guard", () => {
   });
 
   it("redirects customer scope away from admin dashboard routes", async () => {
+    mockMeValidation("Customer", "Customer");
+
     const token = createToken({
       sub: "customer-1",
       role: "Customer",
@@ -79,6 +109,8 @@ describe("proxy auth guard", () => {
   });
 
   it("redirects Admin role from superadmin-only routes", async () => {
+    mockMeValidation("Admin", "Admin");
+
     const token = createToken({
       sub: "admin-1",
       role: "Admin",
@@ -112,26 +144,55 @@ describe("proxy auth guard", () => {
       exp: Math.floor(Date.now() / 1000) + 3600
     });
 
-    global.fetch = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          message: "Oturum yenilendi.",
-          data: {
-            accessToken: refreshedToken,
-            tokenType: "Bearer",
-            expiresAtUtc: new Date().toISOString()
-          }
-        }),
-        {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "set-cookie": "rac_refresh=new-refresh-token; Path=/; HttpOnly; SameSite=Strict"
-          }
-        }
-      )
-    ) as typeof fetch;
+    global.fetch = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.endsWith("/api/admin/v1/auth/refresh")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              message: "Oturum yenilendi.",
+              data: {
+                accessToken: refreshedToken,
+                tokenType: "Bearer",
+                expiresAtUtc: new Date().toISOString()
+              }
+            }),
+            {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "set-cookie": "rac_refresh=new-refresh-token; Path=/; HttpOnly; SameSite=Strict"
+              }
+            }
+          )
+        );
+      }
+
+      if (url.endsWith("/api/admin/v1/auth/me")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              message: "ok",
+              data: { id: "admin-1", email: "admin@test.com", role: "Admin" }
+            }),
+            {
+              status: 200,
+              headers: { "content-type": "application/json" }
+            }
+          )
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: false, message: "unauthorized", data: null }), {
+          status: 401,
+          headers: { "content-type": "application/json" }
+        })
+      );
+    }) as typeof fetch;
 
     const request = createRequest(
       "http://localhost:3000/dashboard/default",
@@ -143,5 +204,31 @@ describe("proxy auth guard", () => {
     expect(response.status).toBe(200);
     expect(global.fetch).toHaveBeenCalled();
     expect(response.headers.get("set-cookie")).toContain(`${ACCESS_COOKIE_NAME}=`);
+  });
+
+  it("rejects forged token when backend me validation fails", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: false, message: "unauthorized", data: null }), {
+        status: 401,
+        headers: { "content-type": "application/json" }
+      })
+    ) as typeof fetch;
+
+    const forgedToken = createToken({
+      sub: "admin-1",
+      role: "SuperAdmin",
+      principal_type: "Admin",
+      exp: Math.floor(Date.now() / 1000) + 3600
+    });
+
+    const request = createRequest(
+      "http://localhost:3000/dashboard/pages/users",
+      `${ACCESS_COOKIE_NAME}=${forgedToken}`
+    );
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/dashboard/login/v2");
   });
 });

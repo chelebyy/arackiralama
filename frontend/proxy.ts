@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { tryRefreshWithBackend } from "@/lib/auth/backend";
+import { tryRefreshWithBackend, validateAccessTokenWithBackend } from "@/lib/auth/backend";
 import {
   ACCESS_COOKIE_NAME,
   ADMIN_DEFAULT_REDIRECT,
@@ -92,14 +92,15 @@ export async function proxy(request: NextRequest) {
 
   let accessToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
   let claims = parseAccessTokenClaims(accessToken);
+  let tokenScope = normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined);
   let refreshedAccessToken: string | null = null;
   let backendRefreshResponse: Response | null = null;
 
-  const shouldAttemptRefresh = !claims || isExpired(claims);
+  const shouldAttemptRefresh = !claims || isExpired(claims) || !accessToken;
 
   if (shouldAttemptRefresh) {
     const refreshResult = await tryRefreshWithBackend({
-      preferredScope: normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined),
+      preferredScope: tokenScope,
       cookieHeader: toBackendCookieHeader(request)
     });
 
@@ -108,11 +109,26 @@ export async function proxy(request: NextRequest) {
       backendRefreshResponse = refreshResult.backendResponse;
       accessToken = refreshedAccessToken;
       claims = parseAccessTokenClaims(accessToken);
+      tokenScope = refreshResult.scope;
     }
   }
 
-  const principalScope = normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined);
+  let principalScope = normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined);
   const role = typeof claims?.role === "string" ? claims.role : undefined;
+
+  const shouldValidateTokenWithBackend = Boolean(accessToken && principalScope);
+  if (shouldValidateTokenWithBackend) {
+    const validationResult = await validateAccessTokenWithBackend({
+      accessToken,
+      preferredScope: principalScope ?? tokenScope
+    });
+
+    if (!validationResult) {
+      principalScope = null;
+    } else {
+      principalScope = validationResult.scope;
+    }
+  }
 
   const isRootRequest = pathname === "/" || pathname === "/dashboard";
 
