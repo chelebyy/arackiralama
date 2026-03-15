@@ -984,10 +984,11 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken)
     {
-        // Try to find existing customer by email
+        // Try to find an existing customer using normalized email to avoid case-drift duplicates
+        var normalizedEmail = Customer.NormalizeEmail(request.Customer.Email);
         var existingCustomer = await _customerRepository
             .GetQueryable()
-            .FirstOrDefaultAsync(c => c.Email == request.Customer.Email, cancellationToken);
+            .FirstOrDefaultAsync(c => c.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (existingCustomer != null)
         {

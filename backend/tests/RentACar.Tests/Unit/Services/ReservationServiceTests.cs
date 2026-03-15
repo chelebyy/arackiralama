@@ -346,6 +346,97 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task CreateDraftReservationAsync_WhenExistingCustomerEmailDiffersByCase_ReusesExistingCustomerByNormalizedEmail()
+    {
+        // Arrange
+        var groupId = Guid.NewGuid();
+        var existingCustomerId = Guid.NewGuid();
+        var request = CreateValidReservationRequest() with
+        {
+            VehicleGroupId = groupId,
+            Customer = new CustomerInfoRequest
+            {
+                FirstName = "Ahmet",
+                LastName = "Yilmaz",
+                Email = "  AHMET@EXAMPLE.COM  ",
+                Phone = "+90 555 123 4567"
+            }
+        };
+
+        var existingCustomer = new Customer
+        {
+            Id = existingCustomerId,
+            FullName = "Ahmet Yilmaz",
+            Email = "ahmet@example.com",
+            Phone = "+90 555 123 4567",
+            IdentityNumber = string.Empty,
+            Nationality = "TR"
+        };
+
+        _fleetServiceMock.Setup(x => x.SearchAvailableVehicleGroupsAsync(
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                request.VehicleGroupId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>
+            {
+                new(groupId, "Ekonomi", "Economy", 5, 500, "TRY", 2000, 21, 2, ["Klima"], null)
+            });
+
+        _pricingServiceMock.Setup(x => x.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                request.CampaignCode,
+                request.ExtraDriverCount,
+                request.ChildSeatCount,
+                request.DriverAge,
+                request.FullCoverageWaiver,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceBreakdownDto(
+                DailyRate: 500,
+                RentalDays: 3,
+                BaseTotal: 1500,
+                ExtrasTotal: 200,
+                CampaignDiscount: 0,
+                AirportFee: 0,
+                OneWayFee: 0,
+                ExtraDriverFee: 0,
+                ChildSeatFee: 100,
+                YoungDriverFee: 0,
+                FullCoverageWaiverFee: 100,
+                FinalTotal: 1700,
+                DepositAmount: 2000,
+                PreAuthorizationAmount: 2000,
+                Currency: "TRY",
+                AppliedCampaignCode: null));
+
+        _customerRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Customer> { existingCustomer }.BuildMockDbSet().Object);
+
+        // Act
+        var result = await _sut.CreateDraftReservationAsync(request, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CustomerId.Should().Be(existingCustomerId);
+        result.CustomerEmail.Should().Be(existingCustomer.Email);
+
+        _customerRepositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<Customer>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _reservationRepositoryMock.Verify(x => x.AddAsync(
+            It.Is<Reservation>(r => r.CustomerId == existingCustomerId),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task CreateHoldAsync_WhenDraftReservationHasGroup_AssignsVehicleAndCreatesHold()
     {
         // Arrange

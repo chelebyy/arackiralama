@@ -1,9 +1,13 @@
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using RentACar.API.Authentication;
+using RentACar.API.Contracts;
+using RentACar.API.Options;
 using RentACar.API.Services;
 using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure;
@@ -20,8 +24,13 @@ public static class ServiceCollectionExtensions
         services.AddHealthChecks();
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<RefreshTokenCookieSettings>(configuration.GetSection(RefreshTokenCookieSettings.SectionName));
         services.AddInfrastructure(configuration);
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IRefreshTokenCookieService, RefreshTokenCookieService>();
+        services.AddScoped<IPasswordResetEmailDispatcher, PasswordResetEmailDispatcher>();
+        services.AddScoped<IAccessTokenSessionValidator, AccessTokenSessionValidator>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();
@@ -55,16 +64,14 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
-        var jwtIssuer = configuration["Jwt:Issuer"] ?? "RentACar.API";
-        var jwtAudience = configuration["Jwt:Audience"] ?? "RentACar.Client";
-        var jwtSecret = configuration["Jwt:Secret"];
+        var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
-        if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+        if (string.IsNullOrWhiteSpace(jwtOptions.Secret) || jwtOptions.Secret.Length < 32)
         {
             throw new InvalidOperationException("JWT secret must be configured with at least 32 characters.");
         }
 
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret));
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -76,10 +83,44 @@ public static class ServiceCollectionExtensions
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtIssuer,
-                    ValidAudience = jwtAudience,
+                    ValidIssuer = jwtOptions.Issuer,
+                    ValidAudience = jwtOptions.Audience,
                     IssuerSigningKey = signingKey,
                     ClockSkew = TimeSpan.FromMinutes(1)
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        if (context.Principal is null)
+                        {
+                            context.Fail("Yetkisiz erişim");
+                            return;
+                        }
+
+                        var sessionValidator = context.HttpContext.RequestServices.GetRequiredService<IAccessTokenSessionValidator>();
+                        var validationFailure = await sessionValidator.ValidateAsync(context.Principal, context.HttpContext.RequestAborted);
+                        if (validationFailure != AccessTokenSessionValidationFailure.None)
+                        {
+                            context.Fail("Yetkisiz erişim");
+                        }
+                    },
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+
+                        if (context.Response.HasStarted)
+                        {
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json";
+
+                        var payload = JsonSerializer.Serialize(ApiResponse<object>.Fail("Yetkisiz erişim"));
+                        await context.Response.WriteAsync(payload);
+                    }
                 };
             });
 
@@ -90,8 +131,14 @@ public static class ServiceCollectionExtensions
     {
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(AuthPolicyNames.AdminOnly, policy => policy.RequireRole("Admin", "SuperAdmin"));
-            options.AddPolicy(AuthPolicyNames.SuperAdminOnly, policy => policy.RequireRole("SuperAdmin"));
+            options.AddPolicy(AuthPolicyNames.GuestOnly, policy =>
+                policy.RequireAssertion(context => context.User.Identity?.IsAuthenticated != true));
+            options.AddPolicy(AuthPolicyNames.CustomerOnly, policy =>
+                policy.RequireRole(AuthRoleNames.Customer));
+            options.AddPolicy(AuthPolicyNames.AdminOnly, policy =>
+                policy.RequireRole(AuthRoleNames.Admin, AuthRoleNames.SuperAdmin));
+            options.AddPolicy(AuthPolicyNames.SuperAdminOnly, policy =>
+                policy.RequireRole(AuthRoleNames.SuperAdmin));
         });
 
         return services;
