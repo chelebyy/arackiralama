@@ -1,5 +1,10 @@
 import { DEFAULT_BACKEND_BASE_URL } from "@/lib/auth/constants";
-import type { ApiEnvelope, LoginResponseData, PrincipalScope, RefreshResponseData } from "@/lib/auth/types";
+import type {
+  ApiEnvelope,
+  LoginResponseData,
+  PrincipalScope,
+  RefreshResponseData
+} from "@/lib/auth/types";
 
 export function buildBackendUrl(path: string) {
   const base = DEFAULT_BACKEND_BASE_URL.endsWith("/")
@@ -175,4 +180,39 @@ export async function callLogoutEndpoint(options: {
     backendResponse,
     envelope
   };
+}
+
+export async function validateAccessTokenWithBackend(options: {
+  accessToken: string;
+  preferredScope?: PrincipalScope | null;
+}) {
+  const candidateScopes: PrincipalScope[] = options.preferredScope
+    ? [
+        options.preferredScope,
+        ...(options.preferredScope === "Admin"
+          ? (["Customer"] as PrincipalScope[])
+          : (["Admin"] as PrincipalScope[]))
+      ]
+    : ["Admin", "Customer"];
+
+  for (const scope of candidateScopes) {
+    const backendResponse = await fetch(buildBackendUrl(`${endpointForScope(scope)}/me`), {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${options.accessToken}`
+      },
+      cache: "no-store"
+    });
+
+    const envelope = await parseEnvelope<Record<string, unknown>>(backendResponse);
+    if (backendResponse.ok && envelope?.success) {
+      return {
+        scope,
+        backendResponse,
+        envelope
+      };
+    }
+  }
+
+  return null;
 }

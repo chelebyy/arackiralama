@@ -93,8 +93,19 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        var utcNow = DateTime.UtcNow;
         adminUser.Role = normalizedRole;
+        adminUser.TokenVersion += 1;
+
+        var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Admin role updated. admin_id={AdminId} new_role={Role} token_version={TokenVersion} revoked_session_count={RevokedSessionCount}",
+            adminUser.Id,
+            adminUser.Role,
+            adminUser.TokenVersion,
+            revokedSessionCount);
 
         return OkResponse(MapToDto(adminUser), "Yonetici rolu guncellendi.");
     }
@@ -123,8 +134,18 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        var utcNow = DateTime.UtcNow;
         adminUser.IsActive = false;
+        adminUser.TokenVersion += 1;
+
+        var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Admin deactivated. admin_id={AdminId} token_version={TokenVersion} revoked_session_count={RevokedSessionCount}",
+            adminUser.Id,
+            adminUser.TokenVersion,
+            revokedSessionCount);
 
         return OkResponse(MapToDto(adminUser), "Yonetici pasif edildi.");
     }
@@ -192,5 +213,24 @@ public sealed class AdminUsersController(
     {
         var tokenBytes = RandomNumberGenerator.GetBytes(64);
         return Base64UrlEncoder.Encode(tokenBytes);
+    }
+
+    private async Task<int> RevokeActiveAdminSessionsAsync(Guid adminId, DateTime utcNow, CancellationToken cancellationToken)
+    {
+        var activeSessions = await dbContext.AuthSessions
+            .Where(session =>
+                session.PrincipalType == AuthPrincipalType.Admin &&
+                session.PrincipalId == adminId &&
+                !session.RevokedAtUtc.HasValue &&
+                session.RefreshTokenExpiresAtUtc > utcNow)
+            .ToListAsync(cancellationToken);
+
+        foreach (var session in activeSessions)
+        {
+            session.RevokedAtUtc = utcNow;
+            session.LastSeenAtUtc = utcNow;
+        }
+
+        return activeSessions.Count;
     }
 }

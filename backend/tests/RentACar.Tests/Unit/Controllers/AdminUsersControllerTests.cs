@@ -111,6 +111,8 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
         using var dbContext = _dbContextFactory.CreateContext();
         var admin = CreateAdminUser("update-role@test.com", role: AuthRoleNames.Admin);
         dbContext.AdminUsers.Add(admin);
+        var session = CreateActiveAdminSession(admin.Id);
+        dbContext.AuthSessions.Add(session);
         await dbContext.SaveChangesAsync();
 
         var controller = CreateController(dbContext);
@@ -126,7 +128,13 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
         response.Data.Should().NotBeNull();
         response.Data!.Role.Should().Be(AuthRoleNames.SuperAdmin);
 
-        dbContext.AdminUsers.Should().ContainSingle().Which.Role.Should().Be(AuthRoleNames.SuperAdmin);
+        var persistedAdmin = dbContext.AdminUsers.Should().ContainSingle().Subject;
+        persistedAdmin.Role.Should().Be(AuthRoleNames.SuperAdmin);
+        persistedAdmin.TokenVersion.Should().Be(1);
+
+        var persistedSession = dbContext.AuthSessions.Should().ContainSingle().Subject;
+        persistedSession.RevokedAtUtc.Should().NotBeNull();
+        persistedSession.LastSeenAtUtc.Should().NotBeNull();
     }
 
     [Fact]
@@ -157,6 +165,8 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
         using var dbContext = _dbContextFactory.CreateContext();
         var admin = CreateAdminUser("deactivate@test.com", isActive: true);
         dbContext.AdminUsers.Add(admin);
+        var session = CreateActiveAdminSession(admin.Id);
+        dbContext.AuthSessions.Add(session);
         await dbContext.SaveChangesAsync();
 
         var controller = CreateController(dbContext);
@@ -167,7 +177,13 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
         response.Success.Should().BeTrue();
         response.Data.Should().NotBeNull();
         response.Data!.IsActive.Should().BeFalse();
-        dbContext.AdminUsers.Should().ContainSingle().Which.IsActive.Should().BeFalse();
+        var persistedAdmin = dbContext.AdminUsers.Should().ContainSingle().Subject;
+        persistedAdmin.IsActive.Should().BeFalse();
+        persistedAdmin.TokenVersion.Should().Be(1);
+
+        var persistedSession = dbContext.AuthSessions.Should().ContainSingle().Subject;
+        persistedSession.RevokedAtUtc.Should().NotBeNull();
+        persistedSession.LastSeenAtUtc.Should().NotBeNull();
     }
 
     [Fact]
@@ -310,6 +326,18 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
             FullName = "Admin User",
             Role = role,
             IsActive = isActive
+        };
+    }
+
+    private static AuthSession CreateActiveAdminSession(Guid adminId)
+    {
+        return new AuthSession
+        {
+            Id = Guid.NewGuid(),
+            PrincipalType = AuthPrincipalType.Admin,
+            PrincipalId = adminId,
+            RefreshTokenHash = "session-hash",
+            RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddHours(1)
         };
     }
 }
