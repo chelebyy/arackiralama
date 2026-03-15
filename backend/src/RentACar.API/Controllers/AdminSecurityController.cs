@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RentACar.API.Authentication;
 using RentACar.API.Configuration;
 
 namespace RentACar.API.Controllers;
@@ -16,7 +17,7 @@ public sealed class AdminSecurityController : BaseApiController
         return OkResponse(new
         {
             status = "authorized",
-            role = User.FindFirst("role")?.Value ?? "unknown",
+            role = User.FindFirst(AuthClaimTypes.Role)?.Value ?? "unknown",
             utcTime = DateTime.UtcNow
         });
     }
