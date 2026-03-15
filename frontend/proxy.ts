@@ -119,7 +119,7 @@ export async function proxy(request: NextRequest) {
   const shouldValidateTokenWithBackend = Boolean(accessToken && principalScope);
   if (shouldValidateTokenWithBackend) {
     const validationResult = await validateAccessTokenWithBackend({
-      accessToken,
+      accessToken: accessToken as string,
       preferredScope: principalScope ?? tokenScope
     });
 
