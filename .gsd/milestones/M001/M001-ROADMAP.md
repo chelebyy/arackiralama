@@ -17,7 +17,7 @@
   > After this: token generation and refresh logic implemented
 - [x] **S03: Customer Auth API** `risk:medium` `depends:[S02]`
   > After this: register/login/refresh/logout endpoints for customers
-- [ ] **S04: Admin Auth, RBAC & Password Reset Backend** `risk:high` `depends:[S03]`
+- [x] **S04: Admin Auth, RBAC & Password Reset Backend** `risk:high` `depends:[S03]`
   > After this: admin/superadmin auth lifecycle, RBAC enforcement closure, and password-reset request/confirm email dispatch are implemented and verified
 - [ ] **S05: Auth Frontend Integration** `risk:high` `depends:[S04]`
   > After this: customer/admin login flows, forgot/reset password UX, refresh/logout handling, and route-level RBAC guards work in Next.js

@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddInfrastructure(configuration);
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenCookieService, RefreshTokenCookieService>();
+        services.AddScoped<IPasswordResetEmailDispatcher, PasswordResetEmailDispatcher>();
         services.AddScoped<IAccessTokenSessionValidator, AccessTokenSessionValidator>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();

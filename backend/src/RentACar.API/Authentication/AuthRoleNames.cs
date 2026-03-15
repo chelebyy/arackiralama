@@ -7,12 +7,32 @@ public static class AuthRoleNames
     public const string Admin = "Admin";
     public const string SuperAdmin = "SuperAdmin";
 
-    private static readonly HashSet<string> AdminRoles =
-    [
-        Admin,
-        SuperAdmin
-    ];
-
     public static bool IsAdminRole(string role) =>
-        !string.IsNullOrWhiteSpace(role) && AdminRoles.Contains(role);
+        TryNormalizeAdminRole(role, out _);
+
+    public static bool TryNormalizeAdminRole(string role, out string normalizedRole)
+    {
+        normalizedRole = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return false;
+        }
+
+        var candidateRole = role.Trim();
+
+        if (candidateRole == Admin)
+        {
+            normalizedRole = Admin;
+            return true;
+        }
+
+        if (candidateRole == SuperAdmin)
+        {
+            normalizedRole = SuperAdmin;
+            return true;
+        }
+
+        return false;
+    }
 }

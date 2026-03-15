@@ -83,29 +83,32 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
     }
 
     [Fact]
-    public async Task ValidateAsync_WhenSessionIsReplaced_ReturnsSessionRevoked()
+    public async Task ValidateAsync_WhenAdminSessionIsReplaced_ReturnsSessionRevoked()
     {
         using var dbContext = _dbContextFactory.CreateContext();
-        var customerId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
 
-        dbContext.Customers.Add(new Customer
+        dbContext.AdminUsers.Add(new AdminUser
         {
-            Id = customerId,
-            Email = "customer@test.com",
-            TokenVersion = 4
+            Id = adminId,
+            Email = "admin@test.com",
+            PasswordHash = "hash",
+            Role = "Admin",
+            TokenVersion = 4,
+            IsActive = true
         });
 
         dbContext.AuthSessions.Add(CreateSession(
-            AuthPrincipalType.Customer,
-            customerId,
+            AuthPrincipalType.Admin,
+            adminId,
             sessionId,
             DateTime.UtcNow.AddDays(1),
             replacedBySessionId: Guid.NewGuid()));
         await dbContext.SaveChangesAsync();
 
         var validator = CreateValidator(dbContext);
-        var principal = CreatePrincipal(AuthPrincipalType.Customer, customerId, sessionId, 4);
+        var principal = CreatePrincipal(AuthPrincipalType.Admin, adminId, sessionId, 4);
 
         var result = await validator.ValidateAsync(principal);
 

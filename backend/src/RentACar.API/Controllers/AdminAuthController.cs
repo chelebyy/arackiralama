@@ -1,10 +1,14 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RentACar.API.Authentication;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts.Auth;
+using RentACar.API.Options;
 using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -17,8 +21,13 @@ public sealed class AdminAuthController(
     IApplicationDbContext dbContext,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
-    IRefreshTokenCookieService refreshTokenCookieService) : BaseApiController
+    IRefreshTokenCookieService refreshTokenCookieService,
+    IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings) : BaseApiController
 {
+    private const int LockoutThreshold = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    private readonly string _refreshTokenCookieName = refreshTokenCookieSettings.Value.Name;
+
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
@@ -29,20 +38,45 @@ public sealed class AdminAuthController(
             return BadRequestResponse("Email ve parola zorunludur.");
         }
 
-        var email = request.Email.Trim();
+        var normalizedEmail = AdminUser.NormalizeEmail(request.Email);
         var adminUser = await dbContext.AdminUsers
-            .FirstOrDefaultAsync(user => user.Email == email, cancellationToken);
+            .FirstOrDefaultAsync(user => user.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (adminUser is null || !adminUser.IsActive)
         {
             return UnauthorizedResponse();
         }
 
+        var utcNow = DateTime.UtcNow;
+
+        if (adminUser.LockoutEndUtc.HasValue)
+        {
+            if (adminUser.LockoutEndUtc.Value > utcNow)
+            {
+                return UnauthorizedResponse();
+            }
+
+            adminUser.LockoutEndUtc = null;
+            adminUser.FailedLoginCount = 0;
+        }
+
         var isPasswordValid = passwordHasher.VerifyPassword(request.Password, adminUser.PasswordHash);
         if (!isPasswordValid)
         {
+            adminUser.FailedLoginCount += 1;
+
+            if (adminUser.FailedLoginCount >= LockoutThreshold)
+            {
+                adminUser.LockoutEndUtc = utcNow.Add(LockoutDuration);
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
             return UnauthorizedResponse();
         }
+
+        adminUser.FailedLoginCount = 0;
+        adminUser.LockoutEndUtc = null;
+        adminUser.LastLoginAtUtc = utcNow;
 
         var sessionId = Guid.NewGuid();
         var accessToken = jwtTokenService.CreateAdminAccessToken(adminUser, sessionId, out var expiresAtUtc);
@@ -56,10 +90,11 @@ public sealed class AdminAuthController(
             PrincipalId = adminUser.Id,
             RefreshTokenHash = refreshTokenHash,
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
-            LastSeenAtUtc = DateTime.UtcNow,
+            LastSeenAtUtc = utcNow,
             CreatedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
             UserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
         });
+
         await dbContext.SaveChangesAsync(cancellationToken);
         refreshTokenCookieService.AppendRefreshTokenCookie(HttpContext, refreshToken, refreshTokenExpiresAtUtc);
 
@@ -71,7 +106,74 @@ public sealed class AdminAuthController(
             FullName: adminUser.FullName,
             Email: adminUser.Email);
 
-        return OkResponse(response, "Giri� ba�ar�l�.");
+        return OkResponse(response, "Giris basarili.");
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    {
+        if (!TryReadRefreshToken(out var refreshToken))
+        {
+            return UnauthorizedResponse();
+        }
+
+        var refreshTokenHash = jwtTokenService.HashRefreshToken(refreshToken);
+        var utcNow = DateTime.UtcNow;
+
+        var currentSession = await dbContext.AuthSessions
+            .FirstOrDefaultAsync(session =>
+                session.PrincipalType == AuthPrincipalType.Admin &&
+                session.RefreshTokenHash == refreshTokenHash,
+                cancellationToken);
+
+        if (currentSession is null ||
+            currentSession.RevokedAtUtc.HasValue ||
+            currentSession.ReplacedBySessionId.HasValue ||
+            currentSession.RefreshTokenExpiresAtUtc <= utcNow)
+        {
+            return UnauthorizedResponse();
+        }
+
+        var adminUser = await dbContext.AdminUsers
+            .FirstOrDefaultAsync(user => user.Id == currentSession.PrincipalId, cancellationToken);
+
+        if (adminUser is null || !adminUser.IsActive)
+        {
+            return UnauthorizedResponse();
+        }
+
+        var newSessionId = Guid.NewGuid();
+        var accessToken = jwtTokenService.CreateAdminAccessToken(adminUser, newSessionId, out var accessTokenExpiresAtUtc);
+        var newRefreshToken = jwtTokenService.CreateRefreshToken(out var refreshTokenExpiresAtUtc);
+        var newRefreshTokenHash = jwtTokenService.HashRefreshToken(newRefreshToken);
+
+        currentSession.RevokedAtUtc = utcNow;
+        currentSession.ReplacedBySessionId = newSessionId;
+        currentSession.LastSeenAtUtc = utcNow;
+
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            Id = newSessionId,
+            PrincipalType = AuthPrincipalType.Admin,
+            PrincipalId = adminUser.Id,
+            RefreshTokenHash = newRefreshTokenHash,
+            RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
+            LastSeenAtUtc = utcNow,
+            CreatedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        refreshTokenCookieService.AppendRefreshTokenCookie(HttpContext, newRefreshToken, refreshTokenExpiresAtUtc);
+
+        var response = new AdminRefreshResponse(
+            AccessToken: accessToken,
+            TokenType: "Bearer",
+            ExpiresAtUtc: accessTokenExpiresAtUtc);
+
+        return OkResponse(response, "Oturum yenilendi.");
     }
 
     [HttpGet("me")]
@@ -81,18 +183,73 @@ public sealed class AdminAuthController(
     {
         return OkResponse(new
         {
-            id = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
-            email = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value,
-            role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+            id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+            email = User.FindFirst(ClaimTypes.Name)?.Value,
+            role = User.FindFirst(ClaimTypes.Role)?.Value
         });
     }
 
     [HttpPost("logout")]
     [Authorize(Policy = AuthPolicyNames.AdminOnly)]
     [EnableRateLimiting(RateLimitPolicyNames.Standard)]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
+        if (!TryReadSessionContext(out var principalId, out var sessionId))
+        {
+            refreshTokenCookieService.ClearRefreshTokenCookie(HttpContext);
+            return UnauthorizedResponse();
+        }
+
+        var session = await dbContext.AuthSessions
+            .FirstOrDefaultAsync(existingSession =>
+                existingSession.Id == sessionId &&
+                existingSession.PrincipalType == AuthPrincipalType.Admin &&
+                existingSession.PrincipalId == principalId,
+                cancellationToken);
+
+        if (session is null)
+        {
+            refreshTokenCookieService.ClearRefreshTokenCookie(HttpContext);
+            return UnauthorizedResponse();
+        }
+
+        if (!session.RevokedAtUtc.HasValue)
+        {
+            session.RevokedAtUtc = DateTime.UtcNow;
+            session.LastSeenAtUtc = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         refreshTokenCookieService.ClearRefreshTokenCookie(HttpContext);
-        return OkResponse(new { success = true }, "��k�� ba�ar�l�.");
+
+        return OkResponse(new { success = true }, "Cikis basarili.");
+    }
+
+    private bool TryReadRefreshToken(out string refreshToken)
+    {
+        refreshToken = string.Empty;
+
+        if (!HttpContext.Request.Cookies.TryGetValue(_refreshTokenCookieName, out var cookieRefreshToken) ||
+            string.IsNullOrWhiteSpace(cookieRefreshToken))
+        {
+            return false;
+        }
+
+        refreshToken = cookieRefreshToken.Trim();
+        return true;
+    }
+
+    private bool TryReadSessionContext(out Guid principalId, out Guid sessionId)
+    {
+        principalId = Guid.Empty;
+        sessionId = Guid.Empty;
+
+        var principalIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var sessionIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sid)?.Value
+            ?? User.FindFirst(ClaimTypes.Sid)?.Value;
+
+        return Guid.TryParse(principalIdClaim, out principalId) &&
+               Guid.TryParse(sessionIdClaim, out sessionId);
     }
 }
