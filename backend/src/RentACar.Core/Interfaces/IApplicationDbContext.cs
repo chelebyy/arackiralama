@@ -16,6 +16,8 @@ public interface IApplicationDbContext
     DbSet<Campaign> Campaigns { get; }
     DbSet<ReservationHold> ReservationHolds { get; }
     DbSet<AdminUser> AdminUsers { get; }
+    DbSet<AuthSession> AuthSessions { get; }
+    DbSet<PasswordResetToken> PasswordResetTokens { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<FeatureFlag> FeatureFlags { get; }
