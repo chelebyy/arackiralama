@@ -13,7 +13,7 @@
 
 - [x] **S01: Auth Domain & Persistence Foundation** `risk:low` `depends:[]`
   > After this: principal entities and migration are ready
-- [ ] **S02: JWT & Session Infrastructure** `risk:medium` `depends:[S01]`
+- [x] **S02: JWT & Session Infrastructure** `risk:medium` `depends:[S01]`
   > After this: token generation and refresh logic implemented
 - [ ] **S03: Customer Auth API** `risk:medium` `depends:[S02]`
   > After this: register/login/refresh/logout endpoints for customers

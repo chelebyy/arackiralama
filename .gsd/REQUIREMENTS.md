@@ -1,10 +1,10 @@
 # Requirements
 
-## Status Buckets (M001/S01 update)
+## Status Buckets (M001/S02 update)
 
 ### Active
 - AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, AUTH-10
-  - S01 advanced persistence prerequisites for AUTH-04/05/06/07/10; end-to-end behavior remains pending S02+.
+  - S02 completed JWT/session infrastructure prerequisites: shared 15-minute access-token issuance with `sid`/`ver`, 7-day refresh-token primitives (rotation/replay helpers), DB-backed session validation in bearer pipeline, and secure refresh-cookie conventions. End-to-end customer/admin auth flows remain pending S03/S04.
 
 ### Validated
 - None

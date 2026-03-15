@@ -2,9 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using RentACar.API.Authentication;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts.Auth;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 
 namespace RentACar.API.Controllers;
@@ -13,7 +16,8 @@ namespace RentACar.API.Controllers;
 public sealed class AdminAuthController(
     IApplicationDbContext dbContext,
     IPasswordHasher passwordHasher,
-    IJwtTokenService jwtTokenService) : BaseApiController
+    IJwtTokenService jwtTokenService,
+    IRefreshTokenCookieService refreshTokenCookieService) : BaseApiController
 {
     [HttpPost("login")]
     [AllowAnonymous]
@@ -40,7 +44,25 @@ public sealed class AdminAuthController(
             return UnauthorizedResponse();
         }
 
-        var accessToken = jwtTokenService.CreateAdminAccessToken(adminUser, out var expiresAtUtc);
+        var sessionId = Guid.NewGuid();
+        var accessToken = jwtTokenService.CreateAdminAccessToken(adminUser, sessionId, out var expiresAtUtc);
+        var refreshToken = jwtTokenService.CreateRefreshToken(out var refreshTokenExpiresAtUtc);
+        var refreshTokenHash = jwtTokenService.HashRefreshToken(refreshToken);
+
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            Id = sessionId,
+            PrincipalType = AuthPrincipalType.Admin,
+            PrincipalId = adminUser.Id,
+            RefreshTokenHash = refreshTokenHash,
+            RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
+            LastSeenAtUtc = DateTime.UtcNow,
+            CreatedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        refreshTokenCookieService.AppendRefreshTokenCookie(HttpContext, refreshToken, refreshTokenExpiresAtUtc);
+
         var response = new AdminLoginResponse(
             AccessToken: accessToken,
             TokenType: "Bearer",
@@ -49,7 +71,7 @@ public sealed class AdminAuthController(
             FullName: adminUser.FullName,
             Email: adminUser.Email);
 
-        return OkResponse(response, "Giriþ baþarýlý.");
+        return OkResponse(response, "Giriï¿½ baï¿½arï¿½lï¿½.");
     }
 
     [HttpGet("me")]
@@ -70,6 +92,7 @@ public sealed class AdminAuthController(
     [EnableRateLimiting(RateLimitPolicyNames.Standard)]
     public IActionResult Logout()
     {
-        return OkResponse(new { success = true }, "Çýkýþ baþarýlý.");
+        refreshTokenCookieService.ClearRefreshTokenCookie(HttpContext);
+        return OkResponse(new { success = true }, "ï¿½ï¿½kï¿½ï¿½ baï¿½arï¿½lï¿½.");
     }
 }
