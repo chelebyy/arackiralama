@@ -13,9 +13,8 @@ public sealed class PasswordResetEmailDispatcher(ILogger<PasswordResetEmailDispa
         CancellationToken cancellationToken)
     {
         logger.LogInformation(
-            "Password reset dispatch invoked. principal_type={PrincipalType} destination_email={DestinationEmail} expires_at_utc={ExpiresAtUtc}",
+            "Password reset dispatch invoked. principal_type={PrincipalType} expires_at_utc={ExpiresAtUtc}",
             principalType,
-            destinationEmail,
             expiresAtUtc);
 
         return Task.CompletedTask;
