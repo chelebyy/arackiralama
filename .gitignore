@@ -103,3 +103,24 @@ postgrebilgiler.txt
 CLAUDE.md
 codex-temp/
 .maestro/
+
+# ── GSD baseline (auto-generated) ──
+.gsd/activity/
+.gsd/runtime/
+.gsd/worktrees/
+.gsd/auto.lock
+.gsd/metrics.json
+.gsd/completed-units.json
+.gsd/STATE.md
+.vscode/
+*.code-workspace
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+venv/
+target/
+vendor/
+coverage/
+tmp/
