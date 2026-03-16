@@ -106,7 +106,7 @@ public sealed class AdminAuthController(
             FullName: adminUser.FullName,
             Email: adminUser.Email);
 
-        return OkResponse(response, "Giris basarili.");
+        return OkResponse(response, "Giriş başarılı.");
     }
 
     [HttpPost("refresh")]
@@ -222,7 +222,7 @@ public sealed class AdminAuthController(
 
         refreshTokenCookieService.ClearRefreshTokenCookie(HttpContext);
 
-        return OkResponse(new { success = true }, "Cikis basarili.");
+        return OkResponse(new { success = true }, "Çıkış başarılı.");
     }
 
     private bool TryReadRefreshToken(out string refreshToken)
