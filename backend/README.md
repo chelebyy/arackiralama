@@ -1,6 +1,14 @@
 # RentACar Backend
 
-Faz 1 foundation backend iskeleti.
+Araç kiralama platformu backend API'si. Clean Architecture ile geliştirilmiş, production-ready REST API.
+
+## Mevcut Özellikler
+
+- **Kimlik Doğrulama**: JWT + Refresh Token, Admin/Patron/Müşteri rolleri
+- **Araç Yönetimi**: Marka, model, kategori, lokasyon yönetimi
+- **Rezervasyon Sistemi**: Çakışma kontrolü, optimistik kilitleme
+- **Fiyatlandırma Motoru**: Dinamik fiyatlandırma, sezon yönetimi
+- **Arka Plan İşleri**: Redis-backed job queue
 
 ## Projeler
 
