@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApiApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOpenApi();
+        services.AddEndpointsApiExplorer();
         services.AddControllers();
         services.AddHealthChecks();
         services.AddHttpContextAccessor();

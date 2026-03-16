@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RentACar.API.Attributes;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Reservations;
@@ -13,6 +14,7 @@ public sealed class ReservationsController(IReservationService reservationServic
 {
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
+    [Idempotent(ExpirationHours = 24)]
     public async Task<IActionResult> Create(
         [FromBody] CreateReservationRequest request,
         CancellationToken cancellationToken)
