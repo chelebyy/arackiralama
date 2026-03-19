@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();
         services.AddScoped<IPaymentService>(serviceProvider => serviceProvider.GetRequiredService<PaymentService>());
+        services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddPaymentIntegration(configuration);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration);

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,9 +24,11 @@ public sealed class AdminUsersController(
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
     IPasswordResetEmailDispatcher emailDispatcher,
+    IAuditLogService auditLogService,
     ILogger<AdminUsersController> logger) : BaseApiController
 {
     private static readonly TimeSpan ResetTokenLifetime = TimeSpan.FromMinutes(30);
+    private const string EntityType = "AdminUser";
 
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
@@ -76,6 +79,16 @@ public sealed class AdminUsersController(
         dbContext.AdminUsers.Add(adminUser);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await auditLogService.LogAsync(
+            "Create",
+            EntityType,
+            adminUser.Id.ToString(),
+            GetCurrentUserId(),
+            null,
+            System.Text.Json.JsonSerializer.Serialize(new { request.Email, request.FullName, Role = normalizedRole }),
+            GetClientIpAddress(),
+            cancellationToken);
+
         return OkResponse(MapToDto(adminUser), "Yonetici kullanicisi olusturuldu.");
     }
 
@@ -93,12 +106,24 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        var oldRole = adminUser.Role;
+
         var utcNow = DateTime.UtcNow;
         adminUser.Role = normalizedRole;
         adminUser.TokenVersion += 1;
 
         var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "UpdateRole",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(new { OldRole = oldRole }),
+            System.Text.Json.JsonSerializer.Serialize(new { NewRole = normalizedRole }),
+            GetClientIpAddress(),
+            cancellationToken);
 
         logger.LogInformation(
             "Admin role updated. admin_id={AdminId} new_role={Role} token_version={TokenVersion} revoked_session_count={RevokedSessionCount}",
@@ -119,8 +144,19 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        var wasActive = adminUser.IsActive;
         adminUser.IsActive = true;
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "Activate",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(new { WasActive = wasActive }),
+            System.Text.Json.JsonSerializer.Serialize(new { IsActive = true }),
+            GetClientIpAddress(),
+            cancellationToken);
 
         return OkResponse(MapToDto(adminUser), "Yonetici aktif edildi.");
     }
@@ -134,12 +170,24 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        var wasActive = adminUser.IsActive;
+
         var utcNow = DateTime.UtcNow;
         adminUser.IsActive = false;
         adminUser.TokenVersion += 1;
 
         var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "Deactivate",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(new { WasActive = wasActive }),
+            System.Text.Json.JsonSerializer.Serialize(new { IsActive = false }),
+            GetClientIpAddress(),
+            cancellationToken);
 
         logger.LogInformation(
             "Admin deactivated. admin_id={AdminId} token_version={TokenVersion} revoked_session_count={RevokedSessionCount}",
@@ -179,6 +227,16 @@ public sealed class AdminUsersController(
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "InitiatePasswordReset",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            null,
+            System.Text.Json.JsonSerializer.Serialize(new { ExpiresAtUtc = expiresAtUtc }),
+            GetClientIpAddress(),
+            cancellationToken);
 
         try
         {
@@ -232,5 +290,15 @@ public sealed class AdminUsersController(
         }
 
         return activeSessions.Count;
+    }
+
+    private string? GetCurrentUserId()
+    {
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private string? GetClientIpAddress()
+    {
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 }

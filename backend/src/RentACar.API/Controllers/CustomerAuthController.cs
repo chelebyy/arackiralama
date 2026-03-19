@@ -258,14 +258,107 @@ public sealed class CustomerAuthController(
     [HttpGet("me")]
     [Authorize(Policy = AuthPolicyNames.CustomerOnly)]
     [EnableRateLimiting(RateLimitPolicyNames.Standard)]
-    public IActionResult Me()
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        return OkResponse(new
+        if (!TryReadPrincipalId(out var principalId))
         {
-            id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-            email = User.FindFirst(ClaimTypes.Name)?.Value,
-            role = User.FindFirst(ClaimTypes.Role)?.Value
-        });
+            return UnauthorizedResponse();
+        }
+
+        var customer = await dbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == principalId, cancellationToken);
+
+        if (customer is null)
+        {
+            return NotFoundResponse("Kullanici bulunamadi.");
+        }
+
+        var response = new CustomerProfileResponse(
+            customer.Id,
+            customer.Email,
+            customer.FullName,
+            customer.Phone,
+            customer.IdentityNumber,
+            customer.Nationality,
+            customer.LicenseYear,
+            customer.BirthDate);
+
+        return OkResponse(response);
+    }
+
+    [HttpPut("profile")]
+    [Authorize(Policy = AuthPolicyNames.CustomerOnly)]
+    [EnableRateLimiting(RateLimitPolicyNames.Standard)]
+    public async Task<IActionResult> UpdateProfile(
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryReadPrincipalId(out var principalId))
+        {
+            return UnauthorizedResponse();
+        }
+
+        var customer = await dbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == principalId, cancellationToken);
+
+        if (customer is null)
+        {
+            return NotFoundResponse("Kullanici bulunamadi.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+        {
+            customer.FullName = request.FullName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Phone))
+        {
+            customer.Phone = request.Phone.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.IdentityNumber))
+        {
+            customer.IdentityNumber = request.IdentityNumber.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Nationality))
+        {
+            customer.Nationality = request.Nationality.Trim();
+        }
+
+        if (request.LicenseYear.HasValue && request.LicenseYear.Value >= 1900)
+        {
+            customer.LicenseYear = request.LicenseYear.Value;
+        }
+
+        if (request.BirthDate.HasValue)
+        {
+            customer.BirthDate = request.BirthDate.Value;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var response = new CustomerProfileResponse(
+            customer.Id,
+            customer.Email,
+            customer.FullName,
+            customer.Phone,
+            customer.IdentityNumber,
+            customer.Nationality,
+            customer.LicenseYear,
+            customer.BirthDate);
+
+        return OkResponse(response, "Profil guncellendi.");
+    }
+
+    private bool TryReadPrincipalId(out Guid principalId)
+    {
+        principalId = Guid.Empty;
+
+        var principalIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        return Guid.TryParse(principalIdClaim, out principalId);
     }
 
     private bool TryReadRefreshToken(out string refreshToken)

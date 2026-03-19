@@ -556,33 +556,46 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
-    public void Me_WithCustomerPrincipal_ReturnsIdentityPayload()
+    public async Task Me_WithCustomerPrincipal_ReturnsProfileData()
     {
         using var dbContext = _dbContextFactory.CreateContext();
-        var controller = CreateController(dbContext);
-        controller.ControllerContext = new ControllerContext
+        var customer = new Customer
         {
-            HttpContext = new DefaultHttpContext
-            {
-                User = new ClaimsPrincipal(
-                    new ClaimsIdentity(
-                    [
-                        new Claim(ClaimTypes.NameIdentifier, "customer-id"),
-                        new Claim(ClaimTypes.Name, "customer@test.com"),
-                        new Claim(ClaimTypes.Role, "Customer")
-                    ],
-                    authenticationType: "TestAuth"))
-            }
+            Email = "me@test.com",
+            FullName = "Me Customer",
+            Phone = "05001234567",
+            IdentityNumber = "12345678901",
+            Nationality = "TR",
+            LicenseYear = 2018,
+            BirthDate = new DateOnly(1995, 3, 15)
         };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
 
-        var result = controller.Me();
+        var controller = CreateController(dbContext);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var result = await controller.Me(CancellationToken.None);
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var payloadJson = JsonSerializer.Serialize(okResult.Value);
-        payloadJson.Should().Contain("\"Success\":true");
-        payloadJson.Should().Contain("\"id\":\"customer-id\"");
-        payloadJson.Should().Contain("\"email\":\"customer@test.com\"");
-        payloadJson.Should().Contain("\"role\":\"Customer\"");
+        var response = okResult.Value.Should().BeOfType<ApiResponse<CustomerProfileResponse>>().Subject;
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data!.Id.Should().Be(customer.Id);
+        response.Data.Email.Should().Be(customer.Email);
+        response.Data.FullName.Should().Be(customer.FullName);
+        response.Data.Phone.Should().Be(customer.Phone);
+        response.Data.IdentityNumber.Should().Be(customer.IdentityNumber);
+        response.Data.Nationality.Should().Be(customer.Nationality);
+        response.Data.LicenseYear.Should().Be(customer.LicenseYear);
+        response.Data.BirthDate.Should().Be(customer.BirthDate);
     }
 
     private static CustomerAuthController CreateController(
@@ -612,4 +625,149 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     {
         httpContext.Request.Headers.Cookie = $"{cookieName}={refreshToken}";
     }
+
+    #region UpdateProfile Tests
+
+    [Fact]
+    public async Task UpdateProfile_WithValidData_UpdatesCustomerAndReturnsSuccess()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "profile@test.com",
+            FullName = "Original Name",
+            Phone = "05001110000",
+            IdentityNumber = "12345678901",
+            Nationality = "TR",
+            LicenseYear = 2015,
+            BirthDate = new DateOnly(1990, 5, 15)
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var request = new UpdateProfileRequest(
+            FullName: "Updated Name",
+            Phone: "05009998877",
+            IdentityNumber: "98765432109",
+            Nationality: "US",
+            LicenseYear: 2018,
+            BirthDate: new DateOnly(1992, 8, 20));
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.FullName.Should().Be("Updated Name");
+        persistedCustomer.Phone.Should().Be("05009998877");
+        persistedCustomer.IdentityNumber.Should().Be("98765432109");
+        persistedCustomer.Nationality.Should().Be("US");
+        persistedCustomer.LicenseYear.Should().Be(2018);
+        persistedCustomer.BirthDate.Should().Be(new DateOnly(1992, 8, 20));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithPartialData_UpdatesOnlyProvidedFields()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "partial@test.com",
+            FullName = "Original Name",
+            Phone = "05001110000",
+            IdentityNumber = "12345678901",
+            Nationality = "TR",
+            LicenseYear = 2015
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var request = new UpdateProfileRequest(
+            FullName: "New Name",
+            Phone: null,
+            IdentityNumber: null,
+            Nationality: null,
+            LicenseYear: null,
+            BirthDate: null);
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.FullName.Should().Be("New Name");
+        persistedCustomer.Phone.Should().Be("05001110000");
+        persistedCustomer.IdentityNumber.Should().Be("12345678901");
+        persistedCustomer.Nationality.Should().Be("TR");
+        persistedCustomer.LicenseYear.Should().Be(2015);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var controller = CreateController(dbContext);
+
+        var request = new UpdateProfileRequest(
+            FullName: "Test",
+            Phone: null,
+            IdentityNumber: null,
+            Nationality: null,
+            LicenseYear: null,
+            BirthDate: null);
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithNonExistentCustomer_ReturnsNotFound()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var controller = CreateController(dbContext);
+
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var request = new UpdateProfileRequest(
+            FullName: "Ghost User",
+            Phone: null,
+            IdentityNumber: null,
+            Nationality: null,
+            LicenseYear: null,
+            BirthDate: null);
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    #endregion
 }

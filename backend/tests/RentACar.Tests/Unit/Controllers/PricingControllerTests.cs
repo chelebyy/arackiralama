@@ -257,8 +257,8 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var controller = new PricingController(new PricingService(dbContext, new EfUnitOfWork(dbContext)));
-        var pickupDate = new DateTime(2026, 3, 13, 10, 0, 0, DateTimeKind.Utc);
-        var returnDate = new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc);
+        var pickupDate = GetNextSaturday(DateTime.UtcNow.Date).AddHours(10);
+        var returnDate = pickupDate.AddDays(2);
 
         var result = await controller.GetBreakdown(
             vehicleGroup.Id,
@@ -277,9 +277,9 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var response = okResult.Value.Should().BeOfType<ApiResponse<PriceBreakdownDto>>().Subject;
 
         response.Data.Should().NotBeNull();
-        response.Data!.DailyRate.Should().Be(1100m);
-        response.Data.BaseTotal.Should().Be(2420m);
-        response.Data.FinalTotal.Should().Be(3170m);
+        response.Data!.DailyRate.Should().Be(1320m);
+        response.Data.BaseTotal.Should().Be(2640m);
+        response.Data.FinalTotal.Should().Be(3390m);
     }
 
     [Fact]
@@ -459,4 +459,12 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
 
         return (vehicleGroup, pickupOffice, returnOffice);
     }
+
+    private static DateTime GetNextSaturday(DateTime date)
+    {
+        var daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)date.DayOfWeek + 7) % 7;
+        return date.Date.AddDays(daysUntilSaturday == 0 ? 0 : daysUntilSaturday);
+    }
 }
+
+

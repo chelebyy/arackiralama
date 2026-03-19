@@ -174,4 +174,26 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
 
         return results;
     }
+
+    public async Task<(IReadOnlyList<Reservation> Items, int TotalCount)> GetByCustomerIdPaginatedAsync(
+        Guid customerId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var query = Entities
+            .AsNoTracking()
+            .Include(r => r.Vehicle)
+            .Where(r => r.CustomerId == customerId);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

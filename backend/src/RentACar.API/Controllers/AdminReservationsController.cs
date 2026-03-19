@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,8 +16,11 @@ namespace RentACar.API.Controllers;
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
 public sealed class AdminReservationsController(
     IReservationService reservationService,
-    IPaymentService paymentService) : BaseApiController
+    IPaymentService paymentService,
+    IAuditLogService auditLogService) : BaseApiController
 {
+    private const string EntityType = "Reservation";
+
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] ReservationFilterRequest? filter = null,
@@ -30,10 +34,10 @@ public sealed class AdminReservationsController(
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var reservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
-        
+
         if (reservation == null)
         {
-            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
         }
 
         return OkResponse(reservation);
@@ -56,14 +60,30 @@ public sealed class AdminReservationsController(
     {
         try
         {
-            var reservation = await reservationService.UpdateReservationAsync(id, request, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(reservation, "Rezervasyon başarıyla güncellendi.");
+            var reservation = await reservationService.UpdateReservationAsync(id, request, cancellationToken);
+
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "Update",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(existingReservation),
+                System.Text.Json.JsonSerializer.Serialize(reservation),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Rezervasyon basariyla guncellendi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -79,19 +99,35 @@ public sealed class AdminReservationsController(
     {
         if (vehicleId == Guid.Empty)
         {
-            return BadRequestResponse("Geçerli bir araç ID'si gereklidir.");
+            return BadRequestResponse("Gecerli bir arac ID'si gereklidir.");
         }
 
         try
         {
-            var reservation = await reservationService.AssignVehicleAsync(id, vehicleId, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(reservation, "Araç rezervasyona atandı.");
+            var reservation = await reservationService.AssignVehicleAsync(id, vehicleId, cancellationToken);
+
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "AssignVehicle",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.VehicleId }),
+                System.Text.Json.JsonSerializer.Serialize(new { VehicleId = vehicleId }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Arac rezervasyona atandi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -104,14 +140,30 @@ public sealed class AdminReservationsController(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var reservation = await reservationService.UnassignVehicleAsync(id, cancellationToken);
-        
-        if (reservation == null)
+        var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+        if (existingReservation == null)
         {
-            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
         }
 
-        return OkResponse(reservation, "Araç rezervasyondan kaldırıldı.");
+        var reservation = await reservationService.UnassignVehicleAsync(id, cancellationToken);
+
+        if (reservation == null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+        }
+
+        await auditLogService.LogAsync(
+            "UnassignVehicle",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(new { existingReservation.VehicleId }),
+            System.Text.Json.JsonSerializer.Serialize(new { VehicleId = (Guid?)null }),
+            GetClientIpAddress(),
+            cancellationToken);
+
+        return OkResponse(reservation, "Arac rezervasyondan kaldirildi.");
     }
 
     [HttpPost("{id:guid}/transition-status")]
@@ -127,19 +179,35 @@ public sealed class AdminReservationsController(
 
         if (!Enum.TryParse<ReservationStatus>(newStatus, true, out var status))
         {
-            return BadRequestResponse("Geçersiz durum değeri.");
+            return BadRequestResponse("Gecersiz durum degeri.");
         }
 
         try
         {
-            var reservation = await reservationService.TransitionStatusAsync(id, status, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return BadRequestResponse("Durum geçişi yapılamadı. Geçersiz rezervasyon veya durum.");
+                return BadRequestResponse("Durum gecisi yapilamadi. Gecersiz rezervasyon veya durum.");
             }
 
-            return OkResponse(reservation, $"Rezervasyon durumu '{newStatus}' olarak güncellendi.");
+            var reservation = await reservationService.TransitionStatusAsync(id, status, cancellationToken);
+
+            if (reservation == null)
+            {
+                return BadRequestResponse("Durum gecisi yapilamadi. Gecersiz rezervasyon veya durum.");
+            }
+
+            await auditLogService.LogAsync(
+                "TransitionStatus",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.Status }),
+                System.Text.Json.JsonSerializer.Serialize(new { Status = newStatus }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, $"Rezervasyon durumu '{newStatus}' olarak guncellendi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -155,14 +223,30 @@ public sealed class AdminReservationsController(
     {
         try
         {
-            var reservation = await reservationService.CheckInAsync(id, request, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(reservation, "Rezervasyon check-in yapıldı.");
+            var reservation = await reservationService.CheckInAsync(id, request, cancellationToken);
+
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "CheckIn",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.Status }),
+                System.Text.Json.JsonSerializer.Serialize(new { reservation.Status, request.ActualMileage, request.ActualFuelLevel, request.Notes }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Rezervasyon check-in yapildi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -178,14 +262,30 @@ public sealed class AdminReservationsController(
     {
         try
         {
-            var reservation = await reservationService.CheckOutAsync(id, request, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(reservation, "Rezervasyon check-out yapıldı.");
+            var reservation = await reservationService.CheckOutAsync(id, request, cancellationToken);
+
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "CheckOut",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.Status }),
+                System.Text.Json.JsonSerializer.Serialize(new { reservation.Status, request.ReturnMileage, request.ReturnFuelLevel, request.Notes }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Rezervasyon check-out yapildi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -201,14 +301,30 @@ public sealed class AdminReservationsController(
     {
         try
         {
-            var reservation = await reservationService.AdminCancelReservationAsync(id, reason, cancellationToken);
-            
-            if (reservation == null)
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(reservation, "Rezervasyon yönetici tarafından iptal edildi.");
+            var reservation = await reservationService.AdminCancelReservationAsync(id, reason, cancellationToken);
+
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "Cancel",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.Status }),
+                System.Text.Json.JsonSerializer.Serialize(new { Status = reservation.Status, Reason = reason }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Rezervasyon yonetici tarafindan iptal edildi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -227,10 +343,20 @@ public sealed class AdminReservationsController(
             var result = await paymentService.RefundReservationAsync(id, request, cancellationToken);
             if (result == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(result, "İade işlemi tamamlandı.");
+            await auditLogService.LogAsync(
+                "Refund",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                null,
+                System.Text.Json.JsonSerializer.Serialize(request),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(result, "Iade islemi tamamlandi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -249,10 +375,20 @@ public sealed class AdminReservationsController(
             var result = await paymentService.ReleaseDepositAsync(id, request?.Note, cancellationToken);
             if (result == null)
             {
-                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
             }
 
-            return OkResponse(result, "Depozito bırakma işlemi tamamlandı.");
+            await auditLogService.LogAsync(
+                "ReleaseDeposit",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                null,
+                System.Text.Json.JsonSerializer.Serialize(new { Note = request?.Note }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(result, "Depozito birakma islemi tamamlandi.");
         }
         catch (InvalidOperationException ex)
         {
@@ -264,7 +400,7 @@ public sealed class AdminReservationsController(
     public async Task<IActionResult> ProcessExpired(CancellationToken cancellationToken)
     {
         await reservationService.ProcessExpiredReservationsAsync(cancellationToken);
-        return OkResponse<object?>(null, "Süresi dolan rezervasyonlar işlendi.");
+        return OkResponse<object?>(null, "Suresi dolan rezervasyonlar islendi.");
     }
 
     [HttpGet("status-transitions/{currentStatus}")]
@@ -274,10 +410,20 @@ public sealed class AdminReservationsController(
     {
         if (!Enum.TryParse<ReservationStatus>(currentStatus, true, out var status))
         {
-            return BadRequestResponse("Geçersiz durum değeri.");
+            return BadRequestResponse("Gecersiz durum degeri.");
         }
 
         var validTransitions = await reservationService.GetValidNextStatusesAsync(status, cancellationToken);
         return OkResponse(validTransitions);
+    }
+
+    private string? GetCurrentUserId()
+    {
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private string? GetClientIpAddress()
+    {
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 }

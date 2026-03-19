@@ -416,6 +416,12 @@ public sealed class FleetService(
         return MapToDto(existingVehicle);
     }
 
+    public async Task<VehicleDto?> GetVehicleByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var vehicle = await vehicleRepository.GetByIdAsync(id, cancellationToken);
+        return vehicle is null ? null : MapToDto(vehicle);
+    }
+
     public Task<bool> IsVehiclePlateAvailableAsync(string plate, Guid? excludeVehicleId = null, CancellationToken cancellationToken = default)
     {
         return vehicleRepository.IsPlateAvailableAsync(plate, excludeVehicleId, cancellationToken);

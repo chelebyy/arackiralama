@@ -30,4 +30,10 @@ public interface IReservationRepository : IRepository<Reservation>
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Reservation> Items, int TotalCount)> GetByCustomerIdPaginatedAsync(
+        Guid customerId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }
