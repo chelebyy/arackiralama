@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ship Safe Full Audit Report — Arac-Kiralama</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#e2e8f0;padding:2rem}
+.container{max-width:1200px;margin:0 auto}
+h1{font-size:2rem;margin-bottom:0.5rem;color:#38bdf8}
+h2{font-size:1.3rem;margin:2rem 0 1rem;color:#94a3b8;border-bottom:1px solid #1e293b;padding-bottom:0.5rem}
+.meta{color:#64748b;margin-bottom:2rem}
+.score-card{display:flex;align-items:center;gap:2rem;background:#1e293b;padding:2rem;border-radius:12px;margin-bottom:2rem}
+.score-number{font-size:4rem;font-weight:bold}
+.grade{font-size:3rem;font-weight:bold;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.stat{background:#1e293b;padding:1.5rem;border-radius:8px;text-align:center}
+.stat-number{font-size:2rem;font-weight:bold}
+.stat-label{color:#64748b;font-size:0.85rem}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem}
+.summary-card{background:#1e293b;padding:1.5rem;border-radius:8px}
+.summary-card h3{color:#38bdf8;font-size:1rem;margin-bottom:0.5rem}
+.summary-card .big{font-size:2.5rem;font-weight:bold}
+table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:8px;overflow:hidden;margin-bottom:2rem}
+th{background:#334155;text-align:left;padding:0.75rem 1rem;font-size:0.8rem;text-transform:uppercase;color:#94a3b8}
+td{padding:0.75rem 1rem;border-top:1px solid #0f172a;font-size:0.85rem;vertical-align:top}
+tr:hover{background:#334155}
+code{background:#0f172a;padding:2px 6px;border-radius:4px;font-size:0.8rem;color:#38bdf8}
+small{color:#94a3b8}
+.sev{padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;text-transform:uppercase}
+.sev-critical{background:#dc262633;color:#fca5a5}
+.sev-high{background:#f9731633;color:#fdba74}
+.sev-medium,.sev-moderate{background:#eab30833;color:#fde047}
+.sev-low{background:#3b82f633;color:#93c5fd}
+.toc{background:#1e293b;padding:1.5rem 2rem;border-radius:8px;margin-bottom:2rem}
+.toc a{color:#38bdf8;text-decoration:none;display:block;padding:0.3rem 0}
+.toc a:hover{text-decoration:underline}
+.footer{text-align:center;color:#475569;margin-top:3rem;padding:2rem;border-top:1px solid #1e293b}
+.footer a{color:#38bdf8}
+@media print{body{background:#fff;color:#1e293b}table,th,td{border:1px solid #e2e8f0}.score-card,.stat,.summary-card,.toc{background:#f8fafc}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Ship Safe — Full Security Audit Report</h1>
+  <p class="meta">Arac-Kiralama — March 19, 2026 at 08:29 PM</p>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <a href="#score">1. Security Score</a>
+    <a href="#summary">2. Executive Summary</a>
+    <a href="#categories">3. Category Breakdown</a>
+    <a href="#plan">4. Remediation Plan (40 items)</a>
+    <a href="#findings">5. All Findings (131)</a>
+    <a href="#deps">6. Dependency Vulnerabilities (0)</a>
+    <a href="#surface">7. Attack Surface</a>
+  </div>
+
+  <h2 id="score">1. Security Score</h2>
+  <div class="score-card">
+    <div class="grade" style="background:#ef444422;color:#ef4444">D</div>
+    <div>
+      <div class="score-number" style="color:#ef4444">48.6/100</div>
+      <div style="color:#94a3b8">Significant security risks</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-number" style="color:#dc2626">7</div><div class="stat-label">Critical</div></div>
+    <div class="stat"><div class="stat-number" style="color:#f97316">47</div><div class="stat-label">High</div></div>
+    <div class="stat"><div class="stat-number" style="color:#eab308">77</div><div class="stat-label">Medium</div></div>
+    <div class="stat"><div class="stat-number" style="color:#3b82f6">0</div><div class="stat-label">Low</div></div>
+  </div>
+
+  <h2 id="summary">2. Executive Summary</h2>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h3>Code Findings</h3>
+      <div class="big" style="color:#ef4444">131</div>
+      <small>Across 8 categories</small>
+    </div>
+    <div class="summary-card">
+      <h3>Dependency CVEs</h3>
+      <div class="big" style="color:#22c55e">0</div>
+      <small>From npm/pip/bundler audit</small>
+    </div>
+  </div>
+
+  <h2 id="categories">3. Category Breakdown</h2>
+  <table>
+    <thead><tr><th>Category</th><th>Findings</th><th>Score Deduction</th></tr></thead>
+    <tbody><tr>
+          <td>Secrets</td>
+          <td>28</td>
+          <td style="color:#ef4444">-15</td>
+        </tr>
+<tr>
+          <td>Code Vulnerabilities</td>
+          <td>3</td>
+          <td style="color:#ef4444">-15</td>
+        </tr>
+<tr>
+          <td>Dependencies</td>
+          <td>0</td>
+          <td style="color:#22c55e">0</td>
+        </tr>
+<tr>
+          <td>Auth & Access Control</td>
+          <td>6</td>
+          <td style="color:#ef4444">-5.4</td>
+        </tr>
+<tr>
+          <td>Configuration</td>
+          <td>89</td>
+          <td style="color:#ef4444">-10</td>
+        </tr>
+<tr>
+          <td>Supply Chain</td>
+          <td>0</td>
+          <td style="color:#22c55e">0</td>
+        </tr>
+<tr>
+          <td>API Security</td>
+          <td>0</td>
+          <td style="color:#22c55e">0</td>
+        </tr>
+<tr>
+          <td>AI/LLM Security</td>
+          <td>5</td>
+          <td style="color:#ef4444">-6</td>
+        </tr></tbody>
+  </table>
+
+  <h2 id="plan">4. Remediation Plan</h2>
+  <p style="color:#94a3b8;margin-bottom:1rem">Prioritized list of fixes. Address critical items first.</p>
+  <table>
+    <thead><tr><th>#</th><th>Category</th><th>Issue</th><th>Location</th><th>Fix</th></tr></thead>
+    <tbody><tr class="sev-header"><td colspan="5" style="background:#1e293b;padding:1rem;font-weight:bold;color:#dc2626">&#x1F534; CRITICAL — fix immediately</td></tr>
+<tr>
+        <td>1</td>
+        <td><span class="sev sev-critical">CODE VULNERABILITIES</span></td>
+        <td><strong>SQL Injection via Template Literal</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/calendar/components/event-dialog.tsx:132</code></td>
+        <td><small>Use parameterized queries: db.query(&quot;SELECT * FROM users WHERE id = $1&quot;, [userId])</small></td>
+      </tr>
+<tr>
+        <td>2</td>
+        <td><span class="sev sev-critical">HISTORY</span></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120856_6345d025b0264010881279d12896b9f9.trn:0</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td>3</td>
+        <td><span class="sev sev-critical">HISTORY</span></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_c34ce396e8c848beaff02cc34e06a66b.trn:0</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td>4</td>
+        <td><span class="sev sev-critical">HISTORY</span></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_e4dcda03c75e48d888a1bddbfc88c08a.trn:0</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr class="sev-header"><td colspan="5" style="background:#1e293b;padding:1rem;font-weight:bold;color:#f97316">&#x1F7E0; HIGH — fix before deploy</td></tr>
+<tr>
+        <td>5</td>
+        <td><span class="sev sev-high">SECRETS</span></td>
+        <td><strong>Resend API Key</strong></td>
+        <td><code>frontend/tsconfig.tsbuildinfo:1</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>6</td>
+        <td><span class="sev sev-high">SECRETS</span></td>
+        <td><strong>Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120856_6345d025b0264010881279d12896b9f9.trn:5</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>7</td>
+        <td><span class="sev sev-high">SECRETS</span></td>
+        <td><strong>Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_c34ce396e8c848beaff02cc34e06a66b.trn:5</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>8</td>
+        <td><span class="sev sev-high">SECRETS</span></td>
+        <td><strong>Upstash Redis REST Token</strong></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_e4dcda03c75e48d888a1bddbfc88c08a.trn:5</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>9</td>
+        <td><span class="sev sev-high">CODE VULNERABILITIES</span></td>
+        <td><strong>XSS via dangerouslySetInnerHTML</strong></td>
+        <td><code>frontend/components/ui/chart.tsx:76</code></td>
+        <td><small>Sanitize with DOMPurify: dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(html)}}</small></td>
+      </tr>
+<tr>
+        <td>10</td>
+        <td><span class="sev sev-high">CODE VULNERABILITIES</span></td>
+        <td><strong>XSS via dangerouslySetInnerHTML</strong></td>
+        <td><code>frontend/components/ui/custom/prompt/code-block.tsx:62</code></td>
+        <td><small>Sanitize with DOMPurify: dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(html)}}</small></td>
+      </tr>
+<tr>
+        <td>11</td>
+        <td><span class="sev sev-high">CONFIGURATION</span></td>
+        <td><strong>Dockerfile: No Non-Root USER</strong></td>
+        <td><code>backend/src/RentACar.API/Dockerfile:1</code></td>
+        <td><small>Add before CMD: RUN addgroup -S app &amp;&amp; adduser -S app -G app
+USER app</small></td>
+      </tr>
+<tr>
+        <td>12</td>
+        <td><span class="sev sev-high">CONFIGURATION</span></td>
+        <td><strong>Dockerfile: No Non-Root USER</strong></td>
+        <td><code>backend/src/RentACar.Worker/Dockerfile:1</code></td>
+        <td><small>Add before CMD: RUN addgroup -S app &amp;&amp; adduser -S app -G app
+USER app</small></td>
+      </tr>
+<tr>
+        <td>13</td>
+        <td><span class="sev sev-high">HISTORY</span></td>
+        <td><strong>Historical Secret: Password Assignment</strong></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Controllers/AdminUsersControllerTests.cs:0</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td>14</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:24</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>15</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:27</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>16</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:67</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>17</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:89</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>18</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:92</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>19</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:97</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>20</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:116</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>21</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:131</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>22</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:134</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>23</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:137</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>24</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:145</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>25</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:164</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>26</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:167</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>27</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:178</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>28</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:185</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>29</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/ci.yml:195</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>30</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/codeql.yml:33</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td>31</td>
+        <td><span class="sev sev-high">CICD</span></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong></td>
+        <td><code>.github/workflows/dependabot-auto-merge.yml:27</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr class="sev-header"><td colspan="5" style="background:#1e293b;padding:1rem;font-weight:bold;color:#eab308">&#x1F7E1; MEDIUM — fix soon</td></tr>
+<tr>
+        <td>32</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Password Assignment</strong></td>
+        <td><code>docs/05_Runbook_ENTERPRISE_FULL.md:321</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>33</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Password Assignment</strong></td>
+        <td><code>docs/07_API_Contract_ENTERPRISE_FULL.md:346</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>34</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic Secret Assignment</strong></td>
+        <td><code>backend/src/RentACar.API/appsettings.Development.json:5</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>35</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:5</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>36</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:13</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>37</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:21</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>38</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:29</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>39</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:37</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td>40</td>
+        <td><span class="sev sev-medium">SECRETS</span></td>
+        <td><strong>Generic API Key Assignment</strong></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:45</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+</tbody>
+  </table>
+
+  <h2 id="findings">5. All Findings (131)</h2>
+  <table>
+    <thead><tr><th>Severity</th><th>Location</th><th>Issue</th><th>Code</th><th>Fix</th></tr></thead>
+    <tbody><tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>docs/05_Runbook_ENTERPRISE_FULL.md:321</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>&quot;password&quot;:&quot;ADMIN_PASSWORD&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>docs/07_API_Contract_ENTERPRISE_FULL.md:346</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>&quot;password&quot;: &quot;securePassword123&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/tsconfig.tsbuildinfo:1</code></td>
+        <td><strong>Resend API Key</strong><br><small>Resend API keys can send emails from your account and access logs.</small></td>
+        <td><code>re_89c05553cea6333953122f8032d44535</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120856_6345d025b0264010881279d12896b9f9.trn:5</code></td>
+        <td><strong>Upstash Redis REST Token</strong><br><small>Upstash Redis tokens grant access to your serverless Redis database.</small></td>
+        <td><code>AXgoZhOpNzQkPGxufGcQu0FNE6tbtd8pbXBMb2R8xhfVrrQ2xw2XdQ5fXhW7</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_c34ce396e8c848beaff02cc34e06a66b.trn:5</code></td>
+        <td><strong>Upstash Redis REST Token</strong><br><small>Upstash Redis tokens grant access to your serverless Redis database.</small></td>
+        <td><code>AXNQgEUgEjsePQ4BekpoIEyKtaa9ndHwjGzqAjwkD900</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_e4dcda03c75e48d888a1bddbfc88c08a.trn:5</code></td>
+        <td><strong>Upstash Redis REST Token</strong><br><small>Upstash Redis tokens grant access to your serverless Redis database.</small></td>
+        <td><code>AXCJuMmydjSOUOKXqBeN4jJgKqcmva8rV4j3OM</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/src/RentACar.API/appsettings.Development.json:5</code></td>
+        <td><strong>Generic Secret Assignment</strong><br><small>Hardcoded secrets should be moved to environment variables.</small></td>
+        <td><code>&quot;Secret&quot;:  &quot;DevelopmentOnlySecretKeyAtLeast32Chars&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/login-form.test.tsx:64</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password: &quot;Passw0rd!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Controllers/AdminUsersControllerTests.cs:64</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>Password: &quot;P@ssw0rd!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Controllers/AdminUsersControllerTests.cs:96</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>Password: &quot;P@ssw0rd!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:15</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;TestPassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:63</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;SamePassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:77</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;CorrectPassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:91</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;CorrectPassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:92</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>Password = &quot;WrongPassword456!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:119</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;SomePassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Security/BcryptPasswordHasherTests.cs:145</code></td>
+        <td><strong>Password Assignment</strong><br><small>Hardcoded passwords are a critical vulnerability.</small></td>
+        <td><code>password = &quot;SomePassword123!&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:5</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;9e6d336a-2f98-43e9-9fa6-11b4d5cdaf62&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:13</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;8a2d834b-5c92-4d63-a5e4-7a1b0f2f4c24&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:21</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;4b6f472a-987b-4db7-8c1a-7a0de0f3f5b6&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:29</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;d4e3b829-1c7f-48b4-a019-9c1fe472a42f&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:37</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;7c8b945e-3d2a-4f16-b5c8-2e9d1a3b4c5d&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/data.json:45</code></td>
+        <td><strong>Generic API Key Assignment</strong><br><small>Hardcoded API keys should be moved to environment variables.</small></td>
+        <td><code>&quot;api_key&quot;: &quot;2f5e8d1c-9b4a-4e7d-8f3b-6c5a2d1b9e8f&quot;</code></td>
+        <td><small>Move to environment variable or secrets manager</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/calendar/components/event-dialog.tsx:132</code></td>
+        <td><strong>SQL Injection via Template Literal</strong><br><small>SQL query with interpolated template variable. Use parameterized queries ($1, ?) or an ORM.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 129         endHours &lt; StartHour ||</span><span style=""> 130         endHours &gt; EndHour</span><span style=""> 131       ) {</span><span style="background:#dc262633;display:block;"> 132         setError(`Selected time must be between ${StartHour}:00 and ${EndHour}:00`);</span><span style=""> 133         return;</span><span style=""> 134       }</span><span style=""> 135 </span></code></pre></td>
+        <td><code>`Selected time must be between ${StartHour}:00 and ${</code></td>
+        <td><small>Use parameterized queries: db.query(&quot;SELECT * FROM users WHERE id = $1&quot;, [userId])</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120856_6345d025b0264010881279d12896b9f9.trn:0</code></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong><br><small>Secret was removed from code but still exists in git history (commit c10be0d43e, Sun Mar 15 21:09:20 2026 +0300). Anyone</small></td>
+        <td><code>AXgoZhOp***eYEp</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_c34ce396e8c848beaff02cc34e06a66b.trn:0</code></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong><br><small>Secret was removed from code but still exists in git history (commit c10be0d43e, Sun Mar 15 21:09:20 2026 +0300). Anyone</small></td>
+        <td><code>AXNQgEUg***D900</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>.dotnet/.dotnet/TelemetryStorageService/20260314120858_e4dcda03c75e48d888a1bddbfc88c08a.trn:0</code></td>
+        <td><strong>Historical Secret: Upstash Redis REST Token</strong><br><small>Secret was removed from code but still exists in git history (commit c10be0d43e, Sun Mar 15 21:09:20 2026 +0300). Anyone</small></td>
+        <td><code>AXCJuMmy***j3OM</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>.github/workflows/dependabot-auto-merge.yml:4</code></td>
+        <td><strong>CI/CD: pull_request_target with PR Checkout</strong><br><small>pull_request_target trigger detected. Runs with base branch privileges and can be exploited if combined with PR checkout</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">   1 ﻿name: Dependabot Auto Merge (Bot Only)</span><span style="">   2 </span><span style="">   3 on:</span><span style="background:#dc262633;display:block;">   4   pull_request_target:</span><span style="">   5     types:</span><span style="">   6       - opened</span><span style="">   7       - reopened</span></code></pre></td>
+        <td><code>pull_request_target</code></td>
+        <td><small>Use pull_request trigger instead, or never checkout PR branch in pull_request_target</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>frontend/app/api/auth/login/route.ts:31</code></td>
+        <td><strong>Privacy: Password Stored in Plaintext</strong><br><small>Password appears to be stored directly from user input without hashing. Passwords must be hashed before storage.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  28 </span><span style="">  29   const principalScope = normalizePrincipalScope(body.principalScope ?? &quot;&quot;);</span><span style="">  30   const email = body.email?.trim();</span><span style="background:#dc262633;display:block;">  31   const password = body.password;</span><span style="">  32 </span><span style="">  33   if (!principalScope || !email || !password) {</span><span style="">  34     return NextResponse.json(</span></code></pre></td>
+        <td><code>password = body.password</code></td>
+        <td><small>Hash passwords with bcrypt, scrypt, or argon2 before storing: await bcrypt.hash(password, 12)</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-critical">CRITICAL</span></td>
+        <td><code>frontend/app/api/auth/register/route.ts:28</code></td>
+        <td><strong>Privacy: Password Stored in Plaintext</strong><br><small>Password appears to be stored directly from user input without hashing. Passwords must be hashed before storage.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  25   }</span><span style="">  26 </span><span style="">  27   const email = body.email?.trim();</span><span style="background:#dc262633;display:block;">  28   const password = body.password;</span><span style="">  29 </span><span style="">  30   if (!email || !password) {</span><span style="">  31     return NextResponse.json(</span></code></pre></td>
+        <td><code>password = body.password</code></td>
+        <td><small>Hash passwords with bcrypt, scrypt, or argon2 before storing: await bcrypt.hash(password, 12)</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/components/ui/chart.tsx:76</code></td>
+        <td><strong>XSS via dangerouslySetInnerHTML</strong><br><small>dangerouslySetInnerHTML can introduce XSS if the value contains user input.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  73 </span><span style="">  74   return (</span><span style="">  75     &lt;style</span><span style="background:#dc262633;display:block;">  76       dangerouslySetInnerHTML={{</span><span style="">  77         __html: Object.entries(THEMES)</span><span style="">  78           .map(</span><span style="">  79             ([theme, prefix]) =&gt; `</span></code></pre></td>
+        <td><code>dangerouslySetInnerHTML={{</code></td>
+        <td><small>Sanitize with DOMPurify: dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(html)}}</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/components/ui/custom/prompt/code-block.tsx:62</code></td>
+        <td><strong>XSS via dangerouslySetInnerHTML</strong><br><small>dangerouslySetInnerHTML can introduce XSS if the value contains user input.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  59 </span><span style="">  60   // SSR fallback: render plain code if not hydrated yet</span><span style="">  61   return highlightedHtml ? (</span><span style="background:#dc262633;display:block;">  62     &lt;div className={classNames} dangerouslySetInnerHTML={{ __html: highlightedHtml }} {...props} /&gt;</span><span style="">  63   ) : (</span><span style="">  64     &lt;div className={classNames} {...props}&gt;</span><span style="">  65       &lt;pre&gt;</span></code></pre></td>
+        <td><code>dangerouslySetInnerHTML={{</code></td>
+        <td><small>Sanitize with DOMPurify: dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(html)}}</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>backend/src/RentACar.API/Dockerfile:17</code></td>
+        <td><strong>Docker: Running as Root</strong><br><small>No USER instruction found. Container runs as root by default.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  14 WORKDIR /app</span><span style="">  15 COPY --from=build /app/publish .</span><span style="">  16 EXPOSE 8080</span><span style="background:#dc262633;display:block;">  17 ENTRYPOINT [&quot;dotnet&quot;, &quot;RentACar.API.dll&quot;]</span><span style="">  18 </span></code></pre></td>
+        <td><code>ENTRYPOINT</code></td>
+        <td><small>Add USER nonroot before CMD/ENTRYPOINT</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>backend/src/RentACar.API/Dockerfile:1</code></td>
+        <td><strong>Dockerfile: No Non-Root USER</strong><br><small>No USER instruction found. Container runs as root, enabling escape attacks.</small></td>
+        <td><code>Missing USER instruction</code></td>
+        <td><small>Add before CMD: RUN addgroup -S app &amp;&amp; adduser -S app -G app
+USER app</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>backend/src/RentACar.Worker/Dockerfile:16</code></td>
+        <td><strong>Docker: Running as Root</strong><br><small>No USER instruction found. Container runs as root by default.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  13 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final</span><span style="">  14 WORKDIR /app</span><span style="">  15 COPY --from=build /app/publish .</span><span style="background:#dc262633;display:block;">  16 ENTRYPOINT [&quot;dotnet&quot;, &quot;RentACar.Worker.dll&quot;]</span><span style="">  17 </span></code></pre></td>
+        <td><code>ENTRYPOINT</code></td>
+        <td><small>Add USER nonroot before CMD/ENTRYPOINT</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>backend/src/RentACar.Worker/Dockerfile:1</code></td>
+        <td><strong>Dockerfile: No Non-Root USER</strong><br><small>No USER instruction found. Container runs as root, enabling escape attacks.</small></td>
+        <td><code>Missing USER instruction</code></td>
+        <td><small>Add before CMD: RUN addgroup -S app &amp;&amp; adduser -S app -G app
+USER app</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>backend/tests/RentACar.Tests/Unit/Controllers/AdminUsersControllerTests.cs:0</code></td>
+        <td><strong>Historical Secret: Password Assignment</strong><br><small>Secret was removed from code but still exists in git history (commit c10be0d43e, Sun Mar 15 21:09:20 2026 +0300). Anyone</small></td>
+        <td><code>Password***rd!&quot;</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/components/auth/login-form.test.tsx:0</code></td>
+        <td><strong>Historical Secret: Password Assignment</strong><br><small>Secret was removed from code but still exists in git history (commit c10be0d43e, Sun Mar 15 21:09:20 2026 +0300). Anyone</small></td>
+        <td><code>password***rd!&quot;</code></td>
+        <td><small>Rotate this credential immediately, then clean history: npx bfg --replace-text passwords.txt</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:24</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  21 </span><span style="">  22     steps:</span><span style="">  23       - name: Checkout</span><span style="background:#dc262633;display:block;">  24         uses: actions/checkout@v4</span><span style="">  25 </span><span style="">  26       - name: Setup .NET</span><span style="">  27         uses: actions/setup-dotnet@v4</span></code></pre></td>
+        <td><code>uses: actions/checkout@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:27</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  24         uses: actions/checkout@v4</span><span style="">  25 </span><span style="">  26       - name: Setup .NET</span><span style="background:#dc262633;display:block;">  27         uses: actions/setup-dotnet@v4</span><span style="">  28         with:</span><span style="">  29           global-json-file: backend/global.json</span><span style="">  30           cache: true</span></code></pre></td>
+        <td><code>uses: actions/setup-dotnet@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:67</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  64 </span><span style="">  65       - name: Upload Backend Coverage</span><span style="">  66         if: steps.test-projects.outputs.count != '0'</span><span style="background:#dc262633;display:block;">  67         uses: actions/upload-artifact@v7</span><span style="">  68         with:</span><span style="">  69           name: backend-coverage</span><span style="">  70           path: |</span></code></pre></td>
+        <td><code>uses: actions/upload-artifact@v7</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:89</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  86 </span><span style="">  87     steps:</span><span style="">  88       - name: Checkout</span><span style="background:#dc262633;display:block;">  89         uses: actions/checkout@v4</span><span style="">  90 </span><span style="">  91       - name: Setup pnpm</span><span style="">  92         uses: pnpm/action-setup@v4</span></code></pre></td>
+        <td><code>uses: actions/checkout@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:92</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  89         uses: actions/checkout@v4</span><span style="">  90 </span><span style="">  91       - name: Setup pnpm</span><span style="background:#dc262633;display:block;">  92         uses: pnpm/action-setup@v4</span><span style="">  93         with:</span><span style="">  94           version: 9</span><span style="">  95 </span></code></pre></td>
+        <td><code>uses: pnpm/action-setup@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:97</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  94           version: 9</span><span style="">  95 </span><span style="">  96       - name: Setup Node.js</span><span style="background:#dc262633;display:block;">  97         uses: actions/setup-node@v4</span><span style="">  98         with:</span><span style="">  99           node-version: '22'</span><span style=""> 100           cache: 'pnpm'</span></code></pre></td>
+        <td><code>uses: actions/setup-node@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:116</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 113         run: pnpm test:coverage</span><span style=""> 114 </span><span style=""> 115       - name: Upload Frontend Coverage</span><span style="background:#dc262633;display:block;"> 116         uses: actions/upload-artifact@v7</span><span style=""> 117         with:</span><span style=""> 118           name: frontend-coverage</span><span style=""> 119           path: frontend/coverage/</span></code></pre></td>
+        <td><code>uses: actions/upload-artifact@v7</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:131</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 128 </span><span style=""> 129     steps:</span><span style=""> 130       - name: Checkout</span><span style="background:#dc262633;display:block;"> 131         uses: actions/checkout@v4</span><span style=""> 132 </span><span style=""> 133       - name: Set up Docker Buildx</span><span style=""> 134         uses: docker/setup-buildx-action@v4</span></code></pre></td>
+        <td><code>uses: actions/checkout@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:134</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 131         uses: actions/checkout@v4</span><span style=""> 132 </span><span style=""> 133       - name: Set up Docker Buildx</span><span style="background:#dc262633;display:block;"> 134         uses: docker/setup-buildx-action@v4</span><span style=""> 135 </span><span style=""> 136       - name: Build API image</span><span style=""> 137         uses: docker/build-push-action@v6</span></code></pre></td>
+        <td><code>uses: docker/setup-buildx-action@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:137</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 134         uses: docker/setup-buildx-action@v4</span><span style=""> 135 </span><span style=""> 136       - name: Build API image</span><span style="background:#dc262633;display:block;"> 137         uses: docker/build-push-action@v6</span><span style=""> 138         with:</span><span style=""> 139           context: backend</span><span style=""> 140           file: backend/src/RentACar.API/Dockerfile</span></code></pre></td>
+        <td><code>uses: docker/build-push-action@v6</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:145</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 142           tags: rentacar-api:ci</span><span style=""> 143 </span><span style=""> 144       - name: Build Worker image</span><span style="background:#dc262633;display:block;"> 145         uses: docker/build-push-action@v6</span><span style=""> 146         with:</span><span style=""> 147           context: backend</span><span style=""> 148           file: backend/src/RentACar.Worker/Dockerfile</span></code></pre></td>
+        <td><code>uses: docker/build-push-action@v6</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:164</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 161 </span><span style=""> 162     steps:</span><span style=""> 163       - name: Checkout</span><span style="background:#dc262633;display:block;"> 164         uses: actions/checkout@v4</span><span style=""> 165 </span><span style=""> 166       - name: Set up Docker Buildx</span><span style=""> 167         uses: docker/setup-buildx-action@v4</span></code></pre></td>
+        <td><code>uses: actions/checkout@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:167</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 164         uses: actions/checkout@v4</span><span style=""> 165 </span><span style=""> 166       - name: Set up Docker Buildx</span><span style="background:#dc262633;display:block;"> 167         uses: docker/setup-buildx-action@v4</span><span style=""> 168 </span><span style=""> 169       - name: Convert owner to lowercase</span><span style=""> 170         id: owner</span></code></pre></td>
+        <td><code>uses: docker/setup-buildx-action@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:178</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 175           echo &quot;value=${OWNER,,}&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;</span><span style=""> 176 </span><span style=""> 177       - name: Log in to GHCR</span><span style="background:#dc262633;display:block;"> 178         uses: docker/login-action@v4</span><span style=""> 179         with:</span><span style=""> 180           registry: ghcr.io</span><span style=""> 181           username: ${{ github.actor }}</span></code></pre></td>
+        <td><code>uses: docker/login-action@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:185</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 182           password: ${{ secrets.GITHUB_TOKEN }}</span><span style=""> 183 </span><span style=""> 184       - name: Build and push API image</span><span style="background:#dc262633;display:block;"> 185         uses: docker/build-push-action@v6</span><span style=""> 186         with:</span><span style=""> 187           context: backend</span><span style=""> 188           file: backend/src/RentACar.API/Dockerfile</span></code></pre></td>
+        <td><code>uses: docker/build-push-action@v6</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/ci.yml:195</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 192             ghcr.io/${{ steps.owner.outputs.value }}/rentacar-api:latest</span><span style=""> 193 </span><span style=""> 194       - name: Build and push Worker image</span><span style="background:#dc262633;display:block;"> 195         uses: docker/build-push-action@v6</span><span style=""> 196         with:</span><span style=""> 197           context: backend</span><span style=""> 198           file: backend/src/RentACar.Worker/Dockerfile</span></code></pre></td>
+        <td><code>uses: docker/build-push-action@v6</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/codeql.yml:33</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  30 </span><span style="">  31     steps:</span><span style="">  32       - name: Checkout repository</span><span style="background:#dc262633;display:block;">  33         uses: actions/checkout@v4</span><span style="">  34 </span><span style="">  35       - name: Initialize CodeQL</span><span style="">  36         uses: github/codeql-action/init@v4</span></code></pre></td>
+        <td><code>uses: actions/checkout@v4</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>.github/workflows/dependabot-auto-merge.yml:27</code></td>
+        <td><strong>CI/CD: Unpinned GitHub Action (uses @main/master)</strong><br><small>GitHub Action pinned to mutable tag. Pin to a specific commit SHA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  24     steps:</span><span style="">  25       - name: Fetch Dependabot metadata</span><span style="">  26         id: metadata</span><span style="background:#dc262633;display:block;">  27         uses: dependabot/fetch-metadata@v2</span><span style="">  28         with:</span><span style="">  29           github-token: ${{ secrets.GITHUB_TOKEN }}</span><span style="">  30 </span></code></pre></td>
+        <td><code>uses: dependabot/fetch-metadata@v2</code></td>
+        <td><small>Pin to commit SHA: uses: actions/checkout@abcdef1234567890 # v4.1.0</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/components/auth/reset-password-form.tsx:32</code></td>
+        <td><strong>Agent: Credentials Passed Between Tools</strong><br><small>Agent forwards credentials between tools or to external services. Compromised tools can steal credentials.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  29   initialScope?: PrincipalScope;</span><span style="">  30 }</span><span style="">  31 </span><span style="background:#dc262633;display:block;">  32 export function ResetPasswordForm({ initialToken = &quot;&quot;, initialScope = &quot;Admin&quot; }: ResetPasswordFormProps) {</span><span style="">  33   const router = useRouter();</span><span style="">  34 </span><span style="">  35   const [token, setToken] = useState(initialToken);</span></code></pre></td>
+        <td><code>function ResetPasswordForm({ initialToken = &quot;&quot;, initialScope</code></td>
+        <td><small>Scope credentials per-tool. Never forward authentication tokens between tool invocations.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/academy/components/courses-list.tsx:242</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 239                 ))</span><span style=""> 240               ) : (</span><span style=""> 241                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 242                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 243                     No results.</span><span style=""> 244                   &lt;/TableCell&gt;</span><span style=""> 245                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/datatable.tsx:311</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 308                 ))</span><span style=""> 309               ) : (</span><span style=""> 310                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 311                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 312                     No results.</span><span style=""> 313                   &lt;/TableCell&gt;</span><span style=""> 314                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:261</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 258                 ))</span><span style=""> 259               ) : (</span><span style=""> 260                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 261                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 262                     No results.</span><span style=""> 263                   &lt;/TableCell&gt;</span><span style=""> 264                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:403</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 400                 ))</span><span style=""> 401               ) : (</span><span style=""> 402                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 403                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 404                     No results.</span><span style=""> 405                   &lt;/TableCell&gt;</span><span style=""> 406                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/ecommerce/components/best-selling-products.tsx:277</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 274                 ))</span><span style=""> 275               ) : (</span><span style=""> 276                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 277                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 278                     No results.</span><span style=""> 279                   &lt;/TableCell&gt;</span><span style=""> 280                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/ecommerce/components/recent-orders.tsx:440</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 437                 ))</span><span style=""> 438               ) : (</span><span style=""> 439                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 440                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 441                     No results.</span><span style=""> 442                   &lt;/TableCell&gt;</span><span style=""> 443                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/reports.tsx:111</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 108               ))</span><span style=""> 109             ) : (</span><span style=""> 110               &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 111                 &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 112                   No results.</span><span style=""> 113                 &lt;/TableCell&gt;</span><span style=""> 114               &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hotel/components/booking-list.tsx:348</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 345                 ))</span><span style=""> 346               ) : (</span><span style=""> 347                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 348                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 349                     No results found.</span><span style=""> 350                   &lt;/TableCell&gt;</span><span style=""> 351                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/notifications/data-table.tsx:411</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 408                 })</span><span style=""> 409               ) : (</span><span style=""> 410                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 411                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 412                     No results.</span><span style=""> 413                   &lt;/TableCell&gt;</span><span style=""> 414                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/orders/data-table.tsx:448</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 445                 ))</span><span style=""> 446               ) : (</span><span style=""> 447                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 448                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 449                     No results.</span><span style=""> 450                   &lt;/TableCell&gt;</span><span style=""> 451                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/products/product-list.tsx:484</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 481               ))</span><span style=""> 482             ) : (</span><span style=""> 483               &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 484                 &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 485                   No results.</span><span style=""> 486                 &lt;/TableCell&gt;</span><span style=""> 487               &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/users/data-table.tsx:454</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 451               ))</span><span style=""> 452             ) : (</span><span style=""> 453               &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 454                 &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 455                   No results.</span><span style=""> 456                 &lt;/TableCell&gt;</span><span style=""> 457               &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/sales/components/table-order-status.tsx:403</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 400                   ))</span><span style=""> 401                 ) : (</span><span style=""> 402                   &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 403                     &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 404                       No results.</span><span style=""> 405                     &lt;/TableCell&gt;</span><span style=""> 406                   &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/project-management/components/table-recent-projects.tsx:409</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 406                 ))</span><span style=""> 407               ) : (</span><span style=""> 408                 &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 409                   &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 410                     No results.</span><span style=""> 411                   &lt;/TableCell&gt;</span><span style=""> 412                 &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/tasks/components/data-table.tsx:102</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  99               ))</span><span style=""> 100             ) : (</span><span style=""> 101               &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 102                 &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 103                   No results.</span><span style=""> 104                 &lt;/TableCell&gt;</span><span style=""> 105               &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-high">HIGH</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hotel/bookings/components/meeting-room-schedule.tsx:414</code></td>
+        <td><strong>Privacy: PII Column Without Encryption</strong><br><small>Database column storing sensitive PII (SSN, credit card, passport) without encryption-at-rest annotation.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 411                   ))</span><span style=""> 412                 ) : (</span><span style=""> 413                   &lt;TableRow&gt;</span><span style="background:#dc262633;display:block;"> 414                     &lt;TableCell colSpan={columns.length} className=&quot;h-24 text-center&quot;&gt;</span><span style=""> 415                       No bookings found.</span><span style=""> 416                     &lt;/TableCell&gt;</span><span style=""> 417                   &lt;/TableRow&gt;</span></code></pre></td>
+        <td><code>columns.length} className=&quot;h-24 text</code></td>
+        <td><small>Encrypt sensitive PII columns at the application level or use database-level encryption.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/proxy.ts:25</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  22   &quot;/dashboard/register/v1&quot;,</span><span style="">  23   &quot;/dashboard/register/v2&quot;,</span><span style="">  24   &quot;/dashboard/forgot-password&quot;,</span><span style="background:#dc262633;display:block;">  25   &quot;/dashboard/reset-password&quot;</span><span style="">  26 ];</span><span style="">  27 </span><span style="">  28 const PUBLIC_ROUTES = [&quot;/dashboard/forbidden&quot;];</span></code></pre></td>
+        <td><code>/reset-password&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/customer-register-form.tsx:39</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  36     setIsSubmitting(true);</span><span style="">  37 </span><span style="">  38     try {</span><span style="background:#dc262633;display:block;">  39       const response = await fetch(&quot;/api/auth/register&quot;, {</span><span style="">  40         method: &quot;POST&quot;,</span><span style="">  41         headers: {</span><span style="">  42           &quot;content-type&quot;: &quot;application/json&quot;</span></code></pre></td>
+        <td><code>/register&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/login-form.test.tsx:58</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  55 </span><span style="">  56     await waitFor(() =&gt; {</span><span style="">  57       expect(global.fetch).toHaveBeenCalledWith(</span><span style="background:#dc262633;display:block;">  58         &quot;/api/auth/login&quot;,</span><span style="">  59         expect.objectContaining({</span><span style="">  60           method: &quot;POST&quot;,</span><span style="">  61           body: JSON.stringify({</span></code></pre></td>
+        <td><code>/login&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/login-form.tsx:53</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  50     setIsSubmitting(true);</span><span style="">  51 </span><span style="">  52     try {</span><span style="background:#dc262633;display:block;">  53       const response = await fetch(&quot;/api/auth/login&quot;, {</span><span style="">  54         method: &quot;POST&quot;,</span><span style="">  55         headers: {</span><span style="">  56           &quot;content-type&quot;: &quot;application/json&quot;</span></code></pre></td>
+        <td><code>/login&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/lib/auth/backend.ts:18</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  15 }</span><span style="">  16 </span><span style="">  17 function endpointForScope(scope: PrincipalScope) {</span><span style="background:#dc262633;display:block;">  18   return scope === &quot;Admin&quot; ? &quot;/api/admin/v1/auth&quot; : &quot;/api/customer/v1/auth&quot;;</span><span style="">  19 }</span><span style="">  20 </span><span style="">  21 async function parseEnvelope&lt;T&gt;(response: Response): Promise&lt;ApiEnvelope&lt;T&gt; | null&gt; {</span></code></pre></td>
+        <td><code>/auth&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/lib/auth/backend.ts:60</code></td>
+        <td><strong>No Rate Limiting on Authentication</strong><br><small>Auth endpoints without rate limiting are vulnerable to brute-force attacks.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  57   fullName?: string;</span><span style="">  58   phone?: string;</span><span style="">  59 }) {</span><span style="background:#dc262633;display:block;">  60   const backendResponse = await fetch(buildBackendUrl(&quot;/api/customer/v1/auth/register&quot;), {</span><span style="">  61     method: &quot;POST&quot;,</span><span style="">  62     headers: {</span><span style="">  63       &quot;content-type&quot;: &quot;application/json&quot;</span></code></pre></td>
+        <td><code>/register&quot;</code></td>
+        <td><small>Add rate limiting: express-rate-limit, @upstash/ratelimit, or Cloudflare rules</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/layout/sidebar/nav-main.tsx:166</code></td>
+        <td><strong>LLM Endpoint Without Rate Limiting</strong><br><small>AI endpoint without rate limiting. Users could rack up API costs.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 163         icon: SquareKanbanIcon</span><span style=""> 164       },</span><span style=""> 165       { title: &quot;Notes&quot;, href: &quot;/dashboard/apps/notes&quot;, icon: StickyNoteIcon, isDataBadge: &quot;8&quot; },</span><span style="background:#dc262633;display:block;"> 166       { title: &quot;Chats&quot;, href: &quot;/dashboard/apps/chat&quot;, icon: MessageSquareIcon, isDataBadge: &quot;5&quot; },</span><span style=""> 167       {</span><span style=""> 168         title: &quot;Social Media&quot;,</span><span style=""> 169         href: &quot;/dashboard/apps/social-media&quot;,</span></code></pre></td>
+        <td><code>/chat&quot;</code></td>
+        <td><small>Add rate limiting per user: express-rate-limit, @upstash/ratelimit, etc.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/chat/page.tsx:13</code></td>
+        <td><strong>LLM Endpoint Without Rate Limiting</strong><br><small>AI endpoint without rate limiting. Users could rack up API costs.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  10     title: &quot;Chat App&quot;,</span><span style="">  11     description:</span><span style="">  12       &quot;A template to create chat and messaging apps for your customers or users. Built with shadcn/ui, Next.js and Tailwind CSS.&quot;,</span><span style="background:#dc262633;display:block;">  13     canonical: &quot;/apps/chat&quot;</span><span style="">  14   });</span><span style="">  15 }</span><span style="">  16 </span></code></pre></td>
+        <td><code>/chat&quot;</code></td>
+        <td><small>Add rate limiting per user: express-rate-limit, @upstash/ratelimit, etc.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>.github/workflows/ci.yml:92</code></td>
+        <td><strong>CI/CD: Unverified Third-Party Action</strong><br><small>Third-party GitHub Action not from verified publisher. Review source code.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  89         uses: actions/checkout@v4</span><span style="">  90 </span><span style="">  91       - name: Setup pnpm</span><span style="background:#dc262633;display:block;">  92         uses: pnpm/action-setup@v4</span><span style="">  93         with:</span><span style="">  94           version: 9</span><span style="">  95 </span></code></pre></td>
+        <td><code>uses: pnpm/action-setup@</code></td>
+        <td><small>Pin to commit SHA, review the action source, or use an official alternative</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>.github/workflows/dependabot-auto-merge.yml:27</code></td>
+        <td><strong>CI/CD: Unverified Third-Party Action</strong><br><small>Third-party GitHub Action not from verified publisher. Review source code.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  24     steps:</span><span style="">  25       - name: Fetch Dependabot metadata</span><span style="">  26         id: metadata</span><span style="background:#dc262633;display:block;">  27         uses: dependabot/fetch-metadata@v2</span><span style="">  28         with:</span><span style="">  29           github-token: ${{ secrets.GITHUB_TOKEN }}</span><span style="">  30 </span></code></pre></td>
+        <td><code>uses: dependabot/fetch-metadata@</code></td>
+        <td><small>Pin to commit SHA, review the action source, or use an official alternative</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/hooks/use-file-upload.ts:406</code></td>
+        <td><strong>RAG: Excessive Retrieved Context</strong><br><small>Retrieving a very large number of chunks (50+). Increases the attack surface for prompt injection via poisoned documents</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 403 export const formatBytes = (bytes: number, decimals = 2): string =&gt; {</span><span style=""> 404   if (bytes === 0) return &quot;0 Bytes&quot;</span><span style=""> 405 </span><span style="background:#dc262633;display:block;"> 406   const k = 1024</span><span style=""> 407   const dm = decimals &lt; 0 ? 0 : decimals</span><span style=""> 408   const sizes = [&quot;Bytes&quot;, &quot;KB&quot;, &quot;MB&quot;, &quot;GB&quot;, &quot;TB&quot;, &quot;PB&quot;, &quot;EB&quot;, &quot;ZB&quot;, &quot;YB&quot;]</span><span style=""> 409 </span></code></pre></td>
+        <td><code>k = 1024</code></td>
+        <td><small>Limit retrieved chunks to the minimum needed (typically 3-10). More chunks = more injection surface.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/file-manager/components/table-recent-files.tsx:40</code></td>
+        <td><strong>RAG: Excessive Retrieved Context</strong><br><small>Retrieving a very large number of chunks (50+). Increases the attack surface for prompt injection via poisoned documents</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  37 </span><span style="">  38 function formatFileSize(bytes: number): string {</span><span style="">  39   if (bytes === 0) return &quot;0 Bytes&quot;;</span><span style="background:#dc262633;display:block;">  40   const k = 1024;</span><span style="">  41   const sizes = [&quot;Bytes&quot;, &quot;KB&quot;, &quot;MB&quot;, &quot;GB&quot;, &quot;TB&quot;];</span><span style="">  42   const i = Math.floor(Math.log(bytes) / Math.log(k));</span><span style="">  43   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + &quot; &quot; + sizes[i];</span></code></pre></td>
+        <td><code>k = 1024</code></td>
+        <td><small>Limit retrieved chunks to the minimum needed (typically 3-10). More chunks = more injection surface.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/forgot-password-form.tsx:104</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 101                   type=&quot;email&quot;</span><span style=""> 102                   autoComplete=&quot;email&quot;</span><span style=""> 103                   className=&quot;pl-10&quot;</span><span style="background:#dc262633;display:block;"> 104                   placeholder=&quot;contact@bundui.com&quot;</span><span style=""> 105                   value={email}</span><span style=""> 106                   onChange={(event) =&gt; setEmail(event.target.value)}</span><span style=""> 107                   required</span></code></pre></td>
+        <td><code>&quot;contact@bundui.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/auth/login-form.tsx:103</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 100               &lt;Input</span><span style=""> 101                 id=&quot;email&quot;</span><span style=""> 102                 type=&quot;email&quot;</span><span style="background:#dc262633;display:block;"> 103                 placeholder=&quot;contact@bundui.com&quot;</span><span style=""> 104                 autoComplete=&quot;email&quot;</span><span style=""> 105                 required</span><span style=""> 106                 value={email}</span></code></pre></td>
+        <td><code>&quot;contact@bundui.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/components/layout/sidebar/nav-user.tsx:35</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  32 </span><span style="">  33 const fallbackUserData = {</span><span style="">  34   name: &quot;Dashboard User&quot;,</span><span style="background:#dc262633;display:block;">  35   email: &quot;user@rentacar.local&quot;,</span><span style="">  36   avatar: &quot;/images/avatars/01.png&quot;</span><span style="">  37 };</span><span style="">  38 </span></code></pre></td>
+        <td><code>&quot;user@rentacar.local&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/ai-chat/page.tsx:8</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">   5   return generateMeta({</span><span style="">   6     title: &quot;AI Chat App&quot;,</span><span style="">   7     description:</span><span style="background:#dc262633;display:block;">   8       &quot;A template you can use to create applications that allow you to chat with artificial intelligence. Built with shadcn/ui, Next.js and Tailwind CSS.&quot;,</span><span style="">   9     canonical: &quot;/apps/ai-chat&quot;</span><span style="">  10   });</span><span style="">  11 }</span></code></pre></td>
+        <td><code>late you can use to create</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/api-keys/page.tsx:14</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  11   return generateMeta({</span><span style="">  12     title: &quot;Api Keys&quot;,</span><span style="">  13     description:</span><span style="background:#dc262633;display:block;">  14       &quot;A template for listing and managing your API keys. Easily create, organize and control the API keys you use in your projects. Built with shadcn/ui.&quot;,</span><span style="">  15     canonical: &quot;/apps/api-keys&quot;</span><span style="">  16   });</span><span style="">  17 }</span></code></pre></td>
+        <td><code>late for listing and managing your API keys. Easily create</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/chat/page.tsx:12</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">   9   return generateMeta({</span><span style="">  10     title: &quot;Chat App&quot;,</span><span style="">  11     description:</span><span style="background:#dc262633;display:block;">  12       &quot;A template to create chat and messaging apps for your customers or users. Built with shadcn/ui, Next.js and Tailwind CSS.&quot;,</span><span style="">  13     canonical: &quot;/apps/chat&quot;</span><span style="">  14   });</span><span style="">  15 }</span></code></pre></td>
+        <td><code>late to create</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/mail/data.tsx:138</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 135   },</span><span style=""> 136   {</span><span style=""> 137     label: &quot;Tboy Belhome&quot;,</span><span style="background:#dc262633;display:block;"> 138     email: &quot;toby@gmail.com&quot;,</span><span style=""> 139     icon: (</span><span style=""> 140       &lt;svg role=&quot;img&quot; viewBox=&quot;0 0 24 24&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;</span><span style=""> 141         &lt;title&gt;Gmail&lt;/title&gt;</span></code></pre></td>
+        <td><code>&quot;toby@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/mail/data.tsx:151</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 148   },</span><span style=""> 149   {</span><span style=""> 150     label: &quot;Alice Math&quot;,</span><span style="background:#dc262633;display:block;"> 151     email: &quot;alice@apple.com&quot;,</span><span style=""> 152     icon: (</span><span style=""> 153       &lt;svg role=&quot;img&quot; viewBox=&quot;0 0 24 24&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;</span><span style=""> 154         &lt;title&gt;iCloud&lt;/title&gt;</span></code></pre></td>
+        <td><code>&quot;alice@apple.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/pos-system/store.ts:131</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 128 </span><span style=""> 129     if (cart.length === 0 || orders.length === 0) return;</span><span style=""> 130 </span><span style="background:#dc262633;display:block;"> 131     // Find the latest order (the one we just created)</span><span style=""> 132     const latestOrder = orders[orders.length - 1];</span><span style=""> 133 </span><span style=""> 134     // Update the order with the table ID</span></code></pre></td>
+        <td><code>latest order (the one we just create</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/tasks/page.tsx:18</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  15   });</span><span style="">  16 }</span><span style="">  17 </span><span style="background:#dc262633;display:block;">  18 // Simulate a database read for tasks.</span><span style="">  19 async function getTasks() {</span><span style="">  20   const data = await fs.readFile(</span><span style="">  21     path.join(process.cwd(), &quot;app/dashboard/(auth)/apps/tasks/data/tasks.json&quot;)</span></code></pre></td>
+        <td><code>late a database</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:46</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  43     id: &quot;m5gr84i9&quot;,</span><span style="">  44     amount: 316,</span><span style="">  45     status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  46     email: &quot;ken99@yahoo.com&quot;</span><span style="">  47   },</span><span style="">  48   {</span><span style="">  49     id: &quot;3u1reuv4&quot;,</span></code></pre></td>
+        <td><code>&quot;ken99@yahoo.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:52</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  49     id: &quot;3u1reuv4&quot;,</span><span style="">  50     amount: 242,</span><span style="">  51     status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  52     email: &quot;Abe45@gmail.com&quot;</span><span style="">  53   },</span><span style="">  54   {</span><span style="">  55     id: &quot;derv1ws0&quot;,</span></code></pre></td>
+        <td><code>&quot;Abe45@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:58</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  55     id: &quot;derv1ws0&quot;,</span><span style="">  56     amount: 837,</span><span style="">  57     status: &quot;processing&quot;,</span><span style="background:#dc262633;display:block;">  58     email: &quot;Monserrat44@gmail.com&quot;</span><span style="">  59   },</span><span style="">  60   {</span><span style="">  61     id: &quot;5kma53ae&quot;,</span></code></pre></td>
+        <td><code>&quot;Monserrat44@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:64</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  61     id: &quot;5kma53ae&quot;,</span><span style="">  62     amount: 874,</span><span style="">  63     status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  64     email: &quot;Silas22@gmail.com&quot;</span><span style="">  65   },</span><span style="">  66   {</span><span style="">  67     id: &quot;bhqecj4p&quot;,</span></code></pre></td>
+        <td><code>&quot;Silas22@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/crm/components/leads.tsx:70</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  67     id: &quot;bhqecj4p&quot;,</span><span style="">  68     amount: 721,</span><span style="">  69     status: &quot;failed&quot;,</span><span style="background:#dc262633;display:block;">  70     email: &quot;carmella@hotmail.com&quot;</span><span style="">  71   }</span><span style="">  72 ];</span><span style="">  73 </span></code></pre></td>
+        <td><code>&quot;carmella@hotmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/chat-widget.tsx:37</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  34   },</span><span style="">  35   {</span><span style="">  36     name: &quot;Isabella Nguyen&quot;,</span><span style="background:#dc262633;display:block;">  37     email: &quot;isabella.nguyen@email.com&quot;,</span><span style="">  38     avatar: `/images/avatars/07.png`</span><span style="">  39   },</span><span style="">  40   {</span></code></pre></td>
+        <td><code>&quot;isabella.nguyen@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/chat-widget.tsx:52</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  49   },</span><span style="">  50   {</span><span style="">  51     name: &quot;William Kim&quot;,</span><span style="background:#dc262633;display:block;">  52     email: &quot;will@email.com&quot;,</span><span style="">  53     avatar: `/images/avatars/06.png`</span><span style="">  54   }</span><span style="">  55 ] as const;</span></code></pre></td>
+        <td><code>&quot;will@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:66</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  63       {</span><span style="">  64         id: &quot;1&quot;,</span><span style="">  65         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  66         email: &quot;ken99@yahoo.com&quot;,</span><span style="">  67         firstName: &quot;Kenneth&quot;,</span><span style="">  68         lastName: &quot;Thompson&quot;,</span><span style="">  69         amount: 316.0</span></code></pre></td>
+        <td><code>&quot;ken99@yahoo.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:74</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  71       {</span><span style="">  72         id: &quot;2&quot;,</span><span style="">  73         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  74         email: &quot;abe45@gmail.com&quot;,</span><span style="">  75         firstName: &quot;Abraham&quot;,</span><span style="">  76         lastName: &quot;Lincoln&quot;,</span><span style="">  77         amount: 242.0</span></code></pre></td>
+        <td><code>&quot;abe45@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:82</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  79       {</span><span style="">  80         id: &quot;3&quot;,</span><span style="">  81         status: &quot;processing&quot;,</span><span style="background:#dc262633;display:block;">  82         email: &quot;monserrat44@gmail.com&quot;,</span><span style="">  83         firstName: &quot;Monserrat&quot;,</span><span style="">  84         lastName: &quot;Rodriguez&quot;,</span><span style="">  85         amount: 837.0</span></code></pre></td>
+        <td><code>&quot;monserrat44@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:90</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  87       {</span><span style="">  88         id: &quot;4&quot;,</span><span style="">  89         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;">  90         email: &quot;silas22@gmail.com&quot;,</span><span style="">  91         firstName: &quot;Silas&quot;,</span><span style="">  92         lastName: &quot;Johnson&quot;,</span><span style="">  93         amount: 874.0</span></code></pre></td>
+        <td><code>&quot;silas22@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:98</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  95       {</span><span style="">  96         id: &quot;5&quot;,</span><span style="">  97         status: &quot;failed&quot;,</span><span style="background:#dc262633;display:block;">  98         email: &quot;carmella@hotmail.com&quot;,</span><span style="">  99         firstName: &quot;Carmella&quot;,</span><span style=""> 100         lastName: &quot;DeVito&quot;,</span><span style=""> 101         amount: 721.0</span></code></pre></td>
+        <td><code>&quot;carmella@hotmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:106</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 103       {</span><span style=""> 104         id: &quot;6&quot;,</span><span style=""> 105         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 106         email: &quot;maria@gmail.com&quot;,</span><span style=""> 107         firstName: &quot;Maria&quot;,</span><span style=""> 108         lastName: &quot;Garcia&quot;,</span><span style=""> 109         amount: 529.0</span></code></pre></td>
+        <td><code>&quot;maria@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:114</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 111       {</span><span style=""> 112         id: &quot;7&quot;,</span><span style=""> 113         status: &quot;processing&quot;,</span><span style="background:#dc262633;display:block;"> 114         email: &quot;james34@outlook.com&quot;,</span><span style=""> 115         firstName: &quot;James&quot;,</span><span style=""> 116         lastName: &quot;Wilson&quot;,</span><span style=""> 117         amount: 438.0</span></code></pre></td>
+        <td><code>&quot;james34@outlook.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:122</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 119       {</span><span style=""> 120         id: &quot;8&quot;,</span><span style=""> 121         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 122         email: &quot;sarah.j@yahoo.com&quot;,</span><span style=""> 123         firstName: &quot;Sarah&quot;,</span><span style=""> 124         lastName: &quot;Jones&quot;,</span><span style=""> 125         amount: 692.0</span></code></pre></td>
+        <td><code>&quot;sarah.j@yahoo.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:130</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 127       {</span><span style=""> 128         id: &quot;9&quot;,</span><span style=""> 129         status: &quot;failed&quot;,</span><span style="background:#dc262633;display:block;"> 130         email: &quot;robert55@gmail.com&quot;,</span><span style=""> 131         firstName: &quot;Robert&quot;,</span><span style=""> 132         lastName: &quot;Brown&quot;,</span><span style=""> 133         amount: 512.0</span></code></pre></td>
+        <td><code>&quot;robert55@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:138</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 135       {</span><span style=""> 136         id: &quot;10&quot;,</span><span style=""> 137         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 138         email: &quot;emily.p@hotmail.com&quot;,</span><span style=""> 139         firstName: &quot;Emily&quot;,</span><span style=""> 140         lastName: &quot;Parker&quot;,</span><span style=""> 141         amount: 375.0</span></code></pre></td>
+        <td><code>&quot;emily.p@hotmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:146</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 143       {</span><span style=""> 144         id: &quot;11&quot;,</span><span style=""> 145         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 146         email: &quot;david87@gmail.com&quot;,</span><span style=""> 147         firstName: &quot;David&quot;,</span><span style=""> 148         lastName: &quot;Miller&quot;,</span><span style=""> 149         amount: 623.0</span></code></pre></td>
+        <td><code>&quot;david87@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:154</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 151       {</span><span style=""> 152         id: &quot;12&quot;,</span><span style=""> 153         status: &quot;processing&quot;,</span><span style="background:#dc262633;display:block;"> 154         email: &quot;jennifer@yahoo.com&quot;,</span><span style=""> 155         firstName: &quot;Jennifer&quot;,</span><span style=""> 156         lastName: &quot;Davis&quot;,</span><span style=""> 157         amount: 459.0</span></code></pre></td>
+        <td><code>&quot;jennifer@yahoo.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:162</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 159       {</span><span style=""> 160         id: &quot;13&quot;,</span><span style=""> 161         status: &quot;failed&quot;,</span><span style="background:#dc262633;display:block;"> 162         email: &quot;michael.s@hotmail.com&quot;,</span><span style=""> 163         firstName: &quot;Michael&quot;,</span><span style=""> 164         lastName: &quot;Smith&quot;,</span><span style=""> 165         amount: 782.0</span></code></pre></td>
+        <td><code>&quot;michael.s@hotmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:170</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 167       {</span><span style=""> 168         id: &quot;14&quot;,</span><span style=""> 169         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 170         email: &quot;lisa.w@gmail.com&quot;,</span><span style=""> 171         firstName: &quot;Lisa&quot;,</span><span style=""> 172         lastName: &quot;Wilson&quot;,</span><span style=""> 173         amount: 347.0</span></code></pre></td>
+        <td><code>&quot;lisa.w@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:178</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 175       {</span><span style=""> 176         id: &quot;15&quot;,</span><span style=""> 177         status: &quot;success&quot;,</span><span style="background:#dc262633;display:block;"> 178         email: &quot;john.doe@outlook.com&quot;,</span><span style=""> 179         firstName: &quot;John&quot;,</span><span style=""> 180         lastName: &quot;Doe&quot;,</span><span style=""> 181         amount: 594.0</span></code></pre></td>
+        <td><code>&quot;john.doe@outlook.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/latest-payments.tsx:186</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 183       {</span><span style=""> 184         id: &quot;16&quot;,</span><span style=""> 185         status: &quot;processing&quot;,</span><span style="background:#dc262633;display:block;"> 186         email: &quot;emma.j@gmail.com&quot;,</span><span style=""> 187         firstName: &quot;Emma&quot;,</span><span style=""> 188         lastName: &quot;Johnson&quot;,</span><span style=""> 189         amount: 428.0</span></code></pre></td>
+        <td><code>&quot;emma.j@gmail.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/theme-members.tsx:47</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  44   {</span><span style="">  45     id: 1,</span><span style="">  46     name: &quot;Toby Belhome&quot;,</span><span style="background:#dc262633;display:block;">  47     email: &quot;contact@bundui.io&quot;,</span><span style="">  48     avatar: `/images/avatars/01.png`,</span><span style="">  49     role_id: 1</span><span style="">  50   },</span></code></pre></td>
+        <td><code>&quot;contact@bundui.io&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/default/components/theme-members.tsx:61</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  58   {</span><span style="">  59     id: 3,</span><span style="">  60     name: &quot;Hally Gray&quot;,</span><span style="background:#dc262633;display:block;">  61     email: &quot;hally@site.com&quot;,</span><span style="">  62     avatar: `/images/avatars/03.png`,</span><span style="">  63     role_id: 1</span><span style="">  64   }</span></code></pre></td>
+        <td><code>&quot;hally@site.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/patients-with-last-procedure.tsx:12</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">   9     id: 1,</span><span style="">  10     name: &quot;Olivia Martin&quot;,</span><span style="">  11     avatar: `/images/avatars/01.png`,</span><span style="background:#dc262633;display:block;">  12     email: &quot;olivia.martin@email.com&quot;,</span><span style="">  13     lastProcedure: &quot;Appendectomy&quot;,</span><span style="">  14     date: &quot;2025-05-20&quot;</span><span style="">  15   },</span></code></pre></td>
+        <td><code>&quot;olivia.martin@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/patients-with-last-procedure.tsx:20</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  17     id: 2,</span><span style="">  18     name: &quot;Jackson Lee&quot;,</span><span style="">  19     avatar: `/images/avatars/02.png`,</span><span style="background:#dc262633;display:block;">  20     email: &quot;jackson.lee@email.com&quot;,</span><span style="">  21     lastProcedure: &quot;Knee Arthroscopy&quot;,</span><span style="">  22     date: &quot;2025-05-18&quot;</span><span style="">  23   },</span></code></pre></td>
+        <td><code>&quot;jackson.lee@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/patients-with-last-procedure.tsx:28</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  25     id: 3,</span><span style="">  26     name: &quot;Isabella Nguyen&quot;,</span><span style="">  27     avatar: `/images/avatars/03.png`,</span><span style="background:#dc262633;display:block;">  28     email: &quot;isabella.nguyen@email.com&quot;,</span><span style="">  29     lastProcedure: &quot;Cataract Surgery&quot;,</span><span style="">  30     date: &quot;2025-05-15&quot;</span><span style="">  31   },</span></code></pre></td>
+        <td><code>&quot;isabella.nguyen@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/patients-with-last-procedure.tsx:36</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  33     id: 4,</span><span style="">  34     name: &quot;William Chen&quot;,</span><span style="">  35     avatar: `/images/avatars/04.png`,</span><span style="background:#dc262633;display:block;">  36     email: &quot;william.chen@email.com&quot;,</span><span style="">  37     lastProcedure: &quot;Colonoscopy&quot;,</span><span style="">  38     date: &quot;2025-05-12&quot;</span><span style="">  39   },</span></code></pre></td>
+        <td><code>&quot;william.chen@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/hospital-management/components/patients-with-last-procedure.tsx:44</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  41     id: 5,</span><span style="">  42     name: &quot;Can Jackson&quot;,</span><span style="">  43     avatar: `/images/avatars/05.png`,</span><span style="background:#dc262633;display:block;">  44     email: &quot;can.jackson@email.com&quot;,</span><span style="">  45     lastProcedure: &quot;Colonoscopy&quot;,</span><span style="">  46     date: &quot;2025-08-12&quot;</span><span style="">  47   }</span></code></pre></td>
+        <td><code>&quot;can.jackson@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/settings/page.tsx:163</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 160                     &lt;/FormControl&gt;</span><span style=""> 161                     &lt;SelectContent&gt;</span><span style=""> 162                       &lt;SelectItem value=&quot;m@example.com&quot;&gt;m@example.com&lt;/SelectItem&gt;</span><span style="background:#dc262633;display:block;"> 163                       &lt;SelectItem value=&quot;m@google.com&quot;&gt;m@google.com&lt;/SelectItem&gt;</span><span style=""> 164                       &lt;SelectItem value=&quot;m@support.com&quot;&gt;m@support.com&lt;/SelectItem&gt;</span><span style=""> 165                     &lt;/SelectContent&gt;</span><span style=""> 166                   &lt;/Select&gt;</span></code></pre></td>
+        <td><code>&quot;m@google.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/settings/page.tsx:164</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style=""> 161                     &lt;SelectContent&gt;</span><span style=""> 162                       &lt;SelectItem value=&quot;m@example.com&quot;&gt;m@example.com&lt;/SelectItem&gt;</span><span style=""> 163                       &lt;SelectItem value=&quot;m@google.com&quot;&gt;m@google.com&lt;/SelectItem&gt;</span><span style="background:#dc262633;display:block;"> 164                       &lt;SelectItem value=&quot;m@support.com&quot;&gt;m@support.com&lt;/SelectItem&gt;</span><span style=""> 165                     &lt;/SelectContent&gt;</span><span style=""> 166                   &lt;/Select&gt;</span><span style=""> 167                   &lt;FormDescription&gt;</span></code></pre></td>
+        <td><code>&quot;m@support.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/user-profile/store.ts:72</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  69     role: &quot;Developer&quot;,</span><span style="">  70     location: &quot;San Francisco, US&quot;,</span><span style="">  71     joinedDate: &quot;March 2025&quot;,</span><span style="background:#dc262633;display:block;">  72     email: &quot;hi@shadcnuikit.com&quot;,</span><span style="">  73     phone: &quot;+1 (609) 972-22-22&quot;,</span><span style="">  74     department: &quot;No department&quot;,</span><span style="">  75     teams: 7,</span></code></pre></td>
+        <td><code>&quot;hi@shadcnuikit.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/kanban/components/add-assigne.tsx:31</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  28   },</span><span style="">  29   {</span><span style="">  30     name: &quot;Isabella Nguyen&quot;,</span><span style="background:#dc262633;display:block;">  31     email: &quot;isabella.nguyen@email.com&quot;,</span><span style="">  32     avatar: `/images/avatars/07.png`</span><span style="">  33   },</span><span style="">  34   {</span></code></pre></td>
+        <td><code>&quot;isabella.nguyen@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/apps/kanban/components/add-assigne.tsx:46</code></td>
+        <td><strong>Privacy: Real Email Address Hardcoded</strong><br><small>Real email address hardcoded in source code (not @example.com). May be PII or a credential.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  43   },</span><span style="">  44   {</span><span style="">  45     name: &quot;William Kim&quot;,</span><span style="background:#dc262633;display:block;">  46     email: &quot;will@email.com&quot;,</span><span style="">  47     avatar: `/images/avatars/06.png`</span><span style="">  48   }</span><span style="">  49 ] as const;</span></code></pre></td>
+        <td><code>&quot;will@email.com&quot;</code></td>
+        <td><small>Use @example.com for test emails. Store real emails in environment variables or config.</small></td>
+      </tr>
+<tr>
+        <td><span class="sev sev-medium">MEDIUM</span></td>
+        <td><code>frontend/app/(admin)/dashboard/(auth)/pages/products/[id]/page.tsx:28</code></td>
+        <td><strong>Privacy: Precise Geolocation Stored</strong><br><small>Precise geolocation data stored in database. May require explicit consent under GDPR/CCPA.</small><pre style="background:#0f172a;padding:0.5rem;border-radius:4px;font-size:0.75rem;margin-top:0.5rem;overflow-x:auto;line-height:1.4"><code><span style="">  25   return generateMeta({</span><span style="">  26     title: &quot;Product Detail Page&quot;,</span><span style="">  27     description:</span><span style="background:#dc262633;display:block;">  28       &quot;Use this shadcn/ui and Tailwind CSS product page template to create great looking pages for each product, with detailed descriptions, images, pricing, and customer reviews.&quot;,</span><span style="">  29     canonical: &quot;/pages/products/detail&quot;</span><span style="">  30   });</span><span style="">  31 }</span></code></pre></td>
+        <td><code>late to create</code></td>
+        <td><small>Reduce precision of stored geolocation (city-level, not street-level). Require explicit consent for </small></td>
+      </tr></tbody>
+  </table>
+
+  <h2 id="deps">6. Dependency Vulnerabilities (0)</h2>
+  <p style="color:#22c55e;font-weight:bold">No vulnerable dependencies found.</p>
+
+  <h2 id="surface">7. Attack Surface</h2>
+  <table>
+    <tbody>
+      <tr><td>Frameworks</td><td>nextjs</td></tr>
+      <tr><td>Languages</td><td>typescript, javascript, python</td></tr>
+      <tr><td>Databases</td><td>None detected</td></tr>
+      <tr><td>Cloud Providers</td><td>None detected</td></tr>
+      <tr><td>Auth Patterns</td><td>.planning/phases/06-user-management-auth/01-auth-domain-persistence-PLAN.md, .planning/phases/06-user-management-auth/02-token-session-infrastructure-PLAN.md, .planning/phases/06-user-management-auth/03-customer-auth-api-PLAN.md, .planning/phases/06-user-management-auth/04-admin-auth-rbac-PLAN.md, .planning/phases/06-user-management-auth/05-auth-frontend-integration-and-verification-PLAN.md, .planning/phases/06-user-management-auth/06-CONTEXT.md, .planning/phases/06-user-management-auth/06-RESEARCH.md, .planning/phases/06-user-management-auth/06-VALIDATION.md, frontend/components/auth/customer-portal.tsx, frontend/components/auth/customer-register-form.tsx, frontend/components/auth/forgot-password-form.tsx, frontend/components/auth/login-form.test.tsx, frontend/components/auth/login-form.tsx, frontend/components/auth/reset-password-form.tsx, frontend/lib/auth/backend.ts, frontend/lib/auth/constants.ts, frontend/lib/auth/http.ts, frontend/lib/auth/jwt.ts, frontend/lib/auth/types.ts, frontend/app/api/auth/login/route.ts, frontend/app/api/auth/logout/route.ts, frontend/app/api/auth/me/route.ts, frontend/app/api/auth/refresh/route.ts, frontend/app/api/auth/register/route.ts, frontend/app/api/auth/password-reset/confirm/route.ts, frontend/app/api/auth/password-reset/request/route.ts</td></tr>
+      <tr><td>CI/CD</td><td>github-actions, github-actions, github-actions</td></tr>
+      <tr><td>API Routes</td><td>14 discovered</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Generated by <strong>Ship Safe v4.3</strong> — Full Security Audit<br>
+    <a href="https://github.com/asamassekou10/ship-safe">github.com/asamassekou10/ship-safe</a>
+  </div>
+</div>
+</body>
+</html>
