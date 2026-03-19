@@ -133,4 +133,10 @@ public interface IReservationService
     Task<IReadOnlyList<ReservationDto>> GetCustomerReservationsAsync(
         Guid customerId,
         CancellationToken cancellationToken = default);
+
+    Task<PaginatedResponse<ReservationDto>> GetCustomerReservationsPaginatedAsync(
+        Guid customerId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

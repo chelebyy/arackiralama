@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Controllers;
@@ -81,7 +82,7 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         await dbContext.SaveChangesAsync();
 
         var vehiclesController = new VehiclesController(CreateFleetService(dbContext));
-        var adminController = new AdminVehiclesController(CreateFleetService(dbContext));
+        var adminController = new AdminVehiclesController(CreateFleetService(dbContext), Mock.Of<IAuditLogService>());
         var pickup = DateTime.UtcNow.AddDays(1);
         var dropoff = DateTime.UtcNow.AddDays(2);
 

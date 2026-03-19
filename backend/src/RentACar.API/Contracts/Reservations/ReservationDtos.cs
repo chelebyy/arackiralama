@@ -72,3 +72,14 @@ public record PriceBreakdownItemDto
     public decimal Amount { get; init; }
     public string Type { get; init; } = string.Empty; // base, fee, discount, extra
 }
+
+public record PaginatedResponse<T>
+{
+    public IReadOnlyList<T> Items { get; init; } = [];
+    public int TotalCount { get; init; }
+    public int TotalPages { get; init; }
+    public int CurrentPage { get; init; }
+    public int PageSize { get; init; }
+    public bool HasNextPage => CurrentPage < TotalPages;
+    public bool HasPreviousPage => CurrentPage > 1;
+}

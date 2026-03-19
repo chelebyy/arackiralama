@@ -310,6 +310,7 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
             passwordHasher,
             jwtTokenService,
             emailDispatcher,
+            Mock.Of<IAuditLogService>(),
             Mock.Of<ILogger<AdminUsersController>>())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }

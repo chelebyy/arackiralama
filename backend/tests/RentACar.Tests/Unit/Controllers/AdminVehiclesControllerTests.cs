@@ -3,6 +3,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Controllers;
@@ -397,7 +398,7 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         var httpContext = userId is null ? null : CreateAuthenticatedHttpContext(userId);
         var httpContextAccessor = httpContext is null ? null : new HttpContextAccessor { HttpContext = httpContext };
         var fleetService = CreateFleetService(dbContext, webRootPath, httpContextAccessor);
-        var controller = new AdminVehiclesController(fleetService);
+        var controller = new AdminVehiclesController(fleetService, Mock.Of<IAuditLogService>());
 
         if (httpContext is not null)
         {

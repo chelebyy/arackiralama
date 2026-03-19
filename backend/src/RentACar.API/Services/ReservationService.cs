@@ -937,6 +937,31 @@ public sealed class ReservationService : IReservationService
         return reservations.Select(MapToDto).ToList();
     }
 
+    public async Task<PaginatedResponse<ReservationDto>> GetCustomerReservationsPaginatedAsync(
+        Guid customerId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        const int maxPageSize = 100;
+        pageSize = Math.Clamp(pageSize, 1, maxPageSize);
+        page = Math.Max(1, page);
+
+        var (items, totalCount) = await _reservationRepository.GetByCustomerIdPaginatedAsync(
+            customerId, page, pageSize, cancellationToken);
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PaginatedResponse<ReservationDto>
+        {
+            Items = items.Select(MapToDto).ToList(),
+            TotalCount = totalCount,
+            TotalPages = totalPages,
+            CurrentPage = page,
+            PageSize = pageSize
+        };
+    }
+
     #region Helper Methods
 
     private ReservationDto MapToDto(Reservation reservation)

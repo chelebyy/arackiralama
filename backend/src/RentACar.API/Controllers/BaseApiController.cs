@@ -15,4 +15,7 @@ public abstract class BaseApiController : ControllerBase
 
     protected IActionResult UnauthorizedResponse(string message = "Yetkisiz erişim") =>
         Unauthorized(ApiResponse<object>.Fail(message));
+
+    protected IActionResult NotFoundResponse(string message = "Kaynak bulunamadı") =>
+        NotFound(ApiResponse<object>.Fail(message));
 }

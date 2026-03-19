@@ -909,5 +909,97 @@ public sealed class ReservationServiceTests
             Phone = "+90 555 123 4567"
         }
     };
+
+    #region GetCustomerReservationsPaginatedAsync Tests
+
+    [Fact]
+    public async Task GetCustomerReservationsPaginatedAsync_ReturnsCorrectPagination()
+    {
+        // Arrange
+        var customerId = Guid.NewGuid();
+        var reservations = new List<Reservation>
+        {
+            CreateTestReservation(customerId, "RES001"),
+            CreateTestReservation(customerId, "RES002"),
+            CreateTestReservation(customerId, "RES003")
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByCustomerIdPaginatedAsync(customerId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((reservations, 3));
+
+        // Act
+        var result = await _sut.GetCustomerReservationsPaginatedAsync(customerId, 1, 20);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.TotalCount.Should().Be(3);
+        result.TotalPages.Should().Be(1);
+        result.CurrentPage.Should().Be(1);
+        result.PageSize.Should().Be(20);
+        result.HasNextPage.Should().BeFalse();
+        result.HasPreviousPage.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetCustomerReservationsPaginatedAsync_WithMultiplePages_CalculatesCorrectly()
+    {
+        // Arrange
+        var customerId = Guid.NewGuid();
+        var reservations = new List<Reservation>
+        {
+            CreateTestReservation(customerId, "RES001"),
+            CreateTestReservation(customerId, "RES002")
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByCustomerIdPaginatedAsync(customerId, 2, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((reservations, 5));
+
+        // Act
+        var result = await _sut.GetCustomerReservationsPaginatedAsync(customerId, 2, 2);
+
+        // Assert
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(5);
+        result.TotalPages.Should().Be(3);
+        result.CurrentPage.Should().Be(2);
+        result.HasNextPage.Should().BeTrue();
+        result.HasPreviousPage.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-1, 1)]
+    [InlineData(150, 100)]
+    public async Task GetCustomerReservationsPaginatedAsync_ClampsInvalidPageSize(int inputPageSize, int expectedPageSize)
+    {
+        // Arrange
+        var customerId = Guid.NewGuid();
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByCustomerIdPaginatedAsync(customerId, 1, expectedPageSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<Reservation>(), 0));
+
+        // Act
+        var result = await _sut.GetCustomerReservationsPaginatedAsync(customerId, 1, inputPageSize);
+
+        // Assert
+        result.PageSize.Should().Be(expectedPageSize);
+    }
+
+    private static Reservation CreateTestReservation(Guid customerId, string publicCode) => new()
+    {
+        Id = Guid.NewGuid(),
+        PublicCode = publicCode,
+        CustomerId = customerId,
+        PickupDateTime = DateTime.UtcNow.AddDays(1),
+        ReturnDateTime = DateTime.UtcNow.AddDays(3),
+        Status = ReservationStatus.Paid,
+        TotalAmount = 1000,
+        CreatedAt = DateTime.UtcNow
+    };
+
+    #endregion
 }
 
