@@ -294,11 +294,11 @@ public sealed class AdminVehiclesController(
 
     private string? GetCurrentUserId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 
     private string? GetClientIpAddress()
     {
-        return HttpContext.Connection.RemoteIpAddress?.ToString();
+        return HttpContext?.Connection.RemoteIpAddress?.ToString();
     }
 }
