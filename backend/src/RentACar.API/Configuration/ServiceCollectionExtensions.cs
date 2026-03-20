@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using RentACar.API.Authentication;
 using RentACar.API.Contracts;
+using RentACar.API.Filters;
 using RentACar.API.Options;
 using RentACar.API.Services;
 using RentACar.Core.Interfaces.Payments;
@@ -44,7 +45,14 @@ public static class ServiceCollectionExtensions
         services.AddJwtAuthentication(configuration);
         services.AddAdminAuthorization();
         services.AddApiRateLimiting();
+        services.AddAdminAuditLogging();
 
+        return services;
+    }
+
+    private static IServiceCollection AddAdminAuditLogging(this IServiceCollection services)
+    {
+        services.AddScoped<AuditLogActionFilter>();
         return services;
     }
 
