@@ -31,7 +31,7 @@ public sealed class PasswordResetEmailDispatcher(
             ? NotificationTemplateKeys.PasswordResetAdmin
             : NotificationTemplateKeys.PasswordResetCustomer;
 
-        var jobId = await _notificationQueueService.EnqueueEmailAsync(
+        await _notificationQueueService.EnqueueEmailAsync(
             new QueuedEmailNotificationRequest
             {
                 ToEmail = destinationEmail,
@@ -45,10 +45,6 @@ public sealed class PasswordResetEmailDispatcher(
             },
             cancellationToken: cancellationToken);
 
-        logger.LogInformation(
-            "Password reset email queued. principal_type={PrincipalType} background_job_id={BackgroundJobId} expires_at_utc={ExpiresAtUtc}",
-            principalType,
-            jobId,
-            expiresAtUtc);
+        logger.LogInformation("Password reset email queued.");
     }
 }
