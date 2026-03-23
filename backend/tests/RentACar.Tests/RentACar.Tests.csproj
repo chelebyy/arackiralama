@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\RentACar.Core\RentACar.Core.csproj" />
     <ProjectReference Include="..\..\src\RentACar.Infrastructure\RentACar.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\RentACar.API\RentACar.API.csproj" />
+    <ProjectReference Include="..\..\src\RentACar.Worker\RentACar.Worker.csproj" />
   </ItemGroup>
 
 </Project>

@@ -68,16 +68,18 @@ public sealed class Worker(
 
         var enqueuedCount = 0;
         var now = DateTime.UtcNow;
+        var runnablePayloads = await dbContext.BackgroundJobs
+            .AsNoTracking()
+            .Where(x =>
+                x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
+                && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing))
+            .Select(x => x.Payload)
+            .ToListAsync(cancellationToken);
+
         foreach (var reservationId in expiredReservationIds)
         {
-            var marker = reservationId.ToString();
-            var hasRunnableJob = await dbContext.BackgroundJobs
-                .AsNoTracking()
-                .AnyAsync(
-                    x => x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
-                        && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing)
-                        && x.Payload.Contains(marker),
-                    cancellationToken);
+            var hasRunnableJob = runnablePayloads.Any(payload =>
+                WorkerPayloadMatcher.HasReservationId(payload, reservationId));
 
             if (hasRunnableJob)
             {
@@ -294,24 +296,7 @@ public sealed class Worker(
 
     private async Task ExecuteDailyBackupCommandAsync(CancellationToken cancellationToken)
     {
-        var command = dailyBackupOptions.Value.Command?.Trim();
-        if (string.IsNullOrWhiteSpace(command))
-        {
-            throw new InvalidOperationException("Daily backup command is not configured.");
-        }
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = command,
-            Arguments = dailyBackupOptions.Value.Arguments ?? string.Empty,
-            WorkingDirectory = string.IsNullOrWhiteSpace(dailyBackupOptions.Value.WorkingDirectory)
-                ? AppContext.BaseDirectory
-                : dailyBackupOptions.Value.WorkingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
+        var startInfo = DailyBackupCommandPolicy.CreateStartInfo(dailyBackupOptions.Value);
 
         using var process = new Process { StartInfo = startInfo };
         if (!process.Start())
@@ -347,12 +332,12 @@ public sealed class Worker(
         if (process.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"Daily backup command failed with exit code {process.ExitCode}. stderr: {stderr}");
+                $"Daily backup command failed with exit code {process.ExitCode}. stderr: {DailyBackupCommandPolicy.SanitizeForLog(stderr)}");
         }
 
         logger.LogInformation(
             "Daily backup command completed successfully. stdout: {Output}",
-            string.IsNullOrWhiteSpace(stdout) ? "<empty>" : stdout.Trim());
+            DailyBackupCommandPolicy.SanitizeForLog(stdout));
     }
 }
 
@@ -362,6 +347,7 @@ public sealed class DailyBackupOptions
     public string Command { get; set; } = string.Empty;
     public string Arguments { get; set; } = string.Empty;
     public string WorkingDirectory { get; set; } = string.Empty;
+    public List<string> AllowedCommands { get; set; } = [];
     public int ScheduleUtcHour { get; set; } = 2;
     public int ScheduleUtcMinute { get; set; }
     public int TimeoutSeconds { get; set; } = 900;

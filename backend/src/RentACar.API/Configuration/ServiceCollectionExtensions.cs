@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using RentACar.API.Authentication;
@@ -20,7 +21,10 @@ namespace RentACar.API.Configuration;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApiApplicationServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApiApplicationServices(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.AddOpenApi();
         services.AddEndpointsApiExplorer();
@@ -46,7 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
         services.AddPaymentIntegration(configuration);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
-        services.AddJwtAuthentication(configuration);
+        services.AddJwtAuthentication(configuration, environment);
         services.AddAdminAuthorization();
         services.AddApiRateLimiting();
         services.AddAdminAuditLogging();
@@ -76,14 +80,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddJwtAuthentication(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
-        if (string.IsNullOrWhiteSpace(jwtOptions.Secret) || jwtOptions.Secret.Length < 32)
-        {
-            throw new InvalidOperationException("JWT secret must be configured with at least 32 characters.");
-        }
+        JwtSecretValidator.Validate(jwtOptions, environment);
 
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret));
 

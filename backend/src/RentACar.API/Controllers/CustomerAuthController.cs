@@ -22,6 +22,7 @@ public sealed class CustomerAuthController(
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
     IRefreshTokenCookieService refreshTokenCookieService,
+    IAuditLogService auditLogService,
     IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings) : BaseApiController
 {
     private const int LockoutThreshold = 5;
@@ -45,7 +46,17 @@ public sealed class CustomerAuthController(
 
         if (existingCustomer is not null && existingCustomer.HasPassword)
         {
-            return UnauthorizedResponse();
+            await auditLogService.LogAsync(
+                "RegisterIgnored",
+                "CustomerAuth",
+                normalizedEmail,
+                null,
+                null,
+                null,
+                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken);
+
+            return OkResponse(new { success = true }, "Kayit basarili.");
         }
 
         var passwordHash = passwordHasher.HashPassword(request.Password);
@@ -73,6 +84,17 @@ public sealed class CustomerAuthController(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        var persistedCustomer = existingCustomer ?? dbContext.Customers.Local.First(customer => customer.NormalizedEmail == normalizedEmail);
+        await auditLogService.LogAsync(
+            "Register",
+            "CustomerAuth",
+            persistedCustomer.Id.ToString(),
+            null,
+            null,
+            null,
+            ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            cancellationToken);
 
         return OkResponse(new { success = true }, "Kayit basarili.");
     }

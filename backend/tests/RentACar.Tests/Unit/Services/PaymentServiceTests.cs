@@ -98,10 +98,10 @@ public sealed class PaymentServiceTests : IDisposable
 
         result.Duplicate.Should().BeTrue();
         _dbContext.BackgroundJobs
-            .Count(x => x.Type == "payment-webhook-process" && x.Payload.Contains("\"ProviderEventId\":\"evt-1\""))
+            .Count(x => x.Type == "payment-webhook-process" && WebhookJobPayloadMatcher.HasProviderEventId(x.Payload, "evt-1"))
             .Should().Be(2);
         _dbContext.BackgroundJobs
-            .Any(x => x.Type == "payment-webhook-process" && x.Status == BackgroundJobStatus.Pending && x.Payload.Contains("\"ProviderEventId\":\"evt-1\""))
+            .Any(x => x.Type == "payment-webhook-process" && x.Status == BackgroundJobStatus.Pending && WebhookJobPayloadMatcher.HasProviderEventId(x.Payload, "evt-1"))
             .Should().BeTrue();
     }
 
@@ -573,3 +573,4 @@ public sealed class PaymentServiceTests : IDisposable
         }
     }
 }
+
