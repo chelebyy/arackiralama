@@ -8,5 +8,7 @@ public class BackgroundJob : BaseEntity
     public string Payload { get; set; } = string.Empty;
     public BackgroundJobStatus Status { get; set; } = BackgroundJobStatus.Pending;
     public int RetryCount { get; set; }
+    public string? LastError { get; set; }
+    public DateTime? FailedAt { get; set; }
     public DateTime ScheduledAt { get; set; } = DateTime.UtcNow;
 }

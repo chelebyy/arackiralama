@@ -10,8 +10,10 @@ using RentACar.API.Contracts;
 using RentACar.API.Filters;
 using RentACar.API.Options;
 using RentACar.API.Services;
+using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure;
+using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Infrastructure.Services.Payments;
 
 namespace RentACar.API.Configuration;
@@ -26,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddHealthChecks();
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
+        services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<RefreshTokenCookieSettings>(configuration.GetSection(RefreshTokenCookieSettings.SectionName));
         services.AddInfrastructure(configuration);
@@ -40,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PaymentService>();
         services.AddScoped<IPaymentService>(serviceProvider => serviceProvider.GetRequiredService<PaymentService>());
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IFeatureFlagService, FeatureFlagService>();
         services.AddPaymentIntegration(configuration);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration);

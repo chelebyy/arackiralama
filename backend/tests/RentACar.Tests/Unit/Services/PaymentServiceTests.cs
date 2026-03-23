@@ -1,10 +1,12 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
+using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Services.Payments;
@@ -18,6 +20,7 @@ public sealed class PaymentServiceTests : IDisposable
     private readonly TestDbContextFactory _dbFactory = new();
     private readonly RentACarDbContext _dbContext;
     private readonly PaymentService _sut;
+    private readonly Mock<INotificationQueueService> _notificationQueueServiceMock = new();
 
     public PaymentServiceTests()
     {
@@ -27,6 +30,7 @@ public sealed class PaymentServiceTests : IDisposable
         _sut = new PaymentService(
             _dbContext,
             new FakePaymentProvider(),
+            _notificationQueueServiceMock.Object,
             Options.Create(new PaymentOptions
             {
                 Provider = "Mock",
@@ -36,6 +40,13 @@ public sealed class PaymentServiceTests : IDisposable
                 WebhookJobBatchSize = 10
             }),
             NullLogger<PaymentService>.Instance);
+
+        _notificationQueueServiceMock
+            .Setup(x => x.EnqueueEmailAsync(It.IsAny<QueuedEmailNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+        _notificationQueueServiceMock
+            .Setup(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
     }
 
     [Fact]
@@ -107,6 +118,13 @@ public sealed class PaymentServiceTests : IDisposable
             Status = ReservationStatus.PendingPayment,
             TotalAmount = 2500m
         };
+        _dbContext.Customers.Add(new Customer
+        {
+            Id = reservation.CustomerId,
+            FullName = "Test Customer",
+            Email = "customer@example.com",
+            Phone = "+905551112233"
+        });
 
         var paymentIntent = new PaymentIntent
         {
@@ -143,6 +161,148 @@ public sealed class PaymentServiceTests : IDisposable
         reservation.Status.Should().Be(ReservationStatus.Paid);
         _dbContext.PaymentWebhookEvents.Single(x => x.ProviderEventId == "evt-2").Processed.Should().BeTrue();
         _dbContext.BackgroundJobs.Single().Status.Should().Be(BackgroundJobStatus.Completed);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReservationConfirmed),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.PaymentReceived),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.PickupReminder),
+                It.Is<DateTime?>(d => d == reservation.PickupDateTime.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReturnReminder),
+                It.Is<DateTime?>(d => d == reservation.ReturnDateTime.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenDepositReleased_QueuesDepositReleasedNotifications()
+    {
+        var customerId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-DEPOSIT",
+            CustomerId = customerId,
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(-2),
+            ReturnDateTime = DateTime.UtcNow.AddDays(1),
+            Status = ReservationStatus.Completed,
+            TotalAmount = 1500m
+        };
+        var depositIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = 500m,
+            Status = PaymentStatus.Authorized,
+            Provider = "Mock:Deposit",
+            IdempotencyKey = "deposit-intent",
+            ProviderIntentId = "deposit-provider-intent",
+            ProviderTransactionId = "deposit-provider-tx"
+        };
+
+        _dbContext.Customers.Add(new Customer
+        {
+            Id = customerId,
+            FullName = "Deposit Customer",
+            Email = "deposit@example.com",
+            Phone = "+905551119988"
+        });
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(depositIntent);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.ReleaseDepositAsync(reservation.Id, "checkout", CancellationToken.None);
+
+        result.Should().NotBeNull();
+        depositIntent.Status.Should().Be(PaymentStatus.Cancelled);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.DepositReleased),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.DepositReleased),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessPendingWebhookJobsAsync_WhenPaymentSucceeds_QueuesReminderNotifications()
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-REMINDERS",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(3),
+            ReturnDateTime = DateTime.UtcNow.AddDays(5),
+            Status = ReservationStatus.PendingPayment,
+            TotalAmount = 2500m
+        };
+        _dbContext.Customers.Add(new Customer
+        {
+            Id = reservation.CustomerId,
+            FullName = "Reminder Customer",
+            Email = "reminder@example.com",
+            Phone = "+905551110000"
+        });
+        var paymentIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = reservation.TotalAmount,
+            Status = PaymentStatus.Pending,
+            Provider = "Mock",
+            IdempotencyKey = "intent-reminders",
+            ProviderIntentId = "provider-intent-reminders",
+            ProviderTransactionId = "provider-tx-reminders"
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(paymentIntent);
+        _dbContext.PaymentWebhookEvents.Add(new PaymentWebhookEvent
+        {
+            ProviderEventId = "evt-reminders",
+            Payload = "{}",
+            Processed = false
+        });
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = "payment-webhook-process",
+            Payload = $$"""{"ProviderEventId":"evt-reminders","EventType":"payment.succeeded","ProviderIntentId":"{{paymentIntent.ProviderIntentId}}","ProviderTransactionId":"{{paymentIntent.ProviderTransactionId}}","RawPayload":"{}"}""",
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
+        await _sut.ProcessPendingWebhookJobsAsync();
+
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.PickupReminder),
+                It.Is<DateTime?>(d => d == reservation.PickupDateTime.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReturnReminder),
+                It.Is<DateTime?>(d => d == reservation.ReturnDateTime.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

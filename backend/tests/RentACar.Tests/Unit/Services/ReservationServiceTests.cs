@@ -12,6 +12,7 @@ using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
+using RentACar.Core.Interfaces.Notifications;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Services;
@@ -28,6 +29,7 @@ public sealed class ReservationServiceTests
     private readonly Mock<IFleetService> _fleetServiceMock;
     private readonly Mock<IPricingService> _pricingServiceMock;
     private readonly Mock<IPaymentService> _paymentServiceMock;
+    private readonly Mock<INotificationQueueService> _notificationQueueServiceMock;
     private readonly IMemoryCache _memoryCache;
     private readonly Mock<ILogger<ReservationService>> _loggerMock;
     private readonly ReservationService _sut;
@@ -44,6 +46,7 @@ public sealed class ReservationServiceTests
         _fleetServiceMock = new Mock<IFleetService>();
         _pricingServiceMock = new Mock<IPricingService>();
         _paymentServiceMock = new Mock<IPaymentService>();
+        _notificationQueueServiceMock = new Mock<INotificationQueueService>();
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
         _loggerMock = new Mock<ILogger<ReservationService>>();
 
@@ -88,6 +91,14 @@ public sealed class ReservationServiceTests
                 Status = "Succeeded"
             });
 
+        _notificationQueueServiceMock
+            .Setup(x => x.EnqueueEmailAsync(It.IsAny<QueuedEmailNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _notificationQueueServiceMock
+            .Setup(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
         _sut = new ReservationService(
             _reservationRepositoryMock.Object,
             _customerRepositoryMock.Object,
@@ -99,6 +110,7 @@ public sealed class ReservationServiceTests
             _fleetServiceMock.Object,
             _pricingServiceMock.Object,
             _paymentServiceMock.Object,
+            _notificationQueueServiceMock.Object,
             _memoryCache,
             _loggerMock.Object);
     }
@@ -625,6 +637,7 @@ public sealed class ReservationServiceTests
             PublicCode = "ABC-1234-DEF",
             Status = ReservationStatus.Hold,
             CustomerId = Guid.NewGuid(),
+            Customer = new Customer { Email = "customer@example.com", Phone = "+905551112233", FullName = "Test User" },
             VehicleId = Guid.NewGuid(),
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
@@ -644,6 +657,8 @@ public sealed class ReservationServiceTests
         result.Should().BeTrue();
         reservation.Status.Should().Be(ReservationStatus.Cancelled);
         _holdServiceMock.Verify(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Once);
+        _notificationQueueServiceMock.Verify(x => x.EnqueueEmailAsync(It.IsAny<QueuedEmailNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _notificationQueueServiceMock.Verify(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -657,6 +672,7 @@ public sealed class ReservationServiceTests
             Id = reservationId,
             Status = ReservationStatus.Draft,
             CustomerId = Guid.NewGuid(),
+            Customer = new Customer { Email = "customer@example.com", Phone = "+905551112233", FullName = "Test User" },
             VehicleId = Guid.NewGuid(),
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
@@ -689,6 +705,7 @@ public sealed class ReservationServiceTests
             PublicCode = "RSV-001",
             Status = ReservationStatus.Paid,
             CustomerId = Guid.NewGuid(),
+            Customer = new Customer { Email = "customer@example.com", Phone = "+905551112233", FullName = "Test User" },
             VehicleId = Guid.NewGuid(),
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
@@ -709,6 +726,82 @@ public sealed class ReservationServiceTests
         result.Should().NotBeNull();
         result!.Status.Should().Be(ReservationStatus.Cancelled.ToString());
         VerifyLogDoesNotContain(rawReason, "Admin cancelled reservation", "HasReason: True");
+        _notificationQueueServiceMock.Verify(x => x.EnqueueEmailAsync(It.IsAny<QueuedEmailNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        _notificationQueueServiceMock.Verify(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ConfirmPaymentAsync_WhenPaymentConfirmed_QueuesConfirmationAndReminderNotifications()
+    {
+        var reservationId = Guid.NewGuid();
+        var pickupDateTimeUtc = DateTime.UtcNow.AddDays(3);
+        var returnDateTimeUtc = pickupDateTimeUtc.AddDays(2);
+        var customerId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-CONFIRM",
+            CustomerId = customerId,
+            Customer = new Customer
+            {
+                Id = customerId,
+                Email = "ada@example.com",
+                Phone = "+905551112233",
+                FullName = "Ada Lovelace"
+            },
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = pickupDateTimeUtc,
+            ReturnDateTime = returnDateTimeUtc,
+            Status = ReservationStatus.PendingPayment,
+            TotalAmount = 1000m
+        };
+
+        var paymentIntent = new PaymentIntent
+        {
+            ReservationId = reservationId,
+            Status = PaymentStatus.Succeeded,
+            ProviderIntentId = "provider-intent-confirm",
+            ProviderTransactionId = "provider-tx-confirm",
+            Provider = "Mock",
+            IdempotencyKey = "confirm-intent",
+            Amount = 1000m
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _applicationDbContextMock
+            .Setup(x => x.PaymentIntents)
+            .Returns(new List<PaymentIntent> { paymentIntent }.BuildMockDbSet().Object);
+
+        var result = await _sut.ConfirmPaymentAsync(reservationId, "provider-tx-confirm", CancellationToken.None);
+
+        result.Should().NotBeNull();
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReservationConfirmed),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReservationConfirmed),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.PickupReminder),
+                It.Is<DateTime?>(d => d == pickupDateTimeUtc.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationQueueServiceMock.Verify(
+            x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReturnReminder),
+                It.Is<DateTime?>(d => d == returnDateTimeUtc.AddHours(-24)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -1002,4 +1095,3 @@ public sealed class ReservationServiceTests
 
     #endregion
 }
-
