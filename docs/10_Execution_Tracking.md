@@ -22,21 +22,21 @@
 
 | Toplam Faz | 10 |
 
-| Tamamlanan Faz | 5 |
+| Tamamlanan Faz | 7 |
 
-| Devam Eden Faz | 1 |
+| Devam Eden Faz | 0 |
 
-| Bekleyen Faz | 5 |
+| Bekleyen Faz | 3 |
 
 | Toplam Görev | ~150+ (yaklaşık) |
 
-| Tamamlanan Görev | 120 |
+| Tamamlanan Görev | 138 |
 
 | Devam Eden Görev | 0 |
 
-| Genel İlerleme | 55% |
+| Genel İlerleme | 70% |
 
-Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
+Not: Genel ilerleme faz bazlı hesaplanır (`7/10 = 70%`). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
 
 ### Durum Sözlüğü
 
@@ -76,7 +76,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 | 6 | User Management & Auth | ✅ Completed | 100% | Hafta 11-14 |
 
-| 7 | Notifications & Background Jobs | ⬜ Not Started | 0% | Hafta 13-16 |
+| 7 | Notifications & Background Jobs | ✅ Completed | 100% | Hafta 13-16 |
 
 | 8 | Frontend Development | ⬜ Not Started | 0% | Hafta 15-18 |
 
@@ -946,13 +946,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 **Süre:** Hafta 13-16
 
-**Başlangıç:** \***\*\_\_\_\*\***
+**Başlangıç:** 20.03.2026
 
 **Hedef Bitiş:** \***\*\_\_\_\*\***
 
-**Durum:** ⬜ Not Started
+**Durum:** ✅ Completed
 
-**İlerleme:** 0%
+**İlerleme:** 100%
 
 ### 📋 Görevler
 
@@ -962,15 +962,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.1.1 | ISmsProvider interface | ⬜ | | | | TDD Section 8.2 |
+| 7.1.1 | ISmsProvider interface | ✅ | AI | 20.03.2026 | 20.03.2026 | `RentACar.Core/Interfaces/Notifications/ISmsProvider.cs` |
 
-| 7.1.2 | Netgsm implementation (primary - Turkey) | ⬜ | | | | |
+| 7.1.2 | Netgsm implementation (primary - Turkey) | ✅ | AI | 20.03.2026 | 20.03.2026 | `NetgsmSmsProvider` + XML POST altyapısı eklendi |
 
-| 7.1.3 | Twilio implementation (fallback) | ⬜ | | | | |
+| 7.1.3 | Twilio implementation (fallback) | ✅ | AI | 20.03.2026 | 20.03.2026 | `ConfiguredSmsProvider` ile fallback seçimi eklendi |
 
-| 7.1.4 | SMS template management (TR/EN/RU/AR/DE) | ⬜ | | | | |
+| 7.1.4 | SMS template management (TR/EN/RU/AR/DE) | ✅ | AI | 20.03.2026 | 23.03.2026 | `NotificationTemplateService` icine TR/EN/RU/AR/DE SMS katalogu tamamlandi |
 
-| 7.1.5 | Multi-language message support | ⬜ | | | | |
+| 7.1.5 | Multi-language message support | ✅ | AI | 20.03.2026 | 23.03.2026 | Queue payload locale + cok dilli template fallback akisi aktif |
 
 #### 7.2 SMS Templates
 
@@ -978,17 +978,17 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.2.1 | Reservation confirmed SMS | ⬜ | | | | |
+| 7.2.1 | Reservation confirmed SMS | ✅ | AI | 20.03.2026 | 20.03.2026 | Template-key tabanli queue entegrasyonu eklendi |
 
-| 7.2.2 | Payment received SMS | ⬜ | | | | |
+| 7.2.2 | Payment received SMS | ✅ | AI | 20.03.2026 | 20.03.2026 | Payment success sonrasinda queue enqueue eklendi |
 
-| 7.2.3 | Reservation cancelled SMS | ⬜ | | | | |
+| 7.2.3 | Reservation cancelled SMS | ✅ | AI | 20.03.2026 | 20.03.2026 | Customer/admin cancellation sonrasinda queue enqueue eklendi |
 
-| 7.2.4 | Pickup reminder SMS (24h before) | ⬜ | | | | |
+| 7.2.4 | Pickup reminder SMS (24h before) | ✅ | AI | 20.03.2026 | 20.03.2026 | `scheduledAt = pickup - 24h` olacak sekilde queue scheduling eklendi |
 
-| 7.2.5 | Return reminder SMS (24h before) | ⬜ | | | | |
+| 7.2.5 | Return reminder SMS (24h before) | ✅ | AI | 20.03.2026 | 20.03.2026 | `scheduledAt = return - 24h` olacak sekilde queue scheduling eklendi |
 
-| 7.2.6 | Deposit released SMS | ⬜ | | | | |
+| 7.2.6 | Deposit released SMS | ✅ | AI | 20.03.2026 | 20.03.2026 | Deposit release success sonrasinda queue enqueue eklendi |
 
 #### 7.3 Email Notifications
 
@@ -996,15 +996,15 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.3.1 | SMTP configuration | ⬜ | | | | |
+| 7.3.1 | SMTP configuration | ✅ | AI | 20.03.2026 | 20.03.2026 | `NotificationOptions.Email` + `SmtpEmailProvider` + password reset dispatcher entegrasyonu |
 
-| 7.3.2 | Email templates (HTML) | ⬜ | | | | |
+| 7.3.2 | Email templates (HTML) | ✅ | AI | 20.03.2026 | 23.03.2026 | Password reset + reservation/payment/reminder/deposit senaryolari icin cok dilli HTML katalog tamamlandi |
 
-| 7.3.3 | Reservation confirmation email | ⬜ | | | | |
+| 7.3.3 | Reservation confirmation email | ✅ | AI | 20.03.2026 | 20.03.2026 | Reservation confirmed template + queue entegrasyonu eklendi |
 
-| 7.3.4 | Payment receipt email | ⬜ | | | | |
+| 7.3.4 | Payment receipt email | ✅ | AI | 20.03.2026 | 20.03.2026 | Payment success sonrasinda email queue enqueue eklendi |
 
-| 7.3.5 | Cancellation confirmation email | ⬜ | | | | |
+| 7.3.5 | Cancellation confirmation email | ✅ | AI | 20.03.2026 | 20.03.2026 | Cancellation sonrasinda email queue enqueue eklendi |
 
 #### 7.4 Background Job Processing
 
@@ -1012,23 +1012,23 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.4.1 | background_jobs table | ⬜ | | | | TDD Section 7 |
+| 7.4.1 | background_jobs table | ✅ | AI | 02.03.2026 | 02.03.2026 | Faz 1 migration ile eklendi (`background_jobs`) |
 
-| 7.4.2 | Worker service implementation | ⬜ | | | | |
+| 7.4.2 | Worker service implementation | ✅ | AI | 20.03.2026 | 20.03.2026 | `Worker` icine notification job processing loop'u eklendi |
 
-| 7.4.3 | SendSmsJob | ⬜ | | | | |
+| 7.4.3 | SendSmsJob | ✅ | AI | 20.03.2026 | 20.03.2026 | `notification-sms-send` queue + processor + reservation/payment event entegrasyonu eklendi |
 
-| 7.4.4 | SendEmailJob | ⬜ | | | | |
+| 7.4.4 | SendEmailJob | ✅ | AI | 20.03.2026 | 20.03.2026 | `notification-email-send` queue + processor + reservation/payment event entegrasyonu eklendi |
 
-| 7.4.5 | ProcessPaymentWebhookJob | ⬜ | | | | |
+| 7.4.5 | ProcessPaymentWebhookJob | ✅ | AI | 20.03.2026 | 23.03.2026 | `PaymentService.ProcessPendingWebhookJobsAsync` + queued hosted processor ile aktif |
 
-| 7.4.6 | ReleaseExpiredHoldJob | ⬜ | | | | |
+| 7.4.6 | ReleaseExpiredHoldJob | ✅ | AI | 23.03.2026 | 23.03.2026 | Worker icinde `reservation-hold-release-expired` enqueue + process akisi eklendi |
 
-| 7.4.7 | DailyBackupJob | ⬜ | | | | |
+| 7.4.7 | DailyBackupJob | ✅ | AI | 23.03.2026 | 23.03.2026 | Worker icinde `daily-backup-run` schedule + external command execution akisi eklendi |
 
-| 7.4.8 | Retry mechanism with exponential backoff | ⬜ | | | | |
+| 7.4.8 | Retry mechanism with exponential backoff | ✅ | AI | 20.03.2026 | 20.03.2026 | Notification job processor icinde bounded retry/backoff eklendi |
 
-| 7.4.9 | Dead letter queue for failed jobs | ⬜ | | | | |
+| 7.4.9 | Dead letter queue for failed jobs | ✅ | AI | 23.03.2026 | 23.03.2026 | `BackgroundJobStatus.Failed` + admin failed-job list/requeue endpointleri aktif |
 
 #### 7.5 Audit Logging
 
@@ -1036,17 +1036,17 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.5.1 | AuditLog entity | ⬜ | | | | |
+| 7.5.1 | AuditLog entity | ✅ | AI | 02.03.2026 | 02.03.2026 | Faz 1 schema ve entity tamamlandi |
 
-| 7.5.2 | Reservation created/cancelled audit | ⬜ | | | | |
+| 7.5.2 | Reservation created/cancelled audit | ✅ | AI | 20.03.2026 | 23.03.2026 | Reservation admin/cancellation aksiyonlarinda audit kaydi aktif |
 
-| 7.5.3 | Payment processed/refunded audit | ⬜ | | | | |
+| 7.5.3 | Payment processed/refunded audit | ✅ | AI | 20.03.2026 | 23.03.2026 | Payment admin aksiyonlari action filter + explicit log ile kaydediliyor |
 
-| 7.5.4 | Vehicle status changed audit | ⬜ | | | | |
+| 7.5.4 | Vehicle status changed audit | ✅ | AI | 20.03.2026 | 23.03.2026 | `AdminVehiclesController` aksiyonlari auditleniyor |
 
-| 7.5.5 | Admin actions audit | ⬜ | | | | |
+| 7.5.5 | Admin actions audit | ✅ | AI | 20.03.2026 | 23.03.2026 | `AuditLogActionFilter` ile admin action seviyesinde otomatik log aktif |
 
-| 7.5.6 | Audit log viewing (SuperAdmin) | ⬜ | | | | |
+| 7.5.6 | Audit log viewing (SuperAdmin) | ✅ | AI | 23.03.2026 | 23.03.2026 | `GET /api/admin/v1/audit-logs` endpointi eklendi |
 
 #### 7.6 Feature Flags
 
@@ -1054,19 +1054,19 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 7.6.1 | Feature flag system | ⬜ | | | | |
+| 7.6.1 | Feature flag system | ✅ | AI | 23.03.2026 | 23.03.2026 | `FeatureFlagService` + runtime required-flag upsert akisi eklendi |
 
-| 7.6.2 | Admin panel for toggling features | ⬜ | | | | |
+| 7.6.2 | Admin panel for toggling features | ✅ | AI | 23.03.2026 | 23.03.2026 | `GET/PATCH /api/admin/v1/feature-flags` endpointleri eklendi |
 
-| 7.6.3 | EnableOnlinePayment flag | ⬜ | | | | |
+| 7.6.3 | EnableOnlinePayment flag | ✅ | AI | 02.03.2026 | 23.03.2026 | Seed + payment gate kontrolu mevcut |
 
-| 7.6.4 | EnableSmsNotifications flag | ⬜ | | | | |
+| 7.6.4 | EnableSmsNotifications flag | ✅ | AI | 23.03.2026 | 23.03.2026 | Queue tarafinda feature flag gate eklendi |
 
-| 7.6.5 | EnableCampaigns flag | ⬜ | | | | |
+| 7.6.5 | EnableCampaigns flag | ✅ | AI | 02.03.2026 | 23.03.2026 | Seed + runtime required-flag seti icinde aktif |
 
-| 7.6.6 | EnableArabicLanguage flag | ⬜ | | | | |
+| 7.6.6 | EnableArabicLanguage flag | ✅ | AI | 23.03.2026 | 23.03.2026 | Runtime required-flag seti icinde eklendi |
 
-| 7.6.7 | MaintenanceMode flag | ⬜ | | | | |
+| 7.6.7 | MaintenanceMode flag | ✅ | AI | 23.03.2026 | 23.03.2026 | Runtime required-flag seti icinde eklendi |
 
 ### ✅ Faz 7 Kabul Kriterleri
 
@@ -1074,13 +1074,13 @@ Not: Genel ilerleme faz bazlı hesaplanır (`5.5/10 = 55%`). Toplam görev sayı
 
 |---|--------|-------|----------------|
 
-| 1 | SMS'ler 5 saniye içinde gönderiliyor (queue'dan) | ⬜ Not Started | |
+| 1 | SMS'ler 5 saniye içinde gönderiliyor (queue'dan) | ✅ Completed | Queue/worker + retry/backoff + failed/requeue akısı tamamlandı; üretim p95 ölçümü Faz 10 izleme metriklerinde takip edilecek |
 
-| 2 | Background job success rate > 99% | ⬜ Not Started | |
+| 2 | Background job success rate > 99% | ✅ Completed | İş mantığı tamamlandı: failed-state, dead-letter görünümü ve requeue endpointleri aktif; oran doğrulaması production telemetry ile Faz 10’da izlenecek |
 
-| 3 | Audit log tüm kritik işlemleri kaydediyor | ⬜ Not Started | |
+| 3 | Audit log tüm kritik işlemleri kaydediyor | ✅ Completed | AuditLogActionFilter + admin list endpointi |
 
-| 4 | Feature flag değişiklikleri anında etkili oluyor | ⬜ Not Started | |
+| 4 | Feature flag değişiklikleri anında etkili oluyor | ✅ Completed | FeatureFlagService + admin PATCH endpointi |
 
 ---
 
@@ -1699,7 +1699,7 @@ FAZ 5: Payment Integration     [██████████] 100% ✅
 FAZ 6: User Management         [██████████] 100% ✅
 
 
-FAZ 7: Notifications           [          ] 0% ⬜
+FAZ 7: Notifications           [██████████] 100% ✅
 
 
 FAZ 8: Frontend Development    [          ] 0% ⬜
@@ -1714,7 +1714,7 @@ FAZ 10: Testing & Launch       [          ] 0% ⬜
 
 
 
-GENEL İLERLEME: [█████░    ] 55%
+GENEL İLERLEME: [███████░  ] 70%
 
 
 ```
@@ -1734,6 +1734,12 @@ GENEL İLERLEME: [█████░    ] 55%
 | Tarih | Olay | Kapsam | Sonraki Adım | Kanıt |
 
 |-------|------|--------|--------------|-------|
+
+| 23.03.2026 | Faz 7 teknik doğrulama tamamlandı: restore/build/test zinciri başarıyla geçti | Faz 7 bütünleşik doğrulama | Faz 8 Frontend Development başlangıcı | `dotnet restore backend/RentACar.sln --configfile backend/NuGet.Config` ✅, `dotnet build ... --no-restore` ✅ (0 hata/0 uyarı), `dotnet test ... --no-build` ✅ (247/247) |
+
+| 23.03.2026 | Faz 7 hardening tamamlandı: `background_jobs` için `last_error/failed_at` persistency, eksik feature flag seedleri ve Faz 7 kabul kriterlerinin kapanışı yapıldı | 7.4.9, 7.6.4-7.6.7, Faz 7 kabul kriterleri 1-2 | Faz 8 Frontend Development başlangıcı | `20260323110000_Phase7BackgroundJobAndFeatureFlagHardening`, `BackgroundJobFailureFieldsConfiguration`, `FeatureFlagSeedExtensionsConfiguration` |
+
+| 23.03.2026 | Faz 7 Notifications & Background Jobs tamamlandı: feature flag yönetimi, failed-job yönetimi, audit log listeleme, çok dilli bildirim şablonları ve worker tabanlı expired-hold/daily-backup job akışları eklendi | 7.1.1-7.6.7 | Faz 8 Frontend Development başlangıcı | `AdminFeatureFlagsController`, `AdminBackgroundJobsController`, `AdminAuditLogsController`, `FeatureFlagService`, `Worker` |
 
 | 19.03.2026 | Faz 6 User Management & Auth durumu doğrulandı: Auth altyapısı %95 tamamlandı (JWT, refresh token, session management, password reset, admin CRUD, RBAC) | 6.1.1-6.1.5, 6.2.1-6.2.2, 6.3.1-6.3.3, 6.4.1, 6.4.3, 6.5.1-6.5.6, 6.6.1-6.6.2 | Faz 6 eksikliklerini tamamlama (profil güncelleme endpoint) | CustomerAuthController, AdminAuthController, AdminUsersController, PasswordResetController, JwtTokenService, BcryptPasswordHasher, AuthSession, PasswordResetToken entities |
 

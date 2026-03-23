@@ -2,9 +2,11 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RentACar.API.Contracts.Payments;
+using RentACar.Core.Constants;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
+using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure.Services.Payments;
 
@@ -13,14 +15,16 @@ namespace RentACar.API.Services;
 public sealed class PaymentService(
     IApplicationDbContext dbContext,
     IPaymentProvider paymentProvider,
+    INotificationQueueService notificationQueueService,
     IOptions<PaymentOptions> paymentOptions,
     ILogger<PaymentService> logger) : IPaymentService
 {
     private const string DepositProviderSuffix = ":Deposit";
-    private const string WebhookProcessingJobType = "payment-webhook-process";
+    private const string WebhookProcessingJobType = BackgroundJobTypes.PaymentWebhookProcess;
 
     private readonly IApplicationDbContext _dbContext = dbContext;
     private readonly IPaymentProvider _paymentProvider = paymentProvider;
+    private readonly INotificationQueueService _notificationQueueService = notificationQueueService;
     private readonly PaymentOptions _paymentOptions = paymentOptions.Value;
     private readonly ILogger<PaymentService> _logger = logger;
 
@@ -358,6 +362,7 @@ public sealed class PaymentService(
         depositIntent.Status = PaymentStatus.Cancelled;
         depositIntent.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await QueueDepositReleasedNotificationsAsync(reservation, cancellationToken);
 
         return new PaymentOperationApiDto
         {
@@ -736,6 +741,9 @@ public sealed class PaymentService(
                 reservation.Status = ReservationStatus.Paid;
                 reservation.UpdatedAt = DateTime.UtcNow;
                 await EnsureDepositPreAuthorizationAsync(reservation, GetPreferredProviderReference(intent), cancellationToken);
+                await QueueReservationConfirmedNotificationsAsync(reservation, cancellationToken);
+                await QueueReservationReminderNotificationsAsync(reservation, cancellationToken);
+                await QueuePaymentReceivedNotificationsAsync(reservation, cancellationToken);
             }
         }
         else if (parsedEvent.EventType.Contains("failed", StringComparison.OrdinalIgnoreCase))
@@ -749,6 +757,239 @@ public sealed class PaymentService(
 
         intent.UpdatedAt = DateTime.UtcNow;
         return true;
+    }
+
+    private async Task QueuePaymentReceivedNotificationsAsync(
+        Reservation reservation,
+        CancellationToken cancellationToken)
+    {
+        var customer = await ResolveCustomerAsync(reservation, cancellationToken);
+
+        if (customer == null)
+        {
+            return;
+        }
+
+        var locale = ResolveNotificationLocale(customer.Nationality);
+        var variables = new Dictionary<string, string>
+        {
+            ["PublicCode"] = reservation.PublicCode
+        };
+
+        if (!string.IsNullOrWhiteSpace(customer.Email))
+        {
+            await _notificationQueueService.EnqueueEmailAsync(
+                new QueuedEmailNotificationRequest
+                {
+                    ToEmail = customer.Email,
+                    TemplateKey = NotificationTemplateKeys.PaymentReceived,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer.Phone))
+        {
+            await _notificationQueueService.EnqueueSmsAsync(
+                new QueuedSmsNotificationRequest
+                {
+                    ToPhoneNumber = customer.Phone,
+                    TemplateKey = NotificationTemplateKeys.PaymentReceived,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task QueueDepositReleasedNotificationsAsync(
+        Reservation reservation,
+        CancellationToken cancellationToken)
+    {
+        var customer = await ResolveCustomerAsync(reservation, cancellationToken);
+
+        if (customer == null)
+        {
+            return;
+        }
+
+        var locale = ResolveNotificationLocale(customer.Nationality);
+        var variables = new Dictionary<string, string>
+        {
+            ["PublicCode"] = reservation.PublicCode
+        };
+
+        if (!string.IsNullOrWhiteSpace(customer.Email))
+        {
+            await _notificationQueueService.EnqueueEmailAsync(
+                new QueuedEmailNotificationRequest
+                {
+                    ToEmail = customer.Email,
+                    TemplateKey = NotificationTemplateKeys.DepositReleased,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer.Phone))
+        {
+            await _notificationQueueService.EnqueueSmsAsync(
+                new QueuedSmsNotificationRequest
+                {
+                    ToPhoneNumber = customer.Phone,
+                    TemplateKey = NotificationTemplateKeys.DepositReleased,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task QueueReservationConfirmedNotificationsAsync(
+        Reservation reservation,
+        CancellationToken cancellationToken)
+    {
+        var customer = await ResolveCustomerAsync(reservation, cancellationToken);
+        if (customer == null)
+        {
+            return;
+        }
+
+        var locale = ResolveNotificationLocale(customer.Nationality);
+        var variables = new Dictionary<string, string>
+        {
+            ["PublicCode"] = reservation.PublicCode
+        };
+
+        if (!string.IsNullOrWhiteSpace(customer.Email))
+        {
+            await _notificationQueueService.EnqueueEmailAsync(
+                new QueuedEmailNotificationRequest
+                {
+                    ToEmail = customer.Email,
+                    TemplateKey = NotificationTemplateKeys.ReservationConfirmed,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer.Phone))
+        {
+            await _notificationQueueService.EnqueueSmsAsync(
+                new QueuedSmsNotificationRequest
+                {
+                    ToPhoneNumber = customer.Phone,
+                    TemplateKey = NotificationTemplateKeys.ReservationConfirmed,
+                    Locale = locale,
+                    Variables = variables
+                },
+                cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task QueueReservationReminderNotificationsAsync(
+        Reservation reservation,
+        CancellationToken cancellationToken)
+    {
+        var customer = await ResolveCustomerAsync(reservation, cancellationToken);
+        if (customer == null)
+        {
+            return;
+        }
+
+        var locale = ResolveNotificationLocale(customer.Nationality);
+        var variables = new Dictionary<string, string>
+        {
+            ["PublicCode"] = reservation.PublicCode
+        };
+
+        await QueueReminderIfFutureAsync(
+            customer,
+            NotificationTemplateKeys.PickupReminder,
+            reservation.PickupDateTime.AddHours(-24),
+            locale,
+            variables,
+            cancellationToken);
+
+        await QueueReminderIfFutureAsync(
+            customer,
+            NotificationTemplateKeys.ReturnReminder,
+            reservation.ReturnDateTime.AddHours(-24),
+            locale,
+            variables,
+            cancellationToken);
+    }
+
+    private async Task QueueReminderIfFutureAsync(
+        Customer customer,
+        string templateKey,
+        DateTime scheduledAtUtc,
+        string locale,
+        IReadOnlyDictionary<string, string> variables,
+        CancellationToken cancellationToken)
+    {
+        if (scheduledAtUtc <= DateTime.UtcNow)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer.Email))
+        {
+            await _notificationQueueService.EnqueueEmailAsync(
+                new QueuedEmailNotificationRequest
+                {
+                    ToEmail = customer.Email,
+                    TemplateKey = templateKey,
+                    Locale = locale,
+                    Variables = variables
+                },
+                scheduledAtUtc,
+                cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer.Phone))
+        {
+            await _notificationQueueService.EnqueueSmsAsync(
+                new QueuedSmsNotificationRequest
+                {
+                    ToPhoneNumber = customer.Phone,
+                    TemplateKey = templateKey,
+                    Locale = locale,
+                    Variables = variables
+                },
+                scheduledAtUtc,
+                cancellationToken);
+        }
+    }
+
+    private static string ResolveNotificationLocale(string? nationality)
+    {
+        if (string.IsNullOrWhiteSpace(nationality))
+        {
+            return "tr-TR";
+        }
+
+        return nationality.Trim().ToUpperInvariant() switch
+        {
+            "TR" => "tr-TR",
+            "EN" => "en-US",
+            "GB" => "en-US",
+            "US" => "en-US",
+            "RU" => "ru-RU",
+            "AR" => "ar-SA",
+            "DE" => "de-DE",
+            _ => "tr-TR"
+        };
+    }
+
+    private async Task<Customer?> ResolveCustomerAsync(Reservation reservation, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == reservation.CustomerId, cancellationToken);
     }
 
     private async Task<decimal> GetReservationDepositAmountAsync(Guid reservationId, CancellationToken cancellationToken)
@@ -968,5 +1209,3 @@ public sealed class PaymentService(
         public string RawPayload { get; init; } = string.Empty;
     }
 }
-
-

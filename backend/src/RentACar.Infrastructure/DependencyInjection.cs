@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Repositories;
 using RentACar.Infrastructure.Security;
 using RentACar.Infrastructure.Services;
+using RentACar.Infrastructure.Services.Notifications;
 using StackExchange.Redis;
 
 namespace RentACar.Infrastructure;
@@ -35,6 +38,19 @@ public static class DependencyInjection
         services.AddScoped<IOfficeRepository, OfficeRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
+        services.AddScoped<NetgsmSmsProvider>(serviceProvider => new NetgsmSmsProvider(
+            new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
+            serviceProvider.GetRequiredService<ILogger<NetgsmSmsProvider>>()));
+        services.AddScoped<TwilioSmsProvider>(serviceProvider => new TwilioSmsProvider(
+            new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
+            serviceProvider.GetRequiredService<ILogger<TwilioSmsProvider>>()));
+        services.AddScoped<NotificationBackgroundJobProcessor>();
+        services.AddScoped<INotificationQueueService, NotificationQueueService>();
+        services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
+        services.AddScoped<ISmsProvider, ConfiguredSmsProvider>();
+        services.AddScoped<IEmailProvider, SmtpEmailProvider>();
 
         // Add Redis
         var redisConnectionString = configuration.GetConnectionString("Redis");

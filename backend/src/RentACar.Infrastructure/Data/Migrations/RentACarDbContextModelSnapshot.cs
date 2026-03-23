@@ -241,6 +241,14 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("failed_at");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
                     b.Property<string>("Payload")
                         .IsRequired()
                         .HasColumnType("text")
@@ -490,6 +498,33 @@ namespace RentACar.Infrastructure.Data.Migrations
                             Description = "Campaign and discount rules toggle",
                             Enabled = true,
                             Name = "EnableCampaigns",
+                            UpdatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            CreatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "SMS bildirimlerinin gönderimini etkinleştirir",
+                            Enabled = true,
+                            Name = "EnableSmsNotifications",
+                            UpdatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333334"),
+                            CreatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Arabic (RTL) dil desteğini etkinleştirir",
+                            Enabled = true,
+                            Name = "EnableArabicLanguage",
+                            UpdatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333335"),
+                            CreatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Sistemi bakım moduna alır",
+                            Enabled = false,
+                            Name = "MaintenanceMode",
                             UpdatedAt = new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
