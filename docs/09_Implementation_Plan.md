@@ -16,6 +16,11 @@ Bu doküman, docs klasöründeki PRD, ADR, TDD, IDD, Runbook, Security, API Cont
 
 **Ekib Önerisi:** 2 Backend, 2 Frontend, 1 DevOps, 1 QA
 
+## 🔐 Security Plan Referansı
+
+Faz 1-7 güvenlik inceleme çıktıları ve Faz 8-10 güvenlik kapıları için:
+`docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md`
+
 ---
 
 ## 🏗️ Mimari Özet
