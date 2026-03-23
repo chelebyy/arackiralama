@@ -46,19 +46,19 @@ const formSchema = z.object({
       message: "Name must be less than 50 characters."
     }),
   room: z.string({
-    required_error: "Please select a room."
+    error: "Please select a room."
   }),
   date: z.string({
-    required_error: "Please select a date."
+    error: "Please select a date."
   }),
   timeSlot: z.string({
-    required_error: "Please select a time slot."
+    error: "Please select a time slot."
   }),
   startTime: z.string({
-    required_error: "Please select a start time."
+    error: "Please select a start time."
   }),
   endTime: z.string({
-    required_error: "Please select an end time."
+    error: "Please select an end time."
   }),
   phone: z
     .string()
@@ -69,7 +69,7 @@ const formSchema = z.object({
       message: "Phone number must be less than 15 digits."
     }),
   status: z.string({
-    required_error: "Please select a status."
+    error: "Please select a status."
   })
 });
 
