@@ -117,7 +117,7 @@ public sealed class PaymentsController(IPaymentService paymentService) : BaseApi
         }
         catch (UnauthorizedAccessException ex)
         {
-            return BadRequestResponse(ex.Message);
+            return UnauthorizedResponse(ex.Message);
         }
         catch (InvalidOperationException ex)
         {

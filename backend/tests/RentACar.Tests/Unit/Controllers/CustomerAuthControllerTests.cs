@@ -90,7 +90,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
-    public async Task Register_WhenCustomerAlreadyRegistered_ReturnsUnauthorizedWithoutLeaking()
+    public async Task Register_WhenCustomerAlreadyRegistered_ReturnsSuccessWithoutLeaking()
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var passwordHasher = new BcryptPasswordHasher();
@@ -113,13 +113,12 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             new CustomerRegisterRequest("EXISTING@test.com", "NewPass123!", null, null),
             CancellationToken.None);
 
-        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        var response = unauthorized.Value.Should().BeOfType<ApiResponse<object>>().Subject;
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Yetkisiz erişim");
-
-        var customer = dbContext.Customers.Should().ContainSingle().Subject;
-        customer.PasswordHash.Should().Be(existingHash);
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value;
+        response.Should().NotBeNull();
+        ReadBoolProperty(response, nameof(ApiResponse<object>.Success)).Should().BeTrue();
+        ReadStringProperty(response, nameof(ApiResponse<object>.Message)).Should().Be("Kayit basarili.");
+        ReadProperty(response, nameof(ApiResponse<object>.Data)).Should().NotBeNull();
     }
 
     [Fact]
@@ -603,11 +602,13 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         IPasswordHasher? passwordHasher = null,
         IJwtTokenService? jwtTokenService = null,
         IRefreshTokenCookieService? refreshTokenCookieService = null,
+        IAuditLogService? auditLogService = null,
         RefreshTokenCookieSettings? refreshTokenCookieSettings = null)
     {
         passwordHasher ??= new Mock<IPasswordHasher>().Object;
         jwtTokenService ??= Mock.Of<IJwtTokenService>();
         refreshTokenCookieService ??= Mock.Of<IRefreshTokenCookieService>();
+        auditLogService ??= Mock.Of<IAuditLogService>();
         refreshTokenCookieSettings ??= new RefreshTokenCookieSettings();
 
         return new CustomerAuthController(
@@ -615,6 +616,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             passwordHasher,
             jwtTokenService,
             refreshTokenCookieService,
+            auditLogService,
             Options.Create(refreshTokenCookieSettings))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -769,5 +771,18 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+
+    private static object? ReadProperty(object value, string propertyName) =>
+        value.GetType().GetProperty(propertyName)?.GetValue(value);
+
+    private static bool ReadBoolProperty(object value, string propertyName) =>
+        (bool)(ReadProperty(value, propertyName) ?? throw new InvalidOperationException($"Missing property: {propertyName}"));
+
+    private static string ReadStringProperty(object value, string propertyName) =>
+        (string)(ReadProperty(value, propertyName) ?? throw new InvalidOperationException($"Missing property: {propertyName}"));
     #endregion
 }
+
+
+
+

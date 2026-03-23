@@ -211,14 +211,14 @@ public sealed class PaymentService(
         {
             if (!existingEvent.Processed)
             {
-                var providerEventMarker = $"\"ProviderEventId\":\"{parsedEvent.ProviderEventId}\"";
-                var hasRunnableJob = await _dbContext.BackgroundJobs
+                var runnableJobs = await _dbContext.BackgroundJobs
                     .AsNoTracking()
-                    .AnyAsync(
-                        x => x.Type == WebhookProcessingJobType
-                            && x.Payload.Contains(providerEventMarker)
-                            && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing),
-                        cancellationToken);
+                    .Where(x => x.Type == WebhookProcessingJobType
+                        && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing))
+                    .ToListAsync(cancellationToken);
+
+                var hasRunnableJob = runnableJobs.Any(x =>
+                    WebhookJobPayloadMatcher.HasProviderEventId(x.Payload, parsedEvent.ProviderEventId));
 
                 if (!hasRunnableJob)
                 {

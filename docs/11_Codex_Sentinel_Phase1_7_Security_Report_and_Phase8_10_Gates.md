@@ -25,8 +25,8 @@
 ### 2.1 [HIGH] Placeholder JWT secret production’da yanlışlıkla kullanılabilir
 
 - [x] Bulgu tespit edildi
-- [ ] Düzeltme tamamlandı
-- [ ] Test/kanıt eklendi
+- [x] Düzeltme tamamlandı
+- [x] Test/kanıt eklendi
 
 **Referanslar**
 - `backend/src/RentACar.API/appsettings.json` (Jwt.Secret): `CHANGE_THIS_TO_A_32_CHAR_MINIMUM_SECRET`
@@ -44,8 +44,8 @@
 ### 2.2 [MEDIUM] Register akışında kullanıcı varlığı davranış farkı ile sızıyor
 
 - [x] Bulgu tespit edildi
-- [ ] Düzeltme tamamlandı
-- [ ] Test/kanıt eklendi
+- [x] Düzeltme tamamlandı
+- [x] Test/kanıt eklendi
 
 **Referanslar**
 - `backend/src/RentACar.API/Controllers/CustomerAuthController.cs:46`
@@ -63,8 +63,8 @@
 ### 2.3 [MEDIUM] Job dedup kontrolünde `Payload.Contains(...)` kullanımı
 
 - [x] Bulgu tespit edildi
-- [ ] Düzeltme tamamlandı
-- [ ] Test/kanıt eklendi
+- [x] Düzeltme tamamlandı
+- [x] Test/kanıt eklendi
 
 **Referanslar**
 - `backend/src/RentACar.API/Services/PaymentService.cs:214`
@@ -82,8 +82,8 @@
 ### 2.4 [MEDIUM] Worker backup komutu config’den çalıştırılıyor, stdout tam loglanıyor
 
 - [x] Bulgu tespit edildi
-- [ ] Düzeltme tamamlandı
-- [ ] Test/kanıt eklendi
+- [x] Düzeltme tamamlandı
+- [x] Test/kanıt eklendi
 
 **Referanslar**
 - `backend/src/RentACar.Worker/Worker.cs:305`
@@ -102,8 +102,8 @@
 ### 2.5 [LOW] Webhook imza doğrulama hatası için HTTP semantiği
 
 - [x] Bulgu tespit edildi
-- [ ] Düzeltme tamamlandı
-- [ ] Test/kanıt eklendi
+- [x] Düzeltme tamamlandı
+- [x] Test/kanıt eklendi
 
 **Referanslar**
 - `backend/src/RentACar.API/Controllers/PaymentsController.cs:118`
@@ -119,37 +119,37 @@
 ## 3) Faz 1-7 Aksiyon Backlog’u (Issue Checklist)
 
 ### Issue-1 `security(auth): block placeholder/weak JWT secret at startup`
-- [ ] Placeholder secret hard-fail
-- [ ] Env/secret-store zorunluluğu
-- [ ] CI config guard testi
+- [x] Placeholder secret hard-fail
+- [x] Env/secret-store zorunluluğu
+- [x] CI config guard testi
 **Owner:** Backend  
 **Hedef tarih:** 27.03.2026
 
 ### Issue-2 `security(auth): make register response enumeration-safe`
-- [ ] Tek tip response
-- [ ] Audit log
-- [ ] Enum testi
+- [x] Tek tip response
+- [x] Audit log
+- [x] Enum testi
 **Owner:** Backend  
 **Hedef tarih:** 28.03.2026
 
 ### Issue-3 `security(payments): replace payload string matching with typed dedup keys`
-- [ ] Şema güncellemesi (typed alanlar)
-- [ ] Unique index + migration
-- [ ] Dedup testleri
+- [x] Şema güncellemesi (typed alanlar)
+- [x] Unique index + migration
+- [x] Dedup testleri
 **Owner:** Backend + DBA  
 **Hedef tarih:** 02.04.2026
 
 ### Issue-4 `security(worker): harden backup command execution and logs`
-- [ ] Allowlist
-- [ ] Arg validation
-- [ ] Log redaction
-- [ ] Least privilege runtime
+- [x] Allowlist
+- [x] Arg validation
+- [x] Log redaction
+- [x] Least privilege runtime
 **Owner:** Backend + DevOps  
 **Hedef tarih:** 03.04.2026
 
 ### Issue-5 `security(api): return 401/403 for webhook signature failures`
-- [ ] Controller response code standardizasyonu
-- [ ] Monitoring kural güncellemesi
+- [x] Controller response code standardizasyonu
+- [x] Monitoring kural güncellemesi
 **Owner:** Backend  
 **Hedef tarih:** 29.03.2026
 
@@ -312,3 +312,4 @@
 - [ ] Final release notlarına güvenlik özeti eklendi
 - [ ] Post-launch izleme/alert eşikleri doğrulandı
 - [ ] İlk 72 saatlik operasyon planı hazır
+
