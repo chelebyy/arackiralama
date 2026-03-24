@@ -9,6 +9,31 @@ This is a multi-language vehicle rental platform ("Araç Kiralama") targeting th
 - **Backend**: .NET 10.0 REST API with Clean Architecture
 - **Frontend**: Next.js 16 admin dashboard (public website to be added)
 
+## Design Context
+
+### Users
+Primary audience is tourists visiting Alanya.
+Secondary audience includes local and repeat customers.
+Users want to find a vehicle quickly, trust the company, and move into reservation without hesitation.
+
+### Brand Personality
+Corporate, trustworthy, clean.
+The interface should feel controlled, professional, and reassuring.
+
+### Aesthetic Direction
+The public frontend should follow a corporate-minimal direction.
+Default approach is light theme only.
+Design decisions should be desktop-first, while still working cleanly on tablet and mobile.
+The public frontend must not use shadcn components or shadcn visual language.
+The public experience should clearly differ from the admin dashboard look and feel.
+
+### Design Principles
+1. Trust must be obvious on the first screen.
+2. Reservation flow should anchor the content hierarchy.
+3. Desktop-first layout should guide decisions, without breaking tablet and mobile quality.
+4. Public and admin surfaces must not share the same design language.
+5. Simplicity should help decisions, not hide useful information.
+
 ## Development Commands
 
 ### Backend (.NET)

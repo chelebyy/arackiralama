@@ -52,6 +52,33 @@
 - Treat logs as non-sensitive by default; avoid writing tokens, IDs, or PII.
 - Validate dependency bumps with full build + tests before merge.
 
+## Design Context
+
+### Users
+- Primary audience is tourists visiting Alanya.
+- Secondary audience includes local and repeat customers.
+- Users want to find vehicles quickly, understand delivery options clearly, and reserve with confidence.
+
+### Brand Personality
+- Corporate
+- Trustworthy
+- Clean
+
+### Aesthetic Direction
+- Public frontend should be corporate-minimal.
+- Default theme should be light only.
+- Layout decisions should be desktop-first.
+- Tablet and mobile should still look polished and complete.
+- Public frontend must not use shadcn components or shadcn design language.
+- Public design must not feel like an admin dashboard or generic template.
+
+### Design Principles
+- Trust, pricing clarity, and process clarity should be visible immediately.
+- Reservation flow should sit at the center of the information hierarchy.
+- Desktop-first should guide layout, without sacrificing tablet/mobile quality.
+- Public and admin design languages must stay separate.
+- Simplicity should reduce friction without removing key information.
+
 ## Codex Sentinel Integration
 ### Security Checkpoints
 - Planning checkpoint: before locking a plan, architecture, or task breakdown, run a security gap analysis.
