@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import createIntlMiddleware from "next-intl/middleware";
+import { routing } from "./i18n/routing";
 
 import { tryRefreshWithBackend, validateAccessTokenWithBackend } from "@/lib/auth/backend";
 import {
@@ -15,6 +17,10 @@ import {
   toBackendCookieHeader
 } from "@/lib/auth/http";
 import { isExpired, normalizePrincipalScope, parseAccessTokenClaims } from "@/lib/auth/jwt";
+
+const intlMiddleware = createIntlMiddleware(routing);
+
+const PUBLIC_LOCALES = ["/tr", "/en", "/ru", "/ar", "/de"];
 
 const GUEST_ROUTES = [
   "/dashboard/login/v1",
@@ -87,7 +93,12 @@ function chooseDefaultRedirect(principalScope: string | undefined, role: string 
   return "/dashboard/login/v2";
 }
 
-export async function proxy(request: NextRequest) {
+function isPublicWebsiteRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return PUBLIC_LOCALES.some((locale) => pathname === locale || pathname.startsWith(`${locale}/`));
+}
+
+async function handleDashboardAuth(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   let accessToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
@@ -225,6 +236,29 @@ export async function proxy(request: NextRequest) {
   });
 }
 
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  if (isPublicWebsiteRoute(pathname)) {
+    return intlMiddleware(request);
+  }
+
+  return handleDashboardAuth(request);
+}
+
 export const config = {
-  matcher: ["/", "/dashboard/:path*"]
+  matcher: [
+    "/((?!api|_next|_vercel|.*\\..*).*)",
+    "/",
+    "/dashboard/:path*"
+  ]
 };
+
+export async function proxy(request: NextRequest): Promise<Response> {
+  const response = await handleDashboardAuth(request);
+  return response;
+}

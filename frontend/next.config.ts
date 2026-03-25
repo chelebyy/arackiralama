@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 import { config } from "dotenv";
+import createNextIntlPlugin from "next-intl/plugin";
 
 config();
 
 const isProduction = process.env.NODE_ENV === "production";
+
+const withNextIntl = createNextIntlPlugin("./i18n/config.ts");
 
 const nextConfig: NextConfig = {
   assetPrefix: isProduction ? "https://dashboard.shadcnuikit.com" : undefined,
@@ -21,4 +24,4 @@ const nextConfig: NextConfig = {
   }
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

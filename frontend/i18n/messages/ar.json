@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "title": "تأجير سيارات ألانيا - موثوق وبأسعار معقولة",
+    "description": "خدمة تأجير سيارات موثوقة في ألانيا. أسطول واسع من المركبات، أسعار تنافسية ودعم عملاء على مدار الساعة. احجز الآن!"
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "vehicles": "السيارات",
+    "about": "من نحن",
+    "contact": "اتصل بنا",
+    "trackReservation": "تتبع الحجز",
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "myAccount": "حسابي",
+    "logout": "تسجيل الخروج"
+  },
+  "hero": {
+    "headline": "أكثر شركة تأجير سيارات موثوقية في ألانيا",
+    "subtitle": "مع أسطولنا الواسع من المركبات، أسعارنا التنافسية ونهجنا المهني في الخدمة، ينتظرك رحلة مريحة في ألانيا. احجز عبر الإنترنت وسنوصل السيارة إلى باب منزلك.",
+    "ctaPrimary": "تصفح السيارات",
+    "ctaSecondary": "احجز الآن",
+    "trustBadge": "أكثر من 10,000 عميل سعيد",
+    "features": {
+      "delivery": "التوصيل للفندق/المنزل",
+      "support": "دعم العملاء 24/7",
+      "insurance": "تأمين شامل",
+      "price": "ضمان أفضل سعر"
+    }
+  },
+  "searchForm": {
+    "title": "البحث عن سيارة",
+    "pickupLocation": "موقع الاستلام",
+    "pickupLocationPlaceholder": "اختر المطار أو الفندق أو العنوان",
+    "returnLocation": "موقع الإرجاع",
+    "returnLocationPlaceholder": "اختر المطار أو الفندق أو العنوان",
+    "sameLocation": "نفس موقع الاستلام والإرجاع",
+    "pickupDate": "تاريخ الاستلام",
+    "pickupTime": "وقت الاستلام",
+    "returnDate": "تاريخ الإرجاع",
+    "returnTime": "وقت الإرجاع",
+    "driverAge": "عمر السائق",
+    "driverAgeHint": "يجب أن يكون أكبر من 25 عاماً",
+    "searchButton": "البحث عن سيارة",
+    "locationOptions": {
+      "airport": "مطار غازيباشا",
+      "airportAntalya": "مطار أنطاليا",
+      "cityCenter": "مركز ألانيا",
+      "mahmutlar": "محمودلار",
+      "kargicak": "كارجيجاك",
+      "konakli": "كوناكلي",
+      "avsallar": "أفسالار"
+    }
+  },
+  "vehicles": {
+    "title": "أسطولنا",
+    "subtitle": "اختر السيارة التي تناسب احتياجاتك",
+    "categories": {
+      "all": "الكل",
+      "economy": "اقتصادية",
+      "compact": "مدمجة",
+      "suv": "دفع رباعي",
+      "luxury": "فاخرة",
+      "minivan": "فان"
+    },
+    "features": {
+      "seats": "مقاعد",
+      "doors": "أبواب",
+      "transmission": "ناقل الحركة",
+      "manual": "يدوي",
+      "automatic": "أوتوماتيك",
+      "airConditioning": "مكيف",
+      "fuelType": "الوقود",
+      "gasoline": "بنزين",
+      "diesel": "ديزل",
+      "hybrid": "هجينة"
+    },
+    "pricePerDay": "في اليوم",
+    "totalPrice": "الإجمالي",
+    "days": "يوم",
+    "bookNow": "احجز الآن",
+    "viewDetails": "عرض التفاصيل",
+    "unavailable": "غير متاح لهذه التواريخ",
+    "freeCancellation": "إلغاء مجاني",
+    "freeKm": "{km} كم في اليوم مشمولة"
+  },
+  "booking": {
+    "title": "الحجز",
+    "steps": {
+      "vehicle": "اختيار السيارة",
+      "extras": "إضافات",
+      "driver": "بيانات السائق",
+      "payment": "الدفع",
+      "confirmation": "التأكيد"
+    },
+    "extras": {
+      "title": "الخدمات الإضافية",
+      "childSeat": "مقعد أطفال",
+      "gps": "جهاز ملاحة GPS",
+      "additionalDriver": "سائق إضافي",
+      "fullInsurance": "تأمين شامل",
+      "superUmbrella": "تأمين سوبر شامل",
+      "fuelOption": "خيار الوقود الكامل"
+    },
+    "driverInfo": {
+      "title": "معلومات السائق",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "birthDate": "تاريخ الميلاد",
+      "licenseNumber": "رقم الرخصة",
+      "licenseCountry": "دولة الرخصة",
+      "flightNumber": "رقم الرحلة (إن وجد)"
+    },
+    "payment": {
+      "title": "معلومات الدفع",
+      "cardHolder": "الاسم على البطاقة",
+      "cardNumber": "رقم البطاقة",
+      "expiryDate": "تاريخ الانتهاء",
+      "cvv": "CVV",
+      "payNow": "ادفع الآن",
+      "securePayment": "دفع آمن",
+      "summary": {
+        "title": "الملخص",
+        "rentalPeriod": "فترة التأجير",
+        "vehiclePrice": "سعر السيارة",
+        "extrasPrice": "الإضافات",
+        "total": "المبلغ الإجمالي",
+        "deposit": "الوديعة"
+      }
+    },
+    "confirmation": {
+      "title": "تم تأكيد الحجز!",
+      "message": "تم إنشاء حجزك بنجاح. تم إرسال التفاصيل إلى عنوان بريدك الإلكتروني.",
+      "reservationNumber": "رقم الحجز",
+      "downloadVoucher": "تحميل القسيمة",
+      "whatNext": "ما الخطوة التالية؟",
+      "instructions": "يرجى إحضار رخصة القيادة وجواز السفر عند استلام السيارة."
+    }
+  },
+  "trackReservation": {
+    "title": "تتبع الحجز",
+    "subtitle": "أدخل رقم الحجز للتحقق من حالتك",
+    "reservationNumber": "رقم الحجز",
+    "email": "عنوان البريد الإلكتروني",
+    "trackButton": "تتبع",
+    "status": {
+      "confirmed": "مؤكد",
+      "pending": "معلق",
+      "active": "نشط",
+      "completed": "مكتمل",
+      "cancelled": "ملغى"
+    },
+    "details": {
+      "vehicle": "السيارة",
+      "pickup": "الاستلام",
+      "return": "الإرجاع",
+      "location": "الموقع",
+      "total": "الإجمالي"
+    }
+  },
+  "footer": {
+    "about": {
+      "title": "من نحن",
+      "description": "كأكثر شركة تأجير سيارات موثوقية في ألانيا، نقدم خدماتنا لأكثر من 10 سنوات."
+    },
+    "quickLinks": {
+      "title": "روابط سريعة",
+      "links": {
+        "vehicles": "سياراتنا",
+        "howItWorks": "كيف يعمل",
+        "faq": "الأسئلة الشائعة",
+        "terms": "شروط التأجير",
+        "privacy": "سياسة الخصوصية",
+        "contact": "اتصل بنا",
+        "track": "تتبع الحجز",
+        "booking": "احجز الآن"
+      }
+    },
+    "contact": {
+      "title": "اتصل بنا",
+      "address": "شارع أتاتورك، محلة السراي رقم 123، ألانيا/أنطاليا",
+      "phone": "+90 242 123 45 67",
+      "email": "info@alanyaarackiralama.com",
+      "workingHours": "خدمة 24/7"
+    },
+    "newsletter": {
+      "title": "تابع أحدث العروض",
+      "placeholder": "بريدك الإلكتروني",
+      "button": "اشترك"
+    },
+    "copyright": "© {year} تأجير سيارات ألانيا. جميع الحقوق محفوظة."
+  },
+  "common": {
+    "buttons": {
+      "submit": "إرسال",
+      "cancel": "إلغاء",
+      "back": "رجوع",
+      "next": "التالي",
+      "continue": "متابعة",
+      "save": "حفظ",
+      "delete": "حذف",
+      "edit": "تعديل",
+      "close": "إغلاق",
+      "search": "بحث",
+      "filter": "تصفية",
+      "clear": "مسح",
+      "showMore": "عرض المزيد",
+      "showLess": "عرض أقل"
+    },
+    "labels": {
+      "loading": "جاري التحميل...",
+      "noResults": "لم يتم العثور على نتائج",
+      "required": "حقل مطلوب",
+      "optional": "اختياري",
+      "select": "اختر",
+      "all": "الكل"
+    },
+    "errors": {
+      "generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+      "network": "خطأ في الاتصال. يرجى التحقق من اتصال الإنترنت.",
+      "notFound": "الصفحة غير موجودة",
+      "unauthorized": "وصول غير مصرح",
+      "validation": {
+        "required": "هذا الحقل مطلوب",
+        "email": "أدخل عنوان بريد إلكتروني صالح",
+        "phone": "أدخل رقم هاتف صالح",
+        "minLength": "يجب أن يكون على الأقل {min} حرف",
+        "maxLength": "يجب أن لا يتجاوز {max} حرف",
+        "minValue": "يجب أن يكون على الأقل {min}",
+        "maxValue": "يجب أن لا يتجاوز {max}",
+        "passwordMatch": "كلمات المرور غير متطابقة",
+        "invalidDate": "يرجى اختيار تاريخ صالح"
+      }
+    },
+    "dates": {
+      "today": "اليوم",
+      "tomorrow": "غداً",
+      "yesterday": "أمس",
+      "days": {
+        "monday": "الإثنين",
+        "tuesday": "الثلاثاء",
+        "wednesday": "الأربعاء",
+        "thursday": "الخميس",
+        "friday": "الجمعة",
+        "saturday": "السبت",
+        "sunday": "الأحد"
+      },
+      "months": {
+        "january": "يناير",
+        "february": "فبراير",
+        "march": "مارس",
+        "april": "أبريل",
+        "may": "مايو",
+        "june": "يونيو",
+        "july": "يوليو",
+        "august": "أغسطس",
+        "september": "سبتمبر",
+        "october": "أكتوبر",
+        "november": "نوفمبر",
+        "december": "ديسمبر"
+      }
+    }
+  }
+}

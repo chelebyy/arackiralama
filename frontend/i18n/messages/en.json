@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "title": "Alanya Car Rental - Reliable and Affordable",
+    "description": "Reliable car rental service in Alanya. Wide vehicle fleet, competitive prices and 24/7 customer support. Book now!"
+  },
+  "navigation": {
+    "home": "Home",
+    "vehicles": "Vehicles",
+    "about": "About Us",
+    "contact": "Contact",
+    "trackReservation": "Track Reservation",
+    "login": "Login",
+    "register": "Register",
+    "myAccount": "My Account",
+    "logout": "Logout"
+  },
+  "hero": {
+    "headline": "The Most Reliable Car Rental in Alanya",
+    "subtitle": "With our wide vehicle fleet, competitive prices and professional service approach, a comfortable journey awaits you in Alanya. Book online and we'll deliver your car to your door.",
+    "ctaPrimary": "Browse Vehicles",
+    "ctaSecondary": "Make Reservation",
+    "trustBadge": "10,000+ Happy Customers",
+    "features": {
+      "delivery": "Hotel/Door Delivery",
+      "support": "24/7 Customer Support",
+      "insurance": "Comprehensive Insurance",
+      "price": "Best Price Guarantee"
+    }
+  },
+  "searchForm": {
+    "title": "Search Vehicle",
+    "pickupLocation": "Pickup Location",
+    "pickupLocationPlaceholder": "Select airport, hotel or address",
+    "returnLocation": "Return Location",
+    "returnLocationPlaceholder": "Select airport, hotel or address",
+    "sameLocation": "Same pickup and return location",
+    "pickupDate": "Pickup Date",
+    "pickupTime": "Pickup Time",
+    "returnDate": "Return Date",
+    "returnTime": "Return Time",
+    "driverAge": "Driver Age",
+    "driverAgeHint": "Must be over 25 years old",
+    "searchButton": "Search Vehicles",
+    "locationOptions": {
+      "airport": "Gazipasa Airport",
+      "airportAntalya": "Antalya Airport",
+      "cityCenter": "Alanya City Center",
+      "mahmutlar": "Mahmutlar",
+      "kargicak": "Kargicak",
+      "konakli": "Konakli",
+      "avsallar": "Avsallar"
+    }
+  },
+  "vehicles": {
+    "title": "Our Vehicle Fleet",
+    "subtitle": "Choose the vehicle that best suits your needs",
+    "categories": {
+      "all": "All",
+      "economy": "Economy",
+      "compact": "Compact",
+      "suv": "SUV & 4x4",
+      "luxury": "Luxury",
+      "minivan": "Minivan"
+    },
+    "features": {
+      "seats": "Seats",
+      "doors": "Doors",
+      "transmission": "Transmission",
+      "manual": "Manual",
+      "automatic": "Automatic",
+      "airConditioning": "A/C",
+      "fuelType": "Fuel",
+      "gasoline": "Gasoline",
+      "diesel": "Diesel",
+      "hybrid": "Hybrid"
+    },
+    "pricePerDay": "per day",
+    "totalPrice": "Total",
+    "days": "days",
+    "bookNow": "Book Now",
+    "viewDetails": "View Details",
+    "unavailable": "Not available for these dates",
+    "freeCancellation": "Free cancellation",
+    "freeKm": "{km} km per day included"
+  },
+  "booking": {
+    "title": "Reservation",
+    "steps": {
+      "vehicle": "Vehicle Selection",
+      "extras": "Extras",
+      "driver": "Driver Details",
+      "payment": "Payment",
+      "confirmation": "Confirmation"
+    },
+    "extras": {
+      "title": "Additional Services",
+      "childSeat": "Child Seat",
+      "gps": "GPS Navigation",
+      "additionalDriver": "Additional Driver",
+      "fullInsurance": "Full Insurance",
+      "superUmbrella": "Super Umbrella Insurance",
+      "fuelOption": "Full Fuel Option"
+    },
+    "driverInfo": {
+      "title": "Driver Information",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "birthDate": "Date of Birth",
+      "licenseNumber": "License Number",
+      "licenseCountry": "License Country",
+      "flightNumber": "Flight Number (if applicable)"
+    },
+    "payment": {
+      "title": "Payment Information",
+      "cardHolder": "Name on Card",
+      "cardNumber": "Card Number",
+      "expiryDate": "Expiry Date",
+      "cvv": "CVV",
+      "payNow": "Pay Now",
+      "securePayment": "Secure Payment",
+      "summary": {
+        "title": "Summary",
+        "rentalPeriod": "Rental Period",
+        "vehiclePrice": "Vehicle Price",
+        "extrasPrice": "Extras",
+        "total": "Total Amount",
+        "deposit": "Deposit"
+      }
+    },
+    "confirmation": {
+      "title": "Reservation Confirmed!",
+      "message": "Your reservation has been successfully created. Details have been sent to your email address.",
+      "reservationNumber": "Reservation Number",
+      "downloadVoucher": "Download Voucher",
+      "whatNext": "What's Next?",
+      "instructions": "Please have your driver's license and passport ready when picking up your vehicle."
+    }
+  },
+  "trackReservation": {
+    "title": "Track Reservation",
+    "subtitle": "Enter your reservation number to check your status",
+    "reservationNumber": "Reservation Number",
+    "email": "Email Address",
+    "trackButton": "Track",
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "details": {
+      "vehicle": "Vehicle",
+      "pickup": "Pickup",
+      "return": "Return",
+      "location": "Location",
+      "total": "Total"
+    }
+  },
+  "footer": {
+    "about": {
+      "title": "About Us",
+      "description": "As Alanya's most reliable car rental company, we have been serving for over 10 years."
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "links": {
+        "vehicles": "Our Vehicles",
+        "howItWorks": "How It Works",
+        "faq": "FAQ",
+        "terms": "Rental Terms",
+        "privacy": "Privacy Policy",
+        "contact": "Contact",
+        "track": "Track Reservation",
+        "booking": "Book Now"
+      }
+    },
+    "contact": {
+      "title": "Contact",
+      "address": "Saray Mah. Ataturk Blvd No:123 Alanya/Antalya",
+      "phone": "+90 242 123 45 67",
+      "email": "info@alanyaarackiralama.com",
+      "workingHours": "24/7 Service"
+    },
+    "newsletter": {
+      "title": "Stay Updated on Promotions",
+      "placeholder": "Your email address",
+      "button": "Subscribe"
+    },
+    "copyright": "© {year} Alanya Car Rental. All rights reserved."
+  },
+  "common": {
+    "buttons": {
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "continue": "Continue",
+      "save": "Save",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close",
+      "search": "Search",
+      "filter": "Filter",
+      "clear": "Clear",
+      "showMore": "Show More",
+      "showLess": "Show Less"
+    },
+    "labels": {
+      "loading": "Loading...",
+      "noResults": "No results found",
+      "required": "Required field",
+      "optional": "Optional",
+      "select": "Select",
+      "all": "All"
+    },
+    "errors": {
+      "generic": "An error occurred. Please try again.",
+      "network": "Connection error. Please check your internet connection.",
+      "notFound": "Page not found",
+      "unauthorized": "Unauthorized access",
+      "validation": {
+        "required": "This field is required",
+        "email": "Enter a valid email address",
+        "phone": "Enter a valid phone number",
+        "minLength": "Must be at least {min} characters",
+        "maxLength": "Must be at most {max} characters",
+        "minValue": "Must be at least {min}",
+        "maxValue": "Must be at most {max}",
+        "passwordMatch": "Passwords do not match",
+        "invalidDate": "Please select a valid date"
+      }
+    },
+    "dates": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "yesterday": "Yesterday",
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
+    }
+  }
+}

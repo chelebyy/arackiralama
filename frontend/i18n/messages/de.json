@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "title": "Alanya Autovermietung - Zuverlässig und günstig",
+    "description": "Zuverlässiger Autovermieter in Alanya. Große Fahrzeugflotte, wettbewerbsfähige Preise und 24/7 Kundensupport. Jetzt buchen!"
+  },
+  "navigation": {
+    "home": "Startseite",
+    "vehicles": "Fahrzeuge",
+    "about": "Über uns",
+    "contact": "Kontakt",
+    "trackReservation": "Reservierung verfolgen",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "myAccount": "Mein Konto",
+    "logout": "Abmelden"
+  },
+  "hero": {
+    "headline": "Die zuverlässigste Autovermietung in Alanya",
+    "subtitle": "Mit unserer großen Fahrzeugflotte, wettbewerbsfähigen Preisen und professionellen Servicephilosophie erwartet Sie eine komfortable Reise in Alanya. Online buchen, wir liefern Ihr Auto bis zur Tür.",
+    "ctaPrimary": "Fahrzeuge ansehen",
+    "ctaSecondary": "Reservierung machen",
+    "trustBadge": "10.000+ Zufriedene Kunden",
+    "features": {
+      "delivery": "Hotel/Haustür-Lieferung",
+      "support": "24/7 Kundensupport",
+      "insurance": "Umfassende Versicherung",
+      "price": "Bestpreisgarantie"
+    }
+  },
+  "searchForm": {
+    "title": "Fahrzeug suchen",
+    "pickupLocation": "Abholort",
+    "pickupLocationPlaceholder": "Flughafen, Hotel oder Adresse wählen",
+    "returnLocation": "Rückgabeort",
+    "returnLocationPlaceholder": "Flughafen, Hotel oder Adresse wählen",
+    "sameLocation": "Gleicher Abhol- und Rückgabeort",
+    "pickupDate": "Abholdatum",
+    "pickupTime": "Abholzeit",
+    "returnDate": "Rückgabedatum",
+    "returnTime": "Rückgabezeit",
+    "driverAge": "Fahreralter",
+    "driverAgeHint": "Muss über 25 Jahre alt sein",
+    "searchButton": "Fahrzeuge suchen",
+    "locationOptions": {
+      "airport": "Flughafen Gazipasa",
+      "airportAntalya": "Flughafen Antalya",
+      "cityCenter": "Alanya Stadtzentrum",
+      "mahmutlar": "Mahmutlar",
+      "kargicak": "Kargicak",
+      "konakli": "Konakli",
+      "avsallar": "Avsallar"
+    }
+  },
+  "vehicles": {
+    "title": "Unsere Fahrzeugflotte",
+    "subtitle": "Wählen Sie das Fahrzeug, das am besten zu Ihren Bedürfnissen passt",
+    "categories": {
+      "all": "Alle",
+      "economy": "Economy",
+      "compact": "Kompakt",
+      "suv": "SUV & Geländewagen",
+      "luxury": "Luxus",
+      "minivan": "Minivan"
+    },
+    "features": {
+      "seats": "Sitze",
+      "doors": "Türen",
+      "transmission": "Getriebe",
+      "manual": "Schaltgetriebe",
+      "automatic": "Automatik",
+      "airConditioning": "Klimaanlage",
+      "fuelType": "Kraftstoff",
+      "gasoline": "Benzin",
+      "diesel": "Diesel",
+      "hybrid": "Hybrid"
+    },
+    "pricePerDay": "pro Tag",
+    "totalPrice": "Gesamt",
+    "days": "Tage",
+    "bookNow": "Jetzt buchen",
+    "viewDetails": "Details ansehen",
+    "unavailable": "Für diese Daten nicht verfügbar",
+    "freeCancellation": "Kostenlose Stornierung",
+    "freeKm": "{km} km pro Tag inklusive"
+  },
+  "booking": {
+    "title": "Reservierung",
+    "steps": {
+      "vehicle": "Fahrzeugauswahl",
+      "extras": "Extras",
+      "driver": "Fahrerdaten",
+      "payment": "Zahlung",
+      "confirmation": "Bestätigung"
+    },
+    "extras": {
+      "title": "Zusätzliche Dienstleistungen",
+      "childSeat": "Kindersitz",
+      "gps": "GPS-Navigation",
+      "additionalDriver": "Zusätzlicher Fahrer",
+      "fullInsurance": "Vollkasko",
+      "superUmbrella": "Super-Kasko",
+      "fuelOption": "Volltank-Option"
+    },
+    "driverInfo": {
+      "title": "Fahrerinformationen",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "birthDate": "Geburtsdatum",
+      "licenseNumber": "Führerscheinnummer",
+      "licenseCountry": "Führerschein-Land",
+      "flightNumber": "Flugnummer (falls zutreffend)"
+    },
+    "payment": {
+      "title": "Zahlungsinformationen",
+      "cardHolder": "Name auf der Karte",
+      "cardNumber": "Kartennummer",
+      "expiryDate": "Ablaufdatum",
+      "cvv": "CVV",
+      "payNow": "Jetzt bezahlen",
+      "securePayment": "Sichere Zahlung",
+      "summary": {
+        "title": "Zusammenfassung",
+        "rentalPeriod": "Mietdauer",
+        "vehiclePrice": "Fahrzeugpreis",
+        "extrasPrice": "Extras",
+        "total": "Gesamtbetrag",
+        "deposit": "Kaution"
+      }
+    },
+    "confirmation": {
+      "title": "Reservierung bestätigt!",
+      "message": "Ihre Reservierung wurde erfolgreich erstellt. Die Details wurden an Ihre E-Mail-Adresse gesendet.",
+      "reservationNumber": "Reservierungsnummer",
+      "downloadVoucher": "Voucher herunterladen",
+      "whatNext": "Was kommt als Nächstes?",
+      "instructions": "Bitte haben Sie bei der Abholung Ihres Fahrzeugs Führerschein und Reisepass bereit."
+    }
+  },
+  "trackReservation": {
+    "title": "Reservierung verfolgen",
+    "subtitle": "Geben Sie Ihre Reservierungsnummer ein, um Ihren Status zu prüfen",
+    "reservationNumber": "Reservierungsnummer",
+    "email": "E-Mail-Adresse",
+    "trackButton": "Verfolgen",
+    "status": {
+      "confirmed": "Bestätigt",
+      "pending": "Ausstehend",
+      "active": "Aktiv",
+      "completed": "Abgeschlossen",
+      "cancelled": "Storniert"
+    },
+    "details": {
+      "vehicle": "Fahrzeug",
+      "pickup": "Abholung",
+      "return": "Rückgabe",
+      "location": "Ort",
+      "total": "Gesamt"
+    }
+  },
+  "footer": {
+    "about": {
+      "title": "Über uns",
+      "description": "Als zuverlässigste Autovermietung in Alanya sind wir seit über 10 Jahren für Sie da."
+    },
+    "quickLinks": {
+      "title": "Schnelle Links",
+      "links": {
+        "vehicles": "Unsere Fahrzeuge",
+        "howItWorks": "Wie es funktioniert",
+        "faq": "Häufige Fragen",
+        "terms": "Mietbedingungen",
+        "privacy": "Datenschutzrichtlinie",
+        "contact": "Kontakt",
+        "track": "Reservierung verfolgen",
+        "booking": "Jetzt buchen"
+      }
+    },
+    "contact": {
+      "title": "Kontakt",
+      "address": "Saray Mah. Atatürk Bulvarı Nr. 123 Alanya/Antalya",
+      "phone": "+90 242 123 45 67",
+      "email": "info@alanyaarackiralama.com",
+      "workingHours": "24/7 Service"
+    },
+    "newsletter": {
+      "title": "Bleiben Sie über Angebote informiert",
+      "placeholder": "Ihre E-Mail-Adresse",
+      "button": "Abonnieren"
+    },
+    "copyright": "© {year} Alanya Autovermietung. Alle Rechte vorbehalten."
+  },
+  "common": {
+    "buttons": {
+      "submit": "Absenden",
+      "cancel": "Abbrechen",
+      "back": "Zurück",
+      "next": "Weiter",
+      "continue": "Fortfahren",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "close": "Schließen",
+      "search": "Suchen",
+      "filter": "Filtern",
+      "clear": "Löschen",
+      "showMore": "Mehr anzeigen",
+      "showLess": "Weniger anzeigen"
+    },
+    "labels": {
+      "loading": "Wird geladen...",
+      "noResults": "Keine Ergebnisse gefunden",
+      "required": "Pflichtfeld",
+      "optional": "Optional",
+      "select": "Auswählen",
+      "all": "Alle"
+    },
+    "errors": {
+      "generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+      "network": "Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.",
+      "notFound": "Seite nicht gefunden",
+      "unauthorized": "Unberechtigter Zugriff",
+      "validation": {
+        "required": "Dieses Feld ist erforderlich",
+        "email": "Geben Sie eine gültige E-Mail-Adresse ein",
+        "phone": "Geben Sie eine gültige Telefonnummer ein",
+        "minLength": "Muss mindestens {min} Zeichen sein",
+        "maxLength": "Darf höchstens {max} Zeichen sein",
+        "minValue": "Muss mindestens {min} sein",
+        "maxValue": "Darf höchstens {max} sein",
+        "passwordMatch": "Passwörter stimmen nicht überein",
+        "invalidDate": "Bitte wählen Sie ein gültiges Datum"
+      }
+    },
+    "dates": {
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "yesterday": "Gestern",
+      "days": {
+        "monday": "Montag",
+        "tuesday": "Dienstag",
+        "wednesday": "Mittwoch",
+        "thursday": "Donnerstag",
+        "friday": "Freitag",
+        "saturday": "Samstag",
+        "sunday": "Sonntag"
+      },
+      "months": {
+        "january": "Januar",
+        "february": "Februar",
+        "march": "März",
+        "april": "April",
+        "may": "Mai",
+        "june": "Juni",
+        "july": "Juli",
+        "august": "August",
+        "september": "September",
+        "october": "Oktober",
+        "november": "November",
+        "december": "Dezember"
+      }
+    }
+  }
+}

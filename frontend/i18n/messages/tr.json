@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "title": "Alanya Araç Kiralama - Güvenilir ve Uygun Fiyatlı",
+    "description": "Alanya'da güvenilir araç kiralama hizmeti. Geniş araç filosu, uygun fiyatlar ve 7/24 müşteri desteği. Hemen rezervasyon yapın!"
+  },
+  "navigation": {
+    "home": "Ana Sayfa",
+    "vehicles": "Araçlar",
+    "about": "Hakkımızda",
+    "contact": "İletişim",
+    "trackReservation": "Rezervasyon Takip",
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol",
+    "myAccount": "Hesabım",
+    "logout": "Çıkış Yap"
+  },
+  "hero": {
+    "headline": "Alanya'da Araç Kiralamanın En Güvenilir Adresi",
+    "subtitle": "Geniş araç filomuz, uygun fiyatlarımız ve profesyonel hizmet anlayışımızla Alanya'da konforlu bir yolculuk sizi bekliyor. Online rezervasyon yapın, aracınızı kapınıza getirelim.",
+    "ctaPrimary": "Araçları İncele",
+    "ctaSecondary": "Rezervasyon Yap",
+    "trustBadge": "10.000+ Mutlu Müşteri",
+    "features": {
+      "delivery": "Otel/Kapıya Teslimat",
+      "support": "7/24 Müşteri Desteği",
+      "insurance": "Kapsamlı Sigorta",
+      "price": "En Uygun Fiyat Garantisi"
+    }
+  },
+  "searchForm": {
+    "title": "Araç Ara",
+    "pickupLocation": "Alış Yeri",
+    "pickupLocationPlaceholder": "Havalimanı, otel veya adres seçin",
+    "returnLocation": "Dönüş Yeri",
+    "returnLocationPlaceholder": "Havalimanı, otel veya adres seçin",
+    "sameLocation": "Alış ve dönüş yeri aynı",
+    "pickupDate": "Alış Tarihi",
+    "pickupTime": "Alış Saati",
+    "returnDate": "Dönüş Tarihi",
+    "returnTime": "Dönüş Saati",
+    "driverAge": "Sürücü Yaşı",
+    "driverAgeHint": "25 yaşından büyük olmalısınız",
+    "searchButton": "Araç Ara",
+    "locationOptions": {
+      "airport": "Gazipaşa Havalimanı",
+      "airportAntalya": "Antalya Havalimanı",
+      "cityCenter": "Alanya Şehir Merkezi",
+      "mahmutlar": "Mahmutlar",
+      "kargicak": "Kargıcak",
+      "konakli": "Konaklı",
+      "avsallar": "Avsallar"
+    }
+  },
+  "vehicles": {
+    "title": "Araç Filomuz",
+    "subtitle": "İhtiyacınıza en uygun aracı seçin",
+    "categories": {
+      "all": "Tümü",
+      "economy": "Ekonomi",
+      "compact": "Kompakt",
+      "suv": "SUV & 4x4",
+      "luxury": "Lüks",
+      "minivan": "Minivan"
+    },
+    "features": {
+      "seats": "Kişi",
+      "doors": "Kapı",
+      "transmission": "Vites",
+      "manual": "Manuel",
+      "automatic": "Otomatik",
+      "airConditioning": "Klima",
+      "fuelType": "Yakıt",
+      "gasoline": "Benzin",
+      "diesel": "Dizel",
+      "hybrid": "Hibrit"
+    },
+    "pricePerDay": "Günlük",
+    "totalPrice": "Toplam",
+    "days": "gün",
+    "bookNow": "Hemen Rezerve Et",
+    "viewDetails": "Detayları Gör",
+    "unavailable": "Bu tarihlerde müsait değil",
+    "freeCancellation": "Ücretsiz iptal",
+    "freeKm": "Günlük {km} km dahil"
+  },
+  "booking": {
+    "title": "Rezervasyon",
+    "steps": {
+      "vehicle": "Araç Seçimi",
+      "extras": "Ekstralar",
+      "driver": "Sürücü Bilgileri",
+      "payment": "Ödeme",
+      "confirmation": "Onay"
+    },
+    "extras": {
+      "title": "Ek Hizmetler",
+      "childSeat": "Çocuk Koltuğu",
+      "gps": "GPS Navigasyon",
+      "additionalDriver": "Ek Sürücü",
+      "fullInsurance": "Tam Kasko",
+      "superUmbrella": "Süper Kasko",
+      "fuelOption": "Dolu Yakıt Seçeneği"
+    },
+    "driverInfo": {
+      "title": "Sürücü Bilgileri",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "phone": "Telefon",
+      "birthDate": "Doğum Tarihi",
+      "licenseNumber": "Ehliyet No",
+      "licenseCountry": "Ehliyet Ülkesi",
+      "flightNumber": "Uçuş Numarası (varsa)"
+    },
+    "payment": {
+      "title": "Ödeme Bilgileri",
+      "cardHolder": "Kart Üzerindeki İsim",
+      "cardNumber": "Kart Numarası",
+      "expiryDate": "Son Kullanma Tarihi",
+      "cvv": "CVV",
+      "payNow": "Şimdi Öde",
+      "securePayment": "Güvenli Ödeme",
+      "summary": {
+        "title": "Özet",
+        "rentalPeriod": "Kiralama Süresi",
+        "vehiclePrice": "Araç Ücreti",
+        "extrasPrice": "Ekstralar",
+        "total": "Toplam Tutar",
+        "deposit": "Depozito"
+      }
+    },
+    "confirmation": {
+      "title": "Rezervasyon Onaylandı!",
+      "message": "Rezervasyonunuz başarıyla oluşturuldu. Detaylar e-posta adresinize gönderildi.",
+      "reservationNumber": "Rezervasyon Numarası",
+      "downloadVoucher": "Voucher İndir",
+      "whatNext": "Sırada Ne Var?",
+      "instructions": "Aracınızı almak için ehliyetinizi ve pasaportunuzu yanınızda bulundurun."
+    }
+  },
+  "trackReservation": {
+    "title": "Rezervasyon Takip",
+    "subtitle": "Rezervasyon numaranızı girerek durumunuzu kontrol edin",
+    "reservationNumber": "Rezervasyon Numarası",
+    "email": "E-posta Adresi",
+    "trackButton": "Sorgula",
+    "status": {
+      "confirmed": "Onaylandı",
+      "pending": "Beklemede",
+      "active": "Aktif",
+      "completed": "Tamamlandı",
+      "cancelled": "İptal Edildi"
+    },
+    "details": {
+      "vehicle": "Araç",
+      "pickup": "Alış",
+      "return": "Dönüş",
+      "location": "Konum",
+      "total": "Toplam"
+    }
+  },
+  "footer": {
+    "about": {
+      "title": "Hakkımızda",
+      "description": "Alanya'nın en güvenilir araç kiralama firması olarak 10 yılı aşkın süredir hizmet vermekteyiz."
+    },
+    "quickLinks": {
+      "title": "Hızlı Bağlantılar",
+      "links": {
+        "vehicles": "Araçlarımız",
+        "howItWorks": "Nasıl Çalışır?",
+        "faq": "Sıkça Sorulan Sorular",
+        "terms": "Kiralama Koşulları",
+        "privacy": "Gizlilik Politikası",
+        "contact": "İletişim",
+        "track": "Rezervasyon Takip",
+        "booking": "Rezervasyon"
+      }
+    },
+    "contact": {
+      "title": "İletişim",
+      "address": "Saray Mah. Atatürk Bulvarı No:123 Alanya/Antalya",
+      "phone": "+90 242 123 45 67",
+      "email": "info@alanyaarackiralama.com",
+      "workingHours": "7/24 Hizmet"
+    },
+    "newsletter": {
+      "title": "Kampanyalardan Haberdar Olun",
+      "placeholder": "E-posta adresiniz",
+      "button": "Abone Ol"
+    },
+    "copyright": "© {year} Alanya Araç Kiralama. Tüm hakları saklıdır."
+  },
+  "common": {
+    "buttons": {
+      "submit": "Gönder",
+      "cancel": "İptal",
+      "back": "Geri",
+      "next": "İleri",
+      "continue": "Devam Et",
+      "save": "Kaydet",
+      "delete": "Sil",
+      "edit": "Düzenle",
+      "close": "Kapat",
+      "search": "Ara",
+      "filter": "Filtrele",
+      "clear": "Temizle",
+      "showMore": "Daha Fazla Göster",
+      "showLess": "Daha Az Göster"
+    },
+    "labels": {
+      "loading": "Yükleniyor...",
+      "noResults": "Sonuç bulunamadı",
+      "required": "Zorunlu alan",
+      "optional": "İsteğe bağlı",
+      "select": "Seçin",
+      "all": "Tümü"
+    },
+    "errors": {
+      "generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
+      "network": "Bağlantı hatası. İnternet bağlantınızı kontrol edin.",
+      "notFound": "Sayfa bulunamadı",
+      "unauthorized": "Yetkisiz erişim",
+      "validation": {
+        "required": "Bu alan zorunludur",
+        "email": "Geçerli bir e-posta adresi girin",
+        "phone": "Geçerli bir telefon numarası girin",
+        "minLength": "En az {min} karakter olmalıdır",
+        "maxLength": "En fazla {max} karakter olabilir",
+        "minValue": "En az {min} olmalıdır",
+        "maxValue": "En fazla {max} olabilir",
+        "passwordMatch": "Şifreler eşleşmiyor",
+        "invalidDate": "Geçerli bir tarih seçin"
+      }
+    },
+    "dates": {
+      "today": "Bugün",
+      "tomorrow": "Yarın",
+      "yesterday": "Dün",
+      "days": {
+        "monday": "Pazartesi",
+        "tuesday": "Salı",
+        "wednesday": "Çarşamba",
+        "thursday": "Perşembe",
+        "friday": "Cuma",
+        "saturday": "Cumartesi",
+        "sunday": "Pazar"
+      },
+      "months": {
+        "january": "Ocak",
+        "february": "Şubat",
+        "march": "Mart",
+        "april": "Nisan",
+        "may": "Mayıs",
+        "june": "Haziran",
+        "july": "Temmuz",
+        "august": "Ağustos",
+        "september": "Eylül",
+        "october": "Ekim",
+        "november": "Kasım",
+        "december": "Aralık"
+      }
+    }
+  }
+}
