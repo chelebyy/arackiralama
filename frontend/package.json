@@ -95,7 +95,7 @@
     "react-ga4": "^2.1.0",
     "react-hook-form": "^7.72.0",
     "react-markdown": "^10.1.0",
-    "react-medium-image-zoom": "^5.4.0",
+    "react-medium-image-zoom": "^5.4.3",
     "react-resizable-panels": "^4.10.0",
     "react-world-flags": "^1.6.0",
     "recharts": "^2.15.4",
