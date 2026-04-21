@@ -240,15 +240,13 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-16">
-          <div className="rounded-2xl overflow-hidden border border-[#E2E8F0] bg-[#E2E8F0] h-96 flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="h-12 w-12 text-[#64748B] mx-auto mb-4" />
-              <p className="text-lg font-medium text-[#64748B]">Map Placeholder</p>
-              <p className="text-sm text-[#94A3B8] mt-1">
-                Interactive map showing all office locations
-              </p>
-            </div>
-          </div>
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d128084.037171682!2d31.95928245!3d36.54115!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14dca27b8223b0b7%3A0x403b37d0ec0cb80!2sAlanya%2C%20Antalya%2C%20Turkey!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus"
+            title="Office Locations Map"
+            loading="lazy"
+            className="w-full h-96 rounded-2xl border-0"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
+import { useRouter, useParams } from "next/navigation";
 import {
   MapPin,
   Calendar,
   Clock,
   Search,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,11 +18,38 @@ interface SearchFormProps {
   variant?: "hero" | "default";
 }
 
+const getToday = () => new Date().toISOString().split("T")[0];
+const getWeekLater = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().split("T")[0];
+};
+
 export default function SearchForm({ className, variant = "default" }: SearchFormProps) {
   const t = useTranslations("searchForm");
   const [sameLocation, setSameLocation] = useState(true);
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
+
+  const [pickupDate, setPickupDate] = useState(getToday);
+  const [pickupTime, setPickupTime] = useState("10:00");
+  const [returnDate, setReturnDate] = useState(getWeekLater);
+  const [returnTime, setReturnTime] = useState("10:00");
+
+  const router = useRouter();
+  const params = useParams();
+  const locale = (params.locale as string) || "en";
+
+  const handleSearch = useCallback(() => {
+    const query = new URLSearchParams();
+    query.set("pickup", pickupLocation || locations[0].value);
+    query.set("return", returnLocation || pickupLocation || locations[0].value);
+    query.set("pickupDate", pickupDate || getToday());
+    query.set("pickupTime", pickupTime);
+    query.set("returnDate", returnDate || getWeekLater());
+    query.set("returnTime", returnTime);
+    router.push(`/${locale}/vehicles?${query.toString()}`);
+  }, [pickupLocation, returnLocation, pickupDate, pickupTime, returnDate, returnTime, router, locale]);
 
   const locations = [
     { key: "airport", value: "gazipasa-airport" },
@@ -87,9 +115,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="h-4 w-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -124,9 +150,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 </select>
                 {!sameLocation && (
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg className="h-4 w-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
                   </div>
                 )}
               </div>
@@ -170,6 +194,8 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 <input
                   id="pickupDate"
                   type="date"
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
@@ -191,7 +217,8 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 <input
                   id="pickupTime"
                   type="time"
-                  defaultValue="10:00"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
@@ -213,6 +240,8 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 <input
                   id="returnDate"
                   type="date"
+                  value={returnDate}
+                  onChange={(e) => setReturnDate(e.target.value)}
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
@@ -234,7 +263,8 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 <input
                   id="returnTime"
                   type="time"
-                  defaultValue="10:00"
+                  value={returnTime}
+                  onChange={(e) => setReturnTime(e.target.value)}
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
@@ -248,8 +278,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           </div>
 
           {/* Search Button */}
-          <Link
-            href="/vehicles"
+          <button
+            type="button"
+            onClick={handleSearch}
             className={cn(
               "flex items-center justify-center gap-2 w-full py-4 rounded-xl",
               "text-base font-bold text-white bg-[#0369A1]",
@@ -261,7 +292,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           >
             <Search className="h-5 w-5" />
             {t("searchButton")}
-          </Link>
+          </button>
         </form>
       </div>
     </div>

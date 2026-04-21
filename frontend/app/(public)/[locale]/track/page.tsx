@@ -319,11 +319,11 @@ export default function TrackReservationPage() {
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-[#64748B]">Rental Total</span>
-                        <span className="font-medium text-[#0F172A]">${reservation.totalAmount}</span>
+                        <span className="font-medium text-[#0F172A]">€{reservation.totalAmount}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-[#64748B]">Security Deposit</span>
-                        <span className="font-medium text-[#0F172A]">${reservation.depositAmount}</span>
+                        <span className="font-medium text-[#0F172A]">€{reservation.depositAmount}</span>
                       </div>
                     </div>
                     <div className="pt-4 border-t border-[#E2E8F0] flex justify-between items-center">

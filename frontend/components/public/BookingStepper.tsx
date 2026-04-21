@@ -2,9 +2,10 @@
 
 import { cn } from "@/lib/utils";
 import { Calendar, Car, CreditCard, User } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface BookingStepperProps {
-  currentStep: 1 | 2 | 3 | 4;
+  locale: string;
 }
 
 const steps = [
@@ -14,7 +15,10 @@ const steps = [
   { id: 4, label: "Payment", icon: CreditCard },
 ] as const;
 
-export function BookingStepper({ currentStep }: BookingStepperProps) {
+export function BookingStepper({ locale }: BookingStepperProps) {
+  const pathname = usePathname();
+  const stepMatch = pathname.match(/\/step(\d)/);
+  const currentStep = stepMatch ? (parseInt(stepMatch[1]) as 1 | 2 | 3 | 4) : 1;
   return (
     <div className="w-full bg-white border-b border-slate-200">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6">
@@ -30,7 +34,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                 <div className="flex flex-col items-center">
                   <div
                     className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300",
+                      "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 transition-all duration-300",
                       isActive &&
                         "border-sky-600 bg-sky-600 text-white shadow-md shadow-sky-200",
                       isCompleted &&
@@ -44,7 +48,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                   </div>
                   <span
                     className={cn(
-                      "mt-2 text-sm font-medium transition-colors",
+                      "mt-2 text-sm font-medium transition-colors hidden sm:block",
                       isActive && "text-sky-700",
                       isCompleted && "text-sky-700",
                       !isActive && !isCompleted && "text-slate-400"

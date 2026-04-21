@@ -138,7 +138,7 @@ export default function VehicleCard({
           <div className="space-y-0.5">
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-[#0F172A]">
-                ${pricePerDay}
+                €{pricePerDay}
               </span>
               <span className="text-sm text-[#64748B]">
                 /{t("pricePerDay")}
@@ -146,7 +146,7 @@ export default function VehicleCard({
             </div>
             {days > 1 && totalPrice && (
               <div className="text-xs text-[#64748B]">
-                {t("totalPrice")}: ${totalPrice}
+                {t("totalPrice")}: €{totalPrice}
               </div>
             )}
           </div>

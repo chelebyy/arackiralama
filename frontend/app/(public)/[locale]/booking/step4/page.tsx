@@ -20,6 +20,23 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
+import { differenceInCalendarDays } from "date-fns";
+
+const vehicleGroups = [
+  { id: "economy", name: "Fiat Egea or similar", category: "Economy", dailyRate: 45 },
+  { id: "compact", name: "Renault Megane or similar", category: "Compact", dailyRate: 55 },
+  { id: "midsize", name: "VW Passat or similar", category: "Midsize", dailyRate: 75 },
+  { id: "premium", name: "BMW 3 Series or similar", category: "Premium", dailyRate: 95 },
+  { id: "suv", name: "Audi Q5 or similar", category: "SUV", dailyRate: 110 },
+  { id: "minivan", name: "Mercedes Vito or similar", category: "Minivan", dailyRate: 120 },
+];
+
+const extraOptions = [
+  { id: "child_seat", name: "Child Safety Seat", price: 10, priceType: "per_day" as const },
+  { id: "additional_driver", name: "Additional Driver", price: 15, priceType: "per_rental" as const },
+  { id: "gps", name: "GPS Navigation", price: 8, priceType: "per_day" as const },
+  { id: "wifi", name: "Mobile WiFi", price: 12, priceType: "per_day" as const },
+];
 
 const step4Schema = z.object({
   paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]),
@@ -31,7 +48,22 @@ const step4Schema = z.object({
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
   }),
-});
+})
+  .refine((data) => {
+    if (data.paymentMethod === "paypal") return true;
+    if (!data.cardNumber) return false;
+    return /^[\d\s]{16,19}$/.test(data.cardNumber.replace(/\s/g, ""));
+  }, { message: "Card number is required and must be 16 digits", path: ["cardNumber"] })
+  .refine((data) => {
+    if (data.paymentMethod === "paypal") return true;
+    if (!data.expiryDate) return false;
+    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate);
+  }, { message: "Expiry date is required and must be MM/YY", path: ["expiryDate"] })
+  .refine((data) => {
+    if (data.paymentMethod === "paypal") return true;
+    if (!data.cvv) return false;
+    return /^\d{3,4}$/.test(data.cvv);
+  }, { message: "CVV is required and must be 3-4 digits", path: ["cvv"] });
 
 type Step4FormData = z.infer<typeof step4Schema>;
 
@@ -91,13 +123,35 @@ export default function BookingStep4Page() {
 
   const onSubmit = (data: Step4FormData) => {
     console.log("Payment submitted:", data);
-    router.push(`/${locale}/booking/confirmation?${searchParams.toString()}`);
+    const code = `ALN-${Date.now()}`;
+    const queryParams = new URLSearchParams(searchParams.toString());
+    queryParams.set("code", code);
+    router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
   };
 
-  const extras = [
-    { name: "Child Safety Seat", price: 70 },
-    { name: "Additional Driver", price: 15 },
-  ];
+  const pickupDate = searchParams.get("pickupDate") || "";
+  const returnDate = searchParams.get("returnDate") || "";
+  const days = Math.max(
+    1,
+    pickupDate && returnDate
+      ? differenceInCalendarDays(new Date(returnDate), new Date(pickupDate))
+      : 7
+  );
+
+  const vehicleParam = searchParams.get("vehicle") || "";
+  const vehicle = vehicleGroups.find((v) => v.id === vehicleParam);
+
+  const extrasParam = searchParams.get("extras") || "";
+  const selectedExtras = extrasParam
+    ? extrasParam.split(",").map((id) => {
+        const extra = extraOptions.find((e) => e.id === id.trim());
+        if (!extra) return null;
+        return {
+          name: extra.name,
+          price: extra.priceType === "per_day" ? extra.price * days : extra.price,
+        };
+      }).filter((e): e is { name: string; price: number } => e !== null)
+    : [];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -328,10 +382,10 @@ export default function BookingStep4Page() {
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <PriceBreakdown
-              dailyRate={55}
-              days={7}
-              vehicleGroup="Compact - Renault Megane or similar"
-              extras={extras}
+              dailyRate={vehicle?.dailyRate ?? 0}
+              days={days}
+              vehicleGroup={vehicle ? `${vehicle.category} - ${vehicle.name}` : "Unknown Vehicle"}
+              extras={selectedExtras}
               campaignDiscount={appliedCampaign?.discount}
               currency="EUR"
             />

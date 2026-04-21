@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Send, User, Mail, Phone, MessageSquare, CheckCircle, AlertCircle } from "lucide-react";
+import { Send, User, Mail, Phone, MessageSquare, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
 
 interface FormData {
   name: string;
@@ -258,9 +258,7 @@ export default function ContactForm() {
             <option value="other">Other</option>
           </select>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-            <svg className="h-4 w-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
           </div>
         </div>
         {errors.subject && (

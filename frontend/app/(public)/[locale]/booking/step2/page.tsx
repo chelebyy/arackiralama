@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { differenceInCalendarDays } from "date-fns";
 
 interface VehicleGroup {
   id: string;
@@ -140,7 +141,12 @@ export default function BookingStep2Page() {
     router.push(`/${locale}/booking/step3?${queryParams.toString()}`);
   };
 
-  const days = 7;
+  const days = Math.max(
+    1,
+    pickupDate && returnDate
+      ? differenceInCalendarDays(new Date(returnDate), new Date(pickupDate))
+      : 7
+  );
 
   return (
     <div className="max-w-6xl mx-auto">

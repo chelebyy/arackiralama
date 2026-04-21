@@ -1,6 +1,6 @@
 {
-  "name": "shadcn-ui-kit-dashboard",
-  "version": "1.3.0",
+  "name": "alanya-rentacar-frontend",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -149,6 +149,13 @@
       "minimatch": "3.1.4",
       "ajv": "6.14.0",
       "test-exclude": "6.0.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }
