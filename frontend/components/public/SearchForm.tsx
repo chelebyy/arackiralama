@@ -14,8 +14,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface SearchFormProps {
-  className?: string;
-  variant?: "hero" | "default";
+  readonly className?: string;
+  readonly variant?: "hero" | "default";
 }
 
 const getToday = () => new Date().toISOString().split("T")[0];
@@ -200,7 +200,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                       if ('showPicker' in HTMLInputElement.prototype) {
                         e.currentTarget.showPicker();
                       }
-                    } catch (err) {}
+                    } catch (error) {
+                      console.error("Picker error:", error);
+                    }
                   }}
                   className={cn(
                     "w-full h-12 pl-8 pr-2 rounded-xl text-center",
@@ -231,7 +233,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                       if ('showPicker' in HTMLInputElement.prototype) {
                         e.currentTarget.showPicker();
                       }
-                    } catch (err) {}
+                    } catch (error) {
+                      console.error("Picker error:", error);
+                    }
                   }}
                   className={cn(
                     "w-full h-12 pl-8 pr-2 rounded-xl text-center",
@@ -262,7 +266,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                       if ('showPicker' in HTMLInputElement.prototype) {
                         e.currentTarget.showPicker();
                       }
-                    } catch (err) {}
+                    } catch (error) {
+                      console.error("Picker error:", error);
+                    }
                   }}
                   className={cn(
                     "w-full h-12 pl-8 pr-2 rounded-xl text-center",
@@ -293,7 +299,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                       if ('showPicker' in HTMLInputElement.prototype) {
                         e.currentTarget.showPicker();
                       }
-                    } catch (err) {}
+                    } catch (error) {
+                      console.error("Picker error:", error);
+                    }
                   }}
                   className={cn(
                     "w-full h-12 pl-8 pr-2 rounded-xl text-center",

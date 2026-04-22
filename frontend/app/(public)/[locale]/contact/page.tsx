@@ -4,10 +4,8 @@ import {
   Phone,
   Mail,
   Clock,
-  Car,
   AlertTriangle,
-  MessageCircle,
-  ChevronRight
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ContactForm from "@/components/public/ContactForm";
@@ -101,7 +99,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-[#0F172A] mb-1">{t("reservations")}</h3>
                     <a
-                      href={`tel:${contactInfo.reservations.replace(/\s/g, "")}`}
+                      href={`tel:${contactInfo.reservations.replaceAll(/\s/g, "")}`}
                       className="text-[#0369A1] hover:underline"
                     >
                       {contactInfo.reservations}
@@ -117,7 +115,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-[#0F172A] mb-1">{t("whatsapp")}</h3>
                     <a
-                      href={`https://wa.me/${contactInfo.whatsapp.replace(/\s/g, "").replace(/\+/g, "")}`}
+                      href={`https://wa.me/${contactInfo.whatsapp.replaceAll(/\s/g, "").replaceAll("+", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#0369A1] hover:underline"
@@ -151,7 +149,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-amber-800 mb-1">{t("emergency")}</h3>
                     <a
-                      href={`tel:${contactInfo.emergency.replace(/\s/g, "")}`}
+                      href={`tel:${contactInfo.emergency.replaceAll(/\s/g, "")}`}
                       className="text-amber-700 font-bold hover:underline"
                     >
                       {contactInfo.emergency}
@@ -222,7 +220,7 @@ export default function ContactPage() {
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-[#0369A1] flex-shrink-0" />
                     <a
-                      href={`tel:${office.phone.replace(/\s/g, "")}`}
+                      href={`tel:${office.phone.replaceAll(/\s/g, "")}`}
                       className="text-[#0369A1] hover:underline"
                     >
                       {office.phone}

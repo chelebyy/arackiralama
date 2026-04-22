@@ -121,7 +121,6 @@ export default function Header() {
                 "transition-colors duration-200 cursor-pointer",
                 "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
               )}
-              aria-expanded={isMobileMenuOpen}
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
