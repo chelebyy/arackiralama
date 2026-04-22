@@ -31,7 +31,6 @@ export default function Header() {
     { href: "/vehicles" as const, label: t("vehicles"), icon: Car },
     { href: "/about" as const, label: t("about"), icon: Info },
     { href: "/contact" as const, label: t("contact"), icon: Phone },
-    { href: "/track-reservation" as const, label: t("trackReservation"), icon: Search },
   ];
 
   return (
@@ -98,7 +97,7 @@ export default function Header() {
 
             {/* CTA Button - Desktop */}
             <Link
-              href="/vehicles"
+              href="/track-reservation"
               className={cn(
                 "hidden md:flex items-center gap-2 px-5 py-2.5 rounded-lg",
                 "text-sm font-semibold text-white bg-[#0369A1]",
@@ -108,6 +107,7 @@ export default function Header() {
                 "shadow-sm hover:shadow"
               )}
             >
+              <Search className="h-4 w-4" />
               {t("trackReservation")}
             </Link>
 
@@ -180,7 +180,7 @@ export default function Header() {
                 {t("login")}
               </NextLink>
               <Link
-                href="/vehicles"
+                href="/track-reservation"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center justify-center gap-2 px-4 py-3 rounded-lg",
@@ -189,8 +189,8 @@ export default function Header() {
                   "transition-colors duration-200 cursor-pointer"
                 )}
               >
-                <Car className="h-5 w-5" />
-                {t("vehicles")}
+                <Search className="h-5 w-5" />
+                {t("trackReservation")}
               </Link>
             </div>
           </nav>

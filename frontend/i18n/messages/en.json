@@ -262,5 +262,109 @@
         "december": "December"
       }
     }
+  },
+  "aboutUs": {
+    "title": "About Alanya Car Rental",
+    "subtitle": "Your trusted partner for car rentals in Alanya since 2008",
+    "ourStory": {
+      "title": "Our Story",
+      "p1": "Founded in 2008, Alanya Car Rental began with a simple mission: to provide visitors to the Turkish Riviera with reliable, affordable, and hassle-free transportation. What started as a small family business with just 5 vehicles has grown into one of the most trusted car rental companies in the region.",
+      "p2": "Over the past 15 years, we have served over 50,000 customers from around the world, helping them explore the beautiful Alanya region and beyond. Our commitment to transparency, quality service, and customer satisfaction has earned us a reputation as the go-to car rental service for tourists and locals alike.",
+      "p3": "Today, with a fleet of over 500 vehicles and multiple locations across Alanya, we continue to uphold our founding values while embracing modern technology to make the rental process smoother than ever."
+    },
+    "stats": {
+      "years": "Years Experience",
+      "vehicles": "Vehicles in Fleet",
+      "customers": "Happy Customers",
+      "support": "Customer Support"
+    },
+    "whyChooseUs": {
+      "title": "Why Choose Us",
+      "subtitle": "We are committed to providing the best car rental experience in Alanya",
+      "insuranceTitle": "Comprehensive Insurance",
+      "insuranceDesc": "All our vehicles come with full insurance coverage including CDW and theft protection.",
+      "deliveryTitle": "Free Delivery",
+      "deliveryDesc": "We deliver your car to your hotel, airport, or any location in Alanya at no extra cost.",
+      "supportTitle": "24/7 Support",
+      "supportDesc": "Our multilingual support team is available round the clock to assist you.",
+      "feesTitle": "No Hidden Fees",
+      "feesDesc": "Transparent pricing with no surprises. The price you see is the price you pay."
+    },
+    "ourValues": {
+      "title": "Our Values",
+      "subtitle": "The principles that guide everything we do",
+      "trustTitle": "Trust & Transparency",
+      "trustDesc": "We believe in honest pricing with no hidden fees. What you see is what you pay.",
+      "qualityTitle": "Quality First",
+      "qualityDesc": "Every vehicle in our fleet is meticulously maintained and regularly serviced.",
+      "serviceTitle": "Exceptional Service",
+      "serviceDesc": "Our multilingual team is dedicated to making your rental experience seamless.",
+      "innovationTitle": "Continuous Innovation",
+      "innovationDesc": "We constantly improve our services to meet the evolving needs of our customers."
+    },
+    "ourFleet": {
+      "title": "Our Fleet",
+      "subtitle": "A vehicle for every need and budget",
+      "vehicles": "vehicles",
+      "c1": "Fuel-efficient options for budget travelers",
+      "c2": "Perfect balance of comfort and efficiency",
+      "c3": "Spacious vehicles for families and groups",
+      "c4": "Premium vehicles for special occasions",
+      "c5": "Large capacity for group transportation",
+      "c6": "Experience Alanya with the top down"
+    },
+    "coverage": {
+      "title": "Coverage Areas",
+      "subtitle": "Multiple locations for your convenience",
+      "freeDelivery": "Free Delivery",
+      "distance1": "45 km from Alanya center",
+      "distance2": "125 km from Alanya center"
+    }
+  },
+  "contactUs": {
+    "title": "Contact Us",
+    "subtitle": "We are here to help. Reach out to us for any questions or assistance.",
+    "sendMessage": "Send Us a Message",
+    "formDesc": "Fill out the form below and we will get back to you as soon as possible. For urgent matters, please call us directly.",
+    "contactInfo": "Contact Information",
+    "reservations": "Reservations",
+    "reservationsDesc": "For booking inquiries",
+    "whatsapp": "WhatsApp",
+    "whatsappDesc": "Quick chat support",
+    "email": "Email",
+    "emailDesc": "For general inquiries",
+    "emergency": "24/7 Emergency Line",
+    "emergencyDesc": "Roadside assistance and emergencies only",
+    "workingHours": "Working Hours",
+    "mainOffice": "Main Office",
+    "days": {
+      "mondayFriday": "Monday - Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "holidays": "Public Holidays"
+    },
+    "ourLocations": "Our Locations",
+    "officeTypes": {
+      "main": "Main Office",
+      "airport": "Airport"
+    },
+    "offices": {
+      "main": {
+        "name": "Main Office - Alanya City Center",
+        "address": "Ataturk Boulevard No. 45, Alanya 07400, Turkey"
+      },
+      "gzp": {
+        "name": "Gazipasa Airport Desk",
+        "address": "Gazipasa Alanya Airport (GZP), International Arrivals"
+      },
+      "ayt": {
+        "name": "Antalya Airport Desk",
+        "address": "Antalya Airport (AYT), Terminal 2, Ground Floor"
+      },
+      "mahmutlar": {
+        "name": "Mahmutlar Office",
+        "address": "Barbaros Street No. 12, Mahmutlar, Alanya"
+      }
+    }
   }
 }

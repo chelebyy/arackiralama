@@ -9,66 +9,65 @@ import {
   Users,
   Clock,
   CheckCircle,
-  ChevronRight,
   Building2,
   Plane
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const stats = [
-  { value: "15+", label: "Years Experience", icon: Award },
-  { value: "500+", label: "Vehicles in Fleet", icon: Car },
-  { value: "50K+", label: "Happy Customers", icon: Users },
-  { value: "24/7", label: "Customer Support", icon: Clock }
-];
-
-const values = [
-  {
-    id: "trust",
-    icon: Shield,
-    title: "Trust & Transparency",
-    description: "We believe in honest pricing with no hidden fees. What you see is what you pay."
-  },
-  {
-    id: "quality",
-    icon: CheckCircle,
-    title: "Quality First",
-    description: "Every vehicle in our fleet is meticulously maintained and regularly serviced."
-  },
-  {
-    id: "service",
-    icon: Headphones,
-    title: "Exceptional Service",
-    description: "Our multilingual team is dedicated to making your rental experience seamless."
-  },
-  {
-    id: "innovation",
-    icon: Award,
-    title: "Continuous Innovation",
-    description: "We constantly improve our services to meet the evolving needs of our customers."
-  }
-];
-
-const fleetCategories = [
-  { category: "Economy", count: 120, description: "Fuel-efficient options for budget travelers" },
-  { category: "Compact", count: 150, description: "Perfect balance of comfort and efficiency" },
-  { category: "SUV", count: 80, description: "Spacious vehicles for families and groups" },
-  { category: "Luxury", count: 50, description: "Premium vehicles for special occasions" },
-  { category: "Vans", count: 60, description: "Large capacity for group transportation" },
-  { category: "Convertible", count: 40, description: "Experience Alanya with the top down" }
-];
-
-const coverageAreas = [
-  { name: "Alanya City Center", type: "office", address: "Ataturk Boulevard No. 45, Alanya" },
-  { name: "Gazipasa Airport (GZP)", type: "airport", distance: "45 km from Alanya center" },
-  { name: "Antalya Airport (AYT)", type: "airport", distance: "125 km from Alanya center" },
-  { name: "Mahmutlar", type: "office", address: "Barbaros Street No. 12, Mahmutlar" },
-  { name: "Kestel", type: "office", address: "Ataturk Street No. 8, Kestel" },
-  { name: "Konakli", type: "office", address: "Iskele Street No. 23, Konakli" }
-];
-
 export default function AboutPage() {
-  const t = useTranslations();
+  const t = useTranslations("aboutUs");
+
+  const stats = [
+    { value: "15+", label: t("stats.years"), icon: Award },
+    { value: "500+", label: t("stats.vehicles"), icon: Car },
+    { value: "50K+", label: t("stats.customers"), icon: Users },
+    { value: "24/7", label: t("stats.support"), icon: Clock }
+  ];
+
+  const values = [
+    {
+      id: "trust",
+      icon: Shield,
+      title: t("ourValues.trustTitle"),
+      description: t("ourValues.trustDesc")
+    },
+    {
+      id: "quality",
+      icon: CheckCircle,
+      title: t("ourValues.qualityTitle"),
+      description: t("ourValues.qualityDesc")
+    },
+    {
+      id: "service",
+      icon: Headphones,
+      title: t("ourValues.serviceTitle"),
+      description: t("ourValues.serviceDesc")
+    },
+    {
+      id: "innovation",
+      icon: Award,
+      title: t("ourValues.innovationTitle"),
+      description: t("ourValues.innovationDesc")
+    }
+  ];
+
+  const fleetCategories = [
+    { category: "Economy", count: 120, description: t("ourFleet.c1") },
+    { category: "Compact", count: 150, description: t("ourFleet.c2") },
+    { category: "SUV", count: 80, description: t("ourFleet.c3") },
+    { category: "Luxury", count: 50, description: t("ourFleet.c4") },
+    { category: "Vans", count: 60, description: t("ourFleet.c5") },
+    { category: "Convertible", count: 40, description: t("ourFleet.c6") }
+  ];
+
+  const coverageAreas = [
+    { name: "Alanya City Center", type: "office", address: "Ataturk Boulevard No. 45, Alanya" },
+    { name: "Gazipasa Airport (GZP)", type: "airport", distance: t("coverage.distance1") },
+    { name: "Antalya Airport (AYT)", type: "airport", distance: t("coverage.distance2") },
+    { name: "Mahmutlar", type: "office", address: "Barbaros Street No. 12, Mahmutlar" },
+    { name: "Kestel", type: "office", address: "Ataturk Street No. 8, Kestel" },
+    { name: "Konakli", type: "office", address: "Iskele Street No. 23, Konakli" }
+  ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -76,10 +75,10 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-3xl lg:text-5xl font-bold text-white mb-6">
-              About Alanya Car Rental
+              {t("title")}
             </h1>
             <p className="text-lg lg:text-xl text-white/70">
-              Your trusted partner for car rentals in Alanya since 2008
+              {t("subtitle")}
             </p>
           </div>
         </div>
@@ -89,26 +88,12 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-20">
           <div>
             <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-6">
-              Our Story
+              {t("ourStory.title")}
             </h2>
             <div className="space-y-4 text-[#475569]">
-              <p>
-                Founded in 2008, Alanya Car Rental began with a simple mission: to provide visitors 
-                to the Turkish Riviera with reliable, affordable, and hassle-free transportation. 
-                What started as a small family business with just 5 vehicles has grown into one of 
-                the most trusted car rental companies in the region.
-              </p>
-              <p>
-                Over the past 15 years, we have served over 50,000 customers from around the world, 
-                helping them explore the beautiful Alanya region and beyond. Our commitment to 
-                transparency, quality service, and customer satisfaction has earned us a reputation 
-                as the go-to car rental service for tourists and locals alike.
-              </p>
-              <p>
-                Today, with a fleet of over 500 vehicles and multiple locations across Alanya, 
-                we continue to uphold our founding values while embracing modern technology to 
-                make the rental process smoother than ever.
-              </p>
+              <p>{t("ourStory.p1")}</p>
+              <p>{t("ourStory.p2")}</p>
+              <p>{t("ourStory.p3")}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -136,10 +121,10 @@ export default function AboutPage() {
         <div className="mb-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
-              Why Choose Us
+              {t("whyChooseUs.title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              We are committed to providing the best car rental experience in Alanya
+              {t("whyChooseUs.subtitle")}
             </p>
           </div>
 
@@ -148,26 +133,26 @@ export default function AboutPage() {
               {
                 id: "insurance",
                 icon: Shield,
-                title: "Comprehensive Insurance",
-                description: "All our vehicles come with full insurance coverage including CDW and theft protection."
+                title: t("whyChooseUs.insuranceTitle"),
+                description: t("whyChooseUs.insuranceDesc")
               },
               {
                 id: "delivery",
                 icon: MapPin,
-                title: "Free Delivery",
-                description: "We deliver your car to your hotel, airport, or any location in Alanya at no extra cost."
+                title: t("whyChooseUs.deliveryTitle"),
+                description: t("whyChooseUs.deliveryDesc")
               },
               {
                 id: "support",
                 icon: Headphones,
-                title: "24/7 Support",
-                description: "Our multilingual support team is available round the clock to assist you."
+                title: t("whyChooseUs.supportTitle"),
+                description: t("whyChooseUs.supportDesc")
               },
               {
                 id: "fees",
                 icon: CreditCard,
-                title: "No Hidden Fees",
-                description: "Transparent pricing with no surprises. The price you see is the price you pay."
+                title: t("whyChooseUs.feesTitle"),
+                description: t("whyChooseUs.feesDesc")
               }
             ].map((item) => {
               const Icon = item.icon;
@@ -194,10 +179,10 @@ export default function AboutPage() {
         <div className="mb-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
-              Our Values
+              {t("ourValues.title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              The principles that guide everything we do
+              {t("ourValues.subtitle")}
             </p>
           </div>
 
@@ -228,10 +213,10 @@ export default function AboutPage() {
         <div className="mb-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
-              Our Fleet
+              {t("ourFleet.title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              A vehicle for every need and budget
+              {t("ourFleet.subtitle")}
             </p>
           </div>
 
@@ -250,7 +235,7 @@ export default function AboutPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-[#0F172A]">{category.category}</h3>
-                  <p className="text-sm text-[#0369A1] font-medium">{category.count} vehicles</p>
+                  <p className="text-sm text-[#0369A1] font-medium">{category.count} {t("ourFleet.vehicles")}</p>
                   <p className="text-xs text-[#64748B] mt-1">{category.description}</p>
                 </div>
               </div>
@@ -261,10 +246,10 @@ export default function AboutPage() {
         <div>
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
-              Coverage Areas
+              {t("coverage.title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              Multiple locations for your convenience
+              {t("coverage.subtitle")}
             </p>
           </div>
 
@@ -292,7 +277,7 @@ export default function AboutPage() {
                     </p>
                     {area.type === "airport" && (
                       <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-lg bg-[#F0F9FF] text-xs font-medium text-[#0369A1]">
-                        Free Delivery
+                        {t("coverage.freeDelivery")}
                       </span>
                     )}
                   </div>

@@ -324,5 +324,109 @@
         "december": "Aralık"
       }
     }
+  },
+  "aboutUs": {
+    "title": "Alanya Araç Kiralama Hakkında",
+    "subtitle": "2008'den beri Alanya'da araç kiralama konusunda güvenilir ortağınız",
+    "ourStory": {
+      "title": "Hikayemiz",
+      "p1": "2008 yılında kurulan Alanya Araç Kiralama, basit bir misyonla yola çıktı: Türk Rivierası'nı ziyaret edenlere güvenilir, uygun fiyatlı ve sorunsuz ulaşım sağlamak. Sadece 5 araçla küçük bir aile şirketi olarak başlayan serüvenimiz, bölgedeki en güvenilir araç kiralama şirketlerinden biri haline geldi.",
+      "p2": "Son 15 yılda, dünyanın dört bir yanından 50.000'den fazla müşteriye hizmet verdik ve onların güzel Alanya bölgesini ve ötesini keşfetmelerine yardımcı olduk. Şeffaflığa, kaliteli hizmete ve müşteri memnuniyetine olan bağlılığımız, bize hem turistler hem de yerel halk için gidilecek ilk araç kiralama servisi olma ününü kazandırdı.",
+      "p3": "Bugün, Alanya genelinde 500'den fazla araçlık filomuz ve çok sayıda lokasyonumuzla, kiralama sürecini her zamankinden daha sorunsuz hale getirmek için modern teknolojiyi kucaklarken kurucu değerlerimizi korumaya devam ediyoruz."
+    },
+    "stats": {
+      "years": "Yıllık Deneyim",
+      "vehicles": "Filodaki Araç",
+      "customers": "Mutlu Müşteri",
+      "support": "Müşteri Desteği"
+    },
+    "whyChooseUs": {
+      "title": "Neden Bizi Seçmelisiniz",
+      "subtitle": "Alanya'daki en iyi araç kiralama deneyimini sunmaya kararlıyız",
+      "insuranceTitle": "Kapsamlı Sigorta",
+      "insuranceDesc": "Tüm araçlarımız, Kasko ve Hırsızlık Koruması dahil olmak üzere tam sigorta kapsamı ile sunulmaktadır.",
+      "deliveryTitle": "Ücretsiz Teslimat",
+      "deliveryDesc": "Aracınızı Alanya'daki otelinize, havaalanına veya dilediğiniz herhangi bir konuma ek ücret ödemeden teslim ediyoruz.",
+      "supportTitle": "7/24 Destek",
+      "supportDesc": "Çok dilli destek ekibimiz size yardımcı olmak için günün her saati hazırdır.",
+      "feesTitle": "Gizli Ücret Yok",
+      "feesDesc": "Sürprizsiz şeffaf fiyatlandırma. Gördüğünüz fiyat, ödediğiniz fiyattır."
+    },
+    "ourValues": {
+      "title": "Değerlerimiz",
+      "subtitle": "Yaptığımız her şeye yön veren ilkeler",
+      "trustTitle": "Güven & Şeffaflık",
+      "trustDesc": "Gizli ücretler olmadan dürüst fiyatlandırmaya inanıyoruz. Ne görüyorsanız onu ödersiniz.",
+      "qualityTitle": "Önce Kalite",
+      "qualityDesc": "Filomuzdaki her araç titizlikle bakılır ve düzenli olarak servise girer.",
+      "serviceTitle": "Olağanüstü Hizmet",
+      "serviceDesc": "Çok dilli ekibimiz kiralama deneyiminizi sorunsuz hale getirmeye kendini adamıştır.",
+      "innovationTitle": "Sürekli Yenilik",
+      "innovationDesc": "Müşterilerimizin gelişen ihtiyaçlarını karşılamak için hizmetlerimizi sürekli geliştiriyoruz."
+    },
+    "ourFleet": {
+      "title": "Filomuz",
+      "subtitle": "Her ihtiyaca ve bütçeye uygun bir araç",
+      "vehicles": "araç",
+      "c1": "Bütçe dostu, yakıt tasarruflu seçenekler",
+      "c2": "Konfor ve verimliliğin mükemmel dengesi",
+      "c3": "Aileler ve gruplar için geniş araçlar",
+      "c4": "Özel günler için lüks araçlar",
+      "c5": "Grup taşımacılığı için yüksek kapasite",
+      "c6": "Alanya'yı üstü açık deneyimleyin"
+    },
+    "coverage": {
+      "title": "Hizmet Bölgelerimiz",
+      "subtitle": "Size uygun çok sayıda lokasyon",
+      "freeDelivery": "Ücretsiz Teslimat",
+      "distance1": "Alanya merkeze 45 km",
+      "distance2": "Alanya merkeze 125 km"
+    }
+  },
+  "contactUs": {
+    "title": "İletişim",
+    "subtitle": "Size yardımcı olmak için buradayız. Her türlü soru veya destek için bize ulaşın.",
+    "sendMessage": "Bize Mesaj Gönderin",
+    "formDesc": "Aşağıdaki formu doldurun, size en kısa sürede geri döneceğiz. Acil durumlar için lütfen doğrudan bizi arayın.",
+    "contactInfo": "İletişim Bilgileri",
+    "reservations": "Rezervasyon",
+    "reservationsDesc": "Rezervasyon talepleri için",
+    "whatsapp": "WhatsApp",
+    "whatsappDesc": "Hızlı sohbet desteği",
+    "email": "E-posta",
+    "emailDesc": "Genel talepler için",
+    "emergency": "7/24 Acil Hat",
+    "emergencyDesc": "Sadece yol yardımı ve acil durumlar",
+    "workingHours": "Çalışma Saatleri",
+    "mainOffice": "Merkez Ofis",
+    "days": {
+      "mondayFriday": "Pazartesi - Cuma",
+      "saturday": "Cumartesi",
+      "sunday": "Pazar",
+      "holidays": "Resmi Tatiller"
+    },
+    "ourLocations": "Konumlarımız",
+    "officeTypes": {
+      "main": "Merkez Ofis",
+      "airport": "Havalimanı"
+    },
+    "offices": {
+      "main": {
+        "name": "Merkez Ofis - Alanya Şehir Merkezi",
+        "address": "Atatürk Bulvarı No. 45, Alanya 07400, Türkiye"
+      },
+      "gzp": {
+        "name": "Gazipaşa Havalimanı Masası",
+        "address": "Gazipaşa Alanya Havalimanı (GZP), Dış Hatlar Geliş"
+      },
+      "ayt": {
+        "name": "Antalya Havalimanı Masası",
+        "address": "Antalya Havalimanı (AYT), Terminal 2, Zemin Kat"
+      },
+      "mahmutlar": {
+        "name": "Mahmutlar Ofisi",
+        "address": "Barbaros Caddesi No. 12, Mahmutlar, Alanya"
+      }
+    }
   }
 }
