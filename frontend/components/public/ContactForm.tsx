@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Send, User, Mail, Phone, MessageSquare, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
-import type { FormEvent, ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 
 const getTermsLink = (chunks: React.ReactNode) => (
   <Link href={"/terms" as any} className="text-[#0369A1] hover:underline">{chunks}</Link>
@@ -92,7 +92,7 @@ export default function ContactForm() {
     setSubmitError(null);
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError(null);
 
