@@ -70,7 +70,7 @@ export default function VehicleCard({
           </div>
         )}
 
-        {/* Top Badges (Category & Cancellation) */}
+        {/* Top Badges */}
         <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-start gap-2 overflow-hidden pointer-events-none">
           <span className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
             {t(`categories.${category}`)}
@@ -83,7 +83,7 @@ export default function VehicleCard({
       </div>
 
       {/* Content */}
-      <div className="p-4 md:p-5 flex flex-col flex-1 space-y-4">
+      <div className="p-4 flex flex-col flex-1 space-y-4">
         {/* Name */}
         <h3 className="text-base md:text-lg font-bold text-[#0F172A] truncate">
           {name}
@@ -117,29 +117,29 @@ export default function VehicleCard({
         </div>
 
         {/* Price & CTA */}
-        <div className="pt-4 mt-auto border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-0.5 whitespace-nowrap">
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl md:text-2xl font-bold text-[#0F172A] tracking-tight">
+        <div className="pt-4 mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-2 overflow-hidden">
+          <div className="space-y-0.5 whitespace-nowrap min-w-0">
+            <div className="flex items-baseline gap-1 truncate">
+              <span className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">
                 ₺ {pricePerDay}
               </span>
-              <span className="text-xs md:text-sm text-[#64748B]">
+              <span className="text-[10px] md:text-xs text-[#64748B]">
                 /{t("pricePerDay")}
               </span>
             </div>
             {days > 1 && totalPrice && (
-              <div className="text-[10px] md:text-xs text-[#64748B]">
+              <div className="text-[10px] text-[#64748B] truncate">
                 {t("totalPrice")}: ₺ {totalPrice}
               </div>
             )}
           </div>
 
           {isAvailable ? (
-             <Link
+            <Link
               href={{ pathname: "/vehicles/[id]", params: { id } }}
               className={cn(
-                "px-3 py-2 md:px-4 md:py-3 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap",
-                "transition-all duration-200 text-center flex-1 sm:flex-none",
+                "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                "transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "text-white bg-[#0369A1]",
                 "hover:bg-[#0284C7] active:bg-[#075985]",
@@ -152,7 +152,7 @@ export default function VehicleCard({
           ) : (
             <span
               className={cn(
-                "px-4 py-2 md:px-6 md:py-3 rounded-xl text-xs md:text-sm font-bold text-center flex-1 sm:flex-none",
+                "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
                 "text-[#94A3B8] bg-[#F1F5F9]",
                 "cursor-not-allowed"
               )}
