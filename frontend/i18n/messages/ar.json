@@ -365,6 +365,34 @@
         "name": "مكتب محمودلار",
         "address": "شارع بربروس رقم 12، محمودلار، ألانيا"
       }
+    },
+    "form": {
+      "fullName": "الاسم الكامل",
+      "fullNamePlaceholder": "أدخل اسمك الكامل",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "your@email.com",
+      "phone": "رقم الهاتف",
+      "phonePlaceholder": "+90 555 123 45 67",
+      "subject": "الموضوع",
+      "subjectPlaceholder": "اختر موضوعا",
+      "subjects": {
+        "reservation": "استفسار عن الحجز",
+        "support": "دعم العملاء",
+        "feedback": "ملاحظات",
+        "partnership": "شراكة تجارية",
+        "other": "أخرى"
+      },
+      "message": "الرسالة",
+      "messagePlaceholder": "كيف يمكننا مساعدتك؟",
+      "submit": "إرسال الرسالة",
+      "submitting": "جاري إرسال الرسالة...",
+      "success": "تم إرسال الرسالة بنجاح",
+      "successDesc": "شكرا لاتصالك بنا. لقد تلقينا رسالتك وسنرد عليك في غضون 24 ساعة.",
+      "sendAnother": "إرسال رسالة أخرى",
+      "error": "فشل في إرسال الرسالة. يرجى المحاولة مرة أخرى لاحقًا.",
+      "termsAgreement": "بإرسال هذا النموذج، فإنك توافق على {terms} و {privacy}.",
+      "terms": "شروط الخدمة",
+      "privacy": "سياسة الخصوصية"
     }
   }
 }

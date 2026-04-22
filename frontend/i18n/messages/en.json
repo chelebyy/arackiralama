@@ -365,6 +365,34 @@
         "name": "Mahmutlar Office",
         "address": "Barbaros Street No. 12, Mahmutlar, Alanya"
       }
+    },
+    "form": {
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Enter your full name",
+      "email": "Email Address",
+      "emailPlaceholder": "your@email.com",
+      "phone": "Phone Number",
+      "phonePlaceholder": "+90 555 123 45 67",
+      "subject": "Subject",
+      "subjectPlaceholder": "Select a subject",
+      "subjects": {
+        "reservation": "Reservation Inquiry",
+        "support": "Customer Support",
+        "feedback": "Feedback",
+        "partnership": "Business Partnership",
+        "other": "Other"
+      },
+      "message": "Message",
+      "messagePlaceholder": "How can we help you?",
+      "submit": "Send Message",
+      "submitting": "Sending Message...",
+      "success": "Message Sent Successfully",
+      "successDesc": "Thank you for contacting us. We have received your message and will get back to you within 24 hours.",
+      "sendAnother": "Send Another Message",
+      "error": "Failed to send message. Please try again later.",
+      "termsAgreement": "By submitting this form, you agree to our {terms} and {privacy}.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
     }
   }
 }

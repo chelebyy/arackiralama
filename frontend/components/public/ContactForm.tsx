@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Send, User, Mail, Phone, MessageSquare, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
 
 interface FormData {
   name: string;
@@ -21,6 +23,9 @@ interface FormErrors {
 }
 
 export default function ContactForm() {
+  const t = useTranslations("contactUs.form");
+  const tErr = useTranslations("common.errors.validation");
+  
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
@@ -38,31 +43,31 @@ export default function ContactForm() {
     const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.name = tErr("required");
     } else if (formData.name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
+      newErrors.name = tErr("minLength", { min: 2 });
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = tErr("required");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = tErr("email");
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
+      newErrors.phone = tErr("required");
     } else if (!/^\+?[\d\s-]{8,}$/.test(formData.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Please enter a valid phone number";
+      newErrors.phone = tErr("phone");
     }
 
     if (!formData.subject.trim()) {
-      newErrors.subject = "Subject is required";
+      newErrors.subject = tErr("required");
     }
 
     if (!formData.message.trim()) {
-      newErrors.message = "Message is required";
+      newErrors.message = tErr("required");
     } else if (formData.message.length < 10) {
-      newErrors.message = "Message must be at least 10 characters";
+      newErrors.message = tErr("minLength", { min: 10 });
     }
 
     setErrors(newErrors);
@@ -98,8 +103,9 @@ export default function ContactForm() {
         subject: "",
         message: ""
       });
-    } catch {
-      setSubmitError("Failed to send message. Please try again later.");
+    } catch (err) {
+      console.error(err);
+      setSubmitError(t("error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,9 +117,9 @@ export default function ContactForm() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 mx-auto mb-4">
           <CheckCircle className="h-8 w-8 text-emerald-600" />
         </div>
-        <h3 className="text-xl font-bold text-emerald-800 mb-2">Message Sent Successfully</h3>
+        <h3 className="text-xl font-bold text-emerald-800 mb-2">{t("success")}</h3>
         <p className="text-emerald-700 mb-6">
-          Thank you for contacting us. We have received your message and will get back to you within 24 hours.
+          {t("successDesc")}
         </p>
         <button
           type="button"
@@ -124,7 +130,7 @@ export default function ContactForm() {
             "hover:bg-emerald-700 transition-all duration-200"
           )}
         >
-          Send Another Message
+          {t("sendAnother")}
         </button>
       </div>
     );
@@ -141,7 +147,7 @@ export default function ContactForm() {
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-[#0F172A] mb-2">
-          Full Name <span className="text-red-500">*</span>
+          {t("fullName")} <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
@@ -151,7 +157,7 @@ export default function ContactForm() {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Enter your full name"
+            placeholder={t("fullNamePlaceholder")}
             className={cn(
               "w-full pl-12 pr-4 py-3 rounded-xl",
               "bg-white border",
@@ -171,7 +177,7 @@ export default function ContactForm() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-[#0F172A] mb-2">
-            Email Address <span className="text-red-500">*</span>
+            {t("email")} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
@@ -181,7 +187,7 @@ export default function ContactForm() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="your@email.com"
+              placeholder={t("emailPlaceholder")}
               className={cn(
                 "w-full pl-12 pr-4 py-3 rounded-xl",
                 "bg-white border",
@@ -200,7 +206,7 @@ export default function ContactForm() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-[#0F172A] mb-2">
-            Phone Number <span className="text-red-500">*</span>
+            {t("phone")} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
@@ -210,7 +216,7 @@ export default function ContactForm() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="+90 555 123 45 67"
+              placeholder={t("phonePlaceholder")}
               className={cn(
                 "w-full pl-12 pr-4 py-3 rounded-xl",
                 "bg-white border",
@@ -230,7 +236,7 @@ export default function ContactForm() {
 
       <div>
         <label htmlFor="subject" className="block text-sm font-medium text-[#0F172A] mb-2">
-          Subject <span className="text-red-500">*</span>
+          {t("subject")} <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
@@ -250,12 +256,12 @@ export default function ContactForm() {
               !formData.subject && "text-[#94A3B8]"
             )}
           >
-            <option value="" disabled>Select a subject</option>
-            <option value="reservation">Reservation Inquiry</option>
-            <option value="support">Customer Support</option>
-            <option value="feedback">Feedback</option>
-            <option value="partnership">Business Partnership</option>
-            <option value="other">Other</option>
+            <option value="" disabled>{t("subjectPlaceholder")}</option>
+            <option value="reservation">{t("subjects.reservation")}</option>
+            <option value="support">{t("subjects.support")}</option>
+            <option value="feedback">{t("subjects.feedback")}</option>
+            <option value="partnership">{t("subjects.partnership")}</option>
+            <option value="other">{t("subjects.other")}</option>
           </select>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
             <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
@@ -268,14 +274,14 @@ export default function ContactForm() {
 
       <div>
         <label htmlFor="message" className="block text-sm font-medium text-[#0F172A] mb-2">
-          Message <span className="text-red-500">*</span>
+          {t("message")} <span className="text-red-500">*</span>
         </label>
         <textarea
           id="message"
           name="message"
           value={formData.message}
           onChange={handleChange}
-          placeholder="How can we help you?"
+          placeholder={t("messagePlaceholder")}
           rows={5}
           className={cn(
             "w-full px-4 py-3 rounded-xl resize-none",
@@ -307,21 +313,21 @@ export default function ContactForm() {
         {isSubmitting ? (
           <>
             <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Sending Message...
+            {t("submitting")}
           </>
         ) : (
           <>
             <Send className="h-5 w-5" />
-            Send Message
+            {t("submit")}
           </>
         )}
       </button>
 
       <p className="text-xs text-[#64748B] text-center">
-        By submitting this form, you agree to our{" "}
-        <a href="/terms" className="text-[#0369A1] hover:underline">Terms of Service</a>
-        {" "}and{" "}
-        <a href="/privacy" className="text-[#0369A1] hover:underline">Privacy Policy</a>.
+        {t.rich("termsAgreement", {
+          terms: (chunks) => <Link href="/terms" className="text-[#0369A1] hover:underline">{chunks}</Link>,
+          privacy: (chunks) => <Link href="/privacy" className="text-[#0369A1] hover:underline">{chunks}</Link>
+        })}
       </p>
     </form>
   );

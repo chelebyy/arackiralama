@@ -427,6 +427,34 @@
         "name": "Mahmutlar Ofisi",
         "address": "Barbaros Caddesi No. 12, Mahmutlar, Alanya"
       }
+    },
+    "form": {
+      "fullName": "Ad Soyad",
+      "fullNamePlaceholder": "Adınızı ve soyadınızı girin",
+      "email": "E-posta Adresi",
+      "emailPlaceholder": "ornek@email.com",
+      "phone": "Telefon Numarası",
+      "phonePlaceholder": "+90 555 123 45 67",
+      "subject": "Konu",
+      "subjectPlaceholder": "Bir konu seçin",
+      "subjects": {
+        "reservation": "Rezervasyon Talebi",
+        "support": "Müşteri Desteği",
+        "feedback": "Geri Bildirim",
+        "partnership": "İş Ortaklığı",
+        "other": "Diğer"
+      },
+      "message": "Mesaj",
+      "messagePlaceholder": "Size nasıl yardımcı olabiliriz?",
+      "submit": "Mesaj Gönder",
+      "submitting": "Gönderiliyor...",
+      "success": "Mesaj Başarıyla Gönderildi",
+      "successDesc": "Bize ulaştığınız için teşekkürler. Mesajınızı aldık ve 24 saat içinde size dönüş yapacağız.",
+      "sendAnother": "Yeni Mesaj Gönder",
+      "error": "Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+      "termsAgreement": "Bu formu göndererek {terms} ve {privacy} metinlerini kabul etmiş olursunuz.",
+      "terms": "Hizmet Şartları'nı",
+      "privacy": "Gizlilik Politikası'nı"
     }
   }
 }
