@@ -5,6 +5,15 @@ import { cn } from "@/lib/utils";
 import { Send, User, Mail, Phone, MessageSquare, CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
+import type { FormEvent, ChangeEvent } from "react";
+
+const getTermsLink = (chunks: React.ReactNode) => (
+  <Link href={"/terms" as any} className="text-[#0369A1] hover:underline">{chunks}</Link>
+);
+
+const getPrivacyLink = (chunks: React.ReactNode) => (
+  <Link href={"/privacy" as any} className="text-[#0369A1] hover:underline">{chunks}</Link>
+);
 
 interface FormData {
   name: string;
@@ -56,7 +65,7 @@ export default function ContactForm() {
 
     if (!formData.phone.trim()) {
       newErrors.phone = tErr("required");
-    } else if (!/^\+?[\d\s-]{8,}$/.test(formData.phone.replace(/\s/g, ""))) {
+    } else if (!/^\+?[\d\s-]{8,}$/.test(formData.phone.replaceAll(/\s/g, ""))) {
       newErrors.phone = tErr("phone");
     }
 
@@ -74,7 +83,7 @@ export default function ContactForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name as keyof FormErrors]) {
@@ -83,7 +92,7 @@ export default function ContactForm() {
     setSubmitError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError(null);
 
@@ -325,8 +334,8 @@ export default function ContactForm() {
 
       <p className="text-xs text-[#64748B] text-center">
         {t.rich("termsAgreement", {
-          terms: (chunks) => <Link href="/terms" className="text-[#0369A1] hover:underline">{chunks}</Link>,
-          privacy: (chunks) => <Link href="/privacy" className="text-[#0369A1] hover:underline">{chunks}</Link>
+          terms: getTermsLink,
+          privacy: getPrivacyLink
         })}
       </p>
     </form>
