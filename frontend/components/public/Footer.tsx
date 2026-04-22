@@ -176,6 +176,8 @@ export default function Footer() {
             </p>
             <form className="space-y-2" onSubmit={(e) => e.preventDefault()}>
               <input
+                id="newsletter-email"
+                name="email"
                 type="email"
                 placeholder={t("newsletter.placeholder")}
                 className={cn(

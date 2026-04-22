@@ -61,21 +61,12 @@ export default async function LocaleLayout({
   const isRTL = localeData?.dir === "rtl";
 
   return (
-    <html
-      lang={validLocale}
-      dir={isRTL ? "rtl" : "ltr"}
-      className={cn(
-        lexend.variable,
-        sourceSans.variable,
-        "scroll-smooth"
-      )}
-      suppressHydrationWarning
-    >
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
-      <body
+    <NextIntlClientProvider messages={messages}>
+      <div
         className={cn(
+          lexend.variable,
+          sourceSans.variable,
+          "scroll-smooth",
           "min-h-screen bg-[#F8FAFC] font-sans antialiased",
           "text-[#020617]"
         )}
@@ -83,16 +74,14 @@ export default async function LocaleLayout({
           fontFamily: "var(--font-source-sans), system-ui, sans-serif",
         }}
       >
-        <NextIntlClientProvider messages={messages}>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </div>
+      </div>
+    </NextIntlClientProvider>
   );
 }
