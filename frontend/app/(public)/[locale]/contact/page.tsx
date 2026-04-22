@@ -61,43 +61,43 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="bg-[#0F172A] py-16 lg:py-24">
+      <div className="bg-[#0F172A] py-[var(--space-fluid-3xl)]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-3xl lg:text-5xl font-bold text-white mb-6">
+            <h1 className="text-[length:var(--text-fluid-5xl)] font-bold text-white mb-6">
               {t("title")}
             </h1>
-            <p className="text-lg lg:text-xl text-white/70">
+            <p className="text-[length:var(--text-fluid-xl)] text-white/70">
               {t("subtitle")}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-[var(--space-fluid-3xl)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-fluid-2xl)]">
           <div>
-            <h2 className="text-2xl font-bold text-[#0F172A] mb-6">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-6">
               {t("sendMessage")}
             </h2>
-            <p className="text-[#64748B] mb-8">
+            <p className="text-[length:var(--text-fluid-base)] text-[#64748B] mb-8">
               {t("formDesc")}
             </p>
             <ContactForm />
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-[var(--space-fluid-xl)]">
             <div>
-              <h2 className="text-2xl font-bold text-[#0F172A] mb-6">
+              <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-6">
                 {t("contactInfo")}
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-[var(--space-fluid-md)]">
                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-[#E2E8F0]">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F9FF]">
                     <Phone className="h-6 w-6 text-[#0369A1]" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-[#0F172A] mb-1">{t("reservations")}</h3>
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("reservations")}</h3>
                     <a
                       href={`tel:${contactInfo.reservations.replaceAll(/\s/g, "")}`}
                       className="text-[#0369A1] hover:underline"
@@ -113,7 +113,7 @@ export default function ContactPage() {
                     <MessageCircle className="h-6 w-6 text-[#0369A1]" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-[#0F172A] mb-1">{t("whatsapp")}</h3>
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("whatsapp")}</h3>
                     <a
                       href={`https://wa.me/${contactInfo.whatsapp.replaceAll(/\s/g, "").replaceAll("+", "")}`}
                       target="_blank"
@@ -131,10 +131,10 @@ export default function ContactPage() {
                     <Mail className="h-6 w-6 text-[#0369A1]" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-[#0F172A] mb-1">{t("email")}</h3>
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("email")}</h3>
                     <a
                       href={`mailto:${contactInfo.email}`}
-                      className="text-[#0369A1] hover:underline"
+                      className="text-[#0369A1] hover:underline break-all"
                     >
                       {contactInfo.email}
                     </a>
@@ -147,7 +147,7 @@ export default function ContactPage() {
                     <AlertTriangle className="h-6 w-6 text-amber-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-amber-800 mb-1">{t("emergency")}</h3>
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-amber-800 mb-1">{t("emergency")}</h3>
                     <a
                       href={`tel:${contactInfo.emergency.replaceAll(/\s/g, "")}`}
                       className="text-amber-700 font-bold hover:underline"
@@ -163,7 +163,7 @@ export default function ContactPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-[#0F172A] mb-4">
+              <h2 className="text-[length:var(--text-fluid-2xl)] font-bold text-[#0F172A] mb-4">
                 {t("workingHours")}
               </h2>
               <div className="p-4 rounded-xl bg-white border border-[#E2E8F0]">
@@ -188,10 +188,10 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-16">
-          <h2 className="text-2xl font-bold text-[#0F172A] mb-8 text-center">
+          <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-8 text-center">
             {t("ourLocations")}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[var(--space-fluid-lg)]">
             {offices.map((office) => (
               <div
                 key={office.name}
@@ -211,7 +211,7 @@ export default function ContactPage() {
                     {t("officeTypes.airport")}
                   </span>
                 )}
-                <h3 className="text-lg font-bold text-[#0F172A] mb-3">{office.name}</h3>
+                <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] mb-3">{office.name}</h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-[#0369A1] flex-shrink-0 mt-0.5" />

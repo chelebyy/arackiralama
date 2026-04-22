@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import {
@@ -16,7 +16,6 @@ import {
   List,
   SlidersHorizontal,
   Gauge,
-  Snowflake,
   X,
   Check,
 } from "lucide-react";
@@ -126,9 +125,7 @@ const offices = [
 ];
 
 export default function VehiclesPage() {
-  const params = useParams();
   const searchParams = useSearchParams();
-  const locale = params.locale as string;
   const t = useTranslations("vehicles");
   const tCommon = useTranslations("common");
   const tSearch = useTranslations("searchForm");
@@ -139,9 +136,16 @@ export default function VehiclesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const pickupOffice = searchParams.get("pickup") || "ala";
-  const returnOffice = searchParams.get("return") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
+
+  const pickupOfficeObj = offices.find((o) => o.id === pickupOffice);
+  let locationKey = "airport";
+  if (pickupOfficeObj?.id === "ala") {
+    locationKey = "cityCenter";
+  } else if (pickupOfficeObj?.id === "ayt") {
+    locationKey = "airportAntalya";
+  }
 
   const filteredVehicles =
     selectedGroup === "all"
@@ -153,13 +157,13 @@ export default function VehiclesPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)] py-[var(--space-fluid-md)]">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-[var(--space-fluid-md)]">
             <div className="flex items-center gap-4 bg-slate-50 px-4 py-3 rounded-lg border border-slate-200 overflow-x-auto">
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <MapPin className="h-4 w-4 text-[#0369A1]" />
                 <span className="text-sm text-slate-700">
-                  {tSearch(`locationOptions.${offices.find((o) => o.id === pickupOffice)?.id === 'ala' ? 'cityCenter' : offices.find((o) => o.id === pickupOffice)?.id === 'ayt' ? 'airportAntalya' : 'airport'}`)}
+                  {tSearch(`locationOptions.${locationKey}` as any)}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
@@ -174,8 +178,8 @@ export default function VehiclesPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <main className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)] py-[var(--space-fluid-xl)]">
+        <div className="flex flex-col lg:flex-row gap-[var(--space-fluid-xl)]">
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}
@@ -197,9 +201,9 @@ export default function VehiclesPage() {
               onClick={() => setMobileFiltersOpen(false)}
               aria-label="Close filters"
             />
-            <div className="absolute right-0 top-0 h-full w-80 bg-white p-6 lg:relative lg:w-64 lg:p-0 lg:bg-transparent">
-              <div className="flex items-center justify-between lg:hidden mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">{tCommon("buttons.filter")}</h2>
+            <div className="absolute right-0 top-0 h-full w-80 bg-white p-[var(--space-fluid-lg)] lg:relative lg:w-64 lg:p-0 lg:bg-transparent">
+              <div className="flex items-center justify-between lg:hidden mb-[var(--space-fluid-md)]">
+                <h2 className="text-[length:var(--text-fluid-lg)] font-semibold text-slate-900">{tCommon("buttons.filter")}</h2>
                 <button
                   type="button"
                   onClick={() => setMobileFiltersOpen(false)}
@@ -234,7 +238,7 @@ export default function VehiclesPage() {
           </aside>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-[var(--space-fluid-lg)]">
               <p className="text-slate-600">
                 <span className="font-semibold text-[#0369A1]">{filteredVehicles.length}</span>{" "}
                 {t("title").toLowerCase()}
@@ -271,7 +275,7 @@ export default function VehiclesPage() {
 
             <div
               className={cn(
-                "grid gap-6",
+                "grid gap-[var(--space-fluid-lg)]",
                 viewMode === "grid"
                   ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
                   : "grid-cols-1"
@@ -281,16 +285,16 @@ export default function VehiclesPage() {
                 <div
                   key={vehicle.id}
                   className={cn(
-                    "group relative rounded-2xl bg-white border border-[#E2E8F0]",
+                    "@container group relative rounded-2xl bg-white border border-[#E2E8F0]",
                     "overflow-hidden transition-all duration-300",
                     "hover:shadow-xl hover:border-[#0369A1]/30 flex",
-                    viewMode === "list" ? "flex-col sm:flex-row" : "flex-col h-full"
+                    viewMode === "list" ? "flex-col @sm:flex-row" : "flex-col h-full"
                   )}
                 >
                   <div
                     className={cn(
                       "relative bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0] overflow-hidden shrink-0",
-                      viewMode === "list" ? "sm:w-64 aspect-[16/10] sm:aspect-auto" : "aspect-[16/10]"
+                      viewMode === "list" ? "@sm:w-64 aspect-[16/10] @sm:aspect-auto" : "aspect-[16/10]"
                     )}
                   >
                     {vehicle.image && (
@@ -310,48 +314,48 @@ export default function VehiclesPage() {
                     </div>
                     
                     {/* Top Badges */}
-                    <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-start gap-2 overflow-hidden pointer-events-none">
-                      <span className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
+                    <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
+                      <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
                         {t.has(`categories.${vehicle.group}`) ? t(`categories.${vehicle.group}`) : vehicle.group}
                       </span>
-                      <span className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
+                      <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
                         <Check className="h-3 w-3 shrink-0" />
                         <span className="truncate">{t("freeCancellation")}</span>
                       </span>
                     </div>
                   </div>
                   
-                  <div className="p-4 flex flex-col flex-1 space-y-4">
-                    <h3 className="text-base md:text-lg font-bold text-[#0F172A] truncate">
+                  <div className="p-[var(--space-fluid-sm)] flex flex-col flex-1 space-y-[var(--space-fluid-sm)]">
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] truncate">
                       {vehicle.name}
                     </h3>
 
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-                        <Users className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                    <div className="flex flex-wrap gap-[var(--space-fluid-xs)]">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+                        <Users className="h-3.5 w-3.5 text-[#0369A1]" />
                         {vehicle.passengers} {t("features.seats")}
                       </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-                        <Briefcase className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+                        <Briefcase className="h-3.5 w-3.5 text-[#0369A1]" />
                         {vehicle.luggage}
                       </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-                        <Gauge className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+                        <Gauge className="h-3.5 w-3.5 text-[#0369A1]" />
                         {t(`features.${vehicle.transmission}`)}
                       </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-                        <Fuel className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+                        <Fuel className="h-3.5 w-3.5 text-[#0369A1]" />
                         {t(`features.${vehicle.fuelType}`)}
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-2 overflow-hidden">
+                    <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-[var(--space-fluid-xs)] overflow-hidden">
                       <div className="space-y-0.5 whitespace-nowrap min-w-0">
                         <div className="flex items-baseline gap-1 truncate">
-                          <span className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">
+                          <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
                             ₺ {vehicle.dailyRate}
                           </span>
-                          <span className="text-[10px] md:text-xs text-[#64748B]">
+                          <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
                             /{t("pricePerDay")}
                           </span>
                         </div>
@@ -361,7 +365,7 @@ export default function VehiclesPage() {
                         <Link
                           href={{ pathname: "/vehicles/[id]", params: { id: vehicle.id } }}
                           className={cn(
-                            "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                            "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
                             "transition-all duration-200",
                             "focus:outline-none focus:ring-2 focus:ring-offset-2",
                             "text-white bg-[#0369A1]",
@@ -375,7 +379,7 @@ export default function VehiclesPage() {
                       ) : (
                         <span
                           className={cn(
-                            "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                            "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
                             "text-[#94A3B8] bg-[#F1F5F9]",
                             "cursor-not-allowed"
                           )}

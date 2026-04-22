@@ -146,7 +146,7 @@ export default function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-[var(--space-fluid-md)] @container">
       {submitError && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -183,7 +183,7 @@ export default function ContactForm() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 @md:grid-cols-2 gap-[var(--space-fluid-md)]">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-[#0F172A] mb-2">
             {t("email")} <span className="text-red-500">*</span>

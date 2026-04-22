@@ -71,64 +71,64 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="bg-[#0F172A] py-16 lg:py-24">
+      <div className="bg-[#0F172A] py-[var(--space-fluid-3xl)]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-3xl lg:text-5xl font-bold text-white mb-6">
+            <h1 className="text-[length:var(--text-fluid-5xl)] font-bold text-white mb-6">
               {t("title")}
             </h1>
-            <p className="text-lg lg:text-xl text-white/70">
+            <p className="text-[length:var(--text-fluid-xl)] text-white/70">
               {t("subtitle")}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-[var(--space-fluid-3xl)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-fluid-2xl)] items-center mb-[var(--space-fluid-3xl)]">
           <div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-6">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-6">
               {t("ourStory.title")}
             </h2>
-            <div className="space-y-4 text-[#475569]">
+            <div className="space-y-[var(--space-fluid-sm)] text-[length:var(--text-fluid-base)] text-[#475569]">
               <p>{t("ourStory.p1")}</p>
               <p>{t("ourStory.p2")}</p>
               <p>{t("ourStory.p3")}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-[var(--space-fluid-md)]">
             {stats.map((stat) => {
               const Icon = stat.icon;
               return (
                 <div
                   key={stat.label}
                   className={cn(
-                    "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                    "p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                     "text-center transition-all duration-300 hover:shadow-lg"
                   )}
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F9FF] mx-auto mb-4">
                     <Icon className="h-6 w-6 text-[#0369A1]" />
                   </div>
-                  <p className="text-3xl font-bold text-[#0F172A] mb-1">{stat.value}</p>
-                  <p className="text-sm text-[#64748B]">{stat.label}</p>
+                  <p className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-1">{stat.value}</p>
+                  <p className="text-[length:var(--text-fluid-sm)] text-[#64748B]">{stat.label}</p>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div className="mb-20">
+        <div className="mb-[var(--space-fluid-3xl)]">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-4">
               {t("whyChooseUs.title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {t("whyChooseUs.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-fluid-lg)]">
             {[
               {
                 id: "insurance",
@@ -160,7 +160,7 @@ export default function AboutPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                    "p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                     "transition-all duration-300",
                     "hover:shadow-lg hover:border-[#0369A1]/20"
                   )}
@@ -168,32 +168,32 @@ export default function AboutPage() {
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#F0F9FF] mb-5">
                     <Icon className="h-7 w-7 text-[#0369A1]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0F172A] mb-2">{item.title}</h3>
-                  <p className="text-sm text-[#64748B] leading-relaxed">{item.description}</p>
+                  <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] mb-2">{item.title}</h3>
+                  <p className="text-[length:var(--text-fluid-sm)] text-[#64748B] leading-relaxed">{item.description}</p>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div className="mb-20">
+        <div className="mb-[var(--space-fluid-3xl)]">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-4">
               {t("ourValues.title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {t("ourValues.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--space-fluid-lg)]">
             {values.map((value) => {
               const Icon = value.icon;
               return (
                 <div
                   key={value.id}
                   className={cn(
-                    "flex gap-5 p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                    "flex gap-[var(--space-fluid-md)] p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                     "transition-all duration-300 hover:shadow-md"
                   )}
                 >
@@ -201,8 +201,8 @@ export default function AboutPage() {
                     <Icon className="h-6 w-6 text-[#0369A1]" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[#0F172A] mb-2">{value.title}</h3>
-                    <p className="text-sm text-[#64748B] leading-relaxed">{value.description}</p>
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] mb-2">{value.title}</h3>
+                    <p className="text-[length:var(--text-fluid-sm)] text-[#64748B] leading-relaxed">{value.description}</p>
                   </div>
                 </div>
               );
@@ -210,22 +210,22 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <div className="mb-20">
+        <div className="mb-[var(--space-fluid-3xl)]">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-4">
               {t("ourFleet.title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {t("ourFleet.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-fluid-lg)]">
             {fleetCategories.map((category) => (
               <div
                 key={category.category}
                 className={cn(
-                  "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                  "p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                   "flex items-center gap-4 transition-all duration-300",
                   "hover:shadow-lg hover:border-[#0369A1]/20"
                 )}
@@ -234,9 +234,9 @@ export default function AboutPage() {
                   <Car className="h-7 w-7 text-[#0369A1]" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-[#0F172A]">{category.category}</h3>
-                  <p className="text-sm text-[#0369A1] font-medium">{category.count} {t("ourFleet.vehicles")}</p>
-                  <p className="text-xs text-[#64748B] mt-1">{category.description}</p>
+                  <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A]">{category.category}</h3>
+                  <p className="text-[length:var(--text-fluid-sm)] text-[#0369A1] font-medium">{category.count} {t("ourFleet.vehicles")}</p>
+                  <p className="text-[length:var(--text-fluid-xs)] text-[#64748B] mt-1">{category.description}</p>
                 </div>
               </div>
             ))}
@@ -245,20 +245,20 @@ export default function AboutPage() {
 
         <div>
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl lg:text-3xl font-bold text-[#0F172A] mb-4">
+            <h2 className="text-[length:var(--text-fluid-3xl)] font-bold text-[#0F172A] mb-4">
               {t("coverage.title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {t("coverage.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[var(--space-fluid-lg)]">
             {coverageAreas.map((area) => (
               <div
                 key={area.name}
                 className={cn(
-                  "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                  "p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                   "transition-all duration-300 hover:shadow-md"
                 )}
               >
@@ -271,8 +271,8 @@ export default function AboutPage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[#0F172A] mb-1">{area.name}</h3>
-                    <p className="text-sm text-[#64748B]">
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] mb-1">{area.name}</h3>
+                    <p className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
                       {area.type === "airport" ? area.distance : area.address}
                     </p>
                     {area.type === "airport" && (

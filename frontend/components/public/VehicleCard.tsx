@@ -11,20 +11,20 @@ import {
 import { cn } from "@/lib/utils";
 
 interface VehicleCardProps {
-  id: string;
-  name: string;
-  category: string;
-  image?: string;
-  seats: number;
-  doors?: number;
-  transmission: "manual" | "automatic";
-  fuelType: "gasoline" | "diesel" | "hybrid";
-  airConditioning?: boolean;
-  pricePerDay: number;
-  totalPrice?: number;
-  days?: number;
-  freeKm?: number;
-  isAvailable?: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly category: string;
+  readonly image?: string;
+  readonly seats: number;
+  readonly doors?: number;
+  readonly transmission: "manual" | "automatic";
+  readonly fuelType: "gasoline" | "diesel" | "hybrid";
+  readonly airConditioning?: boolean;
+  readonly pricePerDay: number;
+  readonly totalPrice?: number;
+  readonly days?: number;
+  readonly freeKm?: number;
+  readonly isAvailable?: boolean;
 }
 
 export default function VehicleCard({
@@ -45,12 +45,10 @@ export default function VehicleCard({
 }: VehicleCardProps) {
   const t = useTranslations("vehicles");
 
-  const displayPrice = totalPrice ?? pricePerDay * days;
-
   return (
     <div
       className={cn(
-        "group relative rounded-2xl bg-white border border-[#E2E8F0]",
+        "@container group relative rounded-2xl bg-white border border-[#E2E8F0]",
         "overflow-hidden transition-all duration-300",
         "hover:shadow-xl hover:border-[#0369A1]/30 flex flex-col h-full",
         !isAvailable && "opacity-70"
@@ -71,11 +69,11 @@ export default function VehicleCard({
         )}
 
         {/* Top Badges */}
-        <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-start gap-2 overflow-hidden pointer-events-none">
-          <span className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
+        <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
+          <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
             {t(`categories.${category}`)}
           </span>
-          <span className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
+          <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
             <Check className="h-3 w-3 shrink-0" />
             <span className="truncate">{t("freeCancellation")}</span>
           </span>
@@ -83,52 +81,52 @@ export default function VehicleCard({
       </div>
 
       {/* Content */}
-      <div className="p-4 flex flex-col flex-1 space-y-4">
+      <div className="p-[var(--space-fluid-sm)] flex flex-col flex-1 space-y-[var(--space-fluid-sm)]">
         {/* Name */}
-        <h3 className="text-base md:text-lg font-bold text-[#0F172A] truncate">
+        <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] truncate">
           {name}
         </h3>
 
         {/* Features */}
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-            <Users className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+        <div className="flex flex-wrap gap-[var(--space-fluid-xs)]">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+            <Users className="h-3.5 w-3.5 text-[#0369A1]" />
             {seats} {t("features.seats")}
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-            <Gauge className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+            <Gauge className="h-3.5 w-3.5 text-[#0369A1]" />
             {t(`features.${transmission}`)}
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-            <Fuel className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+            <Fuel className="h-3.5 w-3.5 text-[#0369A1]" />
             {t(`features.${fuelType}`)}
           </div>
           {airConditioning && (
-            <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
-              <Snowflake className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
+              <Snowflake className="h-3.5 w-3.5 text-[#0369A1]" />
               {t("features.airConditioning")}
             </div>
           )}
         </div>
 
         {/* Free KM */}
-        <div className="text-[11px] md:text-xs text-[#64748B]">
+        <div className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
           {t("freeKm", { km: freeKm })}
         </div>
 
         {/* Price & CTA */}
-        <div className="pt-4 mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-2 overflow-hidden">
+        <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-[var(--space-fluid-xs)] overflow-hidden">
           <div className="space-y-0.5 whitespace-nowrap min-w-0">
             <div className="flex items-baseline gap-1 truncate">
-              <span className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">
+              <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
                 ₺ {pricePerDay}
               </span>
-              <span className="text-[10px] md:text-xs text-[#64748B]">
+              <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
                 /{t("pricePerDay")}
               </span>
             </div>
             {days > 1 && totalPrice && (
-              <div className="text-[10px] text-[#64748B] truncate">
+              <div className="text-[length:var(--text-fluid-sm)] text-[#64748B] truncate">
                 {t("totalPrice")}: ₺ {totalPrice}
               </div>
             )}
@@ -138,7 +136,7 @@ export default function VehicleCard({
             <Link
               href={{ pathname: "/vehicles/[id]", params: { id } }}
               className={cn(
-                "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
                 "transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "text-white bg-[#0369A1]",
@@ -152,7 +150,7 @@ export default function VehicleCard({
           ) : (
             <span
               className={cn(
-                "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
                 "text-[#94A3B8] bg-[#F1F5F9]",
                 "cursor-not-allowed"
               )}

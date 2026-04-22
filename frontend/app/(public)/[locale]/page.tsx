@@ -80,28 +80,28 @@ export default function HomePage() {
       <Hero />
 
       {/* Featured Vehicles */}
-      <section className="py-16 lg:py-24 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
+      <section className="py-[var(--space-fluid-3xl)] bg-white">
+        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)]">
+          <div className="text-center max-w-2xl mx-auto mb-[var(--space-fluid-xl)]">
+            <h2 className="text-[length:var(--text-fluid-4xl)] font-bold text-[#0F172A] mb-[var(--space-fluid-sm)]">
               {tv("title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {tv("subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-fluid-lg)]">
             {featuredVehicles.map((vehicle) => (
               <VehicleCard key={vehicle.id} {...vehicle} />
             ))}
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-[var(--space-fluid-xl)] text-center">
             <Link
               href="/vehicles"
               className={cn(
-                "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                "inline-flex items-center gap-[var(--space-fluid-xs)] px-[var(--space-fluid-xl)] py-[var(--space-fluid-md)] rounded-xl",
                 "text-base font-semibold text-[#0369A1]",
                 "border-2 border-[#0369A1]",
                 "hover:bg-[#0369A1] hover:text-white",
@@ -117,33 +117,33 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-16 lg:py-24 bg-[#F8FAFC]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
+      <section className="py-[var(--space-fluid-3xl)] bg-[#F8FAFC]">
+        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)]">
+          <div className="text-center max-w-2xl mx-auto mb-[var(--space-fluid-2xl)]">
+            <h2 className="text-[length:var(--text-fluid-4xl)] font-bold text-[#0F172A] mb-[var(--space-fluid-sm)]">
               {t("whyChooseUs.title")}
             </h2>
-            <p className="text-lg text-[#64748B]">
+            <p className="text-[length:var(--text-fluid-lg)] text-[#64748B]">
               {t("whyChooseUs.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-fluid-xl)]">
             {whyChooseUsKeys.map((key) => {
               const Icon = whyChooseUsIcons[key];
               return (
                 <div
                   key={key}
                   className={cn(
-                    "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
+                    "p-[var(--space-fluid-lg)] rounded-2xl bg-white border border-[#E2E8F0]",
                     "transition-all duration-300",
                     "hover:shadow-lg hover:border-[#0369A1]/20"
                   )}
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#F0F9FF] mb-5">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#F0F9FF] mb-[var(--space-fluid-sm)]">
                     <Icon className="h-7 w-7 text-[#0369A1]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#0F172A] mb-2">
+                  <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] mb-[var(--space-fluid-xs)]">
                     {t(`whyChooseUs.${key}.title`)}
                   </h3>
                   <p className="text-sm text-[#64748B] leading-relaxed">
@@ -157,20 +157,20 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-16 lg:py-24 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-            <div className="lg:sticky lg:top-32 lg:self-start">
-              <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
+      <section id="faq" className="py-[var(--space-fluid-3xl)] bg-white">
+        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-fluid-2xl)]">
+            <div className="lg:sticky lg:top-[var(--space-fluid-3xl)] lg:self-start">
+              <h2 className="text-[length:var(--text-fluid-4xl)] font-bold text-[#0F172A] mb-[var(--space-fluid-sm)]">
                 {t("faq.title")}
               </h2>
-              <p className="text-lg text-[#64748B] mb-8">
+              <p className="text-[length:var(--text-fluid-lg)] text-[#64748B] mb-[var(--space-fluid-lg)]">
                 {t("faq.subtitle")}
               </p>
               <Link
                 href="/contact"
                 className={cn(
-                  "inline-flex items-center gap-2 px-6 py-3 rounded-xl",
+                  "inline-flex items-center gap-[var(--space-fluid-xs)] px-[var(--space-fluid-lg)] py-[var(--space-fluid-sm)] rounded-xl",
                   "text-sm font-semibold text-white bg-[#0369A1]",
                   "hover:bg-[#0284C7] active:bg-[#075985]",
                   "transition-all duration-200 cursor-pointer",
@@ -182,14 +182,14 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-[var(--space-fluid-sm)]">
               {faqs.map((faq) => (
                 <details
                   key={faq.id}
                   className="group rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden"
                 >
-                  <summary className="flex items-center justify-between cursor-pointer p-6 list-none select-none">
-                    <h3 className="text-lg font-bold text-[#0F172A] pr-4">
+                  <summary className="flex items-center justify-between cursor-pointer p-[var(--space-fluid-lg)] list-none select-none">
+                    <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] pr-4">
                       {faq.question}
                     </h3>
                     <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white border border-[#E2E8F0] group-open:bg-[#0369A1] group-open:border-[#0369A1] transition-colors">
@@ -204,7 +204,7 @@ export default function HomePage() {
                       </svg>
                     </span>
                   </summary>
-                  <div className="px-6 pb-6">
+                  <div className="px-[var(--space-fluid-lg)] pb-[var(--space-fluid-lg)]">
                     <p className="text-sm text-[#64748B] leading-relaxed">
                       {faq.answer}
                     </p>
@@ -217,20 +217,20 @@ export default function HomePage() {
       </section>
 
       {/* Contact CTA */}
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-[#0369A1] to-[#0C4A6E]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="py-[var(--space-fluid-3xl)] bg-gradient-to-br from-[#0369A1] to-[#0C4A6E]">
+        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)]">
           <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+            <h2 className="text-[length:var(--text-fluid-4xl)] font-bold text-white mb-[var(--space-fluid-md)]">
               {t("cta.title")}
             </h2>
-            <p className="text-xl text-white/80 mb-8">
+            <p className="text-[length:var(--text-fluid-xl)] text-white/80 mb-[var(--space-fluid-lg)]">
               {t("cta.subtitle")}
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-[var(--space-fluid-sm)]">
               <Link
                 href="/vehicles"
                 className={cn(
-                  "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                  "inline-flex items-center gap-[var(--space-fluid-xs)] px-[var(--space-fluid-xl)] py-[var(--space-fluid-md)] rounded-xl",
                   "text-base font-bold text-[#0369A1] bg-white",
                   "hover:bg-[#F8FAFC] active:bg-[#E2E8F0]",
                   "transition-all duration-200 cursor-pointer",
@@ -245,7 +245,7 @@ export default function HomePage() {
               <Link
                 href="/contact"
                 className={cn(
-                  "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                  "inline-flex items-center gap-[var(--space-fluid-xs)] px-[var(--space-fluid-xl)] py-[var(--space-fluid-md)] rounded-xl",
                   "text-base font-bold text-white",
                   "border-2 border-white/30 bg-white/5",
                   "hover:bg-white/10 hover:border-white/50",
