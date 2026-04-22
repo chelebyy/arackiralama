@@ -79,11 +79,11 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           {t("title")}
         </h3>
 
-        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-7" onSubmit={(e) => e.preventDefault()}>
           {/* Locations Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Pickup Location */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label htmlFor="pickupLocation" className="block text-sm font-semibold text-[#334155]">
                 {t("pickupLocation")}
               </label>
@@ -99,7 +99,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                     }
                   }}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-10 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
@@ -114,14 +114,14 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                     </option>
                   ))}
                 </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                   <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
                 </div>
               </div>
             </div>
 
             {/* Return Location */}
-            <div className={cn("space-y-2", sameLocation && "opacity-60")}>
+            <div className={cn("space-y-4", sameLocation && "opacity-60")}>
               <label htmlFor="returnLocation" className="block text-sm font-semibold text-[#334155]">
                 {t("returnLocation")}
               </label>
@@ -133,7 +133,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   onChange={(e) => setReturnLocation(e.target.value)}
                   disabled={sameLocation}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-10 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
@@ -148,11 +148,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                     </option>
                   ))}
                 </select>
-                {!sameLocation && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
-                  </div>
-                )}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <ChevronDown className={cn("h-4 w-4", sameLocation ? "text-[#94A3B8]" : "text-[#64748B]")} aria-hidden="true" />
+                </div>
               </div>
             </div>
           </div>
@@ -168,11 +166,11 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                 }
               }}
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded border-2",
+                "flex h-5 w-5 items-center justify-center rounded-md border-2",
                 "transition-all duration-200",
                 sameLocation
                   ? "bg-[#0369A1] border-[#0369A1]"
-                  : "bg-white border-[#CBD5E1] group-hover:border-[#0369A1]"
+                  : "bg-white border-[#94A3B8] group-hover:border-[#0369A1]"
               )}
             >
               {sameLocation && <Check className="h-3.5 w-3.5 text-white" />}
@@ -183,9 +181,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           </label>
 
           {/* Dates Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Pickup Date */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label htmlFor="pickupDate" className="block text-sm font-semibold text-[#334155]">
                 {t("pickupDate")}
               </label>
@@ -197,7 +195,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   value={pickupDate}
                   onChange={(e) => setPickupDate(e.target.value)}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-4 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
@@ -208,7 +206,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
             </div>
 
             {/* Pickup Time */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label htmlFor="pickupTime" className="block text-sm font-semibold text-[#334155]">
                 {t("pickupTime")}
               </label>
@@ -220,7 +218,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   value={pickupTime}
                   onChange={(e) => setPickupTime(e.target.value)}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-4 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
@@ -231,7 +229,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
             </div>
 
             {/* Return Date */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label htmlFor="returnDate" className="block text-sm font-semibold text-[#334155]">
                 {t("returnDate")}
               </label>
@@ -243,7 +241,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-4 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
@@ -254,7 +252,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
             </div>
 
             {/* Return Time */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label htmlFor="returnTime" className="block text-sm font-semibold text-[#334155]">
                 {t("returnTime")}
               </label>
@@ -266,7 +264,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
                   value={returnTime}
                   onChange={(e) => setReturnTime(e.target.value)}
                   className={cn(
-                    "w-full pl-12 pr-4 py-3.5 rounded-xl",
+                    "w-full h-12 pl-12 pr-4 rounded-xl",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
                     "text-sm text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",

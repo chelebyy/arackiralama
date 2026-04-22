@@ -117,7 +117,7 @@ export default function Hero() {
             </div>
 
             {/* Right Content - Search Form */}
-            <div className="lg:justify-self-end w-full max-w-md">
+            <div className="lg:justify-self-end w-full max-w-xl">
               <SearchForm variant="hero" />
             </div>
           </div>

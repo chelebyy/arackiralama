@@ -197,4 +197,12 @@
   [data-slot="dialog-overlay"], [data-slot="sheet-overlay"], [data-slot="drawer-overlay"] {
     @apply bg-black/20! backdrop-blur-sm;
   }
+
+  /* Hide native date/time picker indicators to prevent double icons */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    display: none;
+    -webkit-appearance: none;
+  }
 }
