@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
 import {
   Car,
   Users,
@@ -17,6 +18,7 @@ import {
   Gauge,
   Snowflake,
   X,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +29,8 @@ interface Vehicle {
   image: string;
   passengers: number;
   luggage: number;
-  transmission: string;
-  fuelType: string;
+  transmission: "manual" | "automatic";
+  fuelType: "gasoline" | "diesel" | "hybrid";
   dailyRate: number;
   features: string[];
   available: boolean;
@@ -38,12 +40,12 @@ const mockVehicles: Vehicle[] = [
   {
     id: "1",
     name: "Fiat Egea",
-    group: "Economy",
+    group: "economy",
     image: "/images/vehicles/fiat-egea.png",
     passengers: 5,
     luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
+    transmission: "automatic",
+    fuelType: "gasoline",
     dailyRate: 45,
     features: ["A/C", "Bluetooth", "GPS"],
     available: true,
@@ -51,12 +53,12 @@ const mockVehicles: Vehicle[] = [
   {
     id: "2",
     name: "Renault Megane",
-    group: "Compact",
+    group: "compact",
     image: "/images/vehicles/renault-megane.png",
     passengers: 5,
     luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
+    transmission: "automatic",
+    fuelType: "diesel",
     dailyRate: 55,
     features: ["A/C", "Cruise Control", "Parking Sensors"],
     available: true,
@@ -64,12 +66,12 @@ const mockVehicles: Vehicle[] = [
   {
     id: "3",
     name: "VW Passat",
-    group: "Midsize",
+    group: "midsize",
     image: "/images/vehicles/vw-passat.png",
     passengers: 5,
     luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
+    transmission: "automatic",
+    fuelType: "diesel",
     dailyRate: 75,
     features: ["Leather Seats", "Sunroof", "Navigation"],
     available: true,
@@ -77,12 +79,12 @@ const mockVehicles: Vehicle[] = [
   {
     id: "4",
     name: "BMW 3 Series",
-    group: "Premium",
+    group: "luxury",
     image: "/images/vehicles/bmw-3.png",
     passengers: 5,
     luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
+    transmission: "automatic",
+    fuelType: "gasoline",
     dailyRate: 95,
     features: ["Leather Seats", "Premium Sound", "Parking Assistant"],
     available: true,
@@ -90,12 +92,12 @@ const mockVehicles: Vehicle[] = [
   {
     id: "5",
     name: "Mercedes Vito",
-    group: "Minivan",
+    group: "minivan",
     image: "/images/vehicles/mercedes-vito.png",
     passengers: 9,
     luggage: 5,
-    transmission: "Automatic",
-    fuelType: "Diesel",
+    transmission: "automatic",
+    fuelType: "diesel",
     dailyRate: 120,
     features: ["Extra Space", "Dual A/C", "Rear Camera"],
     available: true,
@@ -103,33 +105,36 @@ const mockVehicles: Vehicle[] = [
   {
     id: "6",
     name: "Audi Q5",
-    group: "SUV",
+    group: "suv",
     image: "/images/vehicles/audi-q5.png",
     passengers: 5,
     luggage: 4,
-    transmission: "Automatic",
-    fuelType: "Diesel",
+    transmission: "automatic",
+    fuelType: "diesel",
     dailyRate: 110,
     features: ["4WD", "Panoramic Roof", "Virtual Cockpit"],
     available: true,
   },
 ];
 
-const vehicleGroups = ["All", "Economy", "Compact", "Midsize", "Premium", "SUV", "Minivan"];
+const vehicleGroups = ["all", "economy", "compact", "suv", "luxury", "minivan"];
 
 const offices = [
-  { id: "ala", name: "Alanya City Center" },
-  { id: "gzp", name: "Gazipasa Airport" },
-  { id: "ayt", name: "Antalya Airport" },
+  { id: "ala", name: "Alanya Şehir Merkezi" },
+  { id: "gzp", name: "Gazipaşa Havalimanı" },
+  { id: "ayt", name: "Antalya Havalimanı" },
 ];
 
 export default function VehiclesPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = params.locale as string;
+  const t = useTranslations("vehicles");
+  const tCommon = useTranslations("common");
+  const tSearch = useTranslations("searchForm");
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedGroup, setSelectedGroup] = useState("All");
+  const [selectedGroup, setSelectedGroup] = useState("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -139,7 +144,7 @@ export default function VehiclesPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
 
   const filteredVehicles =
-    selectedGroup === "All"
+    selectedGroup === "all"
       ? mockVehicles
       : mockVehicles.filter((v) => v.group === selectedGroup);
 
@@ -150,18 +155,18 @@ export default function VehiclesPage() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-4 bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-sky-600" />
+            <div className="flex items-center gap-4 bg-slate-50 px-4 py-3 rounded-lg border border-slate-200 overflow-x-auto">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <MapPin className="h-4 w-4 text-[#0369A1]" />
                 <span className="text-sm text-slate-700">
-                  {offices.find((o) => o.id === pickupOffice)?.name}
+                  {tSearch(`locationOptions.${offices.find((o) => o.id === pickupOffice)?.id === 'ala' ? 'cityCenter' : offices.find((o) => o.id === pickupOffice)?.id === 'ayt' ? 'airportAntalya' : 'airport'}`)}
                 </span>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-sky-600" />
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <Calendar className="h-4 w-4 text-[#0369A1]" />
                 <span className="text-sm text-slate-700">
-                  {pickupDate} → {returnDate}
+                  {pickupDate} &rarr; {returnDate}
                 </span>
               </div>
             </div>
@@ -177,13 +182,13 @@ export default function VehiclesPage() {
             className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filters
+            {tCommon("buttons.filter")}
           </button>
 
           <aside
             className={cn(
-              "fixed inset-0 z-40 lg:relative lg:inset-auto lg:block",
-              mobileFiltersOpen ? "block" : "hidden lg:block"
+              "fixed inset-0 z-40 lg:relative lg:inset-auto lg:block shrink-0",
+              mobileFiltersOpen ? "block" : "hidden lg:block",
             )}
           >
             <button
@@ -194,7 +199,7 @@ export default function VehiclesPage() {
             />
             <div className="absolute right-0 top-0 h-full w-80 bg-white p-6 lg:relative lg:w-64 lg:p-0 lg:bg-transparent">
               <div className="flex items-center justify-between lg:hidden mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{tCommon("buttons.filter")}</h2>
                 <button
                   type="button"
                   onClick={() => setMobileFiltersOpen(false)}
@@ -205,8 +210,8 @@ export default function VehiclesPage() {
                 </button>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-900 mb-4">Vehicle Group</h3>
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">{t("title")}</h3>
                 <div className="space-y-2">
                   {vehicleGroups.map((group) => (
                     <button
@@ -216,11 +221,11 @@ export default function VehiclesPage() {
                       className={cn(
                         "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
                         selectedGroup === group
-                          ? "bg-sky-50 text-sky-700 font-medium"
+                          ? "bg-[#0369A1]/10 text-[#0369A1] font-medium"
                           : "text-slate-600 hover:bg-slate-50"
                       )}
                     >
-                      {group}
+                      {t.has(`categories.${group}`) ? t(`categories.${group}`) : group}
                     </button>
                   ))}
                 </div>
@@ -228,11 +233,11 @@ export default function VehiclesPage() {
             </div>
           </aside>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-6">
               <p className="text-slate-600">
-                <span className="font-semibold text-slate-900">{filteredVehicles.length}</span>{" "}
-                vehicles available
+                <span className="font-semibold text-[#0369A1]">{filteredVehicles.length}</span>{" "}
+                {t("title").toLowerCase()}
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -241,8 +246,8 @@ export default function VehiclesPage() {
                   className={cn(
                     "p-2 rounded-lg transition-colors",
                     viewMode === "grid"
-                      ? "bg-sky-100 text-sky-700"
-                      : "text-slate-400 hover:text-slate-600"
+                      ? "bg-[#0369A1]/10 text-[#0369A1]"
+                      : "text-slate-400 hover:text-slate-600 focus:bg-slate-100"
                   )}
                   aria-label="Grid view"
                 >
@@ -254,8 +259,8 @@ export default function VehiclesPage() {
                   className={cn(
                     "p-2 rounded-lg transition-colors",
                     viewMode === "list"
-                      ? "bg-sky-100 text-sky-700"
-                      : "text-slate-400 hover:text-slate-600"
+                      ? "bg-[#0369A1]/10 text-[#0369A1]"
+                      : "text-slate-400 hover:text-slate-600 focus:bg-slate-100"
                   )}
                   aria-label="List view"
                 >
@@ -273,71 +278,114 @@ export default function VehiclesPage() {
               )}
             >
               {filteredVehicles.map((vehicle) => (
-                <Link
+                <div
                   key={vehicle.id}
-                  href={`/${locale}/vehicles/${vehicle.id}?pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
                   className={cn(
-                    "group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-sky-200 transition-all duration-300",
-                    viewMode === "list" && "flex flex-col md:flex-row"
+                    "group relative rounded-2xl bg-white border border-[#E2E8F0]",
+                    "overflow-hidden transition-all duration-300",
+                    "hover:shadow-xl hover:border-[#0369A1]/30 flex",
+                    viewMode === "list" ? "flex-col sm:flex-row" : "flex-col h-full"
                   )}
                 >
                   <div
                     className={cn(
-                      "bg-slate-100 flex items-center justify-center",
-                      viewMode === "list" ? "md:w-64 h-48 md:h-auto" : "h-48"
+                      "relative bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0] overflow-hidden shrink-0",
+                      viewMode === "list" ? "sm:w-64 aspect-[16/10] sm:aspect-auto" : "aspect-[16/10]"
                     )}
                   >
-                    <Car className="h-20 w-20 text-slate-300" />
+                    {vehicle.image && (
+                      <img
+                        src={vehicle.image}
+                        alt={vehicle.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
+                          e.currentTarget.parentElement?.querySelector('.fallback')?.classList.add('flex');
+                        }}
+                      />
+                    )}
+                    <div className={cn("fallback absolute inset-0 items-center justify-center bg-slate-100", vehicle.image ? "hidden" : "flex")}>
+                      <Car className="w-16 h-16 md:w-24 md:h-24 text-[#CBD5E1]" aria-hidden="true" />
+                    </div>
+                    
+                    {/* Top Badges */}
+                    <div className="absolute top-4 left-0 right-0 px-4 flex justify-between items-start gap-2 overflow-hidden pointer-events-none">
+                      <span className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
+                        {t.has(`categories.${vehicle.group}`) ? t(`categories.${vehicle.group}`) : vehicle.group}
+                      </span>
+                      <span className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
+                        <Check className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{t("freeCancellation")}</span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-5 flex-1">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-1 rounded-full">
-                          {vehicle.group}
-                        </span>
-                        <h3
-                          className="text-lg font-semibold text-slate-900 mt-2"
-                          style={{ fontFamily: "Lexend, sans-serif" }}
-                        >
-                          {vehicle.name}
-                        </h3>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-sky-700">
-                          €{vehicle.dailyRate}
-                        </p>
-                        <p className="text-sm text-slate-500">per day</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4" /> {vehicle.passengers}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="h-4 w-4" /> {vehicle.luggage}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Gauge className="h-4 w-4" /> {vehicle.transmission}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Fuel className="h-4 w-4" /> {vehicle.fuelType}
-                      </span>
-                    </div>
+                  
+                  <div className="p-4 flex flex-col flex-1 space-y-4">
+                    <h3 className="text-base md:text-lg font-bold text-[#0F172A] truncate">
+                      {vehicle.name}
+                    </h3>
 
                     <div className="flex flex-wrap gap-2">
-                      {vehicle.features.map((feature) => (
-                        <span
-                          key={feature}
-                          className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded"
+                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
+                        <Users className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                        {vehicle.passengers} {t("features.seats")}
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
+                        <Briefcase className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                        {vehicle.luggage}
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
+                        <Gauge className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                        {t(`features.${vehicle.transmission}`)}
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg bg-[#F8FAFC] text-[11px] md:text-xs text-[#475569]">
+                        <Fuel className="h-3 md:h-3.5 w-3 md:w-3.5 text-[#0369A1]" />
+                        {t(`features.${vehicle.fuelType}`)}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-2 overflow-hidden">
+                      <div className="space-y-0.5 whitespace-nowrap min-w-0">
+                        <div className="flex items-baseline gap-1 truncate">
+                          <span className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">
+                            ₺ {vehicle.dailyRate}
+                          </span>
+                          <span className="text-[10px] md:text-xs text-[#64748B]">
+                            /{t("pricePerDay")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {vehicle.available ? (
+                        <Link
+                          href={{ pathname: "/vehicles/[id]", params: { id: vehicle.id } }}
+                          className={cn(
+                            "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                            "transition-all duration-200",
+                            "focus:outline-none focus:ring-2 focus:ring-offset-2",
+                            "text-white bg-[#0369A1]",
+                            "hover:bg-[#0284C7] active:bg-[#075985]",
+                            "cursor-pointer focus:ring-[#0369A1]",
+                            "shadow-md hover:shadow-lg"
+                          )}
                         >
-                          {feature === "A/C" && <Snowflake className="h-3 w-3" />}
-                          {feature}
+                          {t("bookNow")}
+                        </Link>
+                      ) : (
+                        <span
+                          className={cn(
+                            "px-3 py-2 md:px-4 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold whitespace-nowrap shrink-0",
+                            "text-[#94A3B8] bg-[#F1F5F9]",
+                            "cursor-not-allowed"
+                          )}
+                        >
+                          {t("unavailable")}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 
@@ -347,9 +395,9 @@ export default function VehiclesPage() {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 disabled:opacity-50 hover:bg-slate-50"
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 transition-colors"
                 >
-                  Previous
+                  {tCommon("buttons.back")}
                 </button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -360,7 +408,7 @@ export default function VehiclesPage() {
                       className={cn(
                         "w-10 h-10 rounded-lg text-sm font-medium transition-colors",
                         currentPage === page
-                          ? "bg-sky-600 text-white"
+                          ? "bg-[#0369A1] text-white shadow-md border-transparent"
                           : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
                       )}
                     >
@@ -372,9 +420,9 @@ export default function VehiclesPage() {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 disabled:opacity-50 hover:bg-slate-50"
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 transition-colors"
                 >
-                  Next
+                  {tCommon("buttons.next")}
                 </button>
               </div>
             )}
