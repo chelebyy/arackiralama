@@ -204,6 +204,15 @@ async function handleDashboardAuth(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Skip internal Next.js assets, Vercel internals, and static files
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/_vercel") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
@@ -217,7 +226,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    String.raw`/((?!api|_next|_vercel|.*\..*).*)`,
+    "/((?!api|_next|_vercel|.*\\..*).*)",
     "/",
     "/dashboard/:path*"
   ]
