@@ -115,9 +115,9 @@ export default function VehicleCard({
         </div>
 
         {/* Price & CTA */}
-        <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-[var(--space-fluid-xs)] overflow-hidden">
-          <div className="space-y-0.5 whitespace-nowrap min-w-0">
-            <div className="flex items-baseline gap-1 truncate">
+        <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex flex-col gap-[var(--space-fluid-xs)]">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-baseline gap-1">
               <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
                 ₺ {pricePerDay}
               </span>
@@ -126,7 +126,7 @@ export default function VehicleCard({
               </span>
             </div>
             {days > 1 && totalPrice && (
-              <div className="text-[length:var(--text-fluid-sm)] text-[#64748B] truncate">
+              <div className="text-[length:var(--text-fluid-sm)] text-[#64748B] whitespace-nowrap">
                 {t("totalPrice")}: ₺ {totalPrice}
               </div>
             )}
@@ -136,7 +136,7 @@ export default function VehicleCard({
             <Link
               href={{ pathname: "/vehicles/[id]", params: { id } }}
               className={cn(
-                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
+                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
                 "transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "text-white bg-[#0369A1]",
@@ -150,7 +150,7 @@ export default function VehicleCard({
           ) : (
             <span
               className={cn(
-                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
+                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
                 "text-[#94A3B8] bg-[#F1F5F9]",
                 "cursor-not-allowed"
               )}

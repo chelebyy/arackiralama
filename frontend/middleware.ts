@@ -98,9 +98,16 @@ function isPublicWebsiteRoute(pathname: string): boolean {
   return PUBLIC_LOCALES.some((locale) => pathname === locale || pathname.startsWith(`${locale}/`));
 }
 
-async function handleDashboardAuth(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+interface AuthContext {
+  request: NextRequest;
+  accessToken: string | undefined;
+  principalScope: string | null | undefined;
+  role: string | undefined;
+  refreshedAccessToken: string | null;
+  backendRefreshResponse: Response | null;
+}
 
+async function resolveAuthContext(request: NextRequest): Promise<AuthContext> {
   let accessToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
   let claims = parseAccessTokenClaims(accessToken);
   let tokenScope = normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined);
@@ -127,30 +134,29 @@ async function handleDashboardAuth(request: NextRequest) {
   let principalScope = normalizePrincipalScope((claims?.principal_type as string | undefined) ?? undefined);
   const role = typeof claims?.role === "string" ? claims.role : undefined;
 
-  const shouldValidateTokenWithBackend = Boolean(accessToken && principalScope);
-  if (shouldValidateTokenWithBackend) {
+  if (accessToken && principalScope) {
     const validationResult = await validateAccessTokenWithBackend({
-      accessToken: accessToken as string,
+      accessToken,
       preferredScope: principalScope ?? tokenScope
     });
 
-    if (!validationResult) {
-      principalScope = null;
-    } else {
-      principalScope = validationResult.scope;
-    }
+    principalScope = validationResult ? validationResult.scope : null;
   }
 
+  return { request, accessToken, principalScope, role, refreshedAccessToken, backendRefreshResponse };
+}
+
+function resolveRouteResponse(ctx: AuthContext): NextResponse {
+  const { request, accessToken, principalScope, role, refreshedAccessToken, backendRefreshResponse } = ctx;
+  const pathname = request.nextUrl.pathname;
   const isRootRequest = pathname === "/" || pathname === "/dashboard";
+
+  const withCookies = (response: NextResponse) =>
+    applyRefreshedCookies({ request, response, refreshedAccessToken, backendRefreshResponse });
 
   if (!principalScope) {
     if (isGuestRoute(pathname) || isPublicRoute(pathname)) {
-      return applyRefreshedCookies({
-        request,
-        response: NextResponse.next(),
-        refreshedAccessToken,
-        backendRefreshResponse
-      });
+      return withCookies(NextResponse.next());
     }
 
     const response = createLoginRedirect(request, pathname);
@@ -163,77 +169,36 @@ async function handleDashboardAuth(request: NextRequest) {
     return response;
   }
 
-  if (isRootRequest) {
+  if (isRootRequest || isGuestRoute(pathname)) {
     const destination = chooseDefaultRedirect(principalScope, role);
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.redirect(new URL(destination, request.url)),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
-  }
-
-  if (isGuestRoute(pathname)) {
-    const destination = chooseDefaultRedirect(principalScope, role);
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.redirect(new URL(destination, request.url)),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
+    return withCookies(NextResponse.redirect(new URL(destination, request.url)));
   }
 
   if (isPublicRoute(pathname)) {
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.next(),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
+    return withCookies(NextResponse.next());
   }
 
   if (principalScope === "Customer") {
-    if (!isCustomerOnlyRoute(pathname)) {
-      return applyRefreshedCookies({
-        request,
-        response: NextResponse.redirect(new URL("/dashboard/forbidden", request.url)),
-        refreshedAccessToken,
-        backendRefreshResponse
-      });
-    }
-
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.next(),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
+    const target = isCustomerOnlyRoute(pathname)
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL("/dashboard/forbidden", request.url));
+    return withCookies(target);
   }
 
   if (isCustomerOnlyRoute(pathname)) {
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.redirect(new URL(ADMIN_DEFAULT_REDIRECT, request.url)),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
+    return withCookies(NextResponse.redirect(new URL(ADMIN_DEFAULT_REDIRECT, request.url)));
   }
 
   if (role === "Admin" && isSuperAdminOnlyRoute(pathname)) {
-    return applyRefreshedCookies({
-      request,
-      response: NextResponse.redirect(new URL("/dashboard/forbidden", request.url)),
-      refreshedAccessToken,
-      backendRefreshResponse
-    });
+    return withCookies(NextResponse.redirect(new URL("/dashboard/forbidden", request.url)));
   }
 
-  return applyRefreshedCookies({
-    request,
-    response: NextResponse.next(),
-    refreshedAccessToken,
-    backendRefreshResponse
-  });
+  return withCookies(NextResponse.next());
+}
+
+async function handleDashboardAuth(request: NextRequest) {
+  const ctx = await resolveAuthContext(request);
+  return resolveRouteResponse(ctx);
 }
 
 export async function middleware(request: NextRequest) {
@@ -252,13 +217,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next|_vercel|.*\\..*).*)",
+    String.raw`/((?!api|_next|_vercel|.*\..*).*)`,
     "/",
     "/dashboard/:path*"
   ]
 };
-
-export async function proxy(request: NextRequest): Promise<Response> {
-  const response = await handleDashboardAuth(request);
-  return response;
-}
