@@ -83,7 +83,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           {/* Locations Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Pickup Location */}
-            <div className="space-y-4">
+            <div className={cn("space-y-4", sameLocation ? "lg:col-span-2" : "")}>
               <label htmlFor="pickupLocation" className="block text-sm font-semibold text-[#334155]">
                 {t("pickupLocation")}
               </label>
@@ -121,38 +121,39 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
             </div>
 
             {/* Return Location */}
-            <div className={cn("space-y-4", sameLocation && "opacity-60")}>
-              <label htmlFor="returnLocation" className="block text-sm font-semibold text-[#334155]">
-                {t("returnLocation")}
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
-                <select
-                  id="returnLocation"
-                  value={returnLocation}
-                  onChange={(e) => setReturnLocation(e.target.value)}
-                  disabled={sameLocation}
-                  className={cn(
-                    "w-full h-12 pl-12 pr-10 rounded-xl",
-                    "bg-[#F8FAFC] border border-[#E2E8F0]",
-                    "text-sm text-[#0F172A]",
-                    "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
-                    "transition-all duration-200 cursor-pointer disabled:cursor-not-allowed",
-                    "appearance-none"
-                  )}
-                >
-                  <option value="">{t("returnLocationPlaceholder")}</option>
-                  {locations.map((loc) => (
-                    <option key={loc.value} value={loc.value}>
-                      {t(`locationOptions.${loc.key}`)}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <ChevronDown className={cn("h-4 w-4", sameLocation ? "text-[#94A3B8]" : "text-[#64748B]")} aria-hidden="true" />
+            {!sameLocation && (
+              <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+                <label htmlFor="returnLocation" className="block text-sm font-semibold text-[#334155]">
+                  {t("returnLocation")}
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+                  <select
+                    id="returnLocation"
+                    value={returnLocation}
+                    onChange={(e) => setReturnLocation(e.target.value)}
+                    className={cn(
+                      "w-full h-12 pl-12 pr-10 rounded-xl",
+                      "bg-[#F8FAFC] border border-[#E2E8F0]",
+                      "text-sm text-[#0F172A]",
+                      "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
+                      "transition-all duration-200 cursor-pointer",
+                      "appearance-none"
+                    )}
+                  >
+                    <option value="">{t("returnLocationPlaceholder")}</option>
+                    {locations.map((loc) => (
+                      <option key={loc.value} value={loc.value}>
+                        {t(`locationOptions.${loc.key}`)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden="true" />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Same Location Checkbox */}
@@ -184,22 +185,30 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Pickup Date */}
             <div className="space-y-4">
-              <label htmlFor="pickupDate" className="block text-sm font-semibold text-[#334155]">
+              <label htmlFor="pickupDate" className="block text-center text-sm font-semibold text-[#334155]">
                 {t("pickupDate")}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-[#94A3B8] pointer-events-none" />
                 <input
                   id="pickupDate"
                   type="date"
                   value={pickupDate}
                   onChange={(e) => setPickupDate(e.target.value)}
+                  onClick={(e) => {
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        e.currentTarget.showPicker();
+                      }
+                    } catch (err) {}
+                  }}
                   className={cn(
-                    "w-full h-12 pl-12 pr-4 rounded-xl",
+                    "w-full h-12 pl-8 pr-2 rounded-xl text-center",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
-                    "text-sm text-[#0F172A]",
+                    "text-[13px] sm:text-sm tracking-tight text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
-                    "transition-all duration-200 cursor-pointer"
+                    "transition-all duration-200 cursor-pointer",
+                    "[&::-webkit-calendar-picker-indicator]:hidden"
                   )}
                 />
               </div>
@@ -207,22 +216,30 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
             {/* Pickup Time */}
             <div className="space-y-4">
-              <label htmlFor="pickupTime" className="block text-sm font-semibold text-[#334155]">
+              <label htmlFor="pickupTime" className="block text-center text-sm font-semibold text-[#334155]">
                 {t("pickupTime")}
               </label>
               <div className="relative">
-                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+                <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-[#94A3B8] pointer-events-none" />
                 <input
                   id="pickupTime"
                   type="time"
                   value={pickupTime}
                   onChange={(e) => setPickupTime(e.target.value)}
+                  onClick={(e) => {
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        e.currentTarget.showPicker();
+                      }
+                    } catch (err) {}
+                  }}
                   className={cn(
-                    "w-full h-12 pl-12 pr-4 rounded-xl",
+                    "w-full h-12 pl-8 pr-2 rounded-xl text-center",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
-                    "text-sm text-[#0F172A]",
+                    "text-[13px] sm:text-sm tracking-tight text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
-                    "transition-all duration-200 cursor-pointer"
+                    "transition-all duration-200 cursor-pointer",
+                    "[&::-webkit-calendar-picker-indicator]:hidden"
                   )}
                 />
               </div>
@@ -230,22 +247,30 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
             {/* Return Date */}
             <div className="space-y-4">
-              <label htmlFor="returnDate" className="block text-sm font-semibold text-[#334155]">
+              <label htmlFor="returnDate" className="block text-center text-sm font-semibold text-[#334155]">
                 {t("returnDate")}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-[#94A3B8] pointer-events-none" />
                 <input
                   id="returnDate"
                   type="date"
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
+                  onClick={(e) => {
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        e.currentTarget.showPicker();
+                      }
+                    } catch (err) {}
+                  }}
                   className={cn(
-                    "w-full h-12 pl-12 pr-4 rounded-xl",
+                    "w-full h-12 pl-8 pr-2 rounded-xl text-center",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
-                    "text-sm text-[#0F172A]",
+                    "text-[13px] sm:text-sm tracking-tight text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
-                    "transition-all duration-200 cursor-pointer"
+                    "transition-all duration-200 cursor-pointer",
+                    "[&::-webkit-calendar-picker-indicator]:hidden"
                   )}
                 />
               </div>
@@ -253,22 +278,30 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
             {/* Return Time */}
             <div className="space-y-4">
-              <label htmlFor="returnTime" className="block text-sm font-semibold text-[#334155]">
+              <label htmlFor="returnTime" className="block text-center text-sm font-semibold text-[#334155]">
                 {t("returnTime")}
               </label>
               <div className="relative">
-                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+                <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-[#94A3B8] pointer-events-none" />
                 <input
                   id="returnTime"
                   type="time"
                   value={returnTime}
                   onChange={(e) => setReturnTime(e.target.value)}
+                  onClick={(e) => {
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        e.currentTarget.showPicker();
+                      }
+                    } catch (err) {}
+                  }}
                   className={cn(
-                    "w-full h-12 pl-12 pr-4 rounded-xl",
+                    "w-full h-12 pl-8 pr-2 rounded-xl text-center",
                     "bg-[#F8FAFC] border border-[#E2E8F0]",
-                    "text-sm text-[#0F172A]",
+                    "text-[13px] sm:text-sm tracking-tight text-[#0F172A]",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:border-transparent",
-                    "transition-all duration-200 cursor-pointer"
+                    "transition-all duration-200 cursor-pointer",
+                    "[&::-webkit-calendar-picker-indicator]:hidden"
                   )}
                 />
               </div>

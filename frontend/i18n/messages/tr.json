@@ -30,9 +30,9 @@
   "searchForm": {
     "title": "Araç Ara",
     "pickupLocation": "Alış Yeri",
-    "pickupLocationPlaceholder": "Havalimanı, otel veya adres seçin",
+    "pickupLocationPlaceholder": "Havalimanı, otel, adres...",
     "returnLocation": "Dönüş Yeri",
-    "returnLocationPlaceholder": "Havalimanı, otel veya adres seçin",
+    "returnLocationPlaceholder": "Havalimanı, otel, adres...",
     "sameLocation": "Alış ve dönüş yeri aynı",
     "pickupDate": "Alış Tarihi",
     "pickupTime": "Alış Saati",
