@@ -159,6 +159,67 @@
       "total": "Toplam"
     }
   },
+  "home": {
+    "viewAllVehicles": "Tüm Araçları Gör",
+    "whyChooseUs": {
+      "title": "Neden Bizi Seçmelisiniz?",
+      "subtitle": "Alanya'da en iyi araç kiralama deneyimini sunmaya kararlıyız",
+      "insurance": {
+        "title": "Kapsamlı Sigorta",
+        "description": "Tüm araçlarımız, içinizin rahat etmesi için tam kapsamlı sigorta ile gelir."
+      },
+      "delivery": {
+        "title": "Ücretsiz Teslimat",
+        "description": "Aracınızı otelinize, havalimanına veya Alanya'daki herhangi bir konuma teslim ediyoruz."
+      },
+      "support": {
+        "title": "7/24 Destek",
+        "description": "Çok dilli destek ekibimiz size yardımcı olmak için günün her saati hazırdır."
+      },
+      "payment": {
+        "title": "Güvenli Ödeme",
+        "description": "Kredi kartıyla güvenle online ödeyin veya kapıda nakit ödeme seçeneğini tercih edin."
+      }
+    },
+    "faq": {
+      "title": "Sıkça Sorulan Sorular",
+      "subtitle": "Araç kiralama hizmetlerimiz hakkında sık sorulan soruların cevaplarını bulun. Aradığınızı bulamadınız mı? Destek ekibimizle iletişime geçin.",
+      "contactSupport": "Destek ile İletişime Geç",
+      "questions": [
+        {
+          "id": "documents",
+          "question": "Araç kiralamak için hangi belgelere ihtiyacım var?",
+          "answer": "Geçerli bir ehliyet, pasaport veya kimlik kartı ile teminat için bir kredi kartına ihtiyacınız var. Uluslararası ziyaretçilerin ehliyeti Latin alfabesinde değilse Uluslararası Sürücü Belgesi olmalıdır."
+        },
+        {
+          "id": "age",
+          "question": "Minimum yaş sınırı var mı?",
+          "answer": "Evet, sürücülerin en az 25 yaşında ve 2 yıllık sürücü tecrübesine sahip olması gerekir. 25 yaş altı sürücüler için ek ücret uygulanabilir."
+        },
+        {
+          "id": "airport",
+          "question": "Aracı havalimanında teslim alabilir miyim?",
+          "answer": "Kesinlikle! Gazipaşa Havalimanı (GZP) ve Antalya Havalimanı (AYT)'na ücretsiz teslimat yapıyoruz. Temsilcimiz sizi gelenler salonunda karşılayacak."
+        },
+        {
+          "id": "included",
+          "question": "Kiralama fiyatına neler dahil?",
+          "answer": "Fiyat; kapsamlı sigorta, günlük ücretsiz kilometre (araca göre 200-300 km), 7/24 yol yardımı ve Alanya içi ücretsiz teslimatı içerir."
+        },
+        {
+          "id": "cancel",
+          "question": "Rezervasyonumu değiştirebilir veya iptal edebilir miyim?",
+          "answer": "Evet, teslimat tarihinden 48 saat öncesine kadar ücretsiz olarak değiştirebilir veya iptal edebilirsiniz. 48 saat içindeki iptallerde ücret uygulanabilir."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Alanya'yı Keşfetmeye Hazır mısınız?",
+      "subtitle": "Şimdi aracınızı rezerve edin ve maceranıza başlayın. Ekibimiz size en uygun aracı bulmak için hazır.",
+      "browseVehicles": "Araçlara Göz At",
+      "contactUs": "Bize Ulaşın"
+    }
+  },
   "footer": {
     "about": {
       "title": "Hakkımızda",
@@ -186,6 +247,7 @@
     },
     "newsletter": {
       "title": "Kampanyalardan Haberdar Olun",
+      "description": "Özel fırsatlar ve güncellemeler için abone olun.",
       "placeholder": "E-posta adresiniz",
       "button": "Abone Ol"
     },

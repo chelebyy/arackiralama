@@ -105,7 +105,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-white tracking-wider">
               {t("quickLinks.title")}
             </h3>
             <ul className="space-y-2">
@@ -129,7 +129,7 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-white tracking-wider">
               {t("contact.title")}
             </h3>
             <ul className="space-y-3">
@@ -168,11 +168,11 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-white tracking-wider">
               {t("newsletter.title")}
             </h3>
             <p className="text-sm text-[#94A3B8]">
-              Subscribe for exclusive deals and updates.
+              {t("newsletter.description")}
             </p>
             <form className="space-y-2" onSubmit={(e) => e.preventDefault()}>
               <input

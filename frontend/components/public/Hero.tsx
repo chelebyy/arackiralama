@@ -42,25 +42,15 @@ export default function Hero() {
             {/* Left Content */}
             <div className="space-y-8">
               {/* Trust Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="h-8 w-8 rounded-full bg-gradient-to-br from-[#0369A1] to-[#0EA5E9] border-2 border-[#0F172A] flex items-center justify-center"
-                    >
-                      <span className="text-xs font-bold text-white">{i}K</span>
-                    </div>
-                  ))}
-                </div>
-                <span className="text-sm font-medium text-white/90">
-                  {t("trustBadge")}
-                </span>
+              <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                 <div className="flex items-center gap-0.5">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
+                <span className="text-sm font-medium text-white/90">
+                  {t("trustBadge")}
+                </span>
               </div>
 
               {/* Headline */}

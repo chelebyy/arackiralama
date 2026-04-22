@@ -55,63 +55,24 @@ const featuredVehicles = [
   },
 ];
 
-const whyChooseUs = [
-  {
-    id: "insurance",
-    icon: Shield,
-    title: "Comprehensive Insurance",
-    description: "All our vehicles come with full insurance coverage for your peace of mind.",
-  },
-  {
-    id: "delivery",
-    icon: MapPin,
-    title: "Free Delivery",
-    description: "We deliver your car to your hotel, airport, or any location in Alanya.",
-  },
-  {
-    id: "support",
-    icon: Headphones,
-    title: "24/7 Support",
-    description: "Our multilingual support team is available round the clock to assist you.",
-  },
-  {
-    id: "payment",
-    icon: CreditCard,
-    title: "Secure Payment",
-    description: "Pay securely online with credit card or choose cash on delivery.",
-  },
-];
+const whyChooseUsIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  insurance: Shield,
+  delivery: MapPin,
+  support: Headphones,
+  payment: CreditCard,
+};
 
-const faqs = [
-  {
-    id: "documents",
-    question: "What documents do I need to rent a car?",
-    answer: "You need a valid driver's license, passport or ID card, and a credit card for the security deposit. International visitors should have an International Driving Permit if their license is not in Latin alphabet.",
-  },
-  {
-    id: "age",
-    question: "Is there a minimum age requirement?",
-    answer: "Yes, drivers must be at least 25 years old with 2 years of driving experience. Additional fees may apply for drivers under 25.",
-  },
-  {
-    id: "airport",
-    question: "Can I pick up the car at the airport?",
-    answer: "Absolutely! We offer free delivery to Gazipasa Airport (GZP) and Antalya Airport (AYT). Our representative will meet you at the arrivals with your car.",
-  },
-  {
-    id: "included",
-    question: "What is included in the rental price?",
-    answer: "The price includes comprehensive insurance, free daily mileage (200-300 km depending on vehicle), 24/7 roadside assistance, and free delivery within Alanya.",
-  },
-  {
-    id: "cancel",
-    question: "Can I modify or cancel my reservation?",
-    answer: "Yes, you can modify or cancel your reservation free of charge up to 48 hours before pickup. Cancellations within 48 hours may incur a fee.",
-  },
-];
+const whyChooseUsKeys = ["insurance", "delivery", "support", "payment"];
 
 export default function HomePage() {
-  const t = useTranslations();
+  const t = useTranslations("home");
+  const tv = useTranslations("vehicles");
+
+  const faqs = t.raw("faq.questions") as Array<{
+    id: string;
+    question: string;
+    answer: string;
+  }>;
 
   return (
     <>
@@ -123,10 +84,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
-              {t("vehicles.title")}
+              {tv("title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              {t("vehicles.subtitle")}
+              {tv("subtitle")}
             </p>
           </div>
 
@@ -148,7 +109,7 @@ export default function HomePage() {
                 "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-2"
               )}
             >
-              View All Vehicles
+              {t("viewAllVehicles")}
               <ChevronRight className="h-5 w-5" />
             </Link>
           </div>
@@ -160,19 +121,19 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
-              Why Choose Us
+              {t("whyChooseUs.title")}
             </h2>
             <p className="text-lg text-[#64748B]">
-              We are committed to providing the best car rental experience in Alanya
+              {t("whyChooseUs.subtitle")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {whyChooseUs.map((item) => {
-              const Icon = item.icon;
+            {whyChooseUsKeys.map((key) => {
+              const Icon = whyChooseUsIcons[key];
               return (
                 <div
-                  key={item.id}
+                  key={key}
                   className={cn(
                     "p-6 rounded-2xl bg-white border border-[#E2E8F0]",
                     "transition-all duration-300",
@@ -183,10 +144,10 @@ export default function HomePage() {
                     <Icon className="h-7 w-7 text-[#0369A1]" />
                   </div>
                   <h3 className="text-lg font-bold text-[#0F172A] mb-2">
-                    {item.title}
+                    {t(`whyChooseUs.${key}.title`)}
                   </h3>
                   <p className="text-sm text-[#64748B] leading-relaxed">
-                    {item.description}
+                    {t(`whyChooseUs.${key}.description`)}
                   </p>
                 </div>
               );
@@ -201,10 +162,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             <div className="lg:sticky lg:top-32 lg:self-start">
               <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
-                Frequently Asked Questions
+                {t("faq.title")}
               </h2>
               <p className="text-lg text-[#64748B] mb-8">
-                Find answers to common questions about our car rental services. Can&apos;t find what you&apos;re looking for? Contact our support team.
+                {t("faq.subtitle")}
               </p>
               <Link
                 href="/contact"
@@ -217,23 +178,38 @@ export default function HomePage() {
                 )}
               >
                 <MessageCircle className="h-5 w-5" />
-                Contact Support
+                {t("faq.contactSupport")}
               </Link>
             </div>
 
             <div className="space-y-4">
               {faqs.map((faq) => (
-                <div
+                <details
                   key={faq.id}
-                  className="p-6 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]"
+                  className="group rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden"
                 >
-                  <h3 className="text-lg font-bold text-[#0F172A] mb-3">
-                    {faq.question}
-                  </h3>
-                  <p className="text-sm text-[#64748B] leading-relaxed">
-                    {faq.answer}
-                  </p>
-                </div>
+                  <summary className="flex items-center justify-between cursor-pointer p-6 list-none select-none">
+                    <h3 className="text-lg font-bold text-[#0F172A] pr-4">
+                      {faq.question}
+                    </h3>
+                    <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white border border-[#E2E8F0] group-open:bg-[#0369A1] group-open:border-[#0369A1] transition-colors">
+                      <svg
+                        className="h-4 w-4 text-[#0369A1] group-open:text-white transition-transform group-open:rotate-180"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div className="px-6 pb-6">
+                    <p className="text-sm text-[#64748B] leading-relaxed">
+                      {faq.answer}
+                    </p>
+                  </div>
+                </details>
               ))}
             </div>
           </div>
@@ -245,10 +221,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Ready to Explore Alanya?
+              {t("cta.title")}
             </h2>
             <p className="text-xl text-white/80 mb-8">
-              Book your car now and start your adventure. Our team is ready to help you find the perfect vehicle.
+              {t("cta.subtitle")}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
@@ -262,7 +238,7 @@ export default function HomePage() {
                   "shadow-lg"
                 )}
               >
-                Browse Vehicles
+                {t("cta.browseVehicles")}
                 <ChevronRight className="h-5 w-5" />
               </Link>
 
@@ -277,7 +253,7 @@ export default function HomePage() {
                   "focus:outline-none focus:ring-4 focus:ring-white/20"
                 )}
               >
-                Contact Us
+                {t("cta.contactUs")}
               </Link>
             </div>
           </div>

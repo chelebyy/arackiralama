@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname, type Locale } from "@/i18n/routing";
+import { type Locale } from "@/i18n/routing";
 import Flag from "react-world-flags";
 import { ChevronDown, Globe } from "lucide-react";
 import { localeLabels, routing } from "@/i18n/routing";
@@ -12,9 +13,10 @@ import { cn } from "@/lib/utils";
 export default function LanguageSwitcher() {
   const t = useTranslations("common");
   const locale = useLocale();
-  const pathname = usePathname();
-  const params = useParams();
+  const rawPathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+
+  const pathWithoutLocale = rawPathname.replace(/^\/(tr|en|ru|ar|de)/, "") || "/";
 
   const currentLocale = localeLabels[locale as Locale];
 
@@ -67,10 +69,9 @@ export default function LanguageSwitcher() {
             const isActive = loc === locale;
 
             return (
-              <Link
+              <NextLink
                 key={loc}
-                href={pathname}
-                locale={loc}
+                href={`/${loc}${pathWithoutLocale}`}
                 className={cn(
                   "flex items-center gap-3 px-4 py-2.5 text-sm",
                   "transition-colors duration-150",
@@ -92,7 +93,7 @@ export default function LanguageSwitcher() {
                 {isActive && (
                   <span className="h-2 w-2 rounded-full bg-[#0369A1]" />
                 )}
-              </Link>
+              </NextLink>
             );
           })}
         </div>

@@ -56,6 +56,13 @@ export const routing = defineRouting({
       ru: "/bronirovanie",
       ar: "/al-hajz",
       de: "/buchung"
+    },
+    "/vehicles/[id]": {
+      tr: "/araclar/[id]",
+      en: "/vehicles/[id]",
+      ru: "/avtomobili/[id]",
+      ar: "/al-sayarat/[id]",
+      de: "/fahrzeuge/[id]"
     }
   }
 });

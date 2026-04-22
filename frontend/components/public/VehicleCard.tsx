@@ -1,12 +1,12 @@
 import { useTranslations } from "next-intl";
-import NextLink from "next/link";
 import { Link } from "@/i18n/routing";
 import {
   Users,
   Fuel,
   Gauge,
   Snowflake,
-  Check
+  Check,
+  Car
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,20 +66,7 @@ export default function VehicleCard({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <svg
-              className="w-24 h-24 text-[#CBD5E1]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-label="Car placeholder"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
+            <Car className="w-24 h-24 text-[#CBD5E1]" aria-hidden="true" />
           </div>
         )}
 
@@ -152,10 +139,10 @@ export default function VehicleCard({
           </div>
 
           {isAvailable ? (
-            <NextLink
-              href={`/vehicles/${id}`}
+            <Link
+              href={{ pathname: "/vehicles/[id]", params: { id } }}
               className={cn(
-                "px-6 py-3 rounded-xl text-sm font-bold",
+                "px-4 py-3 rounded-xl text-sm font-bold whitespace-nowrap",
                 "transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "text-white bg-[#0369A1]",
@@ -165,7 +152,7 @@ export default function VehicleCard({
               )}
             >
               {t("bookNow")}
-            </NextLink>
+            </Link>
           ) : (
             <span
               className={cn(
