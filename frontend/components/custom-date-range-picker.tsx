@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   format,
   subDays,
+  addDays,
   startOfMonth,
   endOfMonth,
   subMonths,
@@ -69,6 +70,10 @@ export default function CalendarDateRangePicker({
     switch (type) {
       case "today":
         handleQuickSelect(startOfDay(today), endOfDay(today));
+        break;
+      case "tomorrow":
+        const tomorrow = addDays(today, 1);
+        handleQuickSelect(startOfDay(tomorrow), endOfDay(tomorrow));
         break;
       case "yesterday":
         const yesterday = subDays(today, 1);

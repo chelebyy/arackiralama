@@ -328,11 +328,11 @@
       "last7Days": "Son 7 Gün",
       "last28Days": "Son 28 Gün",
       "thisMonth": "Bu Ay",
-      "lastMonth": "GeÃ§en Ay",
+      "lastMonth": "Geçen Ay",
       "thisYear": "Bu Yıl",
       "selectRange": "Tarih Aralığı Seçin"
     },
-    "logoSubtitle": "AraÃ§ Kiralama"
+    "logoSubtitle": "Araç Kiralama"
   },
   "aboutUs": {
     "title": "Alanya Araç Kiralama Hakkında",
@@ -468,87 +468,87 @@
   },
   "auth": {
     "portal": {
-      "title": "MÃ¼ÅŸteri Paneli",
-      "description": "MÃ¼ÅŸteri olarak giriÅŸ yaptÄ±nÄ±z: {email}",
-      "explanation": "Bu sayfa mÃ¼ÅŸteri oturum sÃ¼rekliliÄŸini, yenileme yÃ¶netimini ve admin panelinden RBAC ayrÄ±mÄ±nÄ± doÄŸrular."
+      "title": "Müşteri Paneli",
+      "description": "Müşteri olarak giriş yaptınız: {email}",
+      "explanation": "Bu sayfa müşteri oturum sürekliliğini, yenileme yönetimini ve admin panelinden RBAC ayrımını doğrular."
     },
     "logout": {
-      "button": "Ã‡Ä±kÄ±ÅŸ Yap",
-      "loading": "Ã‡Ä±kÄ±ÅŸ yapÄ±lÄ±yor...",
-      "success": "Ã‡Ä±kÄ±ÅŸ yapÄ±ldÄ±.",
-      "error": "Ã‡Ä±kÄ±ÅŸ iÅŸlemi baÅŸarÄ±sÄ±z."
+      "button": "Çıkış Yap",
+      "loading": "Çıkış yapılıyor...",
+      "success": "Çıkış yapıldı.",
+      "error": "Çıkış işlemi başarısız."
     },
     "register": {
-      "title": "MÃ¼ÅŸteri HesabÄ± OluÅŸtur",
-      "description": "E-posta ve ÅŸifrenizle kayÄ±t olun.",
+      "title": "Müşteri Hesabı Oluştur",
+      "description": "E-posta ve şifrenizle kayıt olun.",
       "labels": {
         "fullName": "Ad Soyad",
         "phone": "Telefon",
         "email": "E-posta",
-        "password": "Åifre"
+        "password": "Şifre"
       },
       "buttons": {
-        "submit": "KayÄ±t Ol",
-        "loading": "LÃ¼tfen bekleyin"
+        "submit": "Kayıt Ol",
+        "loading": "Lütfen bekleyin"
       },
       "footer": {
-        "alreadyRegistered": "Zaten kayÄ±tlÄ± mÄ±sÄ±nÄ±z?",
-        "loginLink": "GiriÅŸ Yap"
+        "alreadyRegistered": "Zaten kayıtlı mısınız?",
+        "loginLink": "Giriş Yap"
       },
       "errors": {
-        "required": "E-posta ve ÅŸifre zorunludur.",
-        "generic": "KayÄ±t sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+        "required": "E-posta ve şifre zorunludur.",
+        "generic": "Kayıt sırasında beklenmeyen bir hata oluştu."
       }
     },
     "forgotPassword": {
-      "title": "Åifremi Unuttum",
-      "description": "E-posta adresinizi girin, hesap mevcutsa sÄ±fÄ±rlama talimatlarÄ±nÄ± gÃ¶ndereceÄŸiz.",
+      "title": "Şifremi Unuttum",
+      "description": "E-posta adresinizi girin, hesap mevcutsa sıfırlama talimatlarını göndereceğiz.",
       "labels": {
-        "accountType": "Hesap TÃ¼rÃ¼",
+        "accountType": "Hesap Türü",
         "email": "E-posta"
       },
       "options": {
-        "admin": "YÃ¶netici / SÃ¼per YÃ¶netici",
-        "customer": "MÃ¼ÅŸteri"
+        "admin": "Yönetici / Süper Yönetici",
+        "customer": "Müşteri"
       },
       "buttons": {
-        "submit": "SÄ±fÄ±rlama TalimatlarÄ±nÄ± GÃ¶nder",
-        "loading": "LÃ¼tfen bekleyin"
+        "submit": "Sıfırlama Talimatlarını Gönder",
+        "loading": "Lütfen bekleyin"
       },
       "messages": {
-        "submitted": "Ä°stek kabul edildi. SÄ±fÄ±rlama baÄŸlantÄ±sÄ± iÃ§in gelen kutunuzu kontrol edin.",
-        "successToast": "EÄŸer hesap mevcutsa parola sÄ±fÄ±rlama talimatlarÄ± e-posta adresinize gÃ¶nderilecektir."
+        "submitted": "İstek kabul edildi. Sıfırlama bağlantısı için gelen kutunuzu kontrol edin.",
+        "successToast": "Eğer hesap mevcutsa parola sıfırlama talimatları e-posta adresinize gönderilecektir."
       },
       "footer": {
-        "rememberPassword": "Åifrenizi hatÄ±rlÄ±yor musunuz?",
-        "loginLink": "GiriÅŸ Yap"
+        "rememberPassword": "Şifrenizi hatırlıyor musunuz?",
+        "loginLink": "Giriş Yap"
       },
       "errors": {
         "emailRequired": "Email zorunludur.",
-        "generic": "Ä°stek sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+        "generic": "İstek sırasında beklenmeyen bir hata oluştu."
       }
     },
     "login": {
       "labels": {
         "email": "E-posta",
-        "password": "Åifre"
+        "password": "Şifre"
       },
       "buttons": {
-        "submit": "GiriÅŸ Yap",
-        "loading": "LÃ¼tfen bekleyin"
+        "submit": "Giriş Yap",
+        "loading": "Lütfen bekleyin"
       },
-      "forgotPassword": "Åifrenizi mi unuttunuz?",
+      "forgotPassword": "Şifrenizi mi unuttunuz?",
       "footer": {
-        "needAccount": "HesabÄ±nÄ±z yok mu?",
-        "registerLink": "KayÄ±t Ol"
+        "needAccount": "Hesabınız yok mu?",
+        "registerLink": "Kayıt Ol"
       },
       "errors": {
         "required": "Email ve parola zorunludur.",
-        "generic": "GiriÅŸ sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+        "generic": "Giriş sırasında beklenmeyen bir hata oluştu."
       },
       "v1": {
-        "title": "MÃ¼ÅŸteri GiriÅŸi",
-        "description": "MÃ¼ÅŸteri hesabÄ±nÄ±zla giriÅŸ yapÄ±n."
+        "title": "Müşteri Girişi",
+        "description": "Müşteri hesabınızla giriş yapın."
       }
     }
   }
