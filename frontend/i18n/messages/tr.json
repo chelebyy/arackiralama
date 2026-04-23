@@ -270,7 +270,7 @@
       "clear": "Temizle",
       "showMore": "Daha Fazla Göster",
       "showLess": "Daha Az Göster",
-      "export": "DÄ±ÅŸa Aktar"
+      "export": "Dışa Aktar"
     },
     "labels": {
       "loading": "Yükleniyor...",
@@ -325,12 +325,12 @@
         "december": "Aralık"
       },
       "thisWeek": "Bu Hafta",
-      "last7Days": "Son 7 GÃ¼n",
-      "last28Days": "Son 28 GÃ¼n",
+      "last7Days": "Son 7 Gün",
+      "last28Days": "Son 28 Gün",
       "thisMonth": "Bu Ay",
       "lastMonth": "GeÃ§en Ay",
-      "thisYear": "Bu YÄ±l",
-      "selectRange": "Tarih AralÄ±ÄŸÄ± SeÃ§in"
+      "thisYear": "Bu Yıl",
+      "selectRange": "Tarih Aralığı Seçin"
     },
     "logoSubtitle": "AraÃ§ Kiralama"
   },
