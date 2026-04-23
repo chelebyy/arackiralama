@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ interface MeResponse {
 
 export function CustomerPortal() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [email, setEmail] = useState<string>("customer");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -60,11 +62,11 @@ export function CustomerPortal() {
         method: "POST"
       });
 
-      toast.success("Çıkış yapıldı.");
+      toast.success(t("logout.success"));
       router.push("/dashboard/login/v1");
       router.refresh();
     } catch {
-      toast.error("Çıkış işlemi başarısız.");
+      toast.error(t("logout.error"));
     } finally {
       setIsLoading(false);
     }
@@ -74,20 +76,19 @@ export function CustomerPortal() {
     <div className="container mx-auto flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-xl">
         <CardHeader>
-          <CardTitle>Customer Portal</CardTitle>
+          <CardTitle>{t("portal.title")}</CardTitle>
           <CardDescription>
-            You are signed in as customer: <span className="font-medium">{email}</span>
+            {t("portal.description", { email })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-sm">
-            This route verifies customer session continuity, refresh handling, and RBAC separation from admin
-            dashboard routes.
+            {t("portal.explanation")}
           </p>
 
           <Button onClick={onLogout} disabled={isLoading}>
             <LogOutIcon />
-            {isLoading ? "Signing out..." : "Log out"}
+            {isLoading ? t("logout.loading") : t("logout.button")}
           </Button>
         </CardContent>
       </Card>

@@ -269,7 +269,8 @@
       "filter": "Filtrele",
       "clear": "Temizle",
       "showMore": "Daha Fazla Göster",
-      "showLess": "Daha Az Göster"
+      "showLess": "Daha Az Göster",
+      "export": "Dışa Aktar"
     },
     "labels": {
       "loading": "Yükleniyor...",
@@ -322,8 +323,16 @@
         "october": "Ekim",
         "november": "Kasım",
         "december": "Aralık"
-      }
-    }
+      },
+      "thisWeek": "Bu Hafta",
+      "last7Days": "Son 7 Gün",
+      "last28Days": "Son 28 Gün",
+      "thisMonth": "Bu Ay",
+      "lastMonth": "Geçen Ay",
+      "thisYear": "Bu Yıl",
+      "selectRange": "Tarih Aralığı Seçin"
+    },
+    "logoSubtitle": "Araç Kiralama"
   },
   "aboutUs": {
     "title": "Alanya Araç Kiralama Hakkında",
@@ -455,6 +464,92 @@
       "termsAgreement": "Bu formu göndererek <terms>Hizmet Şartları'nı</terms> ve <privacy>Gizlilik Politikası'nı</privacy> kabul etmiş olursunuz.",
       "terms": "Hizmet Şartları'nı",
       "privacy": "Gizlilik Politikası'nı"
+    }
+  },
+  "auth": {
+    "portal": {
+      "title": "Müşteri Paneli",
+      "description": "Müşteri olarak giriş yaptınız: {email}",
+      "explanation": "Bu sayfa müşteri oturum sürekliliğini, yenileme yönetimini ve admin panelinden RBAC ayrımını doğrular."
+    },
+    "logout": {
+      "button": "Çıkış Yap",
+      "loading": "Çıkış yapılıyor...",
+      "success": "Çıkış yapıldı.",
+      "error": "Çıkış işlemi başarısız."
+    },
+    "register": {
+      "title": "Müşteri Hesabı Oluştur",
+      "description": "E-posta ve şifrenizle kayıt olun.",
+      "labels": {
+        "fullName": "Ad Soyad",
+        "phone": "Telefon",
+        "email": "E-posta",
+        "password": "Şifre"
+      },
+      "buttons": {
+        "submit": "Kayıt Ol",
+        "loading": "Lütfen bekleyin"
+      },
+      "footer": {
+        "alreadyRegistered": "Zaten kayıtlı mısınız?",
+        "loginLink": "Giriş Yap"
+      },
+      "errors": {
+        "required": "E-posta ve şifre zorunludur.",
+        "generic": "Kayıt sırasında beklenmeyen bir hata oluştu."
+      }
+    },
+    "forgotPassword": {
+      "title": "Şifremi Unuttum",
+      "description": "E-posta adresinizi girin, hesap mevcutsa sıfırlama talimatlarını göndereceğiz.",
+      "labels": {
+        "accountType": "Hesap Türü",
+        "email": "E-posta"
+      },
+      "options": {
+        "admin": "Yönetici / Süper Yönetici",
+        "customer": "Müşteri"
+      },
+      "buttons": {
+        "submit": "Sıfırlama Talimatlarını Gönder",
+        "loading": "Lütfen bekleyin"
+      },
+      "messages": {
+        "submitted": "İstek kabul edildi. Sıfırlama bağlantısı için gelen kutunuzu kontrol edin.",
+        "successToast": "Eğer hesap mevcutsa parola sıfırlama talimatları e-posta adresinize gönderilecektir."
+      },
+      "footer": {
+        "rememberPassword": "Şifrenizi hatırlıyor musunuz?",
+        "loginLink": "Giriş Yap"
+      },
+      "errors": {
+        "emailRequired": "Email zorunludur.",
+        "generic": "İstek sırasında beklenmeyen bir hata oluştu."
+      }
+    },
+    "login": {
+      "labels": {
+        "email": "E-posta",
+        "password": "Şifre"
+      },
+      "buttons": {
+        "submit": "Giriş Yap",
+        "loading": "Lütfen bekleyin"
+      },
+      "forgotPassword": "Şifrenizi mi unuttunuz?",
+      "footer": {
+        "needAccount": "Hesabınız yok mu?",
+        "registerLink": "Kayıt Ol"
+      },
+      "errors": {
+        "required": "Email ve parola zorunludur.",
+        "generic": "Giriş sırasında beklenmeyen bir hata oluştu."
+      },
+      "v1": {
+        "title": "Müşteri Girişi",
+        "description": "Müşteri hesabınızla giriş yapın."
+      }
     }
   }
 }

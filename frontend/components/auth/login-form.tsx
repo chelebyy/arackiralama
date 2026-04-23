@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth.login");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,7 @@ export function LoginForm({
     event.preventDefault();
 
     if (!email.trim() || !password) {
-      toast.error("Email ve parola zorunludur.");
+      toast.error(t("errors.required"));
       return;
     }
 
@@ -65,11 +67,11 @@ export function LoginForm({
       const payload = (await response.json()) as LoginApiResponse;
 
       if (!response.ok || !payload.success) {
-        toast.error(payload.message ?? "Giriş başarısız.");
+        toast.error(payload.message ?? "Login Error");
         return;
       }
 
-      toast.success("Giriş başarılı.");
+      toast.success("OK");
 
       const nextPath = searchParams.get("next");
       if (nextPath && nextPath.startsWith("/dashboard") && principalScope === "Admin") {
@@ -80,7 +82,7 @@ export function LoginForm({
 
       router.refresh();
     } catch {
-      toast.error("Giriş sırasında beklenmeyen bir hata oluştu.");
+      toast.error(t("errors.generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +98,7 @@ export function LoginForm({
         <CardContent>
           <form className="grid gap-4" onSubmit={onSubmit}>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("labels.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -110,9 +112,9 @@ export function LoginForm({
 
             <div className="grid gap-2">
               <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("labels.password")}</Label>
                 <Link href="/dashboard/forgot-password" className="ml-auto inline-block text-sm underline">
-                  Forgot your password?
+                  {t("forgotPassword")}
                 </Link>
               </div>
               <Input
@@ -129,19 +131,19 @@ export function LoginForm({
               {isSubmitting ? (
                 <>
                   <Loader2Icon className="animate-spin" />
-                  Please wait
+                  {t("buttons.loading")}
                 </>
               ) : (
-                "Login"
+                t("buttons.submit")
               )}
             </Button>
           </form>
 
           {registerHref ? (
             <div className="mt-4 text-center text-sm">
-              Need an account?{" "}
+              {t("footer.needAccount")}{" "}
               <Link href={registerHref} className="underline">
-                Register
+                {t("footer.registerLink")}
               </Link>
             </div>
           ) : null}

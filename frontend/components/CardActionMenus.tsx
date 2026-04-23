@@ -1,4 +1,5 @@
-import { FolderUp } from "lucide-react";
+﻿import { FolderUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 import {
@@ -10,12 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function ExportButton({ className }: { className?: string }) {
+  const t = useTranslations("common");
+
   return (
     <div className={cn(className)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline">
-            <FolderUp /> <span className="hidden lg:inline">Export</span>
+            <FolderUp /> <span className="hidden lg:inline">{t("buttons.export")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

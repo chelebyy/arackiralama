@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import { Loader2Icon, MailIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ interface ForgotPasswordApiResponse {
 }
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth.forgotPassword");
   const [email, setEmail] = useState("");
   const [principalScope, setPrincipalScope] = useState<PrincipalScope>("Admin");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +35,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
 
     if (!email.trim()) {
-      toast.error("Email zorunludur.");
+      toast.error(t("errors.emailRequired"));
       return;
     }
 
@@ -54,16 +56,14 @@ export function ForgotPasswordForm() {
       const payload = (await response.json()) as ForgotPasswordApiResponse;
 
       if (!response.ok || !payload.success) {
-        toast.error(payload.message ?? "Talep gönderilemedi.");
+        toast.error(payload.message ?? t("errors.generic"));
         return;
       }
 
       setIsSubmitted(true);
-      toast.success(
-        "Eğer hesap mevcutsa parola sıfırlama talimatları e-posta adresinize gönderilecektir."
-      );
+      toast.success(t("messages.successToast"));
     } catch {
-      toast.error("İstek sırasında beklenmeyen bir hata oluştu.");
+      toast.error(t("errors.generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -73,27 +73,25 @@ export function ForgotPasswordForm() {
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">
         <CardHeader>
-          <CardTitle className="text-2xl">Forgot Password</CardTitle>
-          <CardDescription>
-            Enter your email address and we&apos;ll send reset instructions if the account exists.
-          </CardDescription>
+          <CardTitle className="text-2xl">{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="grid gap-2">
-              <Label htmlFor="principalScope">Account Type</Label>
+              <Label htmlFor="principalScope">{t("labels.accountType")}</Label>
               <select
                 id="principalScope"
                 className="border-input bg-background h-10 rounded-md border px-3 text-sm"
                 value={principalScope}
                 onChange={(event) => setPrincipalScope(event.target.value as PrincipalScope)}>
-                <option value="Admin">Admin / SuperAdmin</option>
-                <option value="Customer">Customer</option>
+                <option value="Admin">{t("options.admin")}</option>
+                <option value="Customer">{t("options.customer")}</option>
               </select>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("labels.email")}</Label>
               <div className="relative">
                 <MailIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
@@ -113,25 +111,25 @@ export function ForgotPasswordForm() {
               {isSubmitting ? (
                 <>
                   <Loader2Icon className="animate-spin" />
-                  Please wait
+                  {t("buttons.loading")}
                 </>
               ) : (
-                "Send Reset Instructions"
+                t("buttons.submit")
               )}
             </Button>
 
             {isSubmitted ? (
               <p className="text-muted-foreground text-center text-sm">
-                Request accepted. Check your inbox for a reset link.
+                {t("messages.submitted")}
               </p>
             ) : null}
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm">
-            Remember your password?{" "}
+            {t("footer.rememberPassword")}{" "}
             <Link href="/dashboard/login/v2" className="underline">
-              Log in
+              {t("footer.loginLink")}
             </Link>
           </p>
         </CardFooter>

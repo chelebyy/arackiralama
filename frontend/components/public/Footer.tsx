@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 export default function Footer() {
   const t = useTranslations("footer");
+  const tc = useTranslations("common");
   const year = new Date().getFullYear();
 
   const quickLinks = [

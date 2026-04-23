@@ -269,7 +269,8 @@
       "filter": "Filter",
       "clear": "Clear",
       "showMore": "Show More",
-      "showLess": "Show Less"
+      "showLess": "Show Less",
+      "export": "Export"
     },
     "labels": {
       "loading": "Loading...",
@@ -322,8 +323,16 @@
         "october": "October",
         "november": "November",
         "december": "December"
-      }
-    }
+      },
+      "thisWeek": "This Week",
+      "last7Days": "Last 7 Days",
+      "last28Days": "Last 28 Days",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "thisYear": "This Year",
+      "selectRange": "Select date range"
+    },
+    "logoSubtitle": "Car Rental"
   },
   "aboutUs": {
     "title": "About Alanya Car Rental",
@@ -455,6 +464,92 @@
       "termsAgreement": "By submitting this form, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy"
+    }
+  },
+  "auth": {
+    "portal": {
+      "title": "Customer Portal",
+      "description": "You are signed in as customer: {email}",
+      "explanation": "This route verifies customer session continuity, refresh handling, and RBAC separation from admin dashboard routes."
+    },
+    "logout": {
+      "button": "Log out",
+      "loading": "Signing out...",
+      "success": "Signed out successfully.",
+      "error": "Logout failed."
+    },
+    "register": {
+      "title": "Create Customer Account",
+      "description": "Register with your email and password.",
+      "labels": {
+        "fullName": "Full Name",
+        "phone": "Phone",
+        "email": "Email",
+        "password": "Password"
+      },
+      "buttons": {
+        "submit": "Register",
+        "loading": "Please wait"
+      },
+      "footer": {
+        "alreadyRegistered": "Already registered?",
+        "loginLink": "Login"
+      },
+      "errors": {
+        "required": "Email and password are required.",
+        "generic": "An unexpected error occurred during registration."
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "description": "Enter your email address and we'll send reset instructions if the account exists.",
+      "labels": {
+        "accountType": "Account Type",
+        "email": "Email"
+      },
+      "options": {
+        "admin": "Admin / SuperAdmin",
+        "customer": "Customer"
+      },
+      "buttons": {
+        "submit": "Send Reset Instructions",
+        "loading": "Please wait"
+      },
+      "messages": {
+        "submitted": "Request accepted. Check your inbox for a reset link.",
+        "successToast": "If the account exists, password reset instructions will be sent to your email."
+      },
+      "footer": {
+        "rememberPassword": "Remember your password?",
+        "loginLink": "Log in"
+      },
+      "errors": {
+        "emailRequired": "Email is required.",
+        "generic": "An unexpected error occurred during the request."
+      }
+    },
+    "login": {
+      "labels": {
+        "email": "Email",
+        "password": "Password"
+      },
+      "buttons": {
+        "submit": "Login",
+        "loading": "Please wait"
+      },
+      "forgotPassword": "Forgot your password?",
+      "footer": {
+        "needAccount": "Need an account?",
+        "registerLink": "Register"
+      },
+      "errors": {
+        "required": "Email and password are required.",
+        "generic": "An unexpected error occurred during login."
+      },
+      "v1": {
+        "title": "Customer Login",
+        "description": "Sign in with your customer account."
+      }
     }
   }
 }

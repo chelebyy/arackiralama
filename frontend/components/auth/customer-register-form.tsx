@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ interface RegisterApiResponse {
 
 export function CustomerRegisterForm() {
   const router = useRouter();
+  const t = useTranslations("auth.register");
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,7 +31,7 @@ export function CustomerRegisterForm() {
     event.preventDefault();
 
     if (!email.trim() || !password) {
-      toast.error("Email ve parola zorunludur.");
+      toast.error(t("errors.required"));
       return;
     }
 
@@ -52,15 +54,15 @@ export function CustomerRegisterForm() {
       const payload = (await response.json()) as RegisterApiResponse;
 
       if (!response.ok || !payload.success) {
-        toast.error(payload.message ?? "Kayıt başarısız.");
+        toast.error(payload.message ?? t("errors.generic"));
         return;
       }
 
-      toast.success(payload.message ?? "Kayıt başarılı.");
+      toast.success(payload.message ?? "OK");
       router.push("/dashboard/login/v1");
       router.refresh();
     } catch {
-      toast.error("Kayıt sırasında beklenmeyen bir hata oluştu.");
+      toast.error(t("errors.generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -70,13 +72,13 @@ export function CustomerRegisterForm() {
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">
         <CardHeader>
-          <CardTitle className="text-2xl">Create Customer Account</CardTitle>
-          <CardDescription>Register with your email and password.</CardDescription>
+          <CardTitle className="text-2xl">{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={onSubmit}>
             <div className="grid gap-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">{t("labels.fullName")}</Label>
               <Input
                 id="fullName"
                 placeholder="Ada Lovelace"
@@ -86,7 +88,7 @@ export function CustomerRegisterForm() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{t("labels.phone")}</Label>
               <Input
                 id="phone"
                 placeholder="+90 5xx xxx xx xx"
@@ -96,7 +98,7 @@ export function CustomerRegisterForm() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("labels.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -108,7 +110,7 @@ export function CustomerRegisterForm() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("labels.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -123,18 +125,18 @@ export function CustomerRegisterForm() {
               {isSubmitting ? (
                 <>
                   <Loader2Icon className="animate-spin" />
-                  Please wait
+                  {t("buttons.loading")}
                 </>
               ) : (
-                "Register"
+                t("buttons.submit")
               )}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
-            Already registered?{" "}
+            {t("footer.alreadyRegistered")}{" "}
             <Link href="/dashboard/login/v1" className="underline">
-              Login
+              {t("footer.loginLink")}
             </Link>
           </div>
         </CardContent>

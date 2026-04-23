@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/messages/tr.json";
 
 import { LoginForm } from "@/components/auth/login-form";
 
@@ -41,17 +43,19 @@ describe("LoginForm", () => {
     ) as typeof fetch;
 
     render(
-      <LoginForm
-        principalScope="Admin"
-        title="Admin Login"
-        description="desc"
-        successRedirect="/dashboard/default"
-      />
+      <NextIntlClientProvider locale="tr" messages={messages}>
+        <LoginForm
+          principalScope="Admin"
+          title="Admin Login"
+          description="desc"
+          successRedirect="/dashboard/default"
+        />
+      </NextIntlClientProvider>
     );
 
-    await user.type(screen.getByLabelText(/email/i), "admin@example.com");
-    await user.type(screen.getByLabelText(/password/i), "Passw0rd!");
-    await user.click(screen.getByRole("button", { name: /login/i }));
+    await user.type(screen.getByLabelText(/e-posta/i), "admin@example.com");
+    await user.type(screen.getByLabelText(/şifre/i), "Passw0rd!");
+    await user.click(screen.getByRole("button", { name: /giriş yap/i }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
