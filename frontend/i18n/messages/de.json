@@ -452,7 +452,7 @@
       "successDesc": "Vielen Dank für Ihre Kontaktaufnahme. Wir haben Ihre Nachricht erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.",
       "sendAnother": "Weitere Nachricht senden",
       "error": "Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
-      "termsAgreement": "Durch das Absenden dieses Formulars stimmen Sie unseren {terms} und {privacy} zu.",
+      "termsAgreement": "Durch das Absenden dieses Formulars stimmen Sie unseren <terms>Nutzungsbedingungen</terms> und <privacy>Datenschutzrichtlinie</privacy> zu.",
       "terms": "Nutzungsbedingungen",
       "privacy": "Datenschutzrichtlinie"
     }

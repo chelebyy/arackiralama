@@ -334,8 +334,8 @@ export default function ContactForm() {
 
       <p className="text-xs text-[#64748B] text-center">
         {t.rich("termsAgreement", {
-          terms: getTermsLink,
-          privacy: getPrivacyLink
+          terms: (chunks: React.ReactNode) => <Link href={"/terms" as any} className="text-[#0369A1] hover:underline">{chunks}</Link>,
+          privacy: (chunks: React.ReactNode) => <Link href={"/privacy" as any} className="text-[#0369A1] hover:underline">{chunks}</Link>
         })}
       </p>
     </form>
