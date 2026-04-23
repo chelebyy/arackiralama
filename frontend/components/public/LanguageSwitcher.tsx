@@ -64,8 +64,8 @@ export default function LanguageSwitcher() {
             return (
               <Link
                 key={loc}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                href={pathname as any}
+                // @ts-expect-error next-intl Link typing doesn't accept dynamic route pathname strings
+                href={pathname}
                 locale={loc}
                 role="menuitem"
                 aria-current={isActive ? "true" : undefined}
