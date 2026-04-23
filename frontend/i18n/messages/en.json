@@ -160,6 +160,67 @@
       "total": "Total"
     }
   },
+  "home": {
+    "viewAllVehicles": "View All Vehicles",
+    "whyChooseUs": {
+      "title": "Why Choose Us?",
+      "subtitle": "We are determined to provide the best car rental experience in Alanya",
+      "insurance": {
+        "title": "Comprehensive Insurance",
+        "description": "All our vehicles come with full comprehensive insurance for your peace of mind."
+      },
+      "delivery": {
+        "title": "Free Delivery",
+        "description": "We deliver your vehicle to your hotel, airport, or any location in Alanya."
+      },
+      "support": {
+        "title": "24/7 Support",
+        "description": "Our multilingual support team is ready to help you at any time of day."
+      },
+      "payment": {
+        "title": "Secure Payment",
+        "description": "Pay securely online with your credit card or choose cash on delivery option."
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to frequently asked questions about our car rental services. Can't find what you're looking for? Contact our support team.",
+      "contactSupport": "Contact Support",
+      "questions": [
+        {
+          "id": "documents",
+          "question": "What documents do I need to rent a car?",
+          "answer": "You need a valid driver's license, passport or ID card, and a credit card for deposit. International visitors whose license is not in the Latin alphabet must have an International Driving Permit."
+        },
+        {
+          "id": "age",
+          "question": "Is there a minimum age limit?",
+          "answer": "Yes, drivers must be at least 25 years old and have 2 years of driving experience. Additional fees may apply for drivers under 25."
+        },
+        {
+          "id": "airport",
+          "question": "Can I pick up the car at the airport?",
+          "answer": "Absolutely! We offer free delivery to Gazipasa Airport (GZP) and Antalya Airport (AYT). Our representative will meet you at the arrivals hall."
+        },
+        {
+          "id": "included",
+          "question": "What is included in the rental price?",
+          "answer": "The price includes comprehensive insurance, daily free mileage (200-300 km depending on the vehicle), 24/7 roadside assistance, and free delivery within Alanya."
+        },
+        {
+          "id": "cancel",
+          "question": "Can I change or cancel my reservation?",
+          "answer": "Yes, you can change or cancel free of charge up to 48 hours before the pickup date. Cancellations within 48 hours may be subject to a fee."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready to Explore Alanya?",
+      "subtitle": "Reserve your car now and start your adventure. Our team is ready to find the most suitable vehicle for you.",
+      "browseVehicles": "Browse Vehicles",
+      "contactUs": "Contact Us"
+    }
+  },
   "footer": {
     "about": {
       "title": "About Us",
@@ -187,6 +248,7 @@
     },
     "newsletter": {
       "title": "Stay Updated on Promotions",
+      "description": "Subscribe for special offers and updates.",
       "placeholder": "Your email address",
       "button": "Subscribe"
     },

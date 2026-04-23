@@ -58,6 +58,7 @@
       "all": "Alle",
       "economy": "Economy",
       "compact": "Kompakt",
+      "midsize": "Mittelklasse",
       "suv": "SUV & Geländewagen",
       "luxury": "Luxus",
       "minivan": "Minivan"
@@ -159,6 +160,67 @@
       "total": "Gesamt"
     }
   },
+  "home": {
+    "viewAllVehicles": "Alle Fahrzeuge ansehen",
+    "whyChooseUs": {
+      "title": "Warum uns wählen?",
+      "subtitle": "Wir sind entschlossen, die beste Autovermietungserfahrung in Alanya zu bieten",
+      "insurance": {
+        "title": "Umfassende Versicherung",
+        "description": "Alle unsere Fahrzeuge sind mit einer umfassenden Vollkaskoversicherung ausgestattet, damit Sie sich sicher fühlen."
+      },
+      "delivery": {
+        "title": "Kostenlose Lieferung",
+        "description": "Wir liefern Ihr Fahrzeug zu Ihrem Hotel, Flughafen oder an jeden Ort in Alanya."
+      },
+      "support": {
+        "title": "24/7 Support",
+        "description": "Unser mehrsprachiges Support-Team steht Ihnen rund um die Uhr zur Verfügung."
+      },
+      "payment": {
+        "title": "Sichere Zahlung",
+        "description": "Bezahlen Sie sicher online mit Ihrer Kreditkarte oder wählen Sie die Option Barzahlung bei Lieferung."
+      }
+    },
+    "faq": {
+      "title": "Häufig gestellte Fragen",
+      "subtitle": "Finden Sie Antworten auf häufig gestellte Fragen zu unseren Autovermietungsdiensten. Nicht gefunden, wonach Sie suchen? Kontaktieren Sie unser Support-Team.",
+      "contactSupport": "Support kontaktieren",
+      "questions": [
+        {
+          "id": "documents",
+          "question": "Welche Dokumente benötige ich für die Autovermietung?",
+          "answer": "Sie benötigen einen gültigen Führerschein, Reisepass oder Personalausweis sowie eine Kreditkarte für die Kaution. Internationale Fahrer, deren Führerschein nicht im lateinischen Alphabet ist, müssen einen Internationalen Führerschein haben."
+        },
+        {
+          "id": "age",
+          "question": "Gibt es eine Mindestaltersgrenze?",
+          "answer": "Ja, Fahrer müssen mindestens 25 Jahre alt sein und über 2 Jahre Fahrerfahrung verfügen. Für Fahrer unter 25 Jahren können zusätzliche Gebühren anfallen."
+        },
+        {
+          "id": "airport",
+          "question": "Kann ich das Auto am Flughafen abholen?",
+          "answer": "Absolut! Wir bieten kostenlose Lieferung zum Flughafen Gazipasa (GZP) und zum Flughafen Antalya (AYT). Unser Vertreter wird Sie in der Ankunftshalle treffen."
+        },
+        {
+          "id": "included",
+          "question": "Was ist im Mietpreis enthalten?",
+          "answer": "Der Preis umfasst eine umfassende Versicherung, tägliche Freikilometer (200-300 km je nach Fahrzeug), 24/7 Pannenhilfe und kostenlose Lieferung innerhalb von Alanya."
+        },
+        {
+          "id": "cancel",
+          "question": "Kann ich meine Reservierung ändern oder stornieren?",
+          "answer": "Ja, Sie können bis zu 48 Stunden vor dem Abholdatum kostenlos ändern oder stornieren. Stornierungen innerhalb von 48 Stunden können Gebühren unterliegen."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Bereit, Alanya zu erkunden?",
+      "subtitle": "Reservieren Sie jetzt Ihr Auto und beginnen Sie Ihr Abenteuer. Unser Team ist bereit, das passende Fahrzeug für Sie zu finden.",
+      "browseVehicles": "Fahrzeuge durchsuchen",
+      "contactUs": "Kontaktieren Sie uns"
+    }
+  },
   "footer": {
     "about": {
       "title": "Über uns",
@@ -186,6 +248,7 @@
     },
     "newsletter": {
       "title": "Bleiben Sie über Angebote informiert",
+      "description": "Abonnieren Sie für Sonderangebote und Updates.",
       "placeholder": "Ihre E-Mail-Adresse",
       "button": "Abonnieren"
     },
@@ -260,6 +323,138 @@
         "november": "November",
         "december": "Dezember"
       }
+    }
+  },
+  "aboutUs": {
+    "title": "Über Alanya Autovermietung",
+    "subtitle": "Ihr vertrauenswürdiger Partner für Autovermietung in Alanya seit 2008",
+    "ourStory": {
+      "title": "Unsere Geschichte",
+      "p1": "Die Alanya Autovermietung wurde 2008 mit einer einfachen Mission gegründet: Besuchern der Türkischen Riviera zuverlässige, erschwingliche und problemlose Mobilität zu bieten. Was als kleines Familienunternehmen mit nur 5 Fahrzeugen begann, ist zu einem der vertrauenswürdigsten Autovermieter der Region geworden.",
+      "p2": "In den vergangenen 15 Jahren haben wir über 50.000 Kunden aus aller Welt bedient und ihnen geholfen, die wunderschöne Region Alanya und darüber hinaus zu erkunden. Unser Engagement für Transparenz, Qualitätsservice und Kundenzufriedenheit hat uns den Ruf eingebracht, der erste Anlaufpunkt für Touristen und Einheimische gleichermaßen zu sein.",
+      "p3": "Heute verfügen wir über eine Flotte von über 500 Fahrzeugen und mehrere Standorte in ganz Alanya. Wir bleiben unseren Gründungswerten treu, während wir moderne Technologie nutzen, um den Mietprozess reibungsloser denn je zu gestalten."
+    },
+    "stats": {
+      "years": "Jahre Erfahrung",
+      "vehicles": "Fahrzeuge in der Flotte",
+      "customers": "Zufriedene Kunden",
+      "support": "Kundensupport"
+    },
+    "whyChooseUs": {
+      "title": "Warum uns wählen",
+      "subtitle": "Wir setzen uns dafür ein, das beste Autovermietungserlebnis in Alanya zu bieten",
+      "insuranceTitle": "Umfassende Versicherung",
+      "insuranceDesc": "Alle unsere Fahrzeuge verfügen über eine vollständige Versicherung inklusive Vollkasko und Diebstahlschutz.",
+      "deliveryTitle": "Kostenlose Lieferung",
+      "deliveryDesc": "Wir liefern Ihr Fahrzeug zu Ihrem Hotel, Flughafen oder an jeden Ort in Alanya ohne zusätzliche Kosten.",
+      "supportTitle": "24/7 Support",
+      "supportDesc": "Unser mehrsprachiges Support-Team steht Ihnen rund um die Uhr zur Verfügung.",
+      "feesTitle": "Keine versteckten Gebühren",
+      "feesDesc": "Transparente Preisgestaltung ohne Überraschungen. Der Preis, den Sie sehen, ist der Preis, den Sie zahlen."
+    },
+    "ourValues": {
+      "title": "Unsere Werte",
+      "subtitle": "Die Prinzipien, die alles leiten, was wir tun",
+      "trustTitle": "Vertrauen & Transparenz",
+      "trustDesc": "Wir glauben an ehrliche Preise ohne versteckte Gebühren. Was Sie sehen, ist das, was Sie zahlen.",
+      "qualityTitle": "Qualität zuerst",
+      "qualityDesc": "Jedes Fahrzeug in unserer Flotte wird sorgfältig gewartet und regelmäßig geprüft.",
+      "serviceTitle": "Hervorragender Service",
+      "serviceDesc": "Unser mehrsprachiges Team ist bestrebt, Ihr Miete Erlebnis reibungslos zu gestalten.",
+      "innovationTitle": "Kontinuierliche Innovation",
+      "innovationDesc": "Wir verbessern unsere Dienstleistungen ständig, um den sich ändernden Bedürfnissen unserer Kunden gerecht zu werden."
+    },
+    "ourFleet": {
+      "title": "Unsere Flotte",
+      "subtitle": "Ein Fahrzeug für jeden Bedarf und jedes Budget",
+      "vehicles": "Fahrzeuge",
+      "c1": "Benzinsparende Optionen für preisbewusste Reisende",
+      "c2": "Perfekte Balance aus Komfort und Effizienz",
+      "c3": "Geräumige Fahrzeuge für Familien und Gruppen",
+      "c4": "Premium-Fahrzeuge für besondere Anlässe",
+      "c5": "Große Kapazität für Gruppentransporte",
+      "c6": "Erleben Sie Alanya mit offenem Verdeck"
+    },
+    "coverage": {
+      "title": "Abdeckungsgebiete",
+      "subtitle": "Mehrere Standorte für Ihre Bequemlichkeit",
+      "freeDelivery": "Kostenlose Lieferung",
+      "distance1": "45 km vom Alanya Zentrum",
+      "distance2": "125 km vom Alanya Zentrum"
+    }
+  },
+  "contactUs": {
+    "title": "Kontaktieren Sie uns",
+    "subtitle": "Wir sind hier, um zu helfen. Kontaktieren Sie uns für Fragen oder Unterstützung.",
+    "sendMessage": "Senden Sie uns eine Nachricht",
+    "formDesc": "Füllen Sie das untenstehende Formular aus und wir werden uns so schnell wie möglich bei Ihnen melden. Für dringende Angelegenheiten rufen Sie uns bitte direkt an.",
+    "contactInfo": "Kontaktinformationen",
+    "reservations": "Reservierungen",
+    "reservationsDesc": "Für Buchungsanfragen",
+    "whatsapp": "WhatsApp",
+    "whatsappDesc": "Schneller Chat-Support",
+    "email": "E-Mail",
+    "emailDesc": "Für allgemeine Anfragen",
+    "emergency": "24/7 Notfall-Hotline",
+    "emergencyDesc": "Nur für Pannenhilfe und Notfälle",
+    "workingHours": "Öffnungszeiten",
+    "mainOffice": "Hauptbüro",
+    "days": {
+      "mondayFriday": "Montag - Freitag",
+      "saturday": "Samstag",
+      "sunday": "Sonntag",
+      "holidays": "Feiertage"
+    },
+    "ourLocations": "Unsere Standorte",
+    "officeTypes": {
+      "main": "Hauptbüro",
+      "airport": "Flughafen"
+    },
+    "offices": {
+      "main": {
+        "name": "Hauptbüro - Alanya Stadtzentrum",
+        "address": "Atatürk Boulevard Nr. 45, Alanya 07400, Türkei"
+      },
+      "gzp": {
+        "name": "Gazipasa Flughafen Schalter",
+        "address": "Gazipasa Alanya Flughafen (GZP), Internationale Ankünfte"
+      },
+      "ayt": {
+        "name": "Antalya Flughafen Schalter",
+        "address": "Antalya Flughafen (AYT), Terminal 2, Erdgeschoss"
+      },
+      "mahmutlar": {
+        "name": "Mahmutlar Büro",
+        "address": "Barbaros Straße Nr. 12, Mahmutlar, Alanya"
+      }
+    },
+    "form": {
+      "fullName": "Vollständiger Name",
+      "fullNamePlaceholder": "Geben Sie Ihren vollständigen Namen ein",
+      "email": "E-Mail-Adresse",
+      "emailPlaceholder": "ihr@email.com",
+      "phone": "Telefonnummer",
+      "phonePlaceholder": "+90 555 123 45 67",
+      "subject": "Betreff",
+      "subjectPlaceholder": "Wählen Sie einen Betreff",
+      "subjects": {
+        "reservation": "Reservierungsanfrage",
+        "support": "Kundensupport",
+        "feedback": "Feedback",
+        "partnership": "Geschäftspartnerschaft",
+        "other": "Sonstiges"
+      },
+      "message": "Nachricht",
+      "messagePlaceholder": "Wie können wir Ihnen helfen?",
+      "submit": "Nachricht senden",
+      "submitting": "Nachricht wird gesendet...",
+      "success": "Nachricht erfolgreich gesendet",
+      "successDesc": "Vielen Dank für Ihre Kontaktaufnahme. Wir haben Ihre Nachricht erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.",
+      "sendAnother": "Weitere Nachricht senden",
+      "error": "Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
+      "termsAgreement": "Durch das Absenden dieses Formulars stimmen Sie unseren {terms} und {privacy} zu.",
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutzrichtlinie"
     }
   }
 }

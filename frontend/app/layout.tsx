@@ -9,6 +9,7 @@ import "./globals.css";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
+import { routing } from "@/i18n/routing";
 
 export default async function RootLayout({
   children
@@ -16,6 +17,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
+
+  // Derive document language from locale cookie or default to Turkish
+  const localeCookie = cookieStore.get("NEXT_LOCALE")?.value;
+  const documentLang = localeCookie && routing.locales.includes(localeCookie as typeof routing.locales[number])
+    ? localeCookie
+    : routing.defaultLocale;
+
   const themeSettings = {
     preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as any,
     scale: (cookieStore.get("theme_scale")?.value ?? DEFAULT_THEME.scale) as any,
@@ -31,7 +39,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={documentLang} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>

@@ -61,8 +61,9 @@ export default async function LocaleLayout({
   const isRTL = localeData?.dir === "rtl";
 
   return (
-    <NextIntlClientProvider messages={messages}>
+    <NextIntlClientProvider locale={validLocale} messages={messages}>
       <div
+        dir={isRTL ? "rtl" : "ltr"}
         className={cn(
           lexend.variable,
           sourceSans.variable,

@@ -1,32 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import NextLink from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import { type Locale } from "@/i18n/routing";
+import { useState, useRef } from "react";
+import { useLocale } from "next-intl";
+import { Link, usePathname, localeLabels, routing, type Locale } from "@/i18n/routing";
 import Flag from "react-world-flags";
 import { ChevronDown, Globe } from "lucide-react";
-import { localeLabels, routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 export default function LanguageSwitcher() {
-  const t = useTranslations("common");
   const locale = useLocale();
-  const rawPathname = usePathname();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-
-  const pathWithoutLocale = rawPathname.replace(/^\/(tr|en|ru|ar|de)/, "") || "/";
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const currentLocale = localeLabels[locale as Locale];
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
+        id="language-switcher-button"
         onClick={() => setIsOpen(!isOpen)}
         onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget)) {
+          if (!containerRef.current?.contains(e.relatedTarget as Node)) {
             setIsOpen(false);
           }
         }}
@@ -37,63 +33,55 @@ export default function LanguageSwitcher() {
           "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1",
           "cursor-pointer"
         )}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        aria-expanded={isOpen ? "true" : "false"}
+        aria-haspopup="true"
+        aria-controls="language-menu"
+        aria-label="Select Language"
+        title="Select Language"
       >
         <Globe className="h-4 w-4" />
         <span className="hidden sm:inline">{currentLocale.label}</span>
-        <Flag
-          code={currentLocale.flag}
-          className="h-4 w-6 rounded-sm object-cover"
-          alt={`${currentLocale.label} flag`}
-        />
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isOpen && "rotate-180"
-          )}
-        />
+        <Flag code={currentLocale.flag} className="h-4 w-6 rounded-sm object-cover" alt="" />
+        <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
         <div
+          id="language-menu"
+          role="menu"
+          aria-labelledby="language-switcher-button"
+          aria-orientation="vertical"
           className={cn(
             "absolute right-0 top-full mt-2 w-48 py-2",
             "bg-white rounded-xl shadow-lg border border-[#E2E8F0]",
             "z-50 animate-in fade-in slide-in-from-top-2 duration-200"
           )}
-          role="listbox"
         >
           {routing.locales.map((loc) => {
             const localeData = localeLabels[loc];
             const isActive = loc === locale;
 
             return (
-              <NextLink
+              <Link
                 key={loc}
-                href={`/${loc}${pathWithoutLocale}`}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                href={pathname as any}
+                locale={loc}
+                role="menuitem"
+                aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 text-sm",
+                  "flex items-center gap-3 px-4 py-2.5 text-sm w-full",
                   "transition-colors duration-150",
-                  "cursor-pointer",
                   isActive
-                    ? "bg-[#F0F9FF] text-[#0369A1] font-medium"
-                    : "text-[#334155] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                    ? "bg-[#F0F9FF] text-[#0369A1] font-medium cursor-default pointer-events-none"
+                    : "text-[#334155] hover:bg-[#F8FAFC] hover:text-[#0F172A] cursor-pointer"
                 )}
-                role="option"
-                aria-selected={isActive}
                 onClick={() => setIsOpen(false)}
               >
-                <Flag
-                  code={localeData.flag}
-                  className="h-4 w-6 rounded-sm object-cover flex-shrink-0"
-                  alt={`${localeData.label} flag`}
-                />
-                <span className="flex-1">{localeData.label}</span>
-                {isActive && (
-                  <span className="h-2 w-2 rounded-full bg-[#0369A1]" />
-                )}
-              </NextLink>
+                <Flag code={localeData.flag} className="h-4 w-6 rounded-sm object-cover flex-shrink-0" alt="" />
+                <span className="flex-1 text-left">{localeData.label}</span>
+                {isActive && <span className="h-2 w-2 rounded-full bg-[#0369A1]" />}
+              </Link>
             );
           })}
         </div>
