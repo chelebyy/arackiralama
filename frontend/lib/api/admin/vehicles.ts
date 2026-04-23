@@ -19,7 +19,7 @@ import type {
   AdminVehicleStatus,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 const ADMIN_BASE = '/admin/v1';
 const VEHICLES_ENDPOINT = `${ADMIN_BASE}/vehicles`;

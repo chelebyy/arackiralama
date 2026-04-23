@@ -197,8 +197,8 @@ export interface AuditLogListParams extends AdminListParams {
   endDate?: string;
 }
 
-export interface CreateVehicleData extends Omit<AdminVehicle, 'id'> {}
-export interface UpdateVehicleData extends Partial<CreateVehicleData> {}
+export type CreateVehicleData = Omit<AdminVehicle, 'id'>;
+export type UpdateVehicleData = Partial<CreateVehicleData>;
 
 export interface TransferVehicleData {
   officeId: string;
@@ -210,11 +210,11 @@ export interface VehicleMaintenanceData {
   adminNotes?: string;
 }
 
-export interface CreateVehicleGroupData extends Omit<AdminVehicleGroup, 'id'> {}
-export interface UpdateVehicleGroupData extends Partial<CreateVehicleGroupData> {}
+export type CreateVehicleGroupData = Omit<AdminVehicleGroup, 'id'>;
+export type UpdateVehicleGroupData = Partial<CreateVehicleGroupData>;
 
-export interface CreateOfficeData extends Omit<AdminOffice, 'id'> {}
-export interface UpdateOfficeData extends Partial<CreateOfficeData> {}
+export type CreateOfficeData = Omit<AdminOffice, 'id'>;
+export type UpdateOfficeData = Partial<CreateOfficeData>;
 
 export interface CancelReservationData {
   reason: string;
@@ -236,11 +236,11 @@ export interface ReservationCheckOutData {
   adminNotes?: string;
 }
 
-export interface CreatePricingRuleData extends Omit<PricingRule, 'id'> {}
-export interface UpdatePricingRuleData extends Partial<CreatePricingRuleData> {}
+export type CreatePricingRuleData = Omit<PricingRule, 'id'>;
+export type UpdatePricingRuleData = Partial<CreatePricingRuleData>;
 
-export interface CreateCampaignData extends Omit<Campaign, 'id'> {}
-export interface UpdateCampaignData extends Partial<CreateCampaignData> {}
+export type CreateCampaignData = Omit<Campaign, 'id'>;
+export type UpdateCampaignData = Partial<CreateCampaignData>;
 
 export interface CustomerListParams extends AdminListParams {
   createdAfter?: string;

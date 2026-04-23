@@ -123,9 +123,9 @@ export default function DashboardPage() {
   const retiredCount = vehicles.filter((v) => v.status === "Retired").length;
 
   const dynamicVehicleData = [
-    { name: "Müsait", count: availableCount || 45 },
-    { name: "Bakımda", count: maintenanceCount || 8 },
-    { name: "Emekli", count: retiredCount || 3 },
+    { name: "Müsait", count: availableCount },
+    { name: "Bakımda", count: maintenanceCount },
+    { name: "Emekli", count: retiredCount },
   ];
 
   return (

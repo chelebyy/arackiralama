@@ -64,8 +64,7 @@ export default function LanguageSwitcher() {
             return (
               <Link
                 key={loc}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                href={pathname as any}
+                href={pathname}
                 locale={loc}
                 role="menuitem"
                 aria-current={isActive ? "true" : undefined}
