@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
-import { proxy } from "@/proxy";
+import { proxy } from "@/middleware";
 import { ACCESS_COOKIE_NAME } from "@/lib/auth/constants";
 
 function createToken(payload: Record<string, unknown>) {
