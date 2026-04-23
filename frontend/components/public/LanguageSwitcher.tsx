@@ -64,6 +64,7 @@ export default function LanguageSwitcher() {
             return (
               <Link
                 key={loc}
+                // @ts-expect-error next-intl Link typing doesn't accept dynamic route pathname strings
                 href={pathname}
                 locale={loc}
                 role="menuitem"
