@@ -502,7 +502,7 @@
     },
     "forgotPassword": {
       "title": "Forgot Password",
-      "description": "Enter your email address and we&apos;ll send reset instructions if the account exists.",
+      "description": "Enter your email address and we'll send reset instructions if the account exists.",
       "labels": {
         "accountType": "Account Type",
         "email": "Email"
