@@ -1,14 +1,136 @@
 # Repository Guidelines
 
+**Generated:** 2026-04-23
+**Stack:** .NET 10 + PostgreSQL + Redis | Next.js 16 + React 19 + TypeScript
+**Pattern:** Clean Architecture (API/Core/Infrastructure/Worker)
+
 ## Project Structure & Module Organization
-- `backend/`: .NET 10 solution (`RentACar.sln`).
-- `backend/src/RentACar.API`: ASP.NET Core API controllers, service wiring, middleware.
-- `backend/src/RentACar.Core`: domain entities, interfaces, constants.
-- `backend/src/RentACar.Infrastructure`: EF Core, migrations, background jobs, provider implementations.
-- `backend/src/RentACar.Worker`: background processing host.
-- `backend/tests/RentACar.Tests`: xUnit unit/integration tests.
-- `frontend/`: Next.js 16 + React 19 dashboard app (`app/`, `components/`, `hooks/`, `lib/`).
-- `docs/`: execution notes and project documentation.
+```
+.
+├── backend/
+│   ├── src/RentACar.API/           # Controllers, middleware, auth, app services (116 files)
+│   ├── src/RentACar.Core/          # Entities, interfaces, enums, constants (48 files)
+│   ├── src/RentACar.Infrastructure/# EF Core, repos, external services (66 files)
+│   ├── src/RentACar.Worker/        # Background job host (minimal/stubbed)
+│   └── tests/RentACar.Tests/       # xUnit unit + integration tests
+├── frontend/
+│   ├── app/                        # Next.js App Router with route groups
+│   ├── components/                 # UI components (shadcn/ui + custom)
+│   ├── hooks/                      # Custom React hooks
+│   ├── lib/                        # API clients, auth utilities
+│   └── i18n/                       # next-intl config + message files
+├── .github/workflows/              # CI: dotnet + pnpm + docker
+├── docs/                           # Execution notes + planning docs
+└── AGENTS.md                       # This file
+```
+
+## Where to Look
+| Task | Location | Notes |
+|------|----------|-------|
+| Add API endpoint | `backend/src/RentACar.API/Controllers/` | 22 controllers, RESTful |
+| Add domain entity | `backend/src/RentACar.Core/Entities/` | 18 entities, EF-mapped |
+| Add EF migration | `backend/src/RentACar.Infrastructure/Data/Migrations/` | Npgsql provider |
+| Add background job | `backend/src/RentACar.Worker/Worker.cs` | Polls every 30s |
+| Add public page | `frontend/app/(public)/[locale]/` | i18n-aware |
+| Add admin page | `frontend/app/(admin)/dashboard/(auth)/` | Requires auth |
+| Add UI component | `frontend/components/ui/` | shadcn/ui + custom |
+| Update translations | `frontend/i18n/messages/` | ar, de, en, ru, tr |
+
+## Backend Conventions
+- **Non-standard placement**: Application services live in `RentACar.API/Services/` (20 files) instead of a separate Application layer or Infrastructure.
+- `Contracts/` folders hold request/response DTOs per domain (Fleet, Auth, Pricing, Reservations).
+- `Specifications/` exists in both Core and Infrastructure for CQRS-style queries.
+- Worker project is minimal; background processing logic is in `Worker.cs` polling pattern.
+- `Program.cs` uses `WebApplication.CreateBuilder` with `AddApiApplicationServices()` extension method.
+
+## Frontend Conventions
+- Route groups: `(admin)` and `(public)` segment layouts without affecting URL.
+- `(admin)/dashboard/(auth)/` requires authentication; `(admin)/dashboard/(guest)/` is for login.
+- `(public)/[locale]/` handles i18n routing for all public-facing pages.
+- `app/page.tsx` hardcodes `redirect("/tr")` — entry point for locale selection.
+- `app/api/` contains Next.js Route Handlers for internal API proxying.
+- **Design rule**: Public pages must NOT use shadcn/ui components or design language (corporate-minimal, light-only, desktop-first).
+- Admin/dashboard CAN use shadcn/ui components.
+
+## Commands
+```bash
+# Backend
+dotnet restore backend/RentACar.sln --configfile backend/NuGet.Config
+dotnet build backend/RentACar.sln --no-restore
+dotnet test backend/RentACar.sln --no-build
+dotnet run --project backend/src/RentACar.API
+
+# Frontend
+corepack pnpm -C frontend install
+corepack pnpm -C frontend dev
+corepack pnpm -C frontend build
+corepack pnpm -C frontend test
+
+# Docker (local dev)
+cd backend && docker compose up --build
+```
+
+## CI Pipeline
+- `.github/workflows/ci.yml`: backend build/test → frontend lint/test/build → docker build → docker push to GHCR (main only)
+- `.github/workflows/dependabot-auto-merge.yml`: auto-merges patch/minor Dependabot PRs
+- `.github/workflows/codeql.yml`: security scanning for C# and JS/TS
+
+## Coding Style & Naming Conventions
+- C#: 4-space indent, PascalCase types/methods, camelCase locals/parameters.
+- TypeScript/React: 2-space indent, PascalCase components, camelCase variables/functions.
+- Keep services explicit and small; avoid unnecessary abstractions.
+- Run lint/format before PR (`corepack pnpm -C frontend lint`).
+
+## Testing Guidelines
+- Backend: xUnit; place tests under `backend/tests/RentACar.Tests/Unit/...`.
+- Frontend: Vitest + Testing Library; test files use `*.test.ts` / `*.test.tsx`.
+- Add or update tests for any behavior change, especially auth, payments, reservations, and notifications.
+- Keep tests deterministic (no real external network dependencies).
+
+## Commit & Pull Request Guidelines
+- Follow Conventional Commit style: `feat(phase7): ...`, `fix(frontend): ...`, `fix(security): ...`
+- PRs should include: clear summary, linked issue/PR number, test evidence, screenshots for UI changes.
+- Do not mix unrelated changes in one PR.
+
+## Security & Configuration Tips
+- Never commit secrets; use environment-based config.
+- Treat logs as non-sensitive by default; avoid writing tokens, IDs, or PII.
+- Validate dependency bumps with full build + tests before merge.
+- `docker-compose.yml` contains hardcoded local-dev secrets only — never for production.
+
+## Design Context
+### Users
+- Primary audience is tourists visiting Alanya.
+- Secondary audience includes local and repeat customers.
+- Users want to find vehicles quickly, understand delivery options clearly, and reserve with confidence.
+
+### Brand Personality
+- Corporate, Trustworthy, Clean
+
+### Aesthetic Direction
+- Public frontend: corporate-minimal, light-only, desktop-first.
+- Public frontend must not use shadcn components or shadcn design language.
+- Public design must not feel like an admin dashboard or generic template.
+
+### Design Principles
+- Trust, pricing clarity, and process clarity should be visible immediately.
+- Reservation flow should sit at the center of the information hierarchy.
+- Public and admin design languages must stay separate.
+- Simplicity should reduce friction without removing key information.
+
+## Codex Sentinel Integration
+### Security Checkpoints
+- Planning checkpoint: before locking a plan, architecture, or task breakdown, run a security gap analysis.
+- Risky-implementation checkpoint: when work touches authentication, authorization, tokens, secrets, middleware, outbound requests, file handling, CI, deployment, or other trust-boundary code, run a low-noise scoped risky-change review pass and surface only material concerns.
+- Post-implementation checkpoint: when coding appears complete, offer a focused security review.
+- Pre-release checkpoint: before release, deployment, or handoff, offer a stack-aware security check plan.
+
+### Guardrails
+- Treat security guidance as advisory-first unless the user explicitly asks for stricter gating.
+- Never claim the codebase is secure, fully reviewed, or production-safe from a security perspective.
+- Separate reviewed scope, unreviewed scope, assumptions, and tool-run status in every substantial security result.
+- If the user declines review or test planning at the current stage, do not repeat the same offer until the stage changes.
+- If the stack is unclear, fall back to common web-security guidance and say that stack inference is uncertain.
 
 ## Build, Test, and Development Commands
 - Backend restore/build/test:
