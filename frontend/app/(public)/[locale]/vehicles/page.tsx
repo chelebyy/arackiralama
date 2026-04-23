@@ -122,6 +122,10 @@ const offices = [
   { id: "ala", name: "Alanya Şehir Merkezi" },
   { id: "gzp", name: "Gazipaşa Havalimanı" },
   { id: "ayt", name: "Antalya Havalimanı" },
+  { id: "mahmutlar", name: "Mahmutlar" },
+  { id: "kargicak", name: "Kargıcak" },
+  { id: "konakli", name: "Konaklı" },
+  { id: "avsallar", name: "Avsallar" },
 ];
 
 export default function VehiclesPage() {
@@ -140,12 +144,16 @@ export default function VehiclesPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
 
   const pickupOfficeObj = offices.find((o) => o.id === pickupOffice);
-  let locationKey = "airport";
-  if (pickupOfficeObj?.id === "ala") {
-    locationKey = "cityCenter";
-  } else if (pickupOfficeObj?.id === "ayt") {
-    locationKey = "airportAntalya";
-  }
+  const locationKeyMap: Record<string, string> = {
+    ala: "cityCenter",
+    gzp: "airport",
+    ayt: "airportAntalya",
+    mahmutlar: "mahmutlar",
+    kargicak: "kargicak",
+    konakli: "konakli",
+    avsallar: "avsallar",
+  };
+  const locationKey = locationKeyMap[pickupOfficeObj?.id ?? ""] ?? "airport";
 
   const filteredVehicles =
     selectedGroup === "all"

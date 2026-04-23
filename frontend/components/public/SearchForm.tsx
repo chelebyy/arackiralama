@@ -18,11 +18,20 @@ interface SearchFormProps {
   readonly variant?: "hero" | "default";
 }
 
-const getToday = () => new Date().toISOString().split("T")[0];
+const getToday = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 const getWeekLater = () => {
   const d = new Date();
   d.setDate(d.getDate() + 7);
-  return d.toISOString().split("T")[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 export default function SearchForm({ className, variant = "default" }: SearchFormProps) {
@@ -52,9 +61,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
   }, [pickupLocation, returnLocation, pickupDate, pickupTime, returnDate, returnTime, router, locale]);
 
   const locations = [
-    { key: "airport", value: "gazipasa-airport" },
-    { key: "airportAntalya", value: "antalya-airport" },
-    { key: "cityCenter", value: "alanya-center" },
+    { key: "airport", value: "gzp" },
+    { key: "airportAntalya", value: "ayt" },
+    { key: "cityCenter", value: "ala" },
     { key: "mahmutlar", value: "mahmutlar" },
     { key: "kargicak", value: "kargicak" },
     { key: "konakli", value: "konakli" },

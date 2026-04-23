@@ -129,6 +129,10 @@ const offices = [
   { id: "ala", name: "Alanya City Center" },
   { id: "gzp", name: "Gazipasa Airport" },
   { id: "ayt", name: "Antalya Airport" },
+  { id: "mahmutlar", name: "Mahmutlar" },
+  { id: "kargicak", name: "Kargicak" },
+  { id: "konakli", name: "Konakli" },
+  { id: "avsallar", name: "Avsallar" },
 ];
 
 export default function VehicleDetailPage() {

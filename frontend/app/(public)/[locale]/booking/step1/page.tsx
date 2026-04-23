@@ -23,6 +23,10 @@ const offices = [
   { id: "ala", name: "Alanya City Center", address: "Ataturk Blvd. No:123, Alanya" },
   { id: "gzp", name: "Gazipasa Airport", address: "Gazipasa Airport Terminal" },
   { id: "ayt", name: "Antalya Airport", address: "Antalya Airport Terminal 2" },
+  { id: "mahmutlar", name: "Mahmutlar", address: "Mahmutlar, Alanya" },
+  { id: "kargicak", name: "Kargicak", address: "Kargicak, Alanya" },
+  { id: "konakli", name: "Konakli", address: "Konakli, Alanya" },
+  { id: "avsallar", name: "Avsallar", address: "Avsallar, Alanya" },
 ];
 
 const timeSlots = [
