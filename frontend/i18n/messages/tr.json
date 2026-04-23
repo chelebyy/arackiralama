@@ -269,7 +269,8 @@
       "filter": "Filtrele",
       "clear": "Temizle",
       "showMore": "Daha Fazla Göster",
-      "showLess": "Daha Az Göster"
+      "showLess": "Daha Az Göster",
+      "export": "DÄ±ÅŸa Aktar"
     },
     "labels": {
       "loading": "Yükleniyor...",
@@ -322,8 +323,16 @@
         "october": "Ekim",
         "november": "Kasım",
         "december": "Aralık"
-      }
-    }
+      },
+      "thisWeek": "Bu Hafta",
+      "last7Days": "Son 7 GÃ¼n",
+      "last28Days": "Son 28 GÃ¼n",
+      "thisMonth": "Bu Ay",
+      "lastMonth": "GeÃ§en Ay",
+      "thisYear": "Bu YÄ±l",
+      "selectRange": "Tarih AralÄ±ÄŸÄ± SeÃ§in"
+    },
+    "logoSubtitle": "AraÃ§ Kiralama"
   },
   "aboutUs": {
     "title": "Alanya Araç Kiralama Hakkında",
@@ -455,6 +464,92 @@
       "termsAgreement": "Bu formu göndererek <terms>Hizmet Şartları'nı</terms> ve <privacy>Gizlilik Politikası'nı</privacy> kabul etmiş olursunuz.",
       "terms": "Hizmet Şartları'nı",
       "privacy": "Gizlilik Politikası'nı"
+    }
+  },
+  "auth": {
+    "portal": {
+      "title": "MÃ¼ÅŸteri Paneli",
+      "description": "MÃ¼ÅŸteri olarak giriÅŸ yaptÄ±nÄ±z: {email}",
+      "explanation": "Bu sayfa mÃ¼ÅŸteri oturum sÃ¼rekliliÄŸini, yenileme yÃ¶netimini ve admin panelinden RBAC ayrÄ±mÄ±nÄ± doÄŸrular."
+    },
+    "logout": {
+      "button": "Ã‡Ä±kÄ±ÅŸ Yap",
+      "loading": "Ã‡Ä±kÄ±ÅŸ yapÄ±lÄ±yor...",
+      "success": "Ã‡Ä±kÄ±ÅŸ yapÄ±ldÄ±.",
+      "error": "Ã‡Ä±kÄ±ÅŸ iÅŸlemi baÅŸarÄ±sÄ±z."
+    },
+    "register": {
+      "title": "MÃ¼ÅŸteri HesabÄ± OluÅŸtur",
+      "description": "E-posta ve ÅŸifrenizle kayÄ±t olun.",
+      "labels": {
+        "fullName": "Ad Soyad",
+        "phone": "Telefon",
+        "email": "E-posta",
+        "password": "Åifre"
+      },
+      "buttons": {
+        "submit": "KayÄ±t Ol",
+        "loading": "LÃ¼tfen bekleyin"
+      },
+      "footer": {
+        "alreadyRegistered": "Zaten kayÄ±tlÄ± mÄ±sÄ±nÄ±z?",
+        "loginLink": "GiriÅŸ Yap"
+      },
+      "errors": {
+        "required": "E-posta ve ÅŸifre zorunludur.",
+        "generic": "KayÄ±t sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+      }
+    },
+    "forgotPassword": {
+      "title": "Åifremi Unuttum",
+      "description": "E-posta adresinizi girin, hesap mevcutsa sÄ±fÄ±rlama talimatlarÄ±nÄ± gÃ¶ndereceÄŸiz.",
+      "labels": {
+        "accountType": "Hesap TÃ¼rÃ¼",
+        "email": "E-posta"
+      },
+      "options": {
+        "admin": "YÃ¶netici / SÃ¼per YÃ¶netici",
+        "customer": "MÃ¼ÅŸteri"
+      },
+      "buttons": {
+        "submit": "SÄ±fÄ±rlama TalimatlarÄ±nÄ± GÃ¶nder",
+        "loading": "LÃ¼tfen bekleyin"
+      },
+      "messages": {
+        "submitted": "Ä°stek kabul edildi. SÄ±fÄ±rlama baÄŸlantÄ±sÄ± iÃ§in gelen kutunuzu kontrol edin.",
+        "successToast": "EÄŸer hesap mevcutsa parola sÄ±fÄ±rlama talimatlarÄ± e-posta adresinize gÃ¶nderilecektir."
+      },
+      "footer": {
+        "rememberPassword": "Åifrenizi hatÄ±rlÄ±yor musunuz?",
+        "loginLink": "GiriÅŸ Yap"
+      },
+      "errors": {
+        "emailRequired": "Email zorunludur.",
+        "generic": "Ä°stek sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+      }
+    },
+    "login": {
+      "labels": {
+        "email": "E-posta",
+        "password": "Åifre"
+      },
+      "buttons": {
+        "submit": "GiriÅŸ Yap",
+        "loading": "LÃ¼tfen bekleyin"
+      },
+      "forgotPassword": "Åifrenizi mi unuttunuz?",
+      "footer": {
+        "needAccount": "HesabÄ±nÄ±z yok mu?",
+        "registerLink": "KayÄ±t Ol"
+      },
+      "errors": {
+        "required": "Email ve parola zorunludur.",
+        "generic": "GiriÅŸ sÄ±rasÄ±nda beklenmeyen bir hata oluÅŸtu."
+      },
+      "v1": {
+        "title": "MÃ¼ÅŸteri GiriÅŸi",
+        "description": "MÃ¼ÅŸteri hesabÄ±nÄ±zla giriÅŸ yapÄ±n."
+      }
     }
   }
 }

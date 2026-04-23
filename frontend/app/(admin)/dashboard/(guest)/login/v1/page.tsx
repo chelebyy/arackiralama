@@ -1,22 +1,27 @@
-import { generateMeta } from "@/lib/utils";
-import { LoginForm } from "@/components/auth/login-form";
+﻿import { getTranslations } from \"next-intl/server\";
+import { generateMeta } from \"@/lib/utils\";
+import { LoginForm } from \"@/components/auth/login-form\";
 
-export function generateMetadata() {
+export async function generateMetadata() {
+  const t = await getTranslations(\"auth.login.v1\");
+  
   return generateMeta({
-    title: "Customer Login",
-    description: "Customer sign-in page for dashboard auth integration.",
-    canonical: "/dashboard/login/v1"
+    title: t(\"title\"),
+    description: t(\"description\"),
+    canonical: \"/dashboard/login/v1\"
   });
 }
 
-export default function Page() {
+export default async function Page() {
+  const t = await getTranslations(\"auth.login.v1\");
+
   return (
     <LoginForm
-      principalScope="Customer"
-      title="Customer Login"
-      description="Sign in with your customer account."
-      successRedirect="/dashboard/customer-portal"
-      registerHref="/dashboard/register/v1"
+      principalScope=\"Customer\"
+      title={t(\"title\")}
+      description={t(\"description\")}
+      successRedirect=\"/dashboard/customer-portal\"
+      registerHref=\"/dashboard/register/v1\"
     />
   );
 }
