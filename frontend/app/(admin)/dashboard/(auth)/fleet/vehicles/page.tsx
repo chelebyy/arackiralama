@@ -21,8 +21,14 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Eye, Pencil, Wrench } from "lucide-react";
-import { useAdminVehicles, useAdminOffices } from "@/hooks/admin";
+import { Search, Eye, Pencil, Wrench, Plus } from "lucide-react";
+import { useAdminVehicles, useAdminOffices, useAdminVehicleGroups } from "@/hooks/admin";
+import type { AdminVehicle } from "@/lib/api/admin/types";
+import dynamic from "next/dynamic";
+
+const VehicleDialog = dynamic(() => import("@/components/admin/dialogs/VehicleDialog"), {
+  ssr: false,
+});
 
 const statusBadgeVariant = (status: string) => {
   switch (status) {
@@ -54,9 +60,28 @@ export default function VehiclesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [officeFilter, setOfficeFilter] = useState("ALL");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<AdminVehicle | undefined>();
 
-  const { vehicles, isLoading, isError } = useAdminVehicles();
+  const { vehicles, isLoading, isError, mutate } = useAdminVehicles();
   const { offices } = useAdminOffices();
+  const { groups } = useAdminVehicleGroups();
+
+  const handleEdit = (vehicle: AdminVehicle) => {
+    setEditingVehicle(vehicle);
+    setDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingVehicle(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    setEditingVehicle(undefined);
+    mutate();
+  };
 
   const filtered = vehicles.filter((v) => {
     const q = search.toLowerCase();
@@ -74,7 +99,11 @@ export default function VehiclesPage() {
       <CardHeader>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">Araç Listesi</CardTitle>
-          <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-1" /> Yeni Araç
+          </Button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap mt-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -109,7 +138,6 @@ export default function VehiclesPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -151,17 +179,9 @@ export default function VehiclesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="ghost">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={() => handleEdit(v)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {v.status !== "Maintenance" && (
-                          <Button size="sm" variant="ghost">
-                            <Wrench className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -181,6 +201,14 @@ export default function VehiclesPage() {
           </div>
         )}
       </CardContent>
+      <VehicleDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        vehicle={editingVehicle}
+        onSuccess={handleSuccess}
+        offices={offices}
+        groups={groups}
+      />
     </Card>
   );
 }

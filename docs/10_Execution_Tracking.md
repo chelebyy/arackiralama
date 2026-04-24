@@ -1334,7 +1334,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 | 8.12.1 | Vehicle list | ✅ | AI | 23.04.2026 | 23.04.2026 | `/dashboard/fleet/vehicles` with data table |
 
-| 8.12.2 | Vehicle add/edit form | ⬜ | | | | | Form sayfalari sonraki iterasyonda
+| 8.12.2 | Vehicle add/edit form | ✅ | AI | 24.04.2026 | 24.04.2026 | `VehicleDialog` component oluşturuldu, backend API'ye bağlandı
 
 | 8.12.3 | Vehicle groups | ✅ | AI | 23.04.2026 | 23.04.2026 | `/dashboard/fleet/groups` |
 
@@ -1364,7 +1364,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 | 8.14.2 | Admin users (SuperAdmin only) | ✅ | AI | 23.04.2026 | 23.04.2026 | `/dashboard/users/admins` |
 
-| 8.14.3 | Role management | ⬜ | | | | | Form sonraki iterasyonda |
+| 8.14.3 | Role management | ✅ | AI | 24.04.2026 | 24.04.2026 | `AdminUserDialog` ile admin ekleme formu oluşturuldu, rol değişikliği zaten çalışıyordu
 
 #### 8.15 Admin Panel - Reports
 
@@ -1388,7 +1388,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 | 8.16.2 | Audit logs | ✅ | AI | 23.04.2026 | 23.04.2026 | `/dashboard/settings/audit-logs` |
 
-| 8.16.3 | System settings | ⬜ | | | | | Genel ayarlar formu sonraki iterasyonda |
+| 8.16.3 | System settings | ✅ | AI | 24.04.2026 | 24.04.2026 | `/dashboard/settings/system` sayfası oluşturuldu, şirket bilgileri ve varsayılan ayarlar formu eklendi
 
 #### 8.17 Components Library
 
@@ -1867,6 +1867,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
 
+| 24.04.2026 | Delivery | Faz 8 admin panel tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser CRUD dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi (`/dashboard/settings/system`), tüm admin API modülleri mock'tan gerçek backend'e geçirildi (`USE_MOCK = false`) | Faz 8.12.2, 8.14.3, 8.16.3 | Faz 9 Infrastructure + Faz 10 Testing & Launch | 3D Secure ödeme akışı ödeme sağlayıcısı seçimi sonrasına ertelendi; Build: 103 sayfa, 0 TypeScript error | AI |
 | 23.04.2026 | Bugfix | Faz 8 i18n/language-switcher kritik bug-fix: LanguageSwitcher onBlur containerRef düzeltmesi, eksik `footer.newsletter.description` 4 dile eklendi, `de.json` eksik namespace'ler (`aboutUs`, `contactUs`) tamamlandı, Arabic RTL `dir` desteği eklendi. Tüm 5 dilde console error 0 | Faz 8.2 (i18n) | Backend API entegrasyonu + 3D Secure | Session handoff dokümanı oluşturuldu | AI |
 | 22.04.2026 | Delivery | Faz 8 public website UI/UX polish ve bug-fix tamamlandı: SearchForm query parametreleri, VehicleDetail dinamik ID/gün hesaplama, Step2/Step4 dinamik fiyatlandırma, € standartlaştırması, confirmation sayfası, responsive stepper, Google Maps embed, form validasyonu güçlendirildi | Faz 8.3-8.8 (Public Website) | Backend API entegrasyonu + 3D Secure | Admin panel hariç tutuldu (kullanıcı isteği); swr dependency build sorunu çözüldü (hooks .bak yapıldı) | AI |
 | 19.03.2026 | Verification | Faz 6 User Management & Auth durumu kod tabanı incelemesi ile doğrulandı: JWT token generation/validation, refresh token mechanism, password reset flow, admin CRUD, RBAC tam implement edilmiş; eksik: profil güncelleme endpoint | 6.1.1-6.1.5, 6.2.1-6.2.2, 6.3.1-6.3.3, 6.4.1, 6.4.3, 6.5.1-6.5.6, 6.6.1-6.6.2 | Faz 6 kalan %5 (profil güncelleme endpoint) | 11 controller/service/entity dosyası inceledi: CustomerAuthController, AdminAuthController, AdminUsersController, PasswordResetController, JwtTokenService, BcryptPasswordHasher | AI |
@@ -1985,6 +1986,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 23 Nisan 2026 (Faz 8 i18n/language-switcher bug-fix tamamlandı: LanguageSwitcher onBlur containerRef düzeltmesi, eksik `footer.newsletter.description` 4 dile eklendi, `de.json` eksik `aboutUs`/`contactUs` namespace'leri tamamlandı, Arabic RTL `dir` desteği eklendi. Build: 139 sayfa, 0 console error tüm dillerde)
+**Son Güncelleme:** 24 Nisan 2026 (Faz 8 tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi, tüm admin modülleri mock'tan gerçek backend'e geçirildi. Build: 103 sayfa, 0 TypeScript error)
 
 **Durum:** Aktif Takip

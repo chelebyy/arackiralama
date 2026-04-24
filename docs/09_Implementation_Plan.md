@@ -744,53 +744,53 @@ POST /api/admin/v1/auth/logout
 ### 📋 Görevler
 
 #### 8.1 Project Setup
-- [ ] Next.js 16 project initialization
-- [ ] TypeScript configuration
-- [ ] Tailwind CSS setup
-- [ ] next-intl configuration
-- [ ] Folder structure (App Router)
+- [x] Next.js 16 project initialization
+- [x] TypeScript configuration
+- [x] Tailwind CSS setup
+- [x] next-intl configuration
+- [x] Folder structure (App Router)
 
 #### 8.2 i18n Implementation
-- [ ] 5 language message files
-- [ ] Language switcher component
-- [ ] URL-based locale routing (`/tr/`, `/en/`, etc.)
-- [ ] RTL support for Arabic
-- [ ] Date/number localization
+- [x] 5 language message files
+- [x] Language switcher component
+- [x] URL-based locale routing (`/tr/`, `/en/`, etc.)
+- [x] RTL support for Arabic
+- [x] Date/number localization
 
 #### 8.3 Public Website
 
 **Pages:**
-- [ ] **Home Page:**
+- [x] **Home Page:**
   - Hero section with search form
   - Featured vehicles
   - Why choose us
   - FAQ
   - Contact info
 
-- [ ] **Search Results Page:**
+- [x] **Search Results Page:**
   - Filter sidebar (office, dates, group)
   - Vehicle group cards
   - Pricing display
   - Availability indicator
 
-- [ ] **Vehicle Detail Page:**
+- [x] **Vehicle Detail Page:**
   - Vehicle images gallery
   - Features list
   - Pricing details
   - Book now button
 
-- [ ] **Booking Flow (4 Steps):**
+- [x] **Booking Flow (4 Steps):**
   1. Select dates & office
   2. Select vehicle group
   3. Customer information form
-  4. Payment (3D Secure redirect)
+  4. Payment (3D Secure redirect — UI complete, payment provider pending)
 
-- [ ] **Reservation Tracking Page:**
+- [x] **Reservation Tracking Page:**
   - Public code input
   - Reservation status display
   - Timeline view
 
-- [ ] **Static Pages:**
+- [x] **Static Pages:**
   - About us
   - Contact
   - Terms & Conditions
@@ -799,78 +799,79 @@ POST /api/admin/v1/auth/logout
 #### 8.4 Admin Panel
 
 **Layout:**
-- [ ] Sidebar navigation
-- [ ] Header with user info
-- [ ] Breadcrumb navigation
+- [x] Sidebar navigation
+- [x] Header with user info
+- [x] Breadcrumb navigation
 
 **Pages:**
-- [ ] **Dashboard:**
+- [x] **Dashboard:**
   - Today's pickups/returns
   - Active reservations count
   - Revenue stats
   - Recent bookings
 
-- [ ] **Reservation Management:**
+- [x] **Reservation Management:**
   - Reservation list (filters, search)
   - Reservation detail view
   - Cancel/Refund actions
   - Vehicle assignment
   - Check-in/Check-out
 
-- [ ] **Fleet Management:**
+- [x] **Fleet Management:**
   - Vehicle list
   - Vehicle add/edit form
   - Vehicle groups
   - Maintenance calendar
   - Office management
 
-- [ ] **Pricing Management:**
+- [x] **Pricing Management:**
   - Seasonal pricing rules
   - Campaign codes
   - Airport fees
 
-- [ ] **User Management:**
+- [x] **User Management:**
   - Customer list
   - Admin users (SuperAdmin only)
   - Role management
 
-- [ ] **Reports:**
+- [x] **Reports:**
   - Revenue reports
   - Occupancy reports
   - Popular vehicles
 
-- [ ] **Settings:**
+- [x] **Settings:**
   - Feature flags
   - Audit logs
   - System settings
 
 #### 8.5 Components Library
-- [ ] Button variants
-- [ ] Form inputs (with validation)
-- [ ] Date/time picker
-- [ ] Modal dialogs
-- [ ] Toast notifications
-- [ ] Data tables (with pagination)
-- [ ] Charts (recharts)
+- [x] Button variants
+- [x] Form inputs (with validation)
+- [x] Date/time picker
+- [x] Modal dialogs
+- [x] Toast notifications
+- [x] Data tables (with pagination)
+- [x] Charts (recharts)
 
 #### 8.6 State Management
-- [ ] React Context for global state
-- [ ] SWR or React Query for API data
-- [ ] Local storage for cart/reservation state
+- [x] React Context for global state
+- [x] SWR for API data
+- [x] Local storage for cart/reservation state
 
 #### 8.7 API Integration
-- [ ] API client setup (axios/fetch)
-- [ ] Error handling
-- [ ] Loading states
-- [ ] Optimistic updates
+- [x] API client setup (fetch)
+- [x] Error handling
+- [x] Loading states
+- [x] Optimistic updates
+- [x] Backend API integration (all admin modules connected to real .NET backend)
 
 ### ✅ Kabul Kriterleri
-- [ ] Lighthouse score > 90 (Performance, Accessibility)
+- [ ] Lighthouse score > 90 (Performance, Accessibility) — deferred to Faz 10
 - [ ] All pages load < 3s
 - [ ] Mobile responsive design
-- [ ] All 5 languages functional
-- [ ] RTL layout correct for Arabic
-- [ ] 3D Secure flow works end-to-end
+- [x] All 5 languages functional
+- [x] RTL layout correct for Arabic
+- [ ] 3D Secure flow works end-to-end — deferred until payment provider selected
 
 ---
 

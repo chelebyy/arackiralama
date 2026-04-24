@@ -13,7 +13,7 @@ import type {
   UpdateAdminUserStatusData,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const USERS_ENDPOINT = '/admin/v1/users';
 

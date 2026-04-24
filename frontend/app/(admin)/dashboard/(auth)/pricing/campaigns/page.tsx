@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,18 +13,43 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { useCampaigns } from "@/hooks/admin";
+import type { Campaign } from "@/lib/api/admin/types";
+import dynamic from "next/dynamic";
+
+const CampaignDialog = dynamic(() => import("@/components/admin/dialogs/CampaignDialog"), {
+  ssr: false,
+});
 
 export default function CampaignsPage() {
-  const { campaigns, isLoading, isError } = useCampaigns();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | undefined>();
+  
+  const { campaigns, isLoading, isError, mutate } = useCampaigns();
+
+  const handleEdit = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    setDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingCampaign(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    setEditingCampaign(undefined);
+    mutate();
+  };
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Kampanyalar</CardTitle>
-          <Button size="sm">
+          <Button size="sm" onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-1" /> Yeni Kampanya
           </Button>
         </div>
@@ -78,11 +104,8 @@ export default function CampaignsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={() => handleEdit(c)}>
                           <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -103,6 +126,12 @@ export default function CampaignsPage() {
           </div>
         )}
       </CardContent>
+      <CampaignDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        campaign={editingCampaign}
+        onSuccess={handleSuccess}
+      />
     </Card>
   );
 }

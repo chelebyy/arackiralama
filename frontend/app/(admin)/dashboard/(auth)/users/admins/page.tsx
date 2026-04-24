@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,9 +17,24 @@ import { Plus, Pencil, Power } from "lucide-react";
 import { useAdminUsers, mutateUpdateAdminUserRole, mutateUpdateAdminUserStatus } from "@/hooks/admin";
 import type { AdminUserRole } from "@/lib/api/admin";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
+
+const AdminUserDialog = dynamic(() => import("@/components/admin/dialogs/AdminUserDialog"), {
+  ssr: false,
+});
 
 export default function AdminUsersPage() {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { users, isLoading, isError, mutate } = useAdminUsers();
+
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    mutate();
+  };
 
   const toggleRole = async (id: string, currentRole: string) => {
     const newRole: AdminUserRole = currentRole === "SuperAdmin" ? "Admin" : "SuperAdmin";
@@ -46,7 +62,7 @@ export default function AdminUsersPage() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Admin Kullanıcılar</CardTitle>
-          <Button size="sm">
+          <Button size="sm" onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-1" /> Yeni Admin
           </Button>
         </div>
@@ -126,6 +142,11 @@ export default function AdminUsersPage() {
           </div>
         )}
       </CardContent>
+      <AdminUserDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={handleSuccess}
+      />
     </Card>
   );
 }
