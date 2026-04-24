@@ -9,7 +9,7 @@ import type {
   PaginatedResponse,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const FEATURE_FLAGS_ENDPOINT = '/admin/v1/feature-flags';
 const AUDIT_LOGS_ENDPOINT = '/admin/v1/audit-logs';

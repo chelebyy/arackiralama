@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,16 +13,46 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Plane, Hotel } from "lucide-react";
+import { Pencil, Plane, Hotel, Plus } from "lucide-react";
 import { useAdminOffices } from "@/hooks/admin";
+import type { AdminOffice } from "@/lib/api/admin/types";
+import dynamic from "next/dynamic";
+
+const OfficeDialog = dynamic(() => import("@/components/admin/dialogs/OfficeDialog"), {
+  ssr: false,
+});
 
 export default function OfficesPage() {
-  const { offices, isLoading, isError } = useAdminOffices();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingOffice, setEditingOffice] = useState<AdminOffice | undefined>();
+  
+  const { offices, isLoading, isError, mutate } = useAdminOffices();
+
+  const handleEdit = (office: AdminOffice) => {
+    setEditingOffice(office);
+    setDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingOffice(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    setEditingOffice(undefined);
+    mutate();
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Ofis Listesi</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Ofis Listesi</CardTitle>
+          <Button size="sm" onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-1" /> Yeni Ofis
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -74,7 +105,7 @@ export default function OfficesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="ghost">
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(o)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -95,6 +126,12 @@ export default function OfficesPage() {
           </div>
         )}
       </CardContent>
+      <OfficeDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        office={editingOffice}
+        onSuccess={handleSuccess}
+      />
     </Card>
   );
 }

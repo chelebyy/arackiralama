@@ -12,7 +12,7 @@ import type {
   ReservationListParams,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const RESERVATIONS_ENDPOINT = '/admin/v1/reservations';
 

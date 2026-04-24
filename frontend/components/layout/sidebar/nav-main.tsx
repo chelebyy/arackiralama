@@ -143,6 +143,7 @@ export const navItems: NavGroup[] = [
         href: "/dashboard/settings",
         icon: Settings,
         items: [
+          { title: "Sistem Ayarlari", href: "/dashboard/settings/system" },
           { title: "Ozellik Bayraklari", href: "/dashboard/settings/feature-flags" },
           { title: "Denetim Kayitlari", href: "/dashboard/settings/audit-logs" },
         ],

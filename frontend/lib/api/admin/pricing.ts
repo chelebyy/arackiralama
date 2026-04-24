@@ -13,7 +13,7 @@ import type {
   UpdatePricingRuleData,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const PRICING_RULES_ENDPOINT = '/admin/v1/pricing-rules';
 const CAMPAIGNS_ENDPOINT = '/admin/v1/campaigns';

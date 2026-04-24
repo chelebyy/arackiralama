@@ -7,7 +7,7 @@ import type {
   RevenueReport,
 } from './types';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 function unwrapResponse<T>(response: AdminResponse<T>): T {
   if (response && typeof response === 'object' && 'data' in response) {
