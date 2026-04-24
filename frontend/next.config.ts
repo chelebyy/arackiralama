@@ -9,6 +9,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const withNextIntl = createNextIntlPlugin("./i18n/config.ts");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {

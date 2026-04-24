@@ -29,7 +29,7 @@ Version: 1.0.0
 
 ------------------------------------------------------------------------
 
-# 2. VPS Setup
+# 2. VPS & Dokploy Setup
 
 ## 2.1 Base Configuration
 
@@ -38,7 +38,7 @@ Version: 1.0.0
 sudo apt update && sudo apt upgrade -y
 
 # Install essential packages
-sudo apt install -y fail2ban ufw docker.io docker-compose
+sudo apt install -y fail2ban ufw curl
 
 # Firewall configuration
 sudo ufw default deny incoming
@@ -46,6 +46,7 @@ sudo ufw default allow outgoing
 sudo ufw allow 22/tcp    # SSH (key-only)
 sudo ufw allow 80/tcp    # HTTP
 sudo ufw allow 443/tcp   # HTTPS
+sudo ufw allow 3000/tcp  # Dokploy Panel (optional, can be proxied)
 sudo ufw enable
 
 # Fail2ban setup
@@ -53,7 +54,14 @@ sudo systemctl enable fail2ban
 sudo systemctl start fail2ban
 ```
 
-## 2.2 SSH Security
+## 2.2 Dokploy Installation
+
+```bash
+# Install Dokploy (Self-hosted PaaS)
+curl -sSL https://dokploy.com/install.sh | sh
+```
+
+## 2.3 SSH Security
 
 - Key-only authentication (disable password auth)
 - Root login disabled
@@ -70,7 +78,7 @@ MaxAuthTries 3
 
 ------------------------------------------------------------------------
 
-# 3. Docker Services Architecture
+# 3. Docker Services Architecture (Dokploy/Traefik)
 
 ## 3.1 docker-compose.yml
 
@@ -78,23 +86,6 @@ MaxAuthTries 3
 version: '3.8'
 
 services:
-  # Reverse Proxy
-  nginx:
-    image: nginx:1.24-alpine
-    container_name: nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - certbot-data:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    depends_on:
-      - api
-      - web
-    restart: unless-stopped
-
   # Backend API
   api:
     build:
@@ -119,6 +110,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`alanyarentacar.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=5000"
 
   # Background Worker
   worker:
@@ -149,15 +146,30 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      # Public Domain
+      - "traefik.http.routers.web.rule=Host(`alanyarentacar.com`, `www.alanyarentacar.com`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      # Admin Domain
+      - "traefik.http.routers.admin.rule=Host(`admin.alanyarentacar.com`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
 
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./backups:/backups
-      - ./init-scripts:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_DB=rentacar
       - POSTGRES_USER=rentacar
@@ -171,7 +183,7 @@ services:
 
   # Redis Cache
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: redis
     volumes:
       - redis-data:/data
@@ -183,20 +195,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # Certbot for SSL
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - certbot-data:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-
 volumes:
   postgres-data:
   redis-data:
-  certbot-data:
-  certbot-www:
 
 networks:
   default:
@@ -205,214 +206,40 @@ networks:
 
 ## 3.2 Service Resource Limits
 
-| Service | CPU Limit | Memory Limit |
-|---------|-----------|--------------|
-| nginx | 0.5 cores | 256MB |
-| api | 2 cores | 2GB |
-| worker | 1 core | 1GB |
-| web | 1 core | 1GB |
-| postgres | 1 core | 2GB |
-| redis | 0.5 cores | 256MB |
+| Service | CPU Limit | Memory Limit | Notes |
+|---------|-----------|--------------|-------|
+| api | 2 cores | 2GB | ASP.NET Core |
+| worker | 1 core | 1GB | Background jobs |
+| web | 1 core | 1GB | Next.js SSR |
+| postgres | 1.5 cores | 2GB | PostgreSQL 18 |
+| redis | 0.5 cores | 512MB | Cache + sessions |
+
+> **Not:** Traefik reverse proxy Dokploy tarafından yönetilir, ayrı bir container olarak görünmez.
 
 ------------------------------------------------------------------------
 
-# 4. Nginx Configuration
+# 4. SSL/TLS & Routing (Traefik)
 
-## 4.1 nginx.conf
+## 4.1 Automatic SSL
 
-```nginx
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
+Dokploy uses Traefik as its core reverse proxy. SSL certificates are automatically managed via Let's Encrypt.
 
-events {
-    worker_connections 1024;
-}
+- **Resolver:** `letsencrypt` (configured in Dokploy settings)
+- **Challenge:** HTTP-01 or DNS-01
+- **Auto-renewal:** Handled automatically by Traefik
 
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
+## 4.2 Security Headers
 
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent" "$http_x_forwarded_for"';
+Security headers are configured via Traefik Middlewares in the Dokploy UI:
 
-    access_log /var/log/nginx/access.log main;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
-
-    # Rate limiting zones
-    limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
-    limit_req_zone $binary_remote_addr zone=payment:10m rate=10r/m;
-    limit_req_zone $binary_remote_addr zone=api:10m rate=100r/m;
-
-    # SSL configuration
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    # Include server blocks
-    include /etc/nginx/conf.d/*.conf;
-}
-```
-
-## 4.2 Server Block - Public Site
-
-```nginx
-# /etc/nginx/conf.d/public.conf
-server {
-    listen 80;
-    server_name alanyarentacar.com www.alanyarentacar.com;
-    
-    # Redirect HTTP to HTTPS
-    location / {
-        return 301 https://$server_name$request_uri;
-    }
-    
-    # Certbot challenge
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-}
-
-server {
-    listen 443 ssl http2;
-    server_name alanyarentacar.com www.alanyarentacar.com;
-
-    ssl_certificate /etc/letsencrypt/live/alanyarentacar.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/alanyarentacar.com/privkey.pem;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-    # API requests
-    location /api/ {
-        limit_req zone=api burst=20 nodelay;
-        proxy_pass http://api:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Static files
-    location /_next/static/ {
-        proxy_pass http://web:3000;
-        proxy_cache_valid 200 365d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # All other requests to Next.js
-    location / {
-        proxy_pass http://web:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-## 4.3 Server Block - Admin Panel
-
-```nginx
-# /etc/nginx/conf.d/admin.conf
-server {
-    listen 80;
-    server_name admin.alanyarentacar.com;
-    
-    location / {
-        return 301 https://$server_name$request_uri;
-    }
-    
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-}
-
-server {
-    listen 443 ssl http2;
-    server_name admin.alanyarentacar.com;
-
-    ssl_certificate /etc/letsencrypt/live/alanyarentacar.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/alanyarentacar.com/privkey.pem;
-
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Robots-Tag "noindex, nofollow" always;
-
-    # Admin API
-    location /api/ {
-        limit_req zone=api burst=20 nodelay;
-        proxy_pass http://api:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Admin frontend
-    location / {
-        proxy_pass http://web:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+- `X-Frame-Options: SAMEORIGIN`
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
 
 ------------------------------------------------------------------------
 
-# 5. SSL/TLS Configuration
-
-## 5.1 Initial Certificate Setup
-
-```bash
-# First time certificate generation
-docker-compose run --rm certbot certonly \
-  --webroot \
-  --webroot-path=/var/www/certbot \
-  --email admin@alanyarentacar.com \
-  --agree-tos \
-  --no-eff-email \
-  -d alanyarentacar.com \
-  -d www.alanyarentacar.com \
-  -d admin.alanyarentacar.com
-```
-
-## 5.2 Auto-Renewal
-
-Certbot container handles automatic renewal every 12 hours.
-Manual test:
-```bash
-docker-compose exec certbot certbot renew --dry-run
-```
-
-------------------------------------------------------------------------
-
-# 6. Database Configuration
+# 5. Database Configuration
 
 ## 6.1 PostgreSQL Settings
 
@@ -492,104 +319,60 @@ echo "Restore completed from: ${BACKUP_FILE}"
 
 ------------------------------------------------------------------------
 
-# 7. CI/CD Pipeline
+# 7. CI/CD Pipeline (Dokploy Git-based)
 
 ## 7.1 GitHub Actions Workflow
 
+Dokploy supports direct Git integration. When a push occurs to the `main` branch, Dokploy automatically pulls the changes and redeploys the services.
+
 ```yaml
-# .github/workflows/deploy.yml
-name: Build and Deploy
+# .github/workflows/ci.yml
+name: CI
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Build Backend
+      # Build & Test Backend
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '10.0'
       
-      - name: Build Backend
+      - name: Test Backend
         run: |
           cd backend
           dotnet restore
-          dotnet build --configuration Release
           dotnet test
 
-      # Build Frontend
+      # Build & Test Frontend
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       
-      - name: Build Frontend
+      - name: Test Frontend
         run: |
           cd frontend
           npm ci
-          npm run build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/rentacar
-            git pull origin main
-            docker-compose build
-            docker-compose up -d
-            docker-compose exec api dotnet ef database update
-            docker system prune -f
+          npm test
 ```
 
-## 7.2 Deployment Script
+## 7.2 Dokploy Deployment Setup
 
-```bash
-#!/bin/bash
-# /opt/rentacar/scripts/deploy.sh
-
-set -e
-
-echo "Starting deployment..."
-
-# Pull latest code
-git pull origin main
-
-# Build images
-docker-compose build
-
-# Run migrations
-docker-compose run --rm api dotnet ef database update
-
-# Rolling update
-docker-compose up -d
-
-# Health check
-sleep 10
-if curl -f http://localhost/api/v1/health; then
-    echo "Deployment successful!"
-else
-    echo "Health check failed!"
-    exit 1
-fi
-
-# Cleanup
-docker system prune -f
-```
+1. **Connect Repository:** Link GitHub repository in Dokploy Panel.
+2. **Configure Service:** Create a "Compose" service in Dokploy.
+3. **Environment Variables:** Add secrets (DB_PASSWORD, JWT_SECRET, etc.) in Dokploy UI.
+4. **Auto-Deploy:** Enable "Automatic Deployment" on push to `main`.
+5. **Health Checks:** Ensure `docker-compose.yml` has proper health checks for Traefik routing.
 
 ------------------------------------------------------------------------
 
