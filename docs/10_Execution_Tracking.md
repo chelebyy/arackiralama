@@ -1476,7 +1476,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 ### 📋 Görevler
 
-#### 9.1 VPS Setup
+#### 9.1 VPS & Dokploy Setup
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 
@@ -1486,57 +1486,63 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 | 9.1.2 | SSH key-only authentication | ⬜ | | | | |
 
-| 9.1.3 | Firewall (UFW) yapılandırması | ⬜ | | | | |
+| 9.1.3 | Firewall (UFW) yapılandırması | ⬜ | | | | Port 22, 80, 443 açık |
 
 | 9.1.4 | Fail2ban kurulumu | ⬜ | | | | |
 
-| 9.1.5 | Docker & Docker Compose kurulumu | ⬜ | | | | |
+| 9.1.5 | Dokploy kurulumu | ⬜ | | | | `curl -sSL https://dokploy.com/install.sh \| sh` |
 
-#### 9.2 Docker Production Configuration
+| 9.1.6 | Dokploy admin yapılandırması | ⬜ | | | | Panel erişimi, güvenlik |
 
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
+| 9.1.7 | Domain DNS yapılandırması | ⬜ | | | | A records |
 
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 9.2.1 | Multi-stage Dockerfiles | ⬜ | | | | |
-
-| 9.2.2 | docker-compose.prod.yml | ⬜ | | | | |
-
-| 9.2.3 | Environment variables (.env) | ⬜ | | | | |
-
-| 9.2.4 | Volume mounts for persistence | ⬜ | | | | |
-
-| 9.2.5 | Network isolation | ⬜ | | | | |
-
-#### 9.3 Nginx Configuration
+#### 9.2 Docker Production Configuration (Dokploy)
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 9.3.1 | Reverse proxy yapılandırması | ⬜ | | | | |
+| 9.2.1 | Multi-stage Dockerfiles (API, Worker, Web) | ⬜ | | | | |
 
-| 9.3.2 | Host-based routing (domain.com vs admin.domain.com) | ⬜ | | | | |
+| 9.2.2 | Dokploy uyumlu `docker-compose.yml` | ⬜ | | | | Traefik labels ile |
 
-| 9.3.3 | Gzip compression | ⬜ | | | | |
+| 9.2.3 | Environment variables (Dokploy UI) | ⬜ | | | | Secrets yönetimi |
 
-| 9.3.4 | Rate limiting zones | ⬜ | | | | |
+| 9.2.4 | Volume mounts for persistence | ⬜ | | | | PostgreSQL, Redis |
 
-| 9.3.5 | SSL/TLS configuration | ⬜ | | | | |
+| 9.2.5 | Health check tanımlamaları | ⬜ | | | | Traefik routing için |
 
-#### 9.4 SSL/TLS
+| 9.2.6 | ~~Nginx container~~ | ⬜ | | | | Traefik ile değiştirildi |
+
+#### 9.3 Traefik Routing (Dokploy Native)
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 9.4.1 | Let's Encrypt certbot setup | ⬜ | | | | |
+| 9.3.1 | ~~Nginx reverse proxy yapılandırması~~ | ⬜ | | | | Traefik ile değiştirildi |
 
-| 9.4.2 | Auto-renewal configuration | ⬜ | | | | |
+| 9.3.2 | Host-based routing (domain.com vs admin.domain.com) | ⬜ | | | | Traefik labels |
 
-| 9.4.3 | HTTP to HTTPS redirect | ⬜ | | | | |
+| 9.3.3 | Gzip compression | ⬜ | | | | Traefik middleware |
 
-| 9.4.4 | Security headers | ⬜ | | | | |
+| 9.3.4 | Rate limiting | ⬜ | | | | Traefik middleware |
+
+| 9.3.5 | Health check routing | ⬜ | | | | Traefik + Docker health checks |
+
+#### 9.4 SSL/TLS (Traefik Otomatik)
+
+| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
+
+|---|-------|-------|--------|-----------|-------|--------|
+
+| 9.4.1 | ~~Let's Encrypt certbot setup~~ | ⬜ | | | | Traefik otomatik Let's Encrypt |
+
+| 9.4.2 | ~~Auto-renewal configuration~~ | ⬜ | | | | Traefik tarafından otomatik |
+
+| 9.4.3 | HTTP to HTTPS redirect | ⬜ | | | | Traefik default |
+
+| 9.4.4 | Security headers (HSTS, CSP) | ⬜ | | | | Traefik middleware |
 
 #### 9.5 Database
 
@@ -1566,19 +1572,23 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 | 9.6.4 | Disk space alerts | ⬜ | | | | |
 
-#### 9.7 Deployment Script
+#### 9.7 Git-based Deployment (Dokploy)
 
 | # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
 
 |---|-------|-------|--------|-----------|-------|--------|
 
-| 9.7.1 | Automated deployment script | ⬜ | | | | |
+| 9.7.1 | GitHub repository bağlantısı | ⬜ | | | | Dokploy üzerinden |
 
-| 9.7.2 | Zero-downtime deployment (blue/green opsiyonel) | ⬜ | | | | |
+| 9.7.2 | "Push to Deploy" yapılandırması | ⬜ | | | | Otomatik deploy main branch push'unda |
 
-| 9.7.3 | Database migration automation | ⬜ | | | | |
+| 9.7.3 | ~~Manuel deployment script~~ | ⬜ | | | | Git-based deploy ile değiştirildi |
 
-| 9.7.4 | Rollback procedure | ⬜ | | | | |
+| 9.7.4 | ~~Blue/green deployment~~ | ⬜ | | | | Dokploy native rollback kullanılacak |
+
+| 9.7.5 | Database migration automation | ⬜ | | | | Post-deploy hook |
+
+| 9.7.6 | Rollback procedure (Dokploy) | ⬜ | | | | UI üzerinden versiyon geri alma |
 
 ### ✅ Faz 9 Kabul Kriterleri
 
@@ -1586,17 +1596,17 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 |---|--------|-------|----------------|
 
-| 1 | `docker-compose -f docker-compose.prod.yml build` hatasız tamamlanıyor | ⬜ Not Started | `backend/docker-compose.prod.yml` |
+| 1 | Dokploy üzerinde servisler healthy durumda | ⬜ Not Started | Dokploy Dashboard |
 
-| 2 | Site HTTPS ile erişilebilir | ⬜ Not Started | |
+| 2 | Site HTTPS ile erişilebilir (Otomatik SSL) | ⬜ Not Started | SSL Labs test |
 
-| 3 | SSL sertifikası A+ rating | ⬜ Not Started | |
+| 3 | SSL sertifikası A+ rating | ⬜ Not Started | SSL Labs test |
 
-| 4 | Otomatik yedekleme çalışıyor | ⬜ Not Started | |
+| 4 | Otomatik yedekleme çalışıyor (günlük) | ⬜ Not Started | Backup dosyaları |
 
-| 5 | Deployment < 5 dakika | ⬜ Not Started | |
+| 5 | Git push → Deployment < 2 dakika | ⬜ Not Started | CI/CD logları |
 
-| 6 | Health check endpoint'leri çalışıyor | ⬜ Not Started | |
+| 6 | Health check endpoint'leri Traefik tarafından tanınıyor | ⬜ Not Started | `/health`, `/api/health` |
 
 ---
 

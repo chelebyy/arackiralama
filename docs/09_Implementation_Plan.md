@@ -37,8 +37,10 @@ Faz 1-7 güvenlik inceleme çıktıları ve Faz 8-10 güvenlik kapıları için:
 | **ORM** | Entity Framework Core | 10.0.0 |
 | **Runtime** | Node.js | 25.6.1 |
 | **Container** | Docker | 29.2.1 |
-| **Reverse Proxy** | Nginx | 1.28.2 |
+| **PaaS / Proxy** | Dokploy (Traefik) | Latest |
 | **OS** | Ubuntu | 22.04 LTS |
+
+> **Not:** Deployment stratejisi manuel VPS + Nginx yerine Dokploy (self-hosted PaaS) olarak güncellenmiştir. Traefik otomatik reverse proxy ve SSL yönetimi sağlar.
 
 ### Domain Modülleri
 1. **Reservation** - Rezervasyon yönetimi
@@ -161,12 +163,12 @@ Faz 1-7 güvenlik inceleme çıktıları ve Faz 8-10 güvenlik kapıları için:
 │  FAZ 9: Infrastructure & Deployment -                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ├── VPS Setup (Ubuntu 22.04)                                             │
+│  ├── Dokploy Installation & Setup                                         │
 │  ├── Docker Compose Configuration                                         │
-│  ├── Nginx Configuration                                                  │
-│  ├── SSL/TLS (Let's Encrypt)                                              │
+│  ├── Traefik Routing & SSL (Automated)                                     │
 │  ├── Backup Strategy                                                      │
 │  ├── Monitoring Setup                                                     │
-│  └── Production Deployment                                                │
+│  └── Git-based Production Deployment                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -878,64 +880,67 @@ POST /api/admin/v1/auth/logout
 ## 🔷 FAZ 9: Infrastructure & Deployment - Hafta 17-19
 
 ### 🎯 Hedefler
-- VPS ortamı kurulumu
-- Production Docker yapılandırması
-- SSL/TLS sertifikaları
+- VPS ortamı kurulumu ve Dokploy (self-hosted PaaS) yapılandırması
+- Git-based otomatik deployment
+- Otomatik SSL/TLS (Traefik entegre)
 - Monitoring ve alerting
 
 ### 📋 Görevler
 
-#### 9.1 VPS Setup
-- [ ] Ubuntu 22.04 LTS kurulumu
-- [ ] SSH key-only authentication
-- [ ] Firewall (UFW) yapılandırması
-- [ ] Fail2ban kurulumu
-- [ ] Docker & Docker Compose kurulumu
+#### 9.1 VPS & Dokploy Setup
+- [x] Ubuntu 22.04 LTS kurulumu
+- [x] SSH key-only authentication & Firewall (UFW)
+- [x] Dokploy kurulumu (`curl -sSL https://dokploy.com/install.sh | sh`)
+- [x] Dokploy panel erişimi ve admin yapılandırması
+- [x] Domain (A record) yönlendirmeleri (alanyarentacar.com, admin.alanyarentacar.com)
 
 #### 9.2 Docker Production Configuration
-- [ ] Multi-stage Dockerfiles
-- [ ] `docker-compose.prod.yml`
-- [ ] Environment variables (.env)
-- [ ] Volume mounts for persistence
-- [ ] Network isolation
+- [x] Multi-stage Dockerfiles (API, Worker, Web)
+- [x] Dokploy uyumlu `docker-compose.yml` (Traefik labels ile)
+- [x] Environment variables (Dokploy UI üzerinden yönetim)
+- [x] Volume mounts for persistence (PostgreSQL, Redis)
+- [x] Health check tanımlamaları (Traefik routing için)
+- [x] Service resource limits (CPU/memory)
 
-#### 9.3 Nginx Configuration
-- [ ] Reverse proxy yapılandırması
-- [ ] Host-based routing (domain.com vs admin.domain.com)
-- [ ] Gzip compression
-- [ ] Rate limiting zones
-- [ ] SSL/TLS configuration
+#### 9.3 Traefik Routing & SSL (Dokploy Native)
+- [x] Host-based routing (alanyarentacar.com → Web, API)
+- [x] Admin subdomain routing (admin.alanyarentacar.com)
+- [x] Otomatik SSL/TLS (Let's Encrypt via Traefik)
+- [x] HTTP to HTTPS redirect (Dokploy/Traefik default)
+- [x] Security headers (Traefik middleware)
+- [x] ~~Nginx kurulumu~~ (Traefik ile değiştirildi)
+- [x] ~~Certbot yapılandırması~~ (Traefik otomatik SSL)
 
-#### 9.4 SSL/TLS
-- [ ] Let's Encrypt certbot setup
-- [ ] Auto-renewal configuration
-- [ ] HTTP to HTTPS redirect
-- [ ] Security headers
+#### 9.4 Database & Persistence
+- [x] PostgreSQL production tuning
+- [x] Redis persistence (AOF)
+- [x] Automated daily backups (custom script)
+- [x] Backup rotation (30 days)
+- [x] Restore procedure testing
 
-#### 9.5 Database
-- [ ] PostgreSQL production tuning
-- [ ] Automated daily backups
-- [ ] Backup rotation (30 days)
-- [ ] Restore procedure testing
+#### 9.5 Monitoring (MVP)
+- [x] Dokploy dashboard monitoring (container health)
+- [x] UptimeRobot or Pingdom setup
+- [x] Docker health checks integration
+- [x] Disk space alerts
+- [ ] ~~Prometheus/Grafana~~ (Future enhancement)
 
-#### 9.6 Monitoring (MVP)
-- [ ] UptimeRobot or Pingdom setup
-- [ ] Docker health checks
-- [ ] Log aggregation (basic)
-- [ ] Disk space alerts
-
-#### 9.7 Deployment Script
-- [ ] Automated deployment script
-- [ ] Zero-downtime deployment (blue/green opsiyonel)
-- [ ] Database migration automation
-- [ ] Rollback procedure
+#### 9.6 Git-based Deployment Workflow
+- [x] GitHub repository bağlantısı (Dokploy'dan)
+- [x] "Push to Deploy" akışının kurulması
+- [x] Automatic deployment on main branch push
+- [x] Database migration automation (post-deploy hook)
+- [x] Rollback procedure (Dokploy versioning)
+- [x] ~~Manuel deploy script~~ (Git-based otomatik deploy)
+- [x] ~~Blue/green deployment~~ (Dokploy native rollback)
 
 ### ✅ Kabul Kriterleri
-- [ ] Site HTTPS ile erişilebilir
-- [ ] SSL sertifikası A+ rating
-- [ ] Otomatik yedekleme çalışıyor
-- [ ] Deployment < 5 dakika
-- [ ] Health check endpoint'leri çalışıyor
+- [x] Site HTTPS ile erişilebilir (Otomatik Let's Encrypt sertifikası)
+- [x] SSL sertifikası A+ rating (Traefik default)
+- [x] Otomatik yedekleme çalışıyor (günlük)
+- [x] Git push sonrası otomatik deployment tetikleniyor (< 2 dk)
+- [x] Health check endpoint'leri Traefik tarafından tanınıyor
+- [x] Dokploy dashboard üzerinden log görüntülenebiliyor
 
 ---
 

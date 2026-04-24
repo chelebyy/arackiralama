@@ -169,9 +169,10 @@
 
 - [ ] Secret yönetimi: repo içi secret sıfır
 - [ ] CI security gates: SAST + dependency + image scan
-- [ ] Nginx/TLS hardening (HSTS dahil)
+- [ ] ~~Nginx/TLS hardening~~ → Traefik/SSL yapılandırması (HSTS dahil)
 - [ ] DB/Redis ağ segmentasyonu
 - [ ] Backup/restore güvenli prosedür doğrulaması
+- [ ] Dokploy admin panel güvenlik yapılandırması
 
 ## Faz 10 (Testing & Launch) - Security Gate Checklist
 
@@ -249,7 +250,7 @@
 
 ### 8.1 Başlangıç Kapısı
 
-- [ ] Faz 9 mimari kapsamı (VPS/Docker/Nginx/CI/CD/Monitoring) netleştirildi
+- [ ] Faz 9 mimari kapsamı (VPS/Docker/**Dokploy**/Traefik/CI/CD/Monitoring) netleştirildi
 - [ ] Secret yönetim modeli (env/secret store) kararlaştırıldı
 - [ ] Deployment ortamları (dev/stage/prod) ayrıştırıldı
 - [ ] Rollback stratejisi yazılı hale getirildi
@@ -258,7 +259,7 @@
 
 - [ ] CI security gates aktif: SAST, dependency scan, image scan
 - [ ] Secret’lar repo dışı güvenli kaynağa taşındı
-- [ ] Nginx/TLS hardening uygulandı (HSTS + modern TLS policy)
+- [ ] ~~Nginx/TLS hardening~~ → Traefik/SSL yapılandırması uygulandı (HSTS + modern TLS policy)
 - [ ] DB/Redis ağ erişimleri minimum yetki ile sınırlandı
 - [ ] Backup komut/işletim politikası (allowlist + redaction) uygulandı
 

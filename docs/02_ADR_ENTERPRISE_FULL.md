@@ -55,25 +55,35 @@ Reasons: - SSR for SEO - Strong i18n support - Production maturity
 
 ## 7. Deployment
 
-C# Chosen: Docker + VPS (PostgreSQL inside VPS)
+**Chosen:** Dokploy (Self-hosted PaaS) on VPS
 
-## Architecture:
+**Previous Consideration:** Docker + VPS + Nginx (manuel yapılandırma)
 
-- Nginx (reverse proxy)
+### Architecture:
+
+- **Dokploy** (PaaS yönetimi, Traefik entegre)
+- **Traefik** (otomatik reverse proxy, SSL/TLS)
 - API container (ASP.NET Core 10.0.3)
 - Background Worker container
 - Single Next.js container (public + admin)
 - Redis container
 - PostgreSQL container
 
-## Rationale:
+### Rationale:
 
-- Controlled infrastructure
-- Cost efficiency
-- Full environment control
-- Acceptable risk with backup strategy
-- Scalable vertically
-- Horizontally scalable for API if required
+- **Reduced operational complexity:** Otomatik reverse proxy ve SSL yönetimi
+- **Git-based deployment:** `git push` ile otomatik deploy
+- **Automatic SSL/TLS:** Let's Encrypt entegrasyonu (Certbot gerektirmez)
+- **Health check routing:** Traefik health check'lere göre traffic yönlendirme
+- **Cost efficiency:** Tek VPS üzerinde tüm servisler
+- **Self-hosted:** Veri kontrolü ve gizlilik (SaaS PaaS'e göre)
+- **Dokku/Heroku-like experience:** Basit deployment deneyimi
+
+### Trade-offs:
+
+- ~~Nginx konfigürasyon kontrolü~~ → Traefik middleware yapılandırması
+- ~~Manuel SSL sertifika yönetimi~~ → Otomatik Let's Encrypt (Traefik)
+- ~~Blue/green deployment~~ → Dokploy native rollback (versiyon geçmişi)
 
 # 8. Frontend Application Structure
 
@@ -151,7 +161,8 @@ If admin traffic or operational complexity increases:
 | Node.js | 25.6.1 | Stable | Active LTS, stable for production |
 | Docker | 29.2.1 | Current | BuildKit, improved security |
 | Docker Compose | 2.20+ | Current | Compose spec v3, better networking |
-| Nginx | 1.28.2 | Stable | Reverse proxy, SSL termination, rate limiting |
+| Dokploy | Latest | Active | Self-hosted PaaS, Git-based deployment |
+| Traefik | Latest (Dokploy) | Stable | Auto SSL, reverse proxy, health-based routing |
 | Ubuntu | 22.04 LTS | LTS (Apr 2027) | Server-grade stability, security updates |
 
 ## 9. i18n & Localization
@@ -189,9 +200,11 @@ admin.domain.com/api/   → Admin API endpoints
 ```
 
 ### Routing Logic
-- **Nginx**: Host-based routing (`domain.com` vs `admin.domain.com`)
+- **Traefik (Dokploy)**: Host-based routing (`domain.com` vs `admin.domain.com`), auto SSL
 - **Next.js Middleware**: Locale detection and redirect
 - **Backend**: JWT validation, RBAC enforcement
+
+> **Not:** Nginx yerine Traefik kullanılmaktadır. Traefik, Dokploy ile birlikte gelen otomatik reverse proxy'dir ve Let's Encrypt SSL sertifikalarını otomatik yönetir.
 
 ## 11. Redis Resilience Strategy
 
@@ -229,4 +242,5 @@ Cache: Redis 7.4.x
 Frontend: Next.js 16.1.6 (App Router) + React 19.2.0
 Runtime: Node 25.6.1
 Container: Docker 29.2.1
+PaaS: Dokploy (self-hosted) with Traefik
 OS: Ubuntu 22.04 LTS
