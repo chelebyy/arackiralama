@@ -14,7 +14,7 @@ public sealed class NotificationBackgroundJobProcessor(
     INotificationTemplateService notificationTemplateService,
     IEmailProvider emailProvider,
     ISmsProvider smsProvider,
-    ILogger<NotificationBackgroundJobProcessor> logger)
+    ILogger<NotificationBackgroundJobProcessor> logger) : INotificationBackgroundJobProcessor
 {
     private const int RetryLimit = 3;
     private const int BatchSize = 20;

@@ -306,7 +306,29 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 | `AdminCampaignsControllerTests.cs` | 2 | Create validation, duplicate code detection |
 | `AdminOfficesControllerTests.cs` | ~6 | GetAll, Create validation, Update |
 
-**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Wave 2 ile Pricing, Fleet, Notification modülleri kapsamlandı. Worker tests (T6) Wave 3'e bırakıldı. Admin panel controller coverage hâlâ düşük. Bir sonraki dalga (Wave 3): Worker tests + eksik admin controller testleri + integration tests (10.2).
+**Wave 3 Sonuçları (27 Nisan 2026):**
+- Toplam test: 395 → **451** (+56 yeni test)
+- Tüm 451 test geçti (0 başarısız)
+- Build: 0 warning, 0 error
+
+**Wave 3 Yeni Test Dosyaları:**
+| Dosya | Test Sayısı | Kapsam |
+|-------|-------------|--------|
+| `WorkerTests.cs` | 10 | ProcessNotificationJobsAsync, EnqueueExpiredHoldJobsAsync, ProcessExpiredHoldJobsAsync, EnsureDailyBackupJobScheduledAsync |
+| `AdminSecurityControllerTests.cs` | 2 | RevokeSession, GetActiveSessions |
+| `AdminFeatureFlagsControllerTests.cs` | 4 | GetAll, Update validation, Update not found |
+| `AdminAuditLogsControllerTests.cs` | 4 | GetPaged validation (page, pageSize), GetPaged success |
+| `AdminBackgroundJobsControllerTests.cs` | 7 | GetFailed, Requeue, GetPending, GetProcessing |
+| `AdminPaymentsControllerTests.cs` | 14 | RetryPayment validation + success + null + exception, GetPaymentStatus validation + success + not found |
+| `AdminReservationsControllerTests.cs` | 15 | CRUD, Assign/UnassignVehicle, TransitionStatus, Cancel, ProcessExpired |
+
+**Wave 3 Coverage (Coverlet):**
+- RentACar.API: **57.61%** line, 41.79% branch
+- RentACar.Core: **78.88%** line, 77.77% branch
+- RentACar.Infrastructure: **10.22%** line, 19.37% branch
+- RentACar.Worker: **21.67%** line, 30.85% branch
+
+**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Wave 3 ile Worker tests ve 6 eksik admin controller testi tamamlandı. Admin panel controller coverage önemli ölçüde arttı. Bir sonraki adım: Integration tests (10.2) veya frontend test coverage devamı.
 
 ### 10.1.2 Frontend Test Review
 
