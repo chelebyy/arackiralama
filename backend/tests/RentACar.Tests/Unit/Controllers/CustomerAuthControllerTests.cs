@@ -555,6 +555,60 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task Logout_WhenSessionExistsButBelongsToDifferentPrincipal_ReturnsSuccessWithoutRevokingSession()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "mismatch@test.com",
+            FullName = "Mismatch Customer",
+            Phone = "05005554433",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = "hashed-password"
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var persistedSessionId = Guid.NewGuid();
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            Id = persistedSessionId,
+            PrincipalType = AuthPrincipalType.Customer,
+            PrincipalId = Guid.NewGuid(),
+            RefreshTokenHash = "sha256:mismatch-refresh-hash",
+            RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(2),
+            LastSeenAtUtc = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var refreshTokenCookieService = new Mock<IRefreshTokenCookieService>();
+        var controller = CreateController(dbContext, refreshTokenCookieService: refreshTokenCookieService.Object);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sid, persistedSessionId.ToString()),
+                new Claim(AuthClaimTypes.PrincipalType, AuthPrincipalType.Customer.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var result = await controller.Logout(CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var payloadJson = JsonSerializer.Serialize(okResult.Value);
+        payloadJson.Should().Contain("\"Success\":true");
+
+        var persistedSession = dbContext.AuthSessions.Should().ContainSingle().Subject;
+        persistedSession.Id.Should().Be(persistedSessionId);
+        persistedSession.RevokedAtUtc.Should().BeNull();
+        refreshTokenCookieService.Verify(service => service.ClearRefreshTokenCookie(It.IsAny<HttpContext>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Me_WithCustomerPrincipal_ReturnsProfileData()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -595,6 +649,25 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         response.Data.Nationality.Should().Be(customer.Nationality);
         response.Data.LicenseYear.Should().Be(customer.LicenseYear);
         response.Data.BirthDate.Should().Be(customer.BirthDate);
+    }
+
+    [Fact]
+    public async Task Me_WithInvalidPrincipalIdClaim_ReturnsUnauthorized()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var controller = CreateController(dbContext);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, "not-a-guid")
+            ],
+            authenticationType: "Bearer"));
+
+        var result = await controller.Me(CancellationToken.None);
+
+        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        unauthorized.Value.Should().BeOfType<ApiResponse<object>>().Which.Message.Should().Be("Yetkisiz erişim");
     }
 
     private static CustomerAuthController CreateController(
@@ -725,6 +798,93 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task UpdateProfile_WithWhitespaceAndInvalidBoundaryValues_PreservesExistingFields()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "no-op@test.com",
+            FullName = "Original Name",
+            Phone = "05001110000",
+            IdentityNumber = "12345678901",
+            Nationality = "TR",
+            LicenseYear = 2015,
+            BirthDate = new DateOnly(1991, 1, 2)
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var request = new UpdateProfileRequest(
+            FullName: "   ",
+            Phone: " ",
+            IdentityNumber: "   ",
+            Nationality: null,
+            LicenseYear: 1899,
+            BirthDate: null);
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.FullName.Should().Be("Original Name");
+        persistedCustomer.Phone.Should().Be("05001110000");
+        persistedCustomer.IdentityNumber.Should().Be("12345678901");
+        persistedCustomer.Nationality.Should().Be("TR");
+        persistedCustomer.LicenseYear.Should().Be(2015);
+        persistedCustomer.BirthDate.Should().Be(new DateOnly(1991, 1, 2));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithLicenseYearAtBoundary1900_UpdatesLicenseYear()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "boundary@test.com",
+            FullName = "Boundary Name",
+            Phone = "05001110000",
+            IdentityNumber = "12345678901",
+            Nationality = "TR",
+            LicenseYear = 2015
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Role, AuthRoleNames.Customer),
+                new Claim(ClaimTypes.NameIdentifier, customer.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, customer.Id.ToString())
+            ],
+            authenticationType: "Bearer"));
+
+        var request = new UpdateProfileRequest(
+            FullName: null,
+            Phone: null,
+            IdentityNumber: null,
+            Nationality: null,
+            LicenseYear: 1900,
+            BirthDate: null);
+
+        var result = await controller.UpdateProfile(request, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        dbContext.Customers.Should().ContainSingle().Which.LicenseYear.Should().Be(1900);
+    }
+
+    [Fact]
     public async Task UpdateProfile_WithoutAuthentication_ReturnsUnauthorized()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -782,7 +942,6 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         (string)(ReadProperty(value, propertyName) ?? throw new InvalidOperationException($"Missing property: {propertyName}"));
     #endregion
 }
-
 
 
 

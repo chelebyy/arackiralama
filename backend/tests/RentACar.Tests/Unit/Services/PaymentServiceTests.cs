@@ -17,6 +17,11 @@ namespace RentACar.Tests.Unit.Services;
 
 public sealed class PaymentServiceTests : IDisposable
 {
+    private static readonly DateTime FixedPastPickupDateTime = new(2030, 1, 4, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime FixedPastReturnDateTime = new(2030, 1, 6, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime FixedFuturePickupDateTime = new(2030, 1, 10, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime FixedFutureReturnDateTime = new(2030, 1, 12, 10, 0, 0, DateTimeKind.Utc);
+
     private readonly TestDbContextFactory _dbFactory = new();
     private readonly RentACarDbContext _dbContext;
     private readonly PaymentService _sut;
@@ -27,19 +32,7 @@ public sealed class PaymentServiceTests : IDisposable
         _dbContext = _dbFactory.CreateContext();
         SeedFeatureFlag();
 
-        _sut = new PaymentService(
-            _dbContext,
-            new FakePaymentProvider(),
-            _notificationQueueServiceMock.Object,
-            Options.Create(new PaymentOptions
-            {
-                Provider = "Mock",
-                Currency = "TRY",
-                RetryLimit = 3,
-                TimeoutRetryCount = 2,
-                WebhookJobBatchSize = 10
-            }),
-            NullLogger<PaymentService>.Instance);
+        _sut = CreateSut();
 
         _notificationQueueServiceMock
             .Setup(x => x.EnqueueEmailAsync(It.IsAny<QueuedEmailNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
@@ -47,6 +40,246 @@ public sealed class PaymentServiceTests : IDisposable
         _notificationQueueServiceMock
             .Setup(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenFeatureFlagDisabled_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        _dbContext.FeatureFlags.Single(x => x.Name == "EnableOnlinePayment").Enabled = false;
+        await _dbContext.SaveChangesAsync();
+
+        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "disabled-flag"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Online ödeme şu anda aktif değil.");
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenIdempotencyKeyBelongsToDifferentReservation_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        var otherReservation = await SeedReservationAsync();
+        await SeedPaymentIntentAsync(otherReservation.Id, "shared-key", PaymentStatus.Pending);
+
+        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "shared-key"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Bu idempotency key farklı bir rezervasyon için zaten kullanılmış.");
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenMatchingIntentAlreadyExists_ReturnsExistingIntentWithoutCallingProvider()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync();
+        var existingIntent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "same-key",
+            PaymentStatus.Pending,
+            providerIntentId: "existing-provider-intent",
+            providerTransactionId: "existing-provider-transaction");
+
+        var result = await sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "same-key"), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.PaymentIntentId.Should().Be(existingIntent.Id);
+        provider.CreatePaymentIntentCallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenRetryLimitReached_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        await SeedPaymentIntentAsync(reservation.Id, "attempt-1", PaymentStatus.Failed);
+        await SeedPaymentIntentAsync(reservation.Id, "attempt-2", PaymentStatus.Failed);
+        await SeedPaymentIntentAsync(reservation.Id, "attempt-3", PaymentStatus.Failed);
+
+        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "attempt-4"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Maksimum ödeme deneme sayısı aşıldı (3).");
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenRequestIsValid_PersistsNewIntentFromProviderResult()
+    {
+        var provider = new FakePaymentProvider
+        {
+            CreatePaymentIntentResult = new PaymentIntentProviderResult
+            {
+                ProviderIntentId = "provider-intent-create",
+                ProviderTransactionId = "provider-transaction-create",
+                Status = PaymentProviderIntentStatus.Pending3DS,
+                RedirectUrl = "https://mock/create-intent",
+                ExpiresAtUtc = FakePaymentProvider.FixedExpiryUtc
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync();
+
+        var result = await sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "new-intent"), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(PaymentProviderIntentStatus.Pending3DS.ToString());
+        result.RedirectUrl.Should().Be("https://mock/create-intent");
+        result.Amount.Should().Be(reservation.TotalAmount);
+        provider.CreatePaymentIntentCallCount.Should().Be(1);
+
+        var storedIntent = _dbContext.PaymentIntents.Single(x => x.Id == result.PaymentIntentId);
+        storedIntent.ProviderIntentId.Should().Be("provider-intent-create");
+        storedIntent.ProviderTransactionId.Should().Be("provider-transaction-create");
+        storedIntent.Status.Should().Be(PaymentStatus.Pending);
+    }
+
+    [Fact]
+    public async Task CompleteThreeDsAsync_WhenVerificationSucceeds_UpdatesIntentAndReservation()
+    {
+        var provider = new FakePaymentProvider
+        {
+            VerifyPaymentResult = new PaymentVerificationProviderResult
+            {
+                Status = PaymentProviderIntentStatus.Succeeded,
+                TransactionId = "verified-transaction"
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync();
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "three-ds-success",
+            PaymentStatus.Pending,
+            providerIntentId: "provider-intent-3ds");
+
+        var result = await sut.CompleteThreeDsAsync(intent.Id, new ThreeDsReturnApiRequest { BankResponse = "ok" }, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(PaymentProviderIntentStatus.Succeeded.ToString());
+        intent.Status.Should().Be(PaymentStatus.Succeeded);
+        intent.ProviderTransactionId.Should().Be("verified-transaction");
+        reservation.Status.Should().Be(ReservationStatus.Paid);
+    }
+
+    [Fact]
+    public async Task CompleteThreeDsAsync_WhenVerificationFails_MarksIntentFailedWithoutPayingReservation()
+    {
+        var provider = new FakePaymentProvider
+        {
+            VerifyPaymentResult = new PaymentVerificationProviderResult
+            {
+                Status = PaymentProviderIntentStatus.Failed,
+                TransactionId = "failed-transaction"
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync();
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "three-ds-failure",
+            PaymentStatus.Pending,
+            providerIntentId: "provider-intent-failed");
+
+        var result = await sut.CompleteThreeDsAsync(intent.Id, new ThreeDsReturnApiRequest { BankResponse = "fail" }, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(PaymentProviderIntentStatus.Failed.ToString());
+        intent.Status.Should().Be(PaymentStatus.Failed);
+        reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+    }
+
+    [Fact]
+    public async Task RetryPaymentAsync_WhenIdempotencyKeyIsMissing_GeneratesRetryKeyForProviderRequest()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync();
+
+        var result = await sut.RetryPaymentAsync(
+            new AdminPaymentRetryApiRequest
+            {
+                ReservationId = reservation.Id,
+                Card = CreateCardRequest()
+            },
+            CancellationToken.None);
+
+        result.Should().NotBeNull();
+        provider.CreatePaymentIntentCallCount.Should().Be(1);
+        provider.LastCreatePaymentIntentRequest!.IdempotencyKey.Should().StartWith("retry-");
+    }
+
+    [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenSuccessfulMainPaymentExists_CreatesAuthorizedDepositIntent()
+    {
+        var provider = new FakePaymentProvider
+        {
+            CreatePreAuthorizationResult = new PreAuthorizationProviderResult
+            {
+                ProviderIntentId = "deposit-provider-intent",
+                ProviderTransactionId = "deposit-provider-transaction",
+                Status = PaymentProviderIntentStatus.Authorized,
+                ExpiresAtUtc = FakePaymentProvider.FixedExpiryUtc
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Paid);
+        await SeedPaymentIntentAsync(
+            reservation.Id,
+            "main-payment",
+            PaymentStatus.Succeeded,
+            providerIntentId: "main-provider-intent",
+            providerTransactionId: "main-provider-transaction");
+
+        var result = await sut.CreateDepositPreAuthorizationAsync(reservation.Id, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.PaymentKind.Should().Be("DepositPreAuthorization");
+        result.Status.Should().Be(PaymentStatus.Authorized.ToString());
+        result.Amount.Should().Be(750m);
+        provider.CreatePreAuthorizationCallCount.Should().Be(1);
+        provider.LastCreatePreAuthorizationRequest!.ReferenceTransactionId.Should().Be("main-provider-transaction");
+
+        var trackedDepositIntent = _dbContext.ChangeTracker
+            .Entries<PaymentIntent>()
+            .Single(x =>
+                x.Entity.ReservationId == reservation.Id
+                && x.Entity.Provider == "Mock:Deposit"
+                && x.Entity.Amount == 750m)
+            .Entity;
+
+        trackedDepositIntent.Status.Should().Be(PaymentStatus.Authorized);
+    }
+
+    [Fact]
+    public async Task CaptureDepositAsync_WhenAuthorizedDepositExists_CapturesDepositAndMarksIntentSucceeded()
+    {
+        var provider = new FakePaymentProvider
+        {
+            CaptureDepositResult = new ProviderCaptureDepositResult
+            {
+                Success = true,
+                ReferenceId = "capture-reference"
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync(status: ReservationStatus.Completed);
+        var depositIntent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "deposit-intent",
+            PaymentStatus.Authorized,
+            provider: "Mock:Deposit",
+            amount: 500m,
+            providerIntentId: "deposit-provider-intent",
+            providerTransactionId: "deposit-provider-transaction");
+
+        var result = await sut.CaptureDepositAsync(reservation.Id, 250m, "damage", CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be("Succeeded");
+        result.ReferenceId.Should().Be("capture-reference");
+        depositIntent.Status.Should().Be(PaymentStatus.Succeeded);
+        provider.CaptureDepositCallCount.Should().Be(1);
+        provider.LastCaptureDepositRequest!.Amount.Should().Be(250m);
     }
 
     [Fact]
@@ -419,6 +652,91 @@ public sealed class PaymentServiceTests : IDisposable
         successfulIntent.Status.Should().Be(PaymentStatus.Refunded);
     }
 
+    private PaymentService CreateSut(FakePaymentProvider? paymentProvider = null)
+    {
+        return new PaymentService(
+            _dbContext,
+            paymentProvider ?? new FakePaymentProvider(),
+            _notificationQueueServiceMock.Object,
+            Options.Create(new PaymentOptions
+            {
+                Provider = "Mock",
+                Currency = "TRY",
+                RetryLimit = 3,
+                TimeoutRetryCount = 2,
+                WebhookJobBatchSize = 10
+            }),
+            NullLogger<PaymentService>.Instance);
+    }
+
+    private static CreatePaymentIntentApiRequest CreatePaymentIntentRequest(Guid reservationId, string idempotencyKey)
+    {
+        return new CreatePaymentIntentApiRequest
+        {
+            ReservationId = reservationId,
+            IdempotencyKey = idempotencyKey,
+            InstallmentCount = 1,
+            Card = CreateCardRequest()
+        };
+    }
+
+    private static PaymentCardApiRequest CreateCardRequest()
+    {
+        return new PaymentCardApiRequest
+        {
+            HolderName = "Test User",
+            Number = "4111111111111111",
+            ExpiryMonth = "12",
+            ExpiryYear = "2030",
+            Cvv = "123"
+        };
+    }
+
+    private async Task<Reservation> SeedReservationAsync(
+        ReservationStatus status = ReservationStatus.PendingPayment,
+        decimal totalAmount = 2500m)
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = $"RSV-{Guid.NewGuid():N}"[..12],
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = FixedFuturePickupDateTime,
+            ReturnDateTime = FixedFutureReturnDateTime,
+            Status = status,
+            TotalAmount = totalAmount
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        await _dbContext.SaveChangesAsync();
+        return reservation;
+    }
+
+    private async Task<PaymentIntent> SeedPaymentIntentAsync(
+        Guid reservationId,
+        string idempotencyKey,
+        PaymentStatus status,
+        string provider = "Mock",
+        decimal? amount = null,
+        string? providerIntentId = null,
+        string? providerTransactionId = null)
+    {
+        var paymentIntent = new PaymentIntent
+        {
+            ReservationId = reservationId,
+            Amount = amount ?? 2500m,
+            Status = status,
+            Provider = provider,
+            IdempotencyKey = idempotencyKey,
+            ProviderIntentId = providerIntentId,
+            ProviderTransactionId = providerTransactionId
+        };
+
+        _dbContext.PaymentIntents.Add(paymentIntent);
+        await _dbContext.SaveChangesAsync();
+        return paymentIntent;
+    }
+
     private void SeedFeatureFlag()
     {
         _dbContext.FeatureFlags.Add(new FeatureFlag
@@ -459,7 +777,9 @@ public sealed class PaymentServiceTests : IDisposable
         return paymentIntent;
     }
 
-    private async Task<Reservation> SeedReservationWithDepositAmountAsync(decimal depositAmount)
+    private async Task<Reservation> SeedReservationWithDepositAmountAsync(
+        decimal depositAmount,
+        ReservationStatus status = ReservationStatus.Active)
     {
         var vehicleGroup = new VehicleGroup
         {
@@ -468,22 +788,24 @@ public sealed class PaymentServiceTests : IDisposable
         };
         var vehicle = new Vehicle
         {
-            Plate = $"34TST{Random.Shared.Next(1000, 9999)}",
+            Plate = $"34TST{_dbContext.Vehicles.Count() + 1000}",
             Brand = "Test",
             Model = "Car",
             Year = 2024,
             Color = "White",
             OfficeId = Guid.NewGuid(),
+            GroupId = vehicleGroup.Id,
             Group = vehicleGroup
         };
         var reservation = new Reservation
         {
             PublicCode = "RSV-DEP",
             CustomerId = Guid.NewGuid(),
+            VehicleId = vehicle.Id,
             Vehicle = vehicle,
-            PickupDateTime = DateTime.UtcNow.AddDays(-3),
-            ReturnDateTime = DateTime.UtcNow.AddDays(-1),
-            Status = ReservationStatus.Active,
+            PickupDateTime = FixedPastPickupDateTime,
+            ReturnDateTime = FixedPastReturnDateTime,
+            Status = status,
             TotalAmount = 1500m
         };
 
@@ -500,31 +822,62 @@ public sealed class PaymentServiceTests : IDisposable
 
     private sealed class FakePaymentProvider : IPaymentProvider
     {
-        public Task<PaymentIntentProviderResult> CreatePaymentIntentAsync(CreatePaymentIntentProviderRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PaymentIntentProviderResult
-            {
-                ProviderIntentId = Guid.NewGuid().ToString("N"),
-                ProviderTransactionId = $"tx-{Guid.NewGuid():N}",
-                Status = PaymentProviderIntentStatus.Pending3DS,
-                RedirectUrl = "https://mock/3ds",
-                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(15)
-            });
+        public static readonly DateTime FixedExpiryUtc = new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
-        public Task<PreAuthorizationProviderResult> CreatePreAuthorizationAsync(CreatePreAuthorizationProviderRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PreAuthorizationProviderResult
-            {
-                ProviderIntentId = Guid.NewGuid().ToString("N"),
-                ProviderTransactionId = $"deposit-{Guid.NewGuid():N}",
-                Status = PaymentProviderIntentStatus.Authorized,
-                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(15)
-            });
+        public int CreatePaymentIntentCallCount { get; private set; }
+        public int CreatePreAuthorizationCallCount { get; private set; }
+        public int VerifyPaymentCallCount { get; private set; }
+        public int CaptureDepositCallCount { get; private set; }
+        public CreatePaymentIntentProviderRequest? LastCreatePaymentIntentRequest { get; private set; }
+        public CreatePreAuthorizationProviderRequest? LastCreatePreAuthorizationRequest { get; private set; }
+        public PaymentCallbackProviderRequest? LastVerifyPaymentRequest { get; private set; }
+        public ProviderCaptureDepositRequest? LastCaptureDepositRequest { get; private set; }
+        public PaymentIntentProviderResult CreatePaymentIntentResult { get; set; } = new()
+        {
+            ProviderIntentId = "provider-intent-1",
+            ProviderTransactionId = "provider-transaction-1",
+            Status = PaymentProviderIntentStatus.Pending3DS,
+            RedirectUrl = "https://mock/3ds",
+            ExpiresAtUtc = FixedExpiryUtc
+        };
+        public PreAuthorizationProviderResult CreatePreAuthorizationResult { get; set; } = new()
+        {
+            ProviderIntentId = "deposit-intent-1",
+            ProviderTransactionId = "deposit-transaction-1",
+            Status = PaymentProviderIntentStatus.Authorized,
+            ExpiresAtUtc = FixedExpiryUtc
+        };
+        public PaymentVerificationProviderResult VerifyPaymentResult { get; set; } = new()
+        {
+            Status = PaymentProviderIntentStatus.Succeeded,
+            TransactionId = "verified-transaction-1"
+        };
+        public ProviderCaptureDepositResult CaptureDepositResult { get; set; } = new()
+        {
+            Success = true,
+            ReferenceId = "capture-1"
+        };
 
-        public Task<PaymentVerificationProviderResult> VerifyPaymentAsync(PaymentCallbackProviderRequest callback, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PaymentVerificationProviderResult
-            {
-                Status = PaymentProviderIntentStatus.Succeeded,
-                TransactionId = $"tx-{Guid.NewGuid():N}"
-            });
+        public Task<PaymentIntentProviderResult> CreatePaymentIntentAsync(CreatePaymentIntentProviderRequest request, CancellationToken cancellationToken = default)
+        {
+            CreatePaymentIntentCallCount++;
+            LastCreatePaymentIntentRequest = request;
+            return Task.FromResult(CreatePaymentIntentResult);
+        }
+
+        public Task<PreAuthorizationProviderResult> CreatePreAuthorizationAsync(CreatePreAuthorizationProviderRequest request, CancellationToken cancellationToken = default)
+        {
+            CreatePreAuthorizationCallCount++;
+            LastCreatePreAuthorizationRequest = request;
+            return Task.FromResult(CreatePreAuthorizationResult);
+        }
+
+        public Task<PaymentVerificationProviderResult> VerifyPaymentAsync(PaymentCallbackProviderRequest callback, CancellationToken cancellationToken = default)
+        {
+            VerifyPaymentCallCount++;
+            LastVerifyPaymentRequest = callback;
+            return Task.FromResult(VerifyPaymentResult);
+        }
 
         public bool VerifyWebhookSignature(string payload, string signature, string? timestamp) => signature == "valid-signature";
 
@@ -547,8 +900,12 @@ public sealed class PaymentServiceTests : IDisposable
         public Task<ProviderReleaseDepositResult> ReleaseDepositAsync(ProviderReleaseDepositRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProviderReleaseDepositResult { Success = true });
 
-        public Task<ProviderCaptureDepositResult> CaptureDepositAsync(ProviderCaptureDepositRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProviderCaptureDepositResult { Success = true, ReferenceId = "capture-1" });
+        public Task<ProviderCaptureDepositResult> CaptureDepositAsync(ProviderCaptureDepositRequest request, CancellationToken cancellationToken = default)
+        {
+            CaptureDepositCallCount++;
+            LastCaptureDepositRequest = request;
+            return Task.FromResult(CaptureDepositResult);
+        }
 
         private static string? ExtractValue(string payload, params string[] propertyNames)
         {
@@ -573,4 +930,3 @@ public sealed class PaymentServiceTests : IDisposable
         }
     }
 }
-

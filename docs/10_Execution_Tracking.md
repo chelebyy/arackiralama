@@ -10,33 +10,24 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 9-10 Bekliyor)
+**Durum:** 🟨 In Progress (Faz 10.0-10.1 Devam Ediyor)
 
 ---
 
 ## 📊 Executive Dashboard
 
 | Metric | Value |
-
 |--------|-------|
-
 | Toplam Faz | 10 |
-
 | Tamamlanan Faz | 8 |
+| Devam Eden Faz | 1 |
+| Bekleyen Faz | 1 |
+| Toplam Görev | ~320+ (yaklaşık) |
+| Tamamlanan Görev | 200+ |
+| Devam Eden Görev | 15+ |
+| Genel İlerleme | 85% |
 
-| Devam Eden Faz | 0 |
-
-| Bekleyen Faz | 2 |
-
-| Toplam Görev | ~160+ (yaklaşık) |
-
-| Tamamlanan Görev | 165+ |
-
-| Devam Eden Görev | 0 |
-
-| Genel İlerleme | 98% |
-
-Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir.
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1 tamamlandı, 97 yeni test yazıldı (53 backend + 44 frontend).
 
 ### Durum Sözlüğü
 
@@ -81,8 +72,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 | 8 | Frontend Development | ✅ Completed | 100% | Hafta 15-18 |
 
 | 9 | Infrastructure & Deployment | ⬜ Not Started | 0% | Hafta 17-19 |
-
-| 10 | Testing & Launch | ⬜ Not Started | 0% | Hafta 19-20 |
+| 10 | Testing & Launch | 🟨 In Progress | 25% | Hafta 19-20 |
 
 ### 🔐 Security Tracking Referansı
 
@@ -1610,17 +1600,24 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 
 ---
 
-## 🔷 FAZ 10: Testing & Launch
+## 🔷 FAZ 10: Testing & Launch (Pre-Launch Gates)
 
 **Süre:** Hafta 19-20
 
-**Başlangıç:** \***\*\_\_\_\*\***
+**Başlangıç:** \***\*\_\_\_\*\*
 
-**Hedef Bitiş:** \***\*\_\_\_\*\***
+**Hedef Bitiş:** \***\*\_\_\_\*\*
 
-**Durum:** ⬜ Not Started
+**Durum:** 🟨 In Progress
 
 **İlerleme:** 0%
+
+> **⚠️ ÖNEMLİ:** Faz 10'un detaylı planı, Go/No-Go kriterleri ve **220 maddelik** kontrol listesi ayrı dokümanda tutulur:
+> **→ `docs/12_Phase10_PreLaunch_Gates.md`**
+>
+> Bu doküman sadece ilerleme özeti içerir. Tüm detaylar, metrikler ve karar kriterleri yukarıdaki dokümanda yer alır.
+>
+> **Sayım Kuralı:** Özet tablo yalnızca tek tek takip edilebilen, durum alanı olan checklist görevlerini sayar. Açıklama tabloları, heuristic metrik tabloları ve referans matrisleri toplam madde sayısına dahil edilmez.
 
 ### 🔐 Güvenlik Yönlendirmesi (Zorunlu Referans)
 
@@ -1628,143 +1625,54 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
   - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md`
 - Özellikle Faz 10 snapshot checklist (Bölüm 9) adımları uygulanmadan faz kapanışı yapılmamalıdır.
 
-### 📋 Görevler
-
-#### 10.1 Test Review & Coverage Audit
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.1.1 | Review all unit tests | ⬜ | | | | Tüm fazlardan |
-
-| 10.1.2 | Coverage report analysis | ⬜ | | | | Hedef: %70+ |
-
-| 10.1.3 | Kritik modül coverage check | ⬜ | | | | Payment, Reservation |
-
-| 10.1.4 | Test gap analysis | ⬜ | | | | Eksik testleri tespit |
-
-#### 10.2 Integration Tests
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.2.1 | API endpoint tests | ⬜ | | | | |
-
-| 10.2.2 | Database integration tests | ⬜ | | | | |
-
-| 10.2.3 | Redis integration tests | ⬜ | | | | |
-
-| 10.2.4 | Payment provider mock tests | ⬜ | | | | |
-
-#### 10.3 E2E Tests
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.3.1 | Booking flow test | ⬜ | | | | |
-
-| 10.3.2 | Payment flow test | ⬜ | | | | |
-
-| 10.3.3 | Admin operations test | ⬜ | | | | |
-
-| 10.3.4 | Cypress or Playwright setup | ⬜ | | | | |
-
-#### 10.4 Load Testing
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.4.1 | Availability query performance | ⬜ | | | | |
-
-| 10.4.2 | Concurrent booking simulation | ⬜ | | | | |
-
-| 10.4.3 | API load test (k6 or Artillery) | ⬜ | | | | |
-
-| 10.4.4 | Target: 100 concurrent users | ⬜ | | | | |
-
-#### 10.5 Security Audit
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.5.1 | OWASP Top 10 check | ⬜ | | | | |
-
-| 10.5.2 | SQL injection testing | ⬜ | | | | |
-
-| 10.5.3 | XSS testing | ⬜ | | | | |
-
-| 10.5.4 | Authentication bypass testing | ⬜ | | | | |
-
-| 10.5.5 | Dependency vulnerability scan | ⬜ | | | | |
-
-#### 10.6 UAT (User Acceptance Testing)
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.6.1 | Internal team testing | ⬜ | | | | |
-
-| 10.6.2 | Beta customer testing | ⬜ | | | | |
-
-| 10.6.3 | Bug fixes | ⬜ | | | | |
-
-| 10.6.4 | Performance optimization | ⬜ | | | | |
-
-#### 10.7 Launch Preparation
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.7.1 | Production data seeding | ⬜ | | | | |
-
-| 10.7.2 | Admin user creation | ⬜ | | | | |
-
-| 10.7.3 | Payment provider production credentials | ⬜ | | | | |
-
-| 10.7.4 | SMS provider production credentials | ⬜ | | | | |
-
-| 10.7.5 | SSL certificates | ⬜ | | | | |
-
-| 10.7.6 | DNS configuration | ⬜ | | | | |
-
-| 10.7.7 | Monitoring alerts | ⬜ | | | | |
-
-#### 10.8 Go-Live
-
-| # | Görev | Durum | Atanan | Başlangıç | Bitiş | Notlar |
-
-|---|-------|-------|--------|-----------|-------|--------|
-
-| 10.8.1 | Soft launch (limited traffic) | ⬜ | | | | |
-
-| 10.8.2 | Full launch | ⬜ | | | | |
-
-| 10.8.3 | Post-launch monitoring | ⬜ | | | | |
-
-| 10.8.4 | Issue response plan | ⬜ | | | | |
-
-### ✅ Faz 10 Kabul Kriterleri
-
-| # | Kriter | Durum | Kanıt/Referans |
-
-|---|--------|-------|----------------|
-
-| 1 | All tests passing | ⬜ Not Started | |
-
-| 2 | Security scan clean | ⬜ Not Started | |
-
-| 3 | Performance targets met | ⬜ Not Started | |
-
-| 4 | UAT sign-off | ⬜ Not Started | |
-
-| 5 | Go-live checklist complete | ⬜ Not Started | |
+### 📋 Faz 10 Phase Özeti
+
+| Phase | Adı | Durum | Maddeler | Tamamlanan |
+|-------|-----|-------|----------|------------|
+| 10.0 | Code Quality Assessment | ⬜ | 15 | 0 |
+| 10.1 | Test Coverage & Gap Analysis | ⬜ | 21 | 0 |
+| 10.2 | Integration Tests | ⬜ | 24 | 0 |
+| 10.3 | E2E Tests | ⬜ | 17 | 0 |
+| 10.4 | Load Testing | ⬜ | 6 | 0 |
+| 10.5 | Security Final Audit | ⬜ | 26 | 0 |
+| 10.6 | Performance Baseline | ⬜ | 19 | 0 |
+| 10.7 | Infrastructure Readiness | ⬜ | 26 | 0 |
+| 10.8 | Monitoring & Alerting | ⬜ | 22 | 0 |
+| 10.9 | Data Integrity & Migration | ⬜ | 9 | 0 |
+| 10.10 | Rollback & Incident Response | ⬜ | 12 | 0 |
+| 10.11 | Launch Execution | ⬜ | 23 | 0 |
+| **TOPLAM** | | | **220** | **0** |
+
+### ✅ Faz 10 Go/No-Go Kriterleri (Özet)
+
+Tüm kriterlerin detaylı tanımları ve eşik değerleri `docs/12_Phase10_PreLaunch_Gates.md` içindedir.
+
+| # | Gate | Eşik | Durum |
+|---|------|------|-------|
+| 1 | Code Quality | Critical smell = 0 | ⬜ |
+| 2 | Backend Coverage | ≥ %70 | ⬜ |
+| 3 | Frontend Coverage | ≥ %60 | ⬜ |
+| 4 | Payment Coverage | ≥ %80 | ⬜ |
+| 5 | Reservation Coverage | ≥ %80 | ⬜ |
+| 6 | Integration Tests | 100% pass | ⬜ |
+| 7 | E2E Tests | 100% pass | ⬜ |
+| 8 | Load Test (p95) | < 300ms | ⬜ |
+| 9 | Load Test (Concurrent) | 100 users, 0 double-book | ⬜ |
+| 10 | OWASP Scan | 0 critical/high | ⬜ |
+| 11 | Dependency Scan | 0 critical/high | ⬜ |
+| 12 | Lighthouse Perf | ≥ 90 | ⬜ |
+| 13 | Lighthouse A11y | ≥ 90 | ⬜ |
+| 14 | API Health | < 100ms | ⬜ |
+| 15 | Services Healthy | 200 OK | ⬜ |
+| 16 | SSL Rating | A+ | ⬜ |
+| 17 | Backup Verified | Daily, restorable | ⬜ |
+| 18 | Uptime Monitor | Active | ⬜ |
+| 19 | Alerts Configured | Email/Slack | ⬜ |
+| 20 | Migration Rollback | Tested | ⬜ |
+| 21 | Rollback Plan | Documented | ⬜ |
+| 22 | Incident Response | Escalation matrix | ⬜ |
+
+**Karar Kuralı:** 22 maddenin tamamı "Go" olmadan launch yapılamaz.
 
 ---
 
@@ -1996,6 +1904,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 24 Nisan 2026 (Faz 8 tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi, tüm admin modülleri mock'tan gerçek backend'e geçirildi. Build: 103 sayfa, 0 TypeScript error)
+**Son Güncelleme:** 25 Nisan 2026 (Faz 10 Pre-Launch Gates dokümanı oluşturuldu: `docs/12_Phase10_PreLaunch_Gates.md` — 159 maddelik detaylı kontrol listesi, Go/No-Go karar matrisi, code quality assessment, test coverage gap analysis, integration/E2E/load test planı, security audit, performance baseline, infrastructure readiness, monitoring setup, rollback plan ve launch execution adımları tanımlandı. Faz 10 Execution Tracking dokümanı yeni dokümana referans verecek şekilde güncellendi.)
 
 **Durum:** Aktif Takip
