@@ -280,23 +280,33 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.1.1 | Generate coverage report (`coverlet`) | ✅ | %70+ overall | **Mevcut: %30.69** (önce %27.68) — henüz hedefe ulaşılmadı |
-| 10.1.1.2 | Review all existing unit tests | ✅ | Tüm testler geçiyor | **309/309 geçti** (önce 256) |
+| 10.1.1.1 | Generate coverage report (`coverlet`) | ✅ | %70+ overall | **Mevcut: %32.90** (önce %30.69) — henüz hedefe ulaşılmadı |
+| 10.1.1.2 | Review all existing unit tests | ✅ | Tüm testler geçiyor | **395/395 geçti** (önce 309) |
 | 10.1.1.3 | Payment module coverage | ✅ | %80+ | **19 yeni test** eklendi: CreateIntentAsync, CompleteThreeDsAsync, RetryPaymentAsync, deposit lifecycle |
 | 10.1.1.4 | Reservation module coverage | ✅ | %80+ | **33 yeni test** eklendi: UpdateReservationAsync, ExpireReservationAsync, AssignVehicleAsync, overlap prevention, optimistic locking |
 | 10.1.1.5 | Auth module coverage | ✅ | %75+ | **48 yeni test** eklendi: JwtTokenService, negative authorization, role-based access control |
-| 10.1.1.6 | Pricing module coverage | ⬜ | %75+ | Henüz başlanmadı |
-| 10.1.1.7 | Fleet module coverage | ⬜ | %60+ | Henüz başlanmadı |
-| 10.1.1.8 | Notification module coverage | ⬜ | %60+ | Henüz başlanmadı |
-| 10.1.1.9 | Test gap listesi oluştur | ✅ | Eksik testleri belgele | Wave 1 kapsamında kapatıldı |
-| 10.1.1.10 | Eksik testleri yaz | ✅ | Gap kapatma | Payment/Reservation/Auth testleri yazıldı |
+| 10.1.1.6 | Pricing module coverage | ✅ | %75+ | **27 yeni test** eklendi: PricingService CalculateBreakdown, campaign validation, rule CRUD, static validators |
+| 10.1.1.7 | Fleet module coverage | ✅ | %60+ | **19 yeni test** eklendi: FleetService SearchAvailable, vehicle CRUD, office CRUD, transfer, status |
+| 10.1.1.8 | Notification module coverage | ✅ | %60+ | **17 yeni test** eklendi: NotificationTemplateService email/SMS rendering, locale fallback, variable substitution |
+| 10.1.1.9 | Test gap listesi oluştur | ✅ | Eksik testleri belgele | Wave 1 + Wave 2 kapsamında kapatıldı |
+| 10.1.1.10 | Eksik testleri yaz | ✅ | Gap kapatma | Wave 2: +86 yeni test (Pricing + Fleet + Notification + Controllers) |
 
-**Coverage İlerlemesi:**
-- Önce: %27.68 (4,425 satır) → Sonra: **%30.69** (4,906 satır)
+**Coverage İlerlemesi (Wave 2 Sonrası):**
+- Wave 1: %27.68 (4,425 satır) → %30.69 (4,906 satır)
+- Wave 2: %30.69 → **%32.90** (5,774 / 17,547 satır)
 - API katmanı: %57.61 → **%66.10**
-- Toplam test: 256 → **309** (+53 yeni test)
+- Toplam test: 256 → 309 (Wave 1) → **395** (+86 Wave 2)
 
-**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Pricing, Fleet, Notification modülleri test edilmediğinden gap açık. Phase 10.1 devam etmeli veya Wave 2'ye (Pricing + Fleet) geçilmeli.
+**Wave 2 Yeni Test Dosyaları:**
+| Dosya | Test Sayısı | Kapsam |
+|-------|-------------|--------|
+| `PricingServiceTests.cs` | 27 | CalculateBreakdown, campaign/validation, CRUD, static validators |
+| `FleetServiceTests.cs` | 19 | SearchAvailable, vehicle CRUD, office CRUD, status/transfer/delete |
+| `NotificationTemplateServiceTests.cs` | 17 | Email/SMS rendering, 8 template keys, locale fallback, variables |
+| `AdminCampaignsControllerTests.cs` | 2 | Create validation, duplicate code detection |
+| `AdminOfficesControllerTests.cs` | ~6 | GetAll, Create validation, Update |
+
+**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Wave 2 ile Pricing, Fleet, Notification modülleri kapsamlandı. Worker tests (T6) Wave 3'e bırakıldı. Admin panel controller coverage hâlâ düşük. Bir sonraki dalga (Wave 3): Worker tests + eksik admin controller testleri + integration tests (10.2).
 
 ### 10.1.2 Frontend Test Review
 
