@@ -145,6 +145,7 @@ describe("useReservations", () => {
     });
 
     expect(mockedExtendHold).toHaveBeenCalledWith("reservation-1", { additionalMinutes: 15 });
-    expect(extended?.expiresAt).toBe("2026-04-27T10:45:00.000Z");
+    expect(extended).not.toBeNull();
+    expect(extended!.expiresAt).toBe("2026-04-27T10:45:00.000Z");
   });
 });
