@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RentACar.Core.Constants;
 using RentACar.Core.Entities;
+using RentACar.Core.Interfaces.Notifications;
 using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
@@ -45,7 +46,7 @@ public sealed class Worker(
     private async Task ProcessNotificationJobsAsync(CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
-        var processor = scope.ServiceProvider.GetRequiredService<NotificationBackgroundJobProcessor>();
+        var processor = scope.ServiceProvider.GetRequiredService<INotificationBackgroundJobProcessor>();
         var processedCount = await processor.ProcessPendingAsync(cancellationToken);
 
         if (processedCount > 0)

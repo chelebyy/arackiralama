@@ -46,7 +46,7 @@ public static class DependencyInjection
             new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
             serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
             serviceProvider.GetRequiredService<ILogger<TwilioSmsProvider>>()));
-        services.AddScoped<NotificationBackgroundJobProcessor>();
+        services.AddScoped<INotificationBackgroundJobProcessor, NotificationBackgroundJobProcessor>();
         services.AddScoped<INotificationQueueService, NotificationQueueService>();
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
         services.AddScoped<ISmsProvider, ConfiguredSmsProvider>();
