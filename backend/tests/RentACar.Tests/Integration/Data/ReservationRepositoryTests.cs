@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
+using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Repositories;
 using RentACar.Tests.TestFixtures;
 using Xunit;
@@ -565,5 +566,269 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
             vehicle.Id, overlapStart, overlapEnd);
 
         hasOverlapWhenNotExcluded.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetExpiredReservationsAsync_WhenReservationCreatedAtEqualsCutoff_ExcludesBoundaryReservation()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customer = new Customer { FullName = "Boundary User", Email = "boundary@test.com", Phone = "+90 555 000 0100" };
+        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle = new Vehicle
+        {
+            Plate = "07BOUND001",
+            Brand = "Test",
+            Model = "Test",
+            Group = group,
+            Office = office,
+            Status = VehicleStatus.Available
+        };
+
+        dbContext.Customers.Add(customer);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(vehicle);
+
+        var cutoffDate = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc);
+        dbContext.Reservations.AddRange(
+            new Reservation
+            {
+                PublicCode = "OLDER-HOLD",
+                Customer = customer,
+                Vehicle = vehicle,
+                PickupDateTime = cutoffDate.AddDays(1),
+                ReturnDateTime = cutoffDate.AddDays(2),
+                Status = ReservationStatus.Hold,
+                TotalAmount = 1000,
+                CreatedAt = cutoffDate.AddMinutes(-1)
+            },
+            new Reservation
+            {
+                PublicCode = "BOUNDARY-HOLD",
+                Customer = customer,
+                Vehicle = vehicle,
+                PickupDateTime = cutoffDate.AddDays(3),
+                ReturnDateTime = cutoffDate.AddDays(4),
+                Status = ReservationStatus.Hold,
+                TotalAmount = 1000,
+                CreatedAt = cutoffDate
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var results = await repository.GetExpiredReservationsAsync(cutoffDate);
+
+        results.Select(r => r.PublicCode).Should().ContainSingle().Which.Should().Be("OLDER-HOLD");
+    }
+
+    [Fact]
+    public async Task SearchReservationsAsync_WhenDateRangeMatchesBoundaries_IncludesReservation()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customer = new Customer { FullName = "Boundary Search", Email = "search@test.com", Phone = "+90 555 000 0200" };
+        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle = new Vehicle
+        {
+            Plate = "07SRCH001",
+            Brand = "Test",
+            Model = "Test",
+            Group = group,
+            Office = office,
+            Status = VehicleStatus.Available
+        };
+        var pickup = new DateTime(2026, 5, 10, 10, 0, 0, DateTimeKind.Utc);
+        var dropoff = new DateTime(2026, 5, 12, 10, 0, 0, DateTimeKind.Utc);
+
+        dbContext.Customers.Add(customer);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(vehicle);
+        dbContext.Reservations.Add(new Reservation
+        {
+            PublicCode = "BOUNDARY-SEARCH",
+            Customer = customer,
+            Vehicle = vehicle,
+            PickupDateTime = pickup,
+            ReturnDateTime = dropoff,
+            Status = ReservationStatus.Paid,
+            TotalAmount = 1200
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var results = await repository.SearchReservationsAsync(
+            fromDate: pickup,
+            toDate: dropoff,
+            page: 1,
+            pageSize: 20);
+
+        results.Select(r => r.PublicCode).Should().ContainSingle().Which.Should().Be("BOUNDARY-SEARCH");
+    }
+
+    [Fact]
+    public async Task SearchReservationsAsync_WhenRequestedPageIsBeyondResultSet_ReturnsEmptyCollection()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customer = new Customer { FullName = "Paging User", Email = "paging@test.com", Phone = "+90 555 000 0300" };
+        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle = new Vehicle
+        {
+            Plate = "07PAGE001",
+            Brand = "Test",
+            Model = "Test",
+            Group = group,
+            Office = office,
+            Status = VehicleStatus.Available
+        };
+
+        dbContext.Customers.Add(customer);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(vehicle);
+        dbContext.Reservations.Add(new Reservation
+        {
+            PublicCode = "PAGE-ONLY",
+            Customer = customer,
+            Vehicle = vehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            Status = ReservationStatus.Paid,
+            TotalAmount = 1000
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var results = await repository.SearchReservationsAsync(page: 3, pageSize: 1);
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task HasOverlappingReservationsAsync_WhenReservationIsCreatedInParallelContext_DetectsOverlap()
+    {
+        var databaseName = $"ReservationOverlap_{Guid.NewGuid():N}";
+
+        await using (var setupContext = CreateSharedContext(databaseName))
+        {
+            var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+            var group = new VehicleGroup
+            {
+                NameTr = "Test",
+                NameEn = "Test",
+                NameRu = "Test",
+                NameAr = "Test",
+                NameDe = "Test",
+                DepositAmount = 1000,
+                MinAge = 21,
+                MinLicenseYears = 2
+            };
+            var vehicle = new Vehicle
+            {
+                Id = Guid.NewGuid(),
+                Plate = "07PAR001",
+                Brand = "Test",
+                Model = "Test",
+                Group = group,
+                Office = office,
+                Status = VehicleStatus.Available
+            };
+            var customer = new Customer { FullName = "Parallel User", Email = "parallel@test.com", Phone = "+90 555 000 0400" };
+
+            setupContext.Offices.Add(office);
+            setupContext.VehicleGroups.Add(group);
+            setupContext.Vehicles.Add(vehicle);
+            setupContext.Customers.Add(customer);
+            await setupContext.SaveChangesAsync();
+        }
+
+        await using var firstContext = CreateSharedContext(databaseName);
+        await using var secondContext = CreateSharedContext(databaseName);
+        var firstRepository = new ReservationRepository(firstContext);
+        var secondRepository = new ReservationRepository(secondContext);
+
+        var sharedVehicle = await firstContext.Vehicles.SingleAsync();
+        var sharedCustomer = await firstContext.Customers.SingleAsync();
+        var overlapStart = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        var overlapEnd = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc);
+
+        var beforeParallelSave = await secondRepository.HasOverlappingReservationsAsync(sharedVehicle.Id, overlapStart, overlapEnd);
+
+        firstContext.Reservations.Add(new Reservation
+        {
+            PublicCode = "PARALLEL-1",
+            CustomerId = sharedCustomer.Id,
+            VehicleId = sharedVehicle.Id,
+            PickupDateTime = overlapStart,
+            ReturnDateTime = overlapEnd,
+            Status = ReservationStatus.Paid,
+            TotalAmount = 1500
+        });
+        await firstContext.SaveChangesAsync();
+
+        var afterParallelSave = await secondRepository.HasOverlappingReservationsAsync(sharedVehicle.Id, overlapStart.AddHours(2), overlapEnd.AddHours(2));
+
+        beforeParallelSave.Should().BeFalse();
+        afterParallelSave.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ReservationEntity_WhenMapped_ConfiguresVersionAsRowVersionConcurrencyToken()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+
+        var property = dbContext.Model
+            .FindEntityType(typeof(Reservation))!
+            .FindProperty(nameof(Reservation.Version))!;
+
+        property.IsConcurrencyToken.Should().BeTrue();
+        property.ValueGenerated.Should().Be(Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.OnAddOrUpdate);
+    }
+
+    private static RentACarDbContext CreateSharedContext(string databaseName)
+    {
+        var options = new DbContextOptionsBuilder<RentACarDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .Options;
+
+        return new RentACarDbContext(options);
     }
 }

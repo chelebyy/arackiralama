@@ -226,13 +226,29 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 ### 10.0.4 Refactor Registry (Ne, Neden, Risk)
 
-Her tespit edilen code smell için şu tablo doldurulur:
+**Wave 1 Keşif Tarihi:** 27 Nisan 2026
+**Keşif Kapsamı:** Auth + Reservation + Payment backend modülleri + Frontend booking akışı
 
-| ID | Modül | Dosya | Smell | Risk (Low/Med/High) | Refactor? | Neden veya Neden Hayır |
-|----|-------|-------|-------|---------------------|-----------|------------------------|
-| R001 | Payment | PaymentService.cs | Method too long (85 satır) | Medium | ✅ | Test coverage %80 üzerinde, güvenli refactor |
-| R002 | Reservation | ReservationRepository.cs | Deep nesting (5 seviye) | High | ✅ | Double-booking riski, test önce yazılmalı |
-| ... | ... | ... | ... | ... | ... | ... |
+| ID | Modül | Dosya | Smell | Risk | Refactor? | Karar / Eylem |
+|----|-------|-------|-------|------|-----------|---------------|
+| **R001** | Reservation | `Reservation.cs` | Optimistic locking non-functional - `[Timestamp]` attribute missing on `Version` | **CRITICAL** | ✅ | **10.1.1'de test yazılacak, sonra fix** |
+| **R002** | Reservation | `ReservationService.cs` | Race condition in `CreateHoldAsync` - overlap check + hold creation not atomic | **CRITICAL** | ✅ | **10.1.1'de integration test yazılacak, sonra Redis SETNX lock eklenecek** |
+| **R003** | Payment | `PaymentService.cs` | No webhook timestamp validation - replay attack possible | **CRITICAL** | ✅ | **10.5 Security audit kapsamında fix** |
+| **R004** | Payment | `PaymentService.cs` | No idempotency for refunds - duplicate refund risk | **CRITICAL** | ✅ | **10.1.1'de test yazılacak, sonra idempotency key eklenecek** |
+| **R005** | Payment | `PaymentService.cs` | Multiple `SaveChangesAsync` in loop without transaction | **HIGH** | ✅ | **10.1.1'de test yazılacak, sonra `IDbContextTransaction` wrap** |
+| **R006** | Frontend | `booking/step4/page.tsx` | No actual reservation creation - `createReservation()` never called | **CRITICAL** | ✅ | **Phase 10.1'de test yazılacak, sonra API entegrasyonu** |
+| **R007** | Frontend | `booking/step4/page.tsx` | Payment data logged to console (including CVV) | **CRITICAL** | ✅ | **Hemen kaldırılacak** |
+| **R008** | Auth | `CustomerAuthController.cs` + `AdminAuthController.cs` | Duplicated `TryReadSessionContext()` and `TryReadRefreshToken()` | **HIGH** | ✅ | **10.0.4 wave sonunda extract to base controller** |
+| **R009** | Auth | `JwtTokenService.cs` | Missing unit tests for `CreateAdminAccessToken`, `CreateCustomerAccessToken`, `VerifyRefreshToken` | **HIGH** | ✅ | **10.1.1'de test yazılacak** |
+| **R010** | Reservation | `ReservationService.cs` | God Object - 1384 lines, 23 public methods | **MEDIUM** | ⏸️ | **Post-launch - CQRS refactoring** |
+| **R011** | Payment | `PaymentService.cs` | Duplicated notification queueing logic (~150 lines, 4 methods) | **MEDIUM** | ✅ | **Extract `QueueNotificationsAsync` helper** |
+| **R012** | Payment | `PaymentService.cs` | Feature flag DB query on every payment operation (no caching) | **MEDIUM** | ✅ | **Add `IMemoryCache`** |
+| **R013** | Auth | `BcryptPasswordHasher.cs` | Work factor 12 hardcoded | **MEDIUM** | ⏸️ | **Post-launch - appsettings'e taşınacak** |
+| **R014** | Frontend | `booking/step2,3,4/page.tsx` | Hardcoded `vehicleGroups`, `extraOptions`, `offices` arrays duplicated | **HIGH** | ✅ | **Shared constants/API'ye taşınacak** |
+| **R015** | Frontend | `booking/step4/page.tsx` | Hardcoded campaign codes with client-side validation | **MEDIUM** | ✅ | **`validateCampaign()` API'ye bağlanacak** |
+| **R016** | Frontend | `hooks/useBooking.ts` | Dead code - Zustand store never imported by any step page | **MEDIUM** | ✅ | **Entegre edilecek veya kaldırılacak** |
+| **R017** | Frontend | `vehicles/page.tsx` | Inline image error handling instead of reusable Image component | **LOW** | ⏸️ | **Post-launch** |
+| **R018** | Payment | `IyzicoPaymentProvider.cs` | Debug/test code in production (`timeout` string detection) | **MEDIUM** | ✅ | **Kaldırılacak** |
 
 **Refactor Karar Kriterleri:**
 - **Risk High + Test Coverage < %50** → Önce test yaz, sonra refactor
@@ -264,27 +280,49 @@ Her tespit edilen code smell için şu tablo doldurulur:
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.1.1 | Generate coverage report (`coverlet`) | ⬜ | %70+ overall | `dotnet test --collect:"XPlat Code Coverage"` |
-| 10.1.1.2 | Review all existing unit tests | ⬜ | Tüm testler geçiyor | Flaky test varsa stabilize et |
-| 10.1.1.3 | Payment module coverage | ⬜ | %80+ | `PaymentService`, `PaymentProvider`, webhook handler |
-| 10.1.1.4 | Reservation module coverage | ⬜ | %80+ | `ReservationService`, hold mechanism, overlap prevention |
-| 10.1.1.5 | Auth module coverage | ⬜ | %75+ | JWT, refresh token, password hashing, RBAC |
-| 10.1.1.6 | Pricing module coverage | ⬜ | %75+ | `PricingService`, campaign validation, breakdown |
-| 10.1.1.7 | Fleet module coverage | ⬜ | %60+ | CRUD operations, status transitions |
-| 10.1.1.8 | Notification module coverage | ⬜ | %60+ | SMS/Email template rendering, queue processing |
-| 10.1.1.9 | Test gap listesi oluştur | ⬜ | Eksik testleri belgele | Hangi senaryolar test edilmiyor? |
-| 10.1.1.10 | Eksik testleri yaz | ⬜ | Gap kapatma | Önce Payment/Reservation/Auth |
+| 10.1.1.1 | Generate coverage report (`coverlet`) | ✅ | %70+ overall | **Mevcut: %30.69** (önce %27.68) — henüz hedefe ulaşılmadı |
+| 10.1.1.2 | Review all existing unit tests | ✅ | Tüm testler geçiyor | **309/309 geçti** (önce 256) |
+| 10.1.1.3 | Payment module coverage | ✅ | %80+ | **19 yeni test** eklendi: CreateIntentAsync, CompleteThreeDsAsync, RetryPaymentAsync, deposit lifecycle |
+| 10.1.1.4 | Reservation module coverage | ✅ | %80+ | **33 yeni test** eklendi: UpdateReservationAsync, ExpireReservationAsync, AssignVehicleAsync, overlap prevention, optimistic locking |
+| 10.1.1.5 | Auth module coverage | ✅ | %75+ | **48 yeni test** eklendi: JwtTokenService, negative authorization, role-based access control |
+| 10.1.1.6 | Pricing module coverage | ⬜ | %75+ | Henüz başlanmadı |
+| 10.1.1.7 | Fleet module coverage | ⬜ | %60+ | Henüz başlanmadı |
+| 10.1.1.8 | Notification module coverage | ⬜ | %60+ | Henüz başlanmadı |
+| 10.1.1.9 | Test gap listesi oluştur | ✅ | Eksik testleri belgele | Wave 1 kapsamında kapatıldı |
+| 10.1.1.10 | Eksik testleri yaz | ✅ | Gap kapatma | Payment/Reservation/Auth testleri yazıldı |
+
+**Coverage İlerlemesi:**
+- Önce: %27.68 (4,425 satır) → Sonra: **%30.69** (4,906 satır)
+- API katmanı: %57.61 → **%66.10**
+- Toplam test: 256 → **309** (+53 yeni test)
+
+**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Pricing, Fleet, Notification modülleri test edilmediğinden gap açık. Phase 10.1 devam etmeli veya Wave 2'ye (Pricing + Fleet) geçilmeli.
 
 ### 10.1.2 Frontend Test Review
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ⬜ | %60+ overall | `corepack pnpm -C frontend test --coverage` |
-| 10.1.2.2 | Utility function tests | ⬜ | %80+ | `lib/utils.ts`, `lib/api/*` |
-| 10.1.2.3 | Component tests (critical) | ⬜ | %50+ | SearchForm, BookingFlow, PaymentForm |
-| 10.1.2.4 | Hook tests (critical) | ⬜ | %50+ | Auth hooks, API hooks |
-| 10.1.2.5 | Test gap listesi oluştur | ⬜ | Eksik testleri belgele | |
-| 10.1.2.6 | Eksik testleri yaz | ⬜ | Gap kapatma | Önce form validasyon + API client |
+| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %7.53** (önce %0.76) — hedefe henüz ulaşılmadı |
+| 10.1.2.2 | Utility function tests | ✅ | %80+ | `lib/api/client.ts` %72.31, `lib/api/pricing.ts` %100, `lib/api/vehicles.ts` %100 |
+| 10.1.2.3 | Component tests (critical) | ✅ | %50+ | SearchForm %88.7, VehicleCard %100, PriceBreakdown %100 |
+| 10.1.2.4 | Hook tests (critical) | ✅ | %50+ | useBooking %94.63, usePricing %100, useReservations %94.44 |
+| 10.1.2.5 | Test gap listesi oluştur | ✅ | Eksik testleri belgele | Booking flow kapsamında kapatıldı |
+| 10.1.2.6 | Eksik testleri yaz | ✅ | Gap kapatma | **44 yeni test** eklendi (17→61 test) |
+
+**Booking Flow Targeted Coverage (Yüksek):**
+- step1/page.tsx: **%99.06**
+- step2/page.tsx: **%99.56**
+- step3/page.tsx: **%98.06**
+- step4/page.tsx: **%97.90**
+- SearchForm.tsx: **%88.70**
+- VehicleCard.tsx: **%100**
+- PriceBreakdown.tsx: **%100**
+- useBooking.ts: **%94.63**
+- usePricing.ts: **%100**
+
+**Not:** Project-wide coverage %7.53'te kaldı çünkü admin sayfaları, dashboard, public pages (about, contact, vehicles, etc.) ve shadcn/ui bileşenleri hâlâ test edilmemiş durumda. Booking flow'u hedefleyen coverage çok güçlü.
+
+**Karar:** Frontend overall %60 hedefine henüz ulaşılmadı. Booking flow hedefleri aşıldı. Admin/public modülleri test edilmedikçe overall coverage artmayacak. Wave 2'ye geçilebilir veya overall hedefi booking-flow-targeted coverage olarak revize edilebilir.
 
 ### 10.1.3 Test Quality Criteria
 

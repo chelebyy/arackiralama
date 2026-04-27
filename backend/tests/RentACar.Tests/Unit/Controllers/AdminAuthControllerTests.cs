@@ -348,6 +348,56 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task Refresh_WhenAdminBecomesInactive_ReturnsUnauthorizedWithoutRotatingSession()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var adminUser = CreateAdminUser(passwordHasher, "inactive-refresh-admin@test.com", isActive: false);
+        dbContext.AdminUsers.Add(adminUser);
+        await dbContext.SaveChangesAsync();
+
+        var currentSessionId = Guid.NewGuid();
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            Id = currentSessionId,
+            PrincipalType = AuthPrincipalType.Admin,
+            PrincipalId = adminUser.Id,
+            RefreshTokenHash = "sha256:inactive-admin-refresh-hash",
+            RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(1),
+            LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-2)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("inactive-admin-refresh-token"))
+            .Returns("sha256:inactive-admin-refresh-hash");
+
+        var refreshTokenCookieService = new Mock<IRefreshTokenCookieService>();
+        var controller = CreateController(
+            dbContext,
+            jwtTokenService: jwtTokenService.Object,
+            refreshTokenCookieService: refreshTokenCookieService.Object);
+
+        SetRefreshCookie(controller.HttpContext, "__Host-rac_refresh", "inactive-admin-refresh-token");
+
+        var result = await controller.Refresh(CancellationToken.None);
+
+        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        unauthorized.Value.Should().BeOfType<ApiResponse<object>>().Which.Message.Should().Be("Yetkisiz erişim");
+
+        dbContext.AuthSessions.Should().ContainSingle();
+        var persistedSession = dbContext.AuthSessions.Single();
+        persistedSession.Id.Should().Be(currentSessionId);
+        persistedSession.RevokedAtUtc.Should().BeNull();
+        persistedSession.ReplacedBySessionId.Should().BeNull();
+        jwtTokenService.Verify(service => service.CreateAdminAccessToken(It.IsAny<AdminUser>(), It.IsAny<Guid>(), out It.Ref<DateTime>.IsAny), Times.Never);
+        refreshTokenCookieService.Verify(
+            service => service.AppendRefreshTokenCookie(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<DateTime>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Logout_WithValidSession_RevokesSessionAndClearsRefreshCookie()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -483,6 +533,29 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
         payloadJson.Should().Contain("\"id\":\"admin-id\"");
         payloadJson.Should().Contain("\"email\":\"admin@test.com\"");
         payloadJson.Should().Contain($"\"role\":\"{AuthRoleNames.Admin}\"");
+    }
+
+    [Fact]
+    public void Me_WithMissingClaims_ReturnsPayloadWithNullValues()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var controller = CreateController(dbContext);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "TestAuth"))
+            }
+        };
+
+        var result = controller.Me();
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var payloadJson = JsonSerializer.Serialize(okResult.Value);
+        payloadJson.Should().Contain("\"Success\":true");
+        payloadJson.Should().Contain("\"id\":null");
+        payloadJson.Should().Contain("\"email\":null");
+        payloadJson.Should().Contain("\"role\":null");
     }
 
     private static AdminAuthController CreateController(

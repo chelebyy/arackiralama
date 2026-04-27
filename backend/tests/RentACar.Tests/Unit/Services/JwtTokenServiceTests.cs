@@ -1,7 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using RentACar.API.Authentication;
 using RentACar.API.Options;
 using RentACar.API.Services;
@@ -54,6 +57,9 @@ public class JwtTokenServiceTests
         jwtToken.Claims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == adminUser.Role);
         jwtToken.Claims.Should().Contain(c => c.Type == AuthClaimTypes.Role && c.Value == adminUser.Role);
         jwtToken.Claims.Should().Contain(c => c.Type == AuthClaimTypes.Permission && c.Value == AuthPermissionNames.AdminAccess);
+        jwtToken.Header.Alg.Should().Be(SecurityAlgorithms.HmacSha256);
+        jwtToken.Issuer.Should().Be("TestIssuer");
+        jwtToken.Audiences.Should().ContainSingle().Which.Should().Be("TestAudience");
     }
 
     [Fact]
@@ -80,6 +86,27 @@ public class JwtTokenServiceTests
         jwtToken.Claims.Should().Contain(c => c.Type == AuthClaimTypes.PrincipalType && c.Value == "Customer");
         jwtToken.Claims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == AuthRoleNames.Customer);
         jwtToken.Claims.Should().NotContain(c => c.Type == AuthClaimTypes.Permission);
+        jwtToken.Header.Alg.Should().Be(SecurityAlgorithms.HmacSha256);
+        jwtToken.Issuer.Should().Be("TestIssuer");
+        jwtToken.Audiences.Should().ContainSingle().Which.Should().Be("TestAudience");
+    }
+
+    [Fact]
+    public void CreateCustomerAccessToken_SetsConfiguredExpiryWindow()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            Email = "customer@test.com"
+        };
+        var expectedExpiry = DateTime.UtcNow.AddMinutes(15);
+
+        // Act
+        _service.CreateCustomerAccessToken(customer, Guid.NewGuid(), out var expiresAtUtc);
+
+        // Assert
+        expiresAtUtc.Should().BeCloseTo(expectedExpiry, TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -215,6 +242,8 @@ public class JwtTokenServiceTests
         tokenB.Should().NotBeNullOrWhiteSpace();
         tokenA.Should().NotBe(tokenB);
         tokenA.Length.Should().BeGreaterThan(70);
+        tokenA.Should().MatchRegex("^[A-Za-z0-9_-]+$");
+        Base64UrlEncoder.DecodeBytes(tokenA).Should().HaveCount(64);
         expiresAtUtc.Should().BeCloseTo(expectedExpiry, TimeSpan.FromSeconds(10));
     }
 
@@ -244,6 +273,53 @@ public class JwtTokenServiceTests
 
         // Assert
         isValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void VerifyRefreshToken_WithMismatchedHash_ReturnsFalse()
+    {
+        // Arrange
+        var refreshToken = _service.CreateRefreshToken(out _);
+        var otherRefreshToken = _service.CreateRefreshToken(out _);
+        var hash = _service.HashRefreshToken(otherRefreshToken);
+
+        // Act
+        var isValid = _service.VerifyRefreshToken(refreshToken, hash);
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void VerifyRefreshToken_WithPrefixlessUppercaseHash_NormalizesAndReturnsTrue()
+    {
+        // Arrange
+        var refreshToken = _service.CreateRefreshToken(out _);
+        var normalizedHash = _service.HashRefreshToken(refreshToken);
+        var persistedHash = normalizedHash["sha256:".Length..].ToUpperInvariant();
+
+        // Act
+        var isValid = _service.VerifyRefreshToken(refreshToken, persistedHash);
+
+        // Assert
+        isValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void VerifyRefreshToken_UsesFixedTimeComparison()
+    {
+        // Arrange
+        var method = typeof(JwtTokenService).GetMethod(nameof(JwtTokenService.VerifyRefreshToken))!;
+        var fixedTimeEquals = typeof(CryptographicOperations).GetMethod(
+            nameof(CryptographicOperations.FixedTimeEquals),
+            BindingFlags.Public | BindingFlags.Static,
+            [typeof(ReadOnlySpan<byte>), typeof(ReadOnlySpan<byte>)]);
+
+        // Act
+        var callsFixedTimeEquals = MethodCalls(method, fixedTimeEquals!);
+
+        // Assert
+        callsFixedTimeEquals.Should().BeTrue();
     }
 
     [Fact]
@@ -286,6 +362,18 @@ public class JwtTokenServiceTests
             .WithMessage("*Refresh token cannot be null or empty*");
     }
 
+    [Fact]
+    public void JwtTokenService_DoesNotExposeExpiredTokenPrincipalExtractionMethod()
+    {
+        // Arrange
+        var interfaceMethod = typeof(IJwtTokenService).GetMethod("GetPrincipalFromExpiredToken");
+        var implementationMethod = typeof(JwtTokenService).GetMethod("GetPrincipalFromExpiredToken");
+
+        // Assert
+        interfaceMethod.Should().BeNull();
+        implementationMethod.Should().BeNull();
+    }
+
     private static JwtTokenService CreateService(
         string? secret = ValidSecret,
         int accessTokenMinutes = 15,
@@ -312,5 +400,28 @@ public class JwtTokenServiceTests
             Role = "Admin",
             TokenVersion = tokenVersion
         };
+    }
+
+    private static bool MethodCalls(MethodInfo method, MethodInfo target)
+    {
+        var il = method.GetMethodBody()!.GetILAsByteArray()!;
+        var module = method.Module;
+        var callOpcodeValues = new[] { 0x28, 0x6F };
+
+        for (var index = 0; index < il.Length - 4; index++)
+        {
+            if (!callOpcodeValues.Contains(il[index]))
+            {
+                continue;
+            }
+
+            var metadataToken = BitConverter.ToInt32(il, index + 1);
+            if (module.ResolveMethod(metadataToken) == target)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

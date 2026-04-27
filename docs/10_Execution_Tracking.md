@@ -10,33 +10,24 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10 Planlama Devam Ediyor)
+**Durum:** 🟨 In Progress (Faz 10.0-10.1 Devam Ediyor)
 
 ---
 
 ## 📊 Executive Dashboard
 
 | Metric | Value |
-
 |--------|-------|
-
 | Toplam Faz | 10 |
-
 | Tamamlanan Faz | 8 |
-
 | Devam Eden Faz | 1 |
-
 | Bekleyen Faz | 1 |
-
 | Toplam Görev | ~320+ (yaklaşık) |
+| Tamamlanan Görev | 200+ |
+| Devam Eden Görev | 15+ |
+| Genel İlerleme | 85% |
 
-| Tamamlanan Görev | 165+ |
-
-| Devam Eden Görev | 0 |
-
-| Genel İlerleme | 80% |
-
-Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). Toplam görev sayısı belge kapsamı genişledikçe değişebilen yaklaşık değerdir. Faz 10 planlaması tamamlandı, detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir.
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1 tamamlandı, 97 yeni test yazıldı (53 backend + 44 frontend).
 
 ### Durum Sözlüğü
 
@@ -81,8 +72,7 @@ Not: Genel ilerleme faz bazlı hesaplanır (`8/10 = 80%`, Faz 8 tamamlandı). To
 | 8 | Frontend Development | ✅ Completed | 100% | Hafta 15-18 |
 
 | 9 | Infrastructure & Deployment | ⬜ Not Started | 0% | Hafta 17-19 |
-
-| 10 | Testing & Launch | ⬜ Not Started | 0% | Hafta 19-20 |
+| 10 | Testing & Launch | 🟨 In Progress | 25% | Hafta 19-20 |
 
 ### 🔐 Security Tracking Referansı
 

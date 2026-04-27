@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MockQueryable.Moq;
@@ -970,6 +971,483 @@ public sealed class ReservationServiceTests
 
         // Assert
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task UpdateReservationAsync_WhenReservationIsModifiable_UpdatesDatesAndPreservesExistingAssignments()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var originalVehicleId = Guid.NewGuid();
+        var originalCustomer = new Customer { FullName = "Original Customer", Email = "original@example.com", Phone = "+90 555 000 0000" };
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-UPDATE",
+            CustomerId = Guid.NewGuid(),
+            Customer = originalCustomer,
+            VehicleId = originalVehicleId,
+            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
+            Status = ReservationStatus.Hold,
+            TotalAmount = 1500m
+        };
+
+        var request = new UpdateReservationRequest
+        {
+            PickupDateTimeUtc = new DateTime(2026, 4, 2, 9, 0, 0, DateTimeKind.Utc),
+            ReturnDateTimeUtc = new DateTime(2026, 4, 5, 9, 0, 0, DateTimeKind.Utc),
+            PickupOfficeId = Guid.NewGuid(),
+            ReturnOfficeId = Guid.NewGuid(),
+            Customer = new CustomerInfoRequest
+            {
+                FirstName = "Changed",
+                LastName = "Customer",
+                Email = "changed@example.com",
+                Phone = "+90 555 111 1111"
+            },
+            Notes = "Ignored by current implementation"
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.UpdateReservationAsync(reservationId, request, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.PickupDateTime.Should().Be(request.PickupDateTimeUtc!.Value);
+        result.ReturnDateTime.Should().Be(request.ReturnDateTimeUtc!.Value);
+        reservation.VehicleId.Should().Be(originalVehicleId);
+        reservation.Customer.Should().BeSameAs(originalCustomer);
+        _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExpireReservationAsync_WhenReservationIsOnHold_ExpiresReservationAndReleasesHold()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _holdServiceMock
+            .Setup(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.ExpireReservationAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(ReservationStatus.Expired.ToString());
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExpireReservationAsync_WhenReservationIsPendingPayment_ReturnsNull()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.PendingPayment,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.ExpireReservationAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull();
+        reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessExpiredReservationsAsync_WhenExpiredHoldsExist_ProcessesEachReservation()
+    {
+        // Arrange
+        var firstReservationId = Guid.NewGuid();
+        var secondReservationId = Guid.NewGuid();
+        var firstReservation = new Reservation
+        {
+            Id = firstReservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+        var secondReservation = new Reservation
+        {
+            Id = secondReservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(3),
+            ReturnDateTime = DateTime.UtcNow.AddDays(4)
+        };
+
+        _holdServiceMock
+            .Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { firstReservationId, secondReservationId });
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(firstReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstReservation);
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(secondReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(secondReservation);
+
+        _holdServiceMock
+            .Setup(x => x.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _sut.ProcessExpiredReservationsAsync(CancellationToken.None);
+
+        // Assert
+        firstReservation.Status.Should().Be(ReservationStatus.Expired);
+        secondReservation.Status.Should().Be(ReservationStatus.Expired);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AssignVehicleAsync_WhenNoOverlapExists_AssignsVehicle()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Draft,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc)
+        };
+        var vehicle = new Vehicle
+        {
+            Id = vehicleId,
+            Plate = "34XYZ123",
+            Brand = "Renault",
+            Model = "Clio",
+            Status = VehicleStatus.Available
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetByIdAsync(vehicleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(vehicle);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _sut.AssignVehicleAsync(reservationId, vehicleId, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        reservation.VehicleId.Should().Be(vehicleId);
+    }
+
+    [Fact]
+    public async Task AssignVehicleAsync_WhenOverlapExists_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Draft,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc)
+        };
+        var vehicle = new Vehicle { Id = vehicleId, Plate = "34OVER123", Status = VehicleStatus.Available };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetByIdAsync(vehicleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(vehicle);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var act = () => _sut.AssignVehicleAsync(reservationId, vehicleId, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Vehicle has overlapping reservations");
+    }
+
+    [Fact]
+    public async Task UnassignVehicleAsync_WhenReservationExists_ClearsVehicleId()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Paid,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.UnassignVehicleAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.VehicleId.Should().Be(Guid.Empty);
+        reservation.VehicleId.Should().Be(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task ExtendHoldAsync_WhenReservationCanBeExtended_ReturnsExtendedHold()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _holdServiceMock
+            .Setup(x => x.ExtendHoldAsync(
+                reservationId,
+                TimeSpan.FromMinutes(5),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.ExtendHoldAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.ReservationId.Should().Be(reservationId);
+        result.RemainingMinutes.Should().Be(5);
+        result.IsExpired.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CanHoldBeExtendedAsync_WhenReservationStatusIsHold_ReturnsTrue()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.CanHoldBeExtendedAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CanHoldBeExtendedAsync_WhenReservationStatusIsNotHold_ReturnsFalse()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.PendingPayment,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.CanHoldBeExtendedAsync(reservationId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.Draft, ReservationStatus.Hold, true)]
+    [InlineData(ReservationStatus.Draft, ReservationStatus.Paid, false)]
+    [InlineData(ReservationStatus.Hold, ReservationStatus.PendingPayment, true)]
+    [InlineData(ReservationStatus.Hold, ReservationStatus.Completed, false)]
+    [InlineData(ReservationStatus.PendingPayment, ReservationStatus.Paid, true)]
+    [InlineData(ReservationStatus.PendingPayment, ReservationStatus.Expired, false)]
+    [InlineData(ReservationStatus.Paid, ReservationStatus.Active, true)]
+    [InlineData(ReservationStatus.Paid, ReservationStatus.Hold, false)]
+    [InlineData(ReservationStatus.Active, ReservationStatus.Completed, true)]
+    [InlineData(ReservationStatus.Active, ReservationStatus.Draft, false)]
+    public async Task TransitionStatusAsync_WhenTransitionRequested_ReturnsExpectedOutcome(
+        ReservationStatus currentStatus,
+        ReservationStatus targetStatus,
+        bool shouldSucceed)
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = currentStatus,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2)
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        // Act
+        var result = await _sut.TransitionStatusAsync(reservationId, targetStatus, CancellationToken.None);
+
+        // Assert
+        if (shouldSucceed)
+        {
+            result.Should().NotBeNull();
+            result!.Status.Should().Be(targetStatus.ToString());
+            reservation.Status.Should().Be(targetStatus);
+            return;
+        }
+
+        result.Should().BeNull();
+        reservation.Status.Should().Be(currentStatus);
+    }
+
+    [Fact]
+    public async Task CreateHoldAsync_WhenConcurrentUpdateOccurs_ThrowsUserFriendlyConflict()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-CONFLICT",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = groupId,
+            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500m
+        };
+        var availableVehicle = new Vehicle
+        {
+            Id = vehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34CON123",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { availableVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                It.IsAny<Guid?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _applicationDbContextMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("conflict"));
+
+        // Act
+        var act = () => _sut.CreateHoldAsync(reservationId, "session-conflict", CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Reservation was updated by another request. Please retry.");
     }
 
     private void VerifyLogDoesNotContain(string forbiddenText, string requiredPrefix, string requiredMetadata)
