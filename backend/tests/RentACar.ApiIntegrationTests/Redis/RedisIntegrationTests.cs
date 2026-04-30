@@ -64,11 +64,37 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
             disconnectedRedis,
             dbContext,
             NullLogger<RedisReservationHoldService>.Instance);
-        var reservationId = Guid.NewGuid();
         var vehicleId = await dbContext.Vehicles.Select(vehicle => vehicle.Id).FirstAsync();
 
-        var created = await fallbackService.CreateHoldAsync(reservationId, vehicleId, "session-c", TimeSpan.FromMinutes(15));
-        var fallbackHoldExists = await dbContext.ReservationHolds.AnyAsync(hold => hold.ReservationId == reservationId);
+        // Create a valid customer and reservation first to satisfy FK constraints
+        var customer = new Customer
+        {
+            FullName = "Redis Fallback Test Customer",
+            Phone = "+90 555 999 99 99",
+            Email = $"redis-test-{Guid.NewGuid():N}@example.com",
+            IdentityNumber = "12345678901",
+            Nationality = "TR"
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var reservation = new Reservation
+        {
+            PublicCode = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            VehicleId = vehicleId,
+            CustomerId = customer.Id,
+            PickupDateTime = DateTime.UtcNow.Date.AddDays(1).AddHours(10),
+            ReturnDateTime = DateTime.UtcNow.Date.AddDays(4).AddHours(10),
+            TotalAmount = 1500m,
+            Status = RentACar.Core.Enums.ReservationStatus.Hold,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        dbContext.Reservations.Add(reservation);
+        await dbContext.SaveChangesAsync();
+
+        var created = await fallbackService.CreateHoldAsync(reservation.Id, vehicleId, "session-c", TimeSpan.FromMinutes(15));
+        var fallbackHoldExists = await dbContext.ReservationHolds.AnyAsync(hold => hold.ReservationId == reservation.Id);
 
         created.Should().BeTrue();
         fallbackHoldExists.Should().BeTrue();

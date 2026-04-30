@@ -30,6 +30,7 @@ public static class TestDataSeeder
         await EnsureVehicleGroupsAsync(dbContext, cancellationToken);
         await EnsureVehiclesAsync(dbContext, cancellationToken);
         await EnsureAdminUserAsync(dbContext, cancellationToken);
+        await EnsureFeatureFlagsAsync(dbContext, cancellationToken);
     }
 
     /// <summary>
@@ -196,6 +197,19 @@ public static class TestDataSeeder
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsureFeatureFlagsAsync(RentACarDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var onlinePaymentFlag = await dbContext.FeatureFlags
+            .FirstOrDefaultAsync(f => f.Name == "EnableOnlinePayment", cancellationToken);
+
+        if (onlinePaymentFlag is not null && !onlinePaymentFlag.Enabled)
+        {
+            onlinePaymentFlag.Enabled = true;
+            onlinePaymentFlag.UpdatedAt = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static async Task<Guid> ResolveOfficeIdAsync(RentACarDbContext dbContext, CancellationToken cancellationToken, int index) =>

@@ -132,7 +132,7 @@ internal sealed class KeyPrefixedConnectionMultiplexer : IConnectionMultiplexer
     public override string ToString() => _inner.ToString() ?? nameof(KeyPrefixedConnectionMultiplexer);
 }
 
-internal sealed class KeyPrefixedDatabaseProxy : DispatchProxy
+internal class KeyPrefixedDatabaseProxy : DispatchProxy
 {
     private IDatabase _target = null!;
     private string _keyPrefix = string.Empty;

@@ -95,7 +95,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     private static RentACarDbContext CreateContext(string connectionString)
     {
         var options = new DbContextOptionsBuilder<RentACarDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, npgsqlOptions =>
+                npgsqlOptions.MigrationsAssembly(typeof(RentACarDbContext).Assembly.FullName))
             .Options;
 
         return new RentACarDbContext(options);
