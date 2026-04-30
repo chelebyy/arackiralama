@@ -27,7 +27,7 @@
 | Devam Eden Görev | 15+ |
 | Genel İlerleme | 85% |
 
-Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1 tamamlandı, 97 yeni test yazıldı (53 backend + 44 frontend).
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1 tamamlandı, 97 yeni test yazıldı (53 backend + 44 frontend). **Wave 3 tamamlandı: 56 yeni test (Worker 10 + Admin Controllers 46), toplam 451 test, 0 failure. Build 0 warning/error. Coverlet + ReportGenerator coverage report üretildi.**
 
 ### Durum Sözlüğü
 
@@ -1785,6 +1785,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
 
+| 30.04.2026 | Delivery | Faz 10.1 Wave 3 backend test coverage expansion tamamlandı: `WorkerTests.cs` (10 test), `AdminPaymentsControllerTests.cs` (14), `AdminReservationsControllerTests.cs` (15), `AdminBackgroundJobsControllerTests.cs` (7), `AdminAuditLogsControllerTests.cs` (4), `AdminFeatureFlagsControllerTests.cs` (4), `AdminSecurityControllerTests.cs` (2). `INotificationBackgroundJobProcessor` interface extraction + DI wiring. Tüm build hataları ve test failure'ları çözüldü. | 10.1.1 (Wave 3) | Faz 10.1 Wave 4 (Frontend coverage) veya Faz 10.2 (Integration Tests) | `dotnet build` 0 warning/error; `dotnet test` 451/451 pass; Coverlet + ReportGenerator coverage report üretildi. PR #175 merge conflict çözüldü ve `refactore` branch'e push edildi. | AI |
 | 24.04.2026 | Delivery | Faz 8 admin panel tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser CRUD dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi (`/dashboard/settings/system`), tüm admin API modülleri mock'tan gerçek backend'e geçirildi (`USE_MOCK = false`) | Faz 8.12.2, 8.14.3, 8.16.3 | Faz 9 Infrastructure + Faz 10 Testing & Launch | 3D Secure ödeme akışı ödeme sağlayıcısı seçimi sonrasına ertelendi; Build: 103 sayfa, 0 TypeScript error | AI |
 | 23.04.2026 | Bugfix | Faz 8 i18n/language-switcher kritik bug-fix: LanguageSwitcher onBlur containerRef düzeltmesi, eksik `footer.newsletter.description` 4 dile eklendi, `de.json` eksik namespace'ler (`aboutUs`, `contactUs`) tamamlandı, Arabic RTL `dir` desteği eklendi. Tüm 5 dilde console error 0 | Faz 8.2 (i18n) | Backend API entegrasyonu + 3D Secure | Session handoff dokümanı oluşturuldu | AI |
 | 22.04.2026 | Delivery | Faz 8 public website UI/UX polish ve bug-fix tamamlandı: SearchForm query parametreleri, VehicleDetail dinamik ID/gün hesaplama, Step2/Step4 dinamik fiyatlandırma, € standartlaştırması, confirmation sayfası, responsive stepper, Google Maps embed, form validasyonu güçlendirildi | Faz 8.3-8.8 (Public Website) | Backend API entegrasyonu + 3D Secure | Admin panel hariç tutuldu (kullanıcı isteği); swr dependency build sorunu çözüldü (hooks .bak yapıldı) | AI |
