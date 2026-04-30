@@ -45,7 +45,7 @@ public static class TestDataSeeder
 
     private static async Task EnsureOfficesAsync(RentACarDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (await dbContext.Offices.CountAsync(cancellationToken) >= 2)
+        if (await dbContext.Offices.AnyAsync(o => o.Id == OfficeOneId, cancellationToken))
         {
             return;
         }
@@ -78,7 +78,7 @@ public static class TestDataSeeder
 
     private static async Task EnsureVehicleGroupsAsync(RentACarDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (await dbContext.VehicleGroups.CountAsync(cancellationToken) >= 2)
+        if (await dbContext.VehicleGroups.AnyAsync(g => g.Id == GroupOneId, cancellationToken))
         {
             return;
         }
@@ -119,7 +119,7 @@ public static class TestDataSeeder
 
     private static async Task EnsureVehiclesAsync(RentACarDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (await dbContext.Vehicles.CountAsync(cancellationToken) >= 4)
+        if (await dbContext.Vehicles.AnyAsync(v => v.Plate == "IT-1001", cancellationToken))
         {
             return;
         }
@@ -133,8 +133,8 @@ public static class TestDataSeeder
                 Model = "Clio",
                 Year = 2024,
                 Color = "White",
-                GroupId = await ResolveGroupIdAsync(dbContext, cancellationToken, 0),
-                OfficeId = await ResolveOfficeIdAsync(dbContext, cancellationToken, 0),
+                GroupId = GroupOneId,
+                OfficeId = OfficeOneId,
                 Status = VehicleStatus.Available
             },
             new Vehicle
@@ -144,8 +144,8 @@ public static class TestDataSeeder
                 Model = "Egea",
                 Year = 2024,
                 Color = "Gray",
-                GroupId = await ResolveGroupIdAsync(dbContext, cancellationToken, 0),
-                OfficeId = await ResolveOfficeIdAsync(dbContext, cancellationToken, 1),
+                GroupId = GroupOneId,
+                OfficeId = OfficeTwoId,
                 Status = VehicleStatus.Available
             },
             new Vehicle
@@ -155,8 +155,8 @@ public static class TestDataSeeder
                 Model = "Duster",
                 Year = 2025,
                 Color = "Black",
-                GroupId = await ResolveGroupIdAsync(dbContext, cancellationToken, 1),
-                OfficeId = await ResolveOfficeIdAsync(dbContext, cancellationToken, 0),
+                GroupId = GroupTwoId,
+                OfficeId = OfficeOneId,
                 Status = VehicleStatus.Available
             },
             new Vehicle
@@ -166,8 +166,8 @@ public static class TestDataSeeder
                 Model = "Qashqai",
                 Year = 2025,
                 Color = "Blue",
-                GroupId = await ResolveGroupIdAsync(dbContext, cancellationToken, 1),
-                OfficeId = await ResolveOfficeIdAsync(dbContext, cancellationToken, 1),
+                GroupId = GroupTwoId,
+                OfficeId = OfficeTwoId,
                 Status = VehicleStatus.Available
             }
         };
@@ -212,17 +212,4 @@ public static class TestDataSeeder
         }
     }
 
-    private static async Task<Guid> ResolveOfficeIdAsync(RentACarDbContext dbContext, CancellationToken cancellationToken, int index) =>
-        await dbContext.Offices
-            .OrderBy(office => office.Name)
-            .Select(office => office.Id)
-            .Skip(index)
-            .FirstAsync(cancellationToken);
-
-    private static async Task<Guid> ResolveGroupIdAsync(RentACarDbContext dbContext, CancellationToken cancellationToken, int index) =>
-        await dbContext.VehicleGroups
-            .OrderBy(group => group.NameEn)
-            .Select(group => group.Id)
-            .Skip(index)
-            .FirstAsync(cancellationToken);
 }
