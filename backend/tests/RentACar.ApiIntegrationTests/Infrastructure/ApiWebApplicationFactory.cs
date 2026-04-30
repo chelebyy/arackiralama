@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure;
 using RentACar.Infrastructure.Data;
@@ -21,13 +22,11 @@ public sealed class ApiWebApplicationFactory(
 {
     public string ConnectionString => postgresFixture.ConnectionString;
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    protected override IHost CreateHost(IHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
-
-        builder.ConfigureAppConfiguration((_, configurationBuilder) =>
+        builder.ConfigureHostConfiguration(config =>
         {
-            configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+            config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = postgresFixture.ConnectionString,
                 ["ConnectionStrings:Redis"] = redisFixture.ConnectionString,
@@ -38,6 +37,13 @@ public sealed class ApiWebApplicationFactory(
                 ["Database:AutoMigrateOnStartup"] = "false"
             });
         });
+
+        return base.CreateHost(builder);
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
 
         builder.ConfigureServices(services =>
         {
