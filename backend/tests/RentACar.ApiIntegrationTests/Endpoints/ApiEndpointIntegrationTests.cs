@@ -53,8 +53,8 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
         var url = $"/api/v1/vehicles/available?office_id={TestDataSeeder.OfficeOneId}&pickup_datetime={Uri.EscapeDataString(pickup.ToString("s"))}&return_datetime={Uri.EscapeDataString(dropoff.ToString("s"))}";
 
         var response = await Client.GetAsync(url);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Response body: {body}");
     }
 
     [Fact]
@@ -170,7 +170,11 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
 
     private static async Task<Guid> ReadResponseDataIdAsync(HttpResponseMessage response)
     {
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Request failed with {response.StatusCode}: {errorBody}");
+        }
         await using var stream = await response.Content.ReadAsStreamAsync();
         using var document = await JsonDocument.ParseAsync(stream);
         var id = document.RootElement.GetProperty("data").GetProperty("id").GetGuid();

@@ -123,7 +123,7 @@ public sealed class IdempotencyMiddleware
 
             // Read response body
             memoryStream.Position = 0;
-            var responseBody = await new StreamReader(memoryStream).ReadToEndAsync();
+            var responseBody = await new StreamReader(memoryStream, leaveOpen: true).ReadToEndAsync();
 
             // Cache response if successful (2xx status codes)
             if (context.Response.StatusCode >= 200 && context.Response.StatusCode < 300)
