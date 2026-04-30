@@ -38,8 +38,25 @@ public sealed class PostgresFixture : IAsyncLifetime
 #pragma warning restore EF1002
 
         await using var migratedContext = CreateContext(ConnectionString);
-        await migratedContext.Database.MigrateAsync();
-        await TestDataSeeder.SeedAsync(migratedContext);
+        try
+        {
+            await migratedContext.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PostgresFixture] MigrateAsync failed for {DatabaseName}: {ex}");
+            throw;
+        }
+
+        try
+        {
+            await TestDataSeeder.SeedAsync(migratedContext);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PostgresFixture] SeedAsync failed for {DatabaseName}: {ex}");
+            throw;
+        }
     }
 
     /// <inheritdoc />
