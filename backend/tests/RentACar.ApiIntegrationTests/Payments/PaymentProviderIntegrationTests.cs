@@ -107,6 +107,16 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
+    private async Task<Reservation> SeedPaidReservationAsync(CancellationToken cancellationToken = default)
+    {
+        var reservation = await SeedReservationAsync(ReservationStatus.Hold, cancellationToken);
+        var intent = await CreatePaymentIntentAsync(reservation.Id, cancellationToken: cancellationToken);
+        intent.Should().NotBeNull();
+        var completed = await CompleteThreeDsAsync(intent!.PaymentIntentId, "success", cancellationToken);
+        completed.Should().NotBeNull();
+        return reservation;
+    }
+
     #endregion
 
     #region 10.2.4.3 Idempotency
@@ -209,7 +219,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
     [Fact]
     public async Task CreateDepositPreAuthorizationAsync_AddsTrackedIntent_WhenCalled()
     {
-        var reservation = await SeedReservationAsync();
+        var reservation = await SeedPaidReservationAsync();
 
         using var scope = Services.CreateScope();
         var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
@@ -228,7 +238,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
     [Fact]
     public async Task CaptureDepositAsync_Captures_WhenDepositAuthorized()
     {
-        var reservation = await SeedReservationAsync();
+        var reservation = await SeedPaidReservationAsync();
 
         using var scope = Services.CreateScope();
         var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
@@ -246,7 +256,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
     [Fact]
     public async Task ReleaseDepositAsync_Releases_WhenDepositExists()
     {
-        var reservation = await SeedReservationAsync();
+        var reservation = await SeedPaidReservationAsync();
 
         using var scope = Services.CreateScope();
         var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();

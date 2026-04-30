@@ -50,7 +50,7 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
     {
         var pickup = DateTime.UtcNow.Date.AddDays(10).AddHours(10);
         var dropoff = pickup.AddDays(3);
-        var url = $"/api/v1/vehicles/available?office_id={TestDataSeeder.OfficeOneId}&pickup_datetime={Uri.EscapeDataString(pickup.ToString("O"))}&return_datetime={Uri.EscapeDataString(dropoff.ToString("O"))}";
+        var url = $"/api/v1/vehicles/available?office_id={TestDataSeeder.OfficeOneId}&pickup_datetime={Uri.EscapeDataString(pickup.ToString("s"))}&return_datetime={Uri.EscapeDataString(dropoff.ToString("s"))}";
 
         var response = await Client.GetAsync(url);
 
