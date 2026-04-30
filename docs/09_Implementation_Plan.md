@@ -960,10 +960,10 @@ POST /api/admin/v1/auth/logout
 - [ ] Target: > 70% coverage
 
 #### 10.2 Integration Tests
-- [ ] API endpoint tests
-- [ ] Database integration tests
-- [ ] Redis integration tests
-- [ ] Payment provider mock tests
+- [x] API endpoint tests (9 endpoint senaryosu)
+- [x] Database integration tests (5 senaryo)
+- [x] Redis integration tests (4 senaryo)
+- [x] Payment provider mock tests (10 senaryo)
 
 #### 10.3 E2E Tests
 - [ ] Booking flow test

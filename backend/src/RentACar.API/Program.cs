@@ -8,3 +8,5 @@ var app = builder.Build();
 await app.InitializeApiAsync();
 
 app.Run();
+
+public partial class Program;

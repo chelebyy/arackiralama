@@ -336,30 +336,74 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  backend-unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Build & Test Backend
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0'
-      
-      - name: Test Backend
+      - name: Restore & Build
         run: |
           cd backend
           dotnet restore
-          dotnet test
+          dotnet build --no-restore
+      - name: Unit Tests
+        run: |
+          cd backend
+          dotnet test tests/RentACar.Tests --no-build
 
-      # Build & Test Frontend
+  backend-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentacar
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0'
+      - name: Restore & Build
+        run: |
+          cd backend
+          dotnet restore
+          dotnet build --no-restore
+      - name: Integration Tests
+        run: |
+          cd backend
+          dotnet test tests/RentACar.ApiIntegrationTests --no-build
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      
-      - name: Test Frontend
+      - name: Install & Test
         run: |
           cd frontend
           npm ci
