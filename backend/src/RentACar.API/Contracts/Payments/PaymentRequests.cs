@@ -26,6 +26,7 @@ public record AdminRefundApiRequest
 {
     public decimal? Amount { get; init; }
     public string? Reason { get; init; }
+    public string? IdempotencyKey { get; init; }
 }
 
 public record AdminReleaseDepositApiRequest

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RentACar.Core.Interfaces.Payments;
@@ -16,12 +17,6 @@ public sealed class IyzicoPaymentProvider(
         CreatePaymentIntentProviderRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.IdempotencyKey.Contains("timeout", StringComparison.OrdinalIgnoreCase)
-            || request.Card.HolderName.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new TimeoutException("Iyzico sandbox simulation timed out while creating payment intent.");
-        }
-
         var providerIntentId = Guid.NewGuid().ToString("N");
         var callbackBase = string.IsNullOrWhiteSpace(_options.Iyzico.BaseUrl)
             ? "https://sandbox-api.iyzipay.com"
@@ -47,11 +42,6 @@ public sealed class IyzicoPaymentProvider(
         CreatePreAuthorizationProviderRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.ReferenceTransactionId.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new TimeoutException("Iyzico sandbox simulation timed out while creating pre-authorization.");
-        }
-
         if (request.Amount <= 0)
         {
             return Task.FromResult(new PreAuthorizationProviderResult
@@ -76,24 +66,6 @@ public sealed class IyzicoPaymentProvider(
         PaymentCallbackProviderRequest callback,
         CancellationToken cancellationToken = default)
     {
-        if (callback.BankResponse.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new TimeoutException("Iyzico sandbox simulation timed out while verifying payment.");
-        }
-
-        var isFailure = callback.BankResponse.Contains("fail", StringComparison.OrdinalIgnoreCase)
-            || callback.BankResponse.Contains("cancel", StringComparison.OrdinalIgnoreCase);
-
-        if (isFailure)
-        {
-            return Task.FromResult(new PaymentVerificationProviderResult
-            {
-                Status = PaymentProviderIntentStatus.Failed,
-                FailureCode = "IYZICO_3DS_FAILED",
-                FailureMessage = "3D Secure verification failed at provider."
-            });
-        }
-
         return Task.FromResult(new PaymentVerificationProviderResult
         {
             Status = PaymentProviderIntentStatus.Succeeded,
@@ -103,6 +75,22 @@ public sealed class IyzicoPaymentProvider(
 
     public bool VerifyWebhookSignature(string payload, string signature, string? timestamp)
     {
+        if (!TryGetWebhookTimestampUtc(timestamp, out var timestampUtc))
+        {
+            return false;
+        }
+
+        var nowUtc = DateTimeOffset.UtcNow;
+        if (nowUtc - timestampUtc > TimeSpan.FromSeconds(300))
+        {
+            return false;
+        }
+
+        if (timestampUtc - nowUtc > TimeSpan.FromSeconds(30))
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(signature) || string.IsNullOrWhiteSpace(_options.Iyzico.WebhookSecret))
         {
             return false;
@@ -154,16 +142,7 @@ public sealed class IyzicoPaymentProvider(
             return Task.FromResult(ProviderTransactionStatus.Unknown);
         }
 
-        if (transactionId.Contains("preauth", StringComparison.OrdinalIgnoreCase)
-            || transactionId.Contains("deposit", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(ProviderTransactionStatus.Authorized);
-        }
-
-        return Task.FromResult(
-            transactionId.Contains("fail", StringComparison.OrdinalIgnoreCase)
-                ? ProviderTransactionStatus.Failed
-                : ProviderTransactionStatus.Succeeded);
+        return Task.FromResult(ProviderTransactionStatus.Unknown);
     }
 
     public Task<ProviderRefundResult> RefundAsync(
@@ -177,16 +156,6 @@ public sealed class IyzicoPaymentProvider(
                 Success = false,
                 FailureCode = "IYZICO_INVALID_AMOUNT",
                 FailureMessage = "Refund amount must be greater than zero."
-            });
-        }
-
-        if (request.ProviderIntentId.Contains("fail", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(new ProviderRefundResult
-            {
-                Success = false,
-                FailureCode = "IYZICO_REFUND_FAILED",
-                FailureMessage = "Provider rejected refund request."
             });
         }
 
@@ -208,16 +177,6 @@ public sealed class IyzicoPaymentProvider(
                 Success = false,
                 FailureCode = "IYZICO_RELEASE_INVALID_INTENT",
                 FailureMessage = "Provider intent id is required."
-            });
-        }
-
-        if (request.ProviderIntentId.Contains("fail", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(new ProviderReleaseDepositResult
-            {
-                Success = false,
-                FailureCode = "IYZICO_RELEASE_FAILED",
-                FailureMessage = "Provider rejected deposit release."
             });
         }
 
@@ -251,16 +210,6 @@ public sealed class IyzicoPaymentProvider(
             });
         }
 
-        if (request.ProviderIntentId.Contains("fail", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(new ProviderCaptureDepositResult
-            {
-                Success = false,
-                FailureCode = "IYZICO_CAPTURE_FAILED",
-                FailureMessage = "Iyzico sandbox simulation forced capture failure."
-            });
-        }
-
         return Task.FromResult(new ProviderCaptureDepositResult
         {
             Success = true,
@@ -282,5 +231,33 @@ public sealed class IyzicoPaymentProvider(
             _ => null
         };
     }
-}
 
+    private static bool TryGetWebhookTimestampUtc(string? timestamp, out DateTimeOffset timestampUtc)
+    {
+        timestampUtc = default;
+
+        if (string.IsNullOrWhiteSpace(timestamp))
+        {
+            return false;
+        }
+
+        if (long.TryParse(timestamp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unixSeconds))
+        {
+            try
+            {
+                timestampUtc = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+        }
+
+        return DateTimeOffset.TryParse(
+            timestamp,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal | DateTimeStyles.AllowWhiteSpaces,
+            out timestampUtc);
+    }
+}

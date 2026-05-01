@@ -37,7 +37,7 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 COPY --from=builder --chown=nextjs:nextjs /app/public ./public
-COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone/frontend ./
+COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 
 USER nextjs

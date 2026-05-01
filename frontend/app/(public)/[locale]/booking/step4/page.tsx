@@ -18,9 +18,13 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
 import { differenceInCalendarDays } from "date-fns";
+import { useBookingState } from "@/hooks/useBooking";
+import { createReservation } from "@/lib/api/reservations";
+import type { CreateReservationData } from "@/lib/api/types";
 
 const vehicleGroups = [
   { id: "economy", name: "Fiat Egea or similar", category: "Economy", dailyRate: 45 },
@@ -93,6 +97,7 @@ export default function BookingStep4Page() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
+  const booking = useBookingState();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string; discount: number } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
 
@@ -101,7 +106,7 @@ export default function BookingStep4Page() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<Step4FormData>({
     resolver: zodResolver(step4Schema),
     defaultValues: {
@@ -121,16 +126,44 @@ export default function BookingStep4Page() {
     }
   };
 
-  const onSubmit = (data: Step4FormData) => {
-    console.log("Payment submitted:", data);
-    const code = `ALN-${Date.now()}`;
-    const queryParams = new URLSearchParams(searchParams.toString());
-    queryParams.set("code", code);
-    router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
+  const onSubmit = async (_data: Step4FormData) => {
+    if (!booking.customer || !booking.driver) {
+      toast.error("Booking details are missing. Please return to the previous step.");
+      return;
+    }
+
+    const reservationData: CreateReservationData = {
+      vehicleId: booking.vehicle?.vehicleId ?? vehicleParam,
+      pickupOfficeId: booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "",
+      pickupDate: booking.dates?.pickupDate ?? pickupDate,
+      pickupTime: booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "",
+      returnOfficeId: booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "",
+      returnDate: booking.dates?.returnDate ?? returnDate,
+      returnTime: booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "",
+      customer: booking.customer,
+      driver: booking.driver,
+      extras: extrasParam
+        ? extrasParam.split(",").map((extraId) => ({ extraId: extraId.trim(), quantity: 1 })).filter((extra) => extra.extraId)
+        : undefined,
+      campaignCode: appliedCampaign?.code,
+    };
+
+    try {
+      const reservation = await createReservation(reservationData);
+      const code = reservation.publicCode;
+
+      const queryParams = new URLSearchParams(searchParams.toString());
+      queryParams.set("code", code);
+      router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to complete booking";
+      toast.error(message);
+    }
   };
 
   const pickupDate = searchParams.get("pickupDate") || "";
   const returnDate = searchParams.get("returnDate") || "";
+  const extrasParam = searchParams.get("extras") || "";
   const days = Math.max(
     1,
     pickupDate && returnDate
@@ -141,7 +174,6 @@ export default function BookingStep4Page() {
   const vehicleParam = searchParams.get("vehicle") || "";
   const vehicle = vehicleGroups.find((v) => v.id === vehicleParam);
 
-  const extrasParam = searchParams.get("extras") || "";
   const selectedExtras = extrasParam
     ? extrasParam.split(",").map((id) => {
         const extra = extraOptions.find((e) => e.id === id.trim());
@@ -370,9 +402,10 @@ export default function BookingStep4Page() {
 
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
               >
-                Complete Booking
+                {isSubmitting ? "Completing..." : "Complete Booking"}
                 <ArrowRight className="h-5 w-5" />
               </button>
             </div>
