@@ -129,6 +129,7 @@ public static class TestDataSeeder
         {
             new Vehicle
             {
+                Id = GroupOneId,
                 Plate = "IT-1001",
                 Brand = "Renault",
                 Model = "Clio",
@@ -151,6 +152,7 @@ public static class TestDataSeeder
             },
             new Vehicle
             {
+                Id = GroupTwoId,
                 Plate = "IT-2001",
                 Brand = "Dacia",
                 Model = "Duster",
