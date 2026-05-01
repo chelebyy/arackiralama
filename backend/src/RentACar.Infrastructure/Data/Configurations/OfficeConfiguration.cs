@@ -14,16 +14,20 @@ public sealed class OfficeConfiguration : IEntityTypeConfiguration<Office>
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+        builder.Property(x => x.Code).HasColumnName("code").HasMaxLength(50).IsRequired();
         builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(250).IsRequired();
         builder.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(40).IsRequired();
         builder.Property(x => x.IsAirport).HasColumnName("is_airport");
         builder.Property(x => x.OpeningHours).HasColumnName("opening_hours").HasMaxLength(120).IsRequired();
+
+        builder.HasIndex(x => x.Code).IsUnique();
 
         builder.HasData(
             new Office
             {
                 Id = SeedDataConstants.AlanyaCenterOfficeId,
                 Name = "Alanya Merkez",
+                Code = "ala",
                 Address = "Sekerhane Mah. Ataturk Blv. No:10 Alanya/Antalya",
                 Phone = "+90 242 000 00 01",
                 IsAirport = false,
@@ -35,6 +39,7 @@ public sealed class OfficeConfiguration : IEntityTypeConfiguration<Office>
             {
                 Id = SeedDataConstants.GazipasaAirportOfficeId,
                 Name = "Gazipasa Airport",
+                Code = "gzp",
                 Address = "Gazipasa-Alanya Havalimani Terminal Ici",
                 Phone = "+90 242 000 00 02",
                 IsAirport = true,

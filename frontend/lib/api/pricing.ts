@@ -1,6 +1,11 @@
 import { get, post } from './client';
 import { API_ENDPOINTS } from './config';
-import type { Campaign, PriceBreakdown, PriceBreakdownParams } from './types';
+import type {
+  PriceBreakdown,
+  PriceBreakdownParams,
+  ValidateCampaignParams,
+  ValidateCampaignResponse,
+} from './types';
 
 function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   const searchParams = new URLSearchParams();
@@ -30,6 +35,8 @@ export async function getPriceBreakdown(params: PriceBreakdownParams): Promise<P
   return get<PriceBreakdown>(`${API_ENDPOINTS.pricing.breakdown}${queryString}`);
 }
 
-export async function validateCampaign(code: string): Promise<Campaign> {
-  return post<Campaign>(API_ENDPOINTS.pricing.validateCampaign, { code });
+export async function validateCampaign(
+  params: ValidateCampaignParams
+): Promise<ValidateCampaignResponse> {
+  return post<ValidateCampaignResponse>(API_ENDPOINTS.pricing.validateCampaign, params);
 }

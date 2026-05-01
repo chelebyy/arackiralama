@@ -1,12 +1,17 @@
 import useSWR from 'swr';
 import { useCallback, useState } from 'react';
 import { getPriceBreakdown, validateCampaign } from '@/lib/api/pricing';
-import type { Campaign, PriceBreakdown, PriceBreakdownParams } from '@/lib/api/types';
+import type {
+  PriceBreakdown,
+  PriceBreakdownParams,
+  ValidateCampaignParams,
+  ValidateCampaignResponse,
+} from '@/lib/api/types';
 
 const PRICING_KEYS = {
   all: ['pricing'] as const,
   breakdown: (params: PriceBreakdownParams) => [...PRICING_KEYS.all, 'breakdown', params] as const,
-  campaign: (code: string) => [...PRICING_KEYS.all, 'campaign', code] as const,
+  campaign: (params: ValidateCampaignParams) => [...PRICING_KEYS.all, 'campaign', params] as const,
 };
 
 export function usePriceBreakdown(params: PriceBreakdownParams | null) {
@@ -31,13 +36,13 @@ export function usePriceBreakdown(params: PriceBreakdownParams | null) {
 export function useValidateCampaign() {
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [validatedCampaign, setValidatedCampaign] = useState<Campaign | null>(null);
+  const [validatedCampaign, setValidatedCampaign] = useState<ValidateCampaignResponse | null>(null);
 
-  const validate = useCallback(async (code: string): Promise<Campaign | null> => {
+  const validate = useCallback(async (params: ValidateCampaignParams): Promise<ValidateCampaignResponse | null> => {
     setIsValidating(true);
     setError(null);
     try {
-      const campaign = await validateCampaign(code);
+      const campaign = await validateCampaign(params);
       setValidatedCampaign(campaign);
       return campaign;
     } catch (err) {

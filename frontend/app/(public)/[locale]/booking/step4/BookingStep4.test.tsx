@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import BookingStep4Page from "./page";
 
 const createReservationMock = vi.fn();
+const validateCampaignMock = vi.fn();
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 let searchParams = new URLSearchParams();
@@ -69,6 +70,10 @@ vi.mock("@/lib/api/reservations", () => ({
   createReservation: (...args: unknown[]) => createReservationMock(...args),
 }));
 
+vi.mock("@/lib/api/pricing", () => ({
+  validateCampaign: (...args: unknown[]) => validateCampaignMock(...args),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     error: (...args: unknown[]) => toastErrorMock(...args),
@@ -80,6 +85,7 @@ describe("BookingStep4Page", () => {
     vi.restoreAllMocks();
     createReservationMock.mockReset();
     createReservationMock.mockResolvedValue({ publicCode: "ALN-REAL-123" });
+    validateCampaignMock.mockReset();
     toastErrorMock.mockReset();
     pushMock.mockReset();
     searchParams = new URLSearchParams({
@@ -106,17 +112,40 @@ describe("BookingStep4Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("applies supported campaign codes and updates the price breakdown", async () => {
+  it("validates a campaign code through the API before applying it", async () => {
     const user = userEvent.setup();
+    validateCampaignMock.mockResolvedValue({ valid: true });
 
     render(<BookingStep4Page />);
 
     await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
+    await waitFor(() => {
+      expect(validateCampaignMock).toHaveBeenCalledWith({
+        code: "SUMMER15",
+        vehicleGroupId: "economy",
+        rentalDays: 3,
+        pickupDate: "2026-05-10",
+      });
+    });
     expect(await screen.findByText("Code SUMMER15 applied!")).toBeInTheDocument();
-    expect(screen.getByText("Campaign Discount (15%)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
+  });
+
+  it("shows an error toast when the campaign code is invalid", async () => {
+    const user = userEvent.setup();
+    validateCampaignMock.mockResolvedValue({ valid: false });
+
+    render(<BookingStep4Page />);
+
+    await user.type(screen.getByPlaceholderText(/enter code/i), "badcode");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("Invalid campaign code.");
+    });
+    expect(screen.queryByText(/applied!/i)).not.toBeInTheDocument();
   });
 
   it("allows PayPal checkout without card details and navigates to confirmation", async () => {

@@ -471,6 +471,7 @@ public sealed class PricingServiceTests : IDisposable
         var pickupOffice = new Office
         {
             Name = "Alanya Merkez",
+            Code = "alanya-merkez",
             Address = "Saray Mah.",
             Phone = "+90 242 000 00 00",
             IsAirport = false,
@@ -479,6 +480,7 @@ public sealed class PricingServiceTests : IDisposable
         var returnOffice = new Office
         {
             Name = "Antalya Havalimani",
+            Code = "antalya-havalimani",
             Address = "Havalimani",
             Phone = "+90 242 111 11 11",
             IsAirport = true,

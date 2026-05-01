@@ -19,7 +19,7 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAvailableVehicles } from "@/hooks/useVehicles";
+import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
 import type { AvailableVehicleGroup } from "@/lib/api/types";
 
 interface VehicleDetail {
@@ -91,6 +91,28 @@ const offices = [
   { id: "avsallar", name: "Avsallar" },
 ];
 
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipasa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargicak",
+  konakli: "konakli",
+  avsallar: "avsallar",
+};
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
+  if (isGuid(slugOrGuid)) return slugOrGuid;
+  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+  if (!pattern) return slugOrGuid;
+  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+  return matched?.id ?? slugOrGuid;
+}
+
 export default function VehicleDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -104,10 +126,13 @@ export default function VehicleDetailPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
+  const { offices: apiOffices } = useOffices();
+  const pickupOfficeGuid = resolveOfficeGuid(apiOffices, pickupOffice);
+
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && pickupTime && returnDate && returnTime
+    pickupDate && pickupTime && returnDate && returnTime && pickupOfficeGuid
       ? {
-          office_id: pickupOffice,
+          office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,
           return_datetime: `${returnDate}T${returnTime}`,
         }

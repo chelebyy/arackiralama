@@ -70,6 +70,7 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         var targetOffice = new Office
         {
             Name = "Havalimani",
+            Code = "gazipasa-havalimani",
             Address = "Gazipasa Havalimani",
             Phone = "+90 242 111 11 11",
             IsAirport = true,
@@ -155,6 +156,7 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         var office = new Office
         {
             Name = officeName,
+            Code = string.Concat(officeName.Where(char.IsLetterOrDigit)).ToLowerInvariant(),
             Address = $"{officeName} Adres",
             Phone = "+90 242 000 00 00",
             IsAirport = false,

@@ -29,6 +29,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         dbContext.Offices.Add(new Office
         {
             Name = "Merkez Ofis",
+            Code = "ala",
             Address = "Saray Mah. Ataturk Cad. No:1",
             Phone = "+90 242 000 00 00",
             IsAirport = false,
@@ -43,6 +44,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         var response = okResult.Value.Should().BeOfType<ApiResponse<IReadOnlyList<OfficeDto>>>().Subject;
         response.Success.Should().BeTrue();
         response.Data.Should().HaveCount(1);
+        response.Data![0].Code.Should().Be("ala");
         response.Data![0].Name.Should().Be("Merkez Ofis");
     }
 
@@ -53,6 +55,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         var controller = CreateController(dbContext);
 
         var request = new CreateOfficeRequest(
+            Code: string.Empty,
             Name: string.Empty,
             Address: "Saray Mah. Ataturk Cad. No:1",
             Phone: "+90 242 000 00 00",
@@ -73,6 +76,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         var office = new Office
         {
             Name = "Merkez Ofis",
+            Code = "ala",
             Address = "Saray Mah. Ataturk Cad. No:1",
             Phone = "+90 242 000 00 00",
             IsAirport = false,
@@ -83,6 +87,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
 
         var controller = CreateController(dbContext);
         var request = new UpdateOfficeRequest(
+            Code: "gzp",
             Name: "Havalimani Ofisi",
             Address: "Gazipasa Havalimani",
             Phone: "+90 242 111 11 11",
@@ -95,6 +100,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         var response = okResult.Value.Should().BeOfType<ApiResponse<OfficeDto>>().Subject;
         response.Success.Should().BeTrue();
         response.Data.Should().NotBeNull();
+        response.Data!.Code.Should().Be("gzp");
         response.Data!.Name.Should().Be("Havalimani Ofisi");
         response.Data.IsAirport.Should().BeTrue();
     }

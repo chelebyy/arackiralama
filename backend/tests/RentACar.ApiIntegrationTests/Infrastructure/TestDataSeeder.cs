@@ -57,6 +57,7 @@ public static class TestDataSeeder
             {
                 Id = OfficeOneId,
                 Name = "Integration Test Downtown",
+                Code = "it-downtown",
                 Address = "Ataturk Boulevard No:10, Alanya",
                 Phone = "+90 242 111 11 11",
                 IsAirport = false,
@@ -66,6 +67,7 @@ public static class TestDataSeeder
             {
                 Id = OfficeTwoId,
                 Name = "Integration Test Airport",
+                Code = "it-airport",
                 Address = "Gazipasa Airport Terminal",
                 Phone = "+90 242 222 22 22",
                 IsAirport = true,

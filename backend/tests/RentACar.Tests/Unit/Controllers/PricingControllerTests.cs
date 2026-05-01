@@ -408,6 +408,7 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var pickupOffice = new Office
         {
             Name = "Havalimani",
+            Code = "alanya-airport",
             Address = "Alanya Airport",
             Phone = "+90 242 000 00 00",
             IsAirport = true,
@@ -417,6 +418,7 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var returnOffice = new Office
         {
             Name = "Merkez",
+            Code = "alanya-merkez",
             Address = "Alanya Merkez",
             Phone = "+90 242 000 00 01",
             IsAirport = false,
