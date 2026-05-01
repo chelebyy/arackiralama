@@ -83,6 +83,12 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
     {
         var createResponse = await CreateReservationAsync();
         var reservationId = await ReadResponseDataIdAsync(createResponse);
+
+        using var holdRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{reservationId}/hold");
+        holdRequest.Headers.Add("X-Session-Id", $"session-{Guid.NewGuid():N}");
+        var holdResponse = await Client.SendAsync(holdRequest);
+        holdResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
         var request = new CreatePaymentIntentApiRequest
         {
             ReservationId = reservationId,
