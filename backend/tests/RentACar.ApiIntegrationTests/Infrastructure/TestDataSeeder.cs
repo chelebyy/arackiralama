@@ -189,7 +189,7 @@ public static class TestDataSeeder
         {
             new PricingRule
             {
-                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddd1"),
+                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                 VehicleGroupId = GroupOneId,
                 StartDate = today.AddYears(-1),
                 EndDate = today.AddYears(1),
@@ -202,7 +202,7 @@ public static class TestDataSeeder
             },
             new PricingRule
             {
-                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddd2"),
+                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-ddddddddddd2"),
                 VehicleGroupId = GroupTwoId,
                 StartDate = today.AddYears(-1),
                 EndDate = today.AddYears(1),
