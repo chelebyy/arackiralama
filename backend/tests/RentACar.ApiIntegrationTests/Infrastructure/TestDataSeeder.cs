@@ -29,6 +29,7 @@ public static class TestDataSeeder
         await EnsureOfficesAsync(dbContext, cancellationToken);
         await EnsureVehicleGroupsAsync(dbContext, cancellationToken);
         await EnsureVehiclesAsync(dbContext, cancellationToken);
+        await EnsurePricingRulesAsync(dbContext, cancellationToken);
         await EnsureAdminUserAsync(dbContext, cancellationToken);
         await EnsureFeatureFlagsAsync(dbContext, cancellationToken);
     }
@@ -176,7 +177,49 @@ public static class TestDataSeeder
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task EnsureAdminUserAsync(RentACarDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task EnsurePricingRulesAsync(RentACarDbContext dbContext, CancellationToken cancellationToken = default)
+    {
+        if (await dbContext.PricingRules.AnyAsync(r => r.VehicleGroupId == GroupOneId, cancellationToken))
+        {
+            return;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var rules = new[]
+        {
+            new PricingRule
+            {
+                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddd1"),
+                VehicleGroupId = GroupOneId,
+                StartDate = today.AddYears(-1),
+                EndDate = today.AddYears(1),
+                DailyPrice = 1000m,
+                Multiplier = 1m,
+                WeekdayMultiplier = 1m,
+                WeekendMultiplier = 1m,
+                CalculationType = "fixed",
+                Priority = 1
+            },
+            new PricingRule
+            {
+                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddd2"),
+                VehicleGroupId = GroupTwoId,
+                StartDate = today.AddYears(-1),
+                EndDate = today.AddYears(1),
+                DailyPrice = 1500m,
+                Multiplier = 1m,
+                WeekdayMultiplier = 1m,
+                WeekendMultiplier = 1m,
+                CalculationType = "fixed",
+                Priority = 1
+            }
+        };
+
+        await dbContext.PricingRules.AddRangeAsync(rules, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsureAdminUserAsync(RentACarDbContext dbContext, CancellationToken cancellationToken = default)
     {
         if (await dbContext.AdminUsers.AnyAsync(admin => admin.NormalizedEmail == AdminUser.NormalizeEmail(SeedAdminEmail), cancellationToken))
         {
