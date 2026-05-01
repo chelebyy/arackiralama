@@ -35,8 +35,18 @@ describe("pricing API", () => {
   });
 
   it("posts campaign validation requests", async () => {
-    await validateCampaign("WELCOME10");
+    await validateCampaign({
+      code: "WELCOME10",
+      vehicleGroupId: "vehicle-group-1",
+      rentalDays: 4,
+      pickupDate: "2026-05-10",
+    });
 
-    expect(mockedPost).toHaveBeenCalledWith("/pricing/campaigns/validate", { code: "WELCOME10" });
+    expect(mockedPost).toHaveBeenCalledWith("/pricing/campaigns/validate", {
+      code: "WELCOME10",
+      vehicleGroupId: "vehicle-group-1",
+      rentalDays: 4,
+      pickupDate: "2026-05-10",
+    });
   });
 });

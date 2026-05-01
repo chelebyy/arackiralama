@@ -5,7 +5,7 @@ import { SWRConfig } from "swr";
 
 import { usePriceBreakdown, useValidateCampaign } from "./usePricing";
 import { getPriceBreakdown, validateCampaign } from "@/lib/api/pricing";
-import type { Campaign, PriceBreakdownParams } from "@/lib/api/types";
+import type { PriceBreakdownParams, ValidateCampaignParams, ValidateCampaignResponse } from "@/lib/api/types";
 
 vi.mock("@/lib/api/pricing", () => ({
   getPriceBreakdown: vi.fn(),
@@ -55,26 +55,25 @@ describe("usePricing", () => {
   });
 
   it("validates campaign codes and clears the validation state", async () => {
-    const campaign: Campaign = {
-      id: "campaign-1",
+    const params: ValidateCampaignParams = {
       code: "SUMMER15",
-      name: "Summer",
-      description: "15% off",
-      discountType: "PERCENTAGE",
-      discountValue: 15,
-      validFrom: "2026-05-01",
-      validUntil: "2026-05-31",
-      isActive: true,
+      vehicleGroupId: "vehicle-group-1",
+      rentalDays: 3,
+      pickupDate: "2026-05-10",
     };
-    mockedValidateCampaign.mockResolvedValue(campaign);
+    const response: ValidateCampaignResponse = {
+      valid: true,
+    };
+    mockedValidateCampaign.mockResolvedValue(response);
 
     const { result } = renderHook(() => useValidateCampaign(), { wrapper });
 
     await act(async () => {
-      await result.current.validate("SUMMER15");
+      await result.current.validate(params);
     });
 
-    expect(result.current.campaign).toEqual(campaign);
+    expect(mockedValidateCampaign).toHaveBeenCalledWith(params);
+    expect(result.current.campaign).toEqual(response);
 
     act(() => {
       result.current.clearValidation();
@@ -89,19 +88,16 @@ describe("usePricing", () => {
 
     const { result } = renderHook(() => useValidateCampaign(), { wrapper });
 
-    let validated: Campaign | null = {
-      id: "x",
-      code: "x",
-      name: "x",
-      description: "x",
-      discountType: "PERCENTAGE",
-      discountValue: 1,
-      validFrom: "x",
-      validUntil: "x",
-      isActive: true,
+    let validated: ValidateCampaignResponse | null = {
+      valid: true,
     };
     await act(async () => {
-      validated = await result.current.validate("BADCODE");
+      validated = await result.current.validate({
+        code: "BADCODE",
+        vehicleGroupId: "vehicle-group-1",
+        rentalDays: 2,
+        pickupDate: "2026-05-10",
+      });
     });
 
     expect(validated).toBeNull();

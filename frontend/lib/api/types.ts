@@ -322,6 +322,17 @@ export interface PriceBreakdownParams {
   full_coverage_waiver?: boolean;
 }
 
+export interface ValidateCampaignParams {
+  code: string;
+  vehicleGroupId: string;
+  rentalDays: number;
+  pickupDate: string;
+}
+
+export interface ValidateCampaignResponse {
+  valid: boolean;
+}
+
 export interface CreateReservationData {
   vehicleGroupId: string;
   pickupOfficeId: string;

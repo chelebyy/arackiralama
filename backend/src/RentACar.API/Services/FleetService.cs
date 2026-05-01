@@ -454,6 +454,7 @@ public sealed class FleetService(
         var office = new Office
         {
             Name = request.Name.Trim(),
+            Code = request.Code.Trim(),
             Address = request.Address.Trim(),
             Phone = request.Phone.Trim(),
             IsAirport = request.IsAirport,
@@ -487,6 +488,7 @@ public sealed class FleetService(
         var previousState = new
         {
             existingOffice.Name,
+            existingOffice.Code,
             existingOffice.Address,
             existingOffice.Phone,
             existingOffice.IsAirport,
@@ -494,6 +496,7 @@ public sealed class FleetService(
         };
 
         existingOffice.Name = request.Name.Trim();
+        existingOffice.Code = request.Code.Trim();
         existingOffice.Address = request.Address.Trim();
         existingOffice.Phone = request.Phone.Trim();
         existingOffice.IsAirport = request.IsAirport;
@@ -509,6 +512,7 @@ public sealed class FleetService(
                 Current = new
                 {
                     existingOffice.Name,
+                    existingOffice.Code,
                     existingOffice.Address,
                     existingOffice.Phone,
                     existingOffice.IsAirport,
@@ -573,6 +577,7 @@ public sealed class FleetService(
     {
         return new OfficeDto(
             office.Id,
+            office.Code,
             office.Name,
             office.Address,
             office.Phone,

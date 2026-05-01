@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
 import { differenceInCalendarDays } from "date-fns";
 import { useBookingState } from "@/hooks/useBooking";
+import { useValidateCampaign } from "@/hooks/usePricing";
 import { createReservation } from "@/lib/api/reservations";
 import type { CreateReservationData } from "@/lib/api/types";
 
@@ -89,7 +90,8 @@ export default function BookingStep4Page() {
   const router = useRouter();
   const locale = params.locale as string;
   const booking = useBookingState();
-  const [appliedCampaign, setAppliedCampaign] = useState<{ code: string; discount: number } | null>(null);
+  const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
+  const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
 
   const {
@@ -109,12 +111,55 @@ export default function BookingStep4Page() {
   const selectedPaymentMethod = watch("paymentMethod");
   const isCreditCard = selectedPaymentMethod === "credit_card" || selectedPaymentMethod === "debit_card";
 
-  const applyCampaign = () => {
-    if (campaignInput.toUpperCase() === "SUMMER15") {
-      setAppliedCampaign({ code: campaignInput.toUpperCase(), discount: 15 });
-    } else if (campaignInput.toUpperCase() === "WELCOME10") {
-      setAppliedCampaign({ code: campaignInput.toUpperCase(), discount: 10 });
+  const pickupDate = booking.dates?.pickupDate ?? searchParams.get("pickupDate") ?? "";
+  const returnDate = booking.dates?.returnDate ?? searchParams.get("returnDate") ?? "";
+  const extrasParam = searchParams.get("extras") || "";
+  const rentalDays = Math.max(
+    1,
+    pickupDate && returnDate
+      ? differenceInCalendarDays(new Date(returnDate), new Date(pickupDate))
+      : 7
+  );
+
+  const vehicleParam = searchParams.get("vehicleGroupId") || searchParams.get("vehicle") || "";
+  const selectedVehicleGroupId = booking.vehicle?.vehicleGroupId ?? vehicleParam;
+  const vehicle = booking.vehicle;
+
+  const applyCampaign = async () => {
+    const normalizedCode = campaignInput.trim().toUpperCase();
+
+    if (!normalizedCode) {
+      return;
     }
+
+    if (!selectedVehicleGroupId || !pickupDate) {
+      toast.error("Missing booking details for campaign validation.");
+      return;
+    }
+
+    const validation = await validateCampaignCode({
+      code: normalizedCode,
+      vehicleGroupId: selectedVehicleGroupId,
+      rentalDays,
+      pickupDate,
+    });
+
+    if (!validation) {
+      setAppliedCampaign(null);
+      setValue("campaignCode", "");
+      toast.error("Failed to validate campaign code.");
+      return;
+    }
+
+    if (!validation.valid) {
+      setAppliedCampaign(null);
+      setValue("campaignCode", "");
+      toast.error("Invalid campaign code.");
+      return;
+    }
+
+    setAppliedCampaign({ code: normalizedCode });
+    setValue("campaignCode", normalizedCode);
   };
 
   const onSubmit = async (_data: Step4FormData) => {
@@ -150,26 +195,13 @@ export default function BookingStep4Page() {
     }
   };
 
-  const pickupDate = searchParams.get("pickupDate") || "";
-  const returnDate = searchParams.get("returnDate") || "";
-  const extrasParam = searchParams.get("extras") || "";
-  const days = Math.max(
-    1,
-    pickupDate && returnDate
-      ? differenceInCalendarDays(new Date(returnDate), new Date(pickupDate))
-      : 7
-  );
-
-  const vehicleParam = searchParams.get("vehicle") || "";
-  const vehicle = booking.vehicle;
-
   const selectedExtras = extrasParam
     ? extrasParam.split(",").map((id) => {
         const extra = extraOptions.find((e) => e.id === id.trim());
         if (!extra) return null;
         return {
           name: extra.name,
-          price: extra.priceType === "per_day" ? extra.price * days : extra.price,
+          price: extra.priceType === "per_day" ? extra.price * rentalDays : extra.price,
         };
       }).filter((e): e is { name: string; price: number } => e !== null)
     : [];
@@ -204,13 +236,13 @@ export default function BookingStep4Page() {
                   type="text"
                   value={campaignInput}
                   onChange={(e) => setCampaignInput(e.target.value)}
-                  placeholder="Enter code (e.g., SUMMER15)"
+                  placeholder="Enter code"
                   className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 uppercase"
                 />
                 <button
                   type="button"
                   onClick={applyCampaign}
-                  disabled={!campaignInput || appliedCampaign !== null}
+                  disabled={!campaignInput || appliedCampaign !== null || isValidating}
                   className={cn(
                     "px-6 py-3 font-medium rounded-lg transition-colors",
                     appliedCampaign
@@ -218,7 +250,7 @@ export default function BookingStep4Page() {
                       : "bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-50"
                   )}
                 >
-                  {appliedCampaign ? "Applied" : "Apply"}
+                  {appliedCampaign ? "Applied" : isValidating ? "Validating..." : "Apply"}
                 </button>
               </div>
 
@@ -227,7 +259,7 @@ export default function BookingStep4Page() {
                   <Check className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="font-medium text-green-900">Code {appliedCampaign.code} applied!</p>
-                    <p className="text-sm text-green-700">You saved {appliedCampaign.discount}% on your rental</p>
+                    <p className="text-sm text-green-700">Campaign code validated and ready for your reservation.</p>
                   </div>
                 </div>
               )}
@@ -405,10 +437,10 @@ export default function BookingStep4Page() {
           <div className="sticky top-24">
             <PriceBreakdown
               dailyRate={vehicle?.dailyPrice ?? 0}
-              days={days}
+              days={rentalDays}
               vehicleGroup={vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : "Unknown Vehicle"}
               extras={selectedExtras}
-              campaignDiscount={appliedCampaign?.discount}
+              campaignDiscount={booking.campaignDiscount ?? 0}
               currency="TRY"
             />
           </div>

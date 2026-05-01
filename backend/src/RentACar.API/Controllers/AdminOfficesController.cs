@@ -23,7 +23,7 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOfficeRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateOfficeInput(request.Name, request.Address, request.Phone, request.OpeningHours);
+        var validationError = ValidateOfficeInput(request.Code, request.Name, request.Address, request.Phone, request.OpeningHours);
         if (validationError is not null)
         {
             return BadRequestResponse(validationError);
@@ -36,7 +36,7 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateOfficeRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateOfficeInput(request.Name, request.Address, request.Phone, request.OpeningHours);
+        var validationError = ValidateOfficeInput(request.Code, request.Name, request.Address, request.Phone, request.OpeningHours);
         if (validationError is not null)
         {
             return BadRequestResponse(validationError);
@@ -51,14 +51,20 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
         return OkResponse(updatedOffice, "Ofis guncellendi.");
     }
 
-    private static string? ValidateOfficeInput(string name, string address, string phone, string openingHours)
+    private static string? ValidateOfficeInput(string code, string name, string address, string phone, string openingHours)
     {
-        if (string.IsNullOrWhiteSpace(name) ||
+        if (string.IsNullOrWhiteSpace(code) ||
+            string.IsNullOrWhiteSpace(name) ||
             string.IsNullOrWhiteSpace(address) ||
             string.IsNullOrWhiteSpace(phone) ||
             string.IsNullOrWhiteSpace(openingHours))
         {
-            return "Isim, adres, telefon ve calisma saatleri zorunludur.";
+            return "Kod, isim, adres, telefon ve calisma saatleri zorunludur.";
+        }
+
+        if (code.Trim().Length > 50)
+        {
+            return "Kod en fazla 50 karakter olabilir.";
         }
 
         return null;

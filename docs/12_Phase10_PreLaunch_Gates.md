@@ -394,6 +394,104 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 ---
 
+### 10.0.8 Wave 2 Additional Fixes (1 May 2026 — Post-Codex Review)
+
+**Dalga Kapanış Tarihi:** 1 May 2026  
+**Kapsam:** validateCampaign contract alignment + OfficeDto Code field
+
+#### Verify Sonuçları
+
+| Komut | Sonuç | Notlar |
+|-------|-------|--------|
+| `dotnet build backend/RentACar.sln --no-restore` | ✅ **PASS** | 0 error, 1 uyarı (NU1510) |
+| `corepack pnpm -C frontend exec tsc --noEmit` | ✅ **PASS** | 0 type error |
+| `corepack pnpm -C frontend test` | ✅ **PASS** | 63/63 test geçti (+1 yeni test) |
+
+#### Değiştirilen Dosyalar
+
+| Fix ID | Dosya | Değişiklik |
+|--------|-------|-----------|
+| W2-AC1 | `frontend/lib/api/pricing.ts` | `validateCampaign` artık `ValidateCampaignParams` alıyor: `{ code, vehicleGroupId, rentalDays, pickupDate }` |
+| W2-AC1 | `frontend/lib/api/types.ts` | `ValidateCampaignParams` ve `ValidateCampaignResponse` interfaceleri eklendi |
+| W2-AC1 | `frontend/hooks/usePricing.ts` | `useValidateCampaign()` hook'u yeni params/response contract'ını kullanıyor |
+| W2-AC1 | `frontend/app/(public)/[locale]/booking/step4/page.tsx` | Hardcoded `SUMMER15`/`WELCOME10` mock validasyonu kaldırıldı, gerçek API validasyonu eklendi |
+| W2-AC1 | `frontend/hooks/usePricing.test.ts` + `frontend/lib/api/pricing.test.ts` + `frontend/app/(public)/[locale]/booking/step4/BookingStep4.test.tsx` | Testler yeni signature'a göre güncellendi |
+| W2-AC2 | `backend/src/RentACar.Core/Entities/Office.cs` | `Code` property eklendi |
+| W2-AC2 | `backend/src/RentACar.API/Contracts/Fleet/OfficeDto.cs` | `Code` parametresi eklendi |
+| W2-AC2 | `backend/src/RentACar.API/Contracts/Fleet/CreateOfficeRequest.cs` | `Code` parametresi eklendi |
+| W2-AC2 | `backend/src/RentACar.API/Contracts/Fleet/UpdateOfficeRequest.cs` | `Code` parametresi eklendi |
+| W2-AC2 | `backend/src/RentACar.API/Services/FleetService.cs` | `MapToDto`, `CreateOfficeAsync`, `UpdateOfficeAsync` Code mapping eklendi |
+| W2-AC2 | `backend/src/RentACar.API/Controllers/AdminOfficesController.cs` | Code validasyonu eklendi (required, max 50) |
+| W2-AC2 | `backend/src/RentACar.Infrastructure/Data/Configurations/OfficeConfiguration.cs` | Code: required, max 50, unique index |
+| W2-AC2 | `backend/tests/.../AdminOfficesControllerTests.cs` + `FleetServiceTests.cs` + `ReservationRepositoryTests.cs` | Test fixture'ları Code alanı ile güncellendi |
+| W2-AC2 | `backend/src/RentACar.Infrastructure/Data/Migrations/20260501195452_AddOfficeCode.cs` | EF migration oluşturuldu |
+
+#### Wave 2 Ek Fix Durumu: ✅ **TAMAMLANDI**
+
+- Frontend validateCampaign contract backend ile uyumlu
+- Backend OfficeDto artık `Code` döndürüyor — frontend `resolveOfficeGuid()` artık exact lookup yapabilir
+- Build ve type-check temiz
+- Frontend testler 63/63 geçti
+
+---
+
+### 10.0.9 Wave 3 Assessment: Notifications + Worker + Admin Screens (1 May 2026)
+
+**Dalga Değerlendirme Tarihi:** 1 May 2026  
+**Kapsam:** Notifications module, Background Worker, Admin operation screens
+
+#### Bulgu Özeti
+
+| Modül | CRITICAL | HIGH | MEDIUM | LOW | Toplam |
+|-------|----------|------|--------|-----|--------|
+| Worker/Hold Release | 3 | 5 | 8 | 1 | 17 |
+| Notifications (SMS/Email) | 1 | 4 | 8 | 3 | 16 |
+| Admin Screens | 0 | 0 | 5 | 3 | 8 |
+| **Toplam** | **4** | **9** | **21** | **7** | **41** |
+
+#### Acil Fix Gerektiren (CRITICAL)
+
+| ID | Dosya | Sorun | Risk |
+|----|-------|-------|------|
+| W3-W01 | `Worker.cs:137-154` | Partial failure: reservation `Expired` kaydediliyor ama `ReleaseHoldAsync` fail ederse hold serbest bırakılmamış kalıyor | Rezervasyon Expired ama araç hâlâ Hold'da — müsaitlik yanlış |
+| W3-W02 | `Worker.cs:72-97` | TOCTOU race: duplicate job detection READ ve INSERT arasında başka process INSERT yapabilir | Aynı reservation için duplicate release job'ları |
+| W3-W03 | `Worker.cs:114-121` | No row locking: `FOR UPDATE SKIP LOCKED` yok, concurrent worker'lar aynı job'ları alabilir | Aynı job birden fazla kez işlenebilir |
+| W3-N01 | `Worker.cs:322-325` | Empty catch block: backup process kill exception'ları yutuluyor | Silent failure, debug imkansız |
+
+#### HIGH Öncelikli
+
+| ID | Dosya | Sorun | Risk |
+|----|-------|-------|------|
+| W3-W04 | `Worker.cs:163-181` | Retry exhausted ama reservation status rollback yok + Redis hold cleanup yok | Data inconsistency |
+| W3-W05 | `Worker.cs:148` | `ReleaseHoldAsync` return value (bool) ignore ediliyor | Başarısız release job Completed olarak işaretleniyor |
+| W3-W06 | `Worker.cs:330-331` | `ReadToEndAsync` after `WaitForExitAsync` — deadlock risk | Backup job asılı kalabilir |
+| W3-N02 | `PasswordResetEmailDispatcher.cs:39` | Hardcoded `Locale = "tr-TR"` — tüm kullanıcılar Türkçe email alıyor | UX/i18n bug |
+| W3-N03 | `TwilioSmsProvider.cs` + `NetgsmSmsProvider.cs` | HTTP timeout yok — SMS API call'ları sonsuz askıda kalabilir | Resource leak |
+| W3-N04 | `NetgsmSmsProvider.cs:90-109` | XML CDATA içinde template variables escape edilmiyor | Teorik XML injection riski |
+| W3-N05 | `NotificationQueueService.cs:58-65` | Feature flag query fail ederse SMS hiç enqueue edilmiyor, fallback yok | DB hatası = sessiz SMS kesintisi |
+| W3-N06 | `NotificationBackgroundJobProcessor.cs:89,99` | JSON deserialize without options + payload context kayboluyor | Debug zor, deserialization hataları opak |
+
+#### MEDIUM Öncelikli (Seçilmiş)
+
+| ID | Dosya | Sorun | Risk |
+|----|-------|-------|------|
+| W3-N07 | `NotificationQueueService.cs:15` | Magic string `"EnableSmsNotifications"` | Maintainability |
+| W3-N08 | `NotificationTemplateService.cs:276` | Hardcoded `"tr-TR"` fallback locale | i18n inconsistency |
+| W3-N09 | `TwilioSmsProvider.cs` vs `NetgsmSmsProvider.cs` | Inconsistent phone normalization (+90 vs 90) | Provider switch'te SMS format farkı |
+| W3-W07 | `Worker.cs:37-40` | Worker loop catches all exceptions, continues with 30s delay — no backoff | Sürekli fail eden job log spam'i |
+| W3-W08 | `Worker.cs:114-121` + `NotificationBackgroundJobProcessor.cs:20` | Hardcoded batch size = 20 | Configurability eksik |
+| W3-W09 | `Worker.cs` | No graceful shutdown mid-job protection | Job Processing'de kalabilir |
+| W3-A01 | `frontend/components/admin/dialogs/VehicleDialog.tsx` | `as any` cast kullanılıyor | Type safety |
+| W3-A02 | `frontend/app/(admin)/dashboard/(auth)/default/page.tsx` | Stats değerleri hardcoded/mock | Gerçek veri gösterilmiyor |
+
+#### Değerlendirme Notları
+- **CRITICAL (4):** 3 tanesi Worker/Hold Release data consistency — production'da çift rezervasyon veya orphan hold riski
+- **HIGH (9):** 5 tanesi Worker, 4 tanesi Notifications — silent failure ve resource leak pattern'leri
+- **Admin screens:** Kritik yok, çoğunlukla mock data ve type safety issues
+- **Karar:** CRITICAL + HIGH fix'ler Wave 3 kapsamına alınmalı; MEDIUM/LOW post-launch technical debt olarak kaydedilebilir
+
+---
+
 ## 🔹 Phase 10.1: Test Coverage & Gap Analysis
 
 **Süre:** 2-3 gün  

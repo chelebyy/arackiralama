@@ -162,10 +162,11 @@ public sealed class FleetServiceTests : IDisposable
     public async Task CreateOfficeAsync_WhenValid_CreatesOffice()
     {
         var request = new CreateOfficeRequest(
-            "Antalya Havalimani", "Havalimani", "+90 242 111 11 11", true, "00:00-23:59");
+            "ayt", "Antalya Havalimani", "Havalimani", "+90 242 111 11 11", true, "00:00-23:59");
 
         var result = await _sut.CreateOfficeAsync(request);
 
+        result.Code.Should().Be("ayt");
         result.Name.Should().Be("Antalya Havalimani");
         result.IsAirport.Should().BeTrue();
     }
@@ -175,11 +176,12 @@ public sealed class FleetServiceTests : IDisposable
     {
         var office = await SeedOfficeAsync("Alanya");
         var request = new UpdateOfficeRequest(
-            "Alanya Merkez", "Saray Mah.", "+90 242 000 00 00", false, "09:00-18:00");
+            "ala", "Alanya Merkez", "Saray Mah.", "+90 242 000 00 00", false, "09:00-18:00");
 
         var result = await _sut.UpdateOfficeAsync(office.Id, request);
 
         result.Should().NotBeNull();
+        result!.Code.Should().Be("ala");
         result!.Name.Should().Be("Alanya Merkez");
     }
 
@@ -187,7 +189,7 @@ public sealed class FleetServiceTests : IDisposable
     public async Task UpdateOfficeAsync_WhenNotExists_ReturnsNull()
     {
         var request = new UpdateOfficeRequest(
-            "X", "Y", "Z", false, "09:00-18:00");
+            "x", "X", "Y", "Z", false, "09:00-18:00");
 
         var result = await _sut.UpdateOfficeAsync(Guid.NewGuid(), request);
 
@@ -262,7 +264,12 @@ public sealed class FleetServiceTests : IDisposable
     {
         var office = new Office
         {
-            Name = name, Address = "Test", Phone = "+90", IsAirport = false, OpeningHours = "09:00-18:00"
+            Name = name,
+            Code = string.Concat(name.Where(char.IsLetterOrDigit)).ToLowerInvariant(),
+            Address = "Test",
+            Phone = "+90",
+            IsAirport = false,
+            OpeningHours = "09:00-18:00"
         };
         _dbContext.Offices.Add(office);
         await _dbContext.SaveChangesAsync();

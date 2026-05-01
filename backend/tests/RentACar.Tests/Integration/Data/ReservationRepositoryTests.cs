@@ -575,7 +575,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Boundary User", Email = "boundary@test.com", Phone = "+90 555 000 0100" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-boundary", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -641,7 +641,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Boundary Search", Email = "search@test.com", Phone = "+90 555 000 0200" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-search", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -698,7 +698,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Paging User", Email = "paging@test.com", Phone = "+90 555 000 0300" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-paging", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -749,7 +749,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         await using (var setupContext = CreateSharedContext(databaseName))
         {
-            var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+            var office = new Office { Name = "Office", Code = "office-parallel", Address = "Addr", Phone = "+90 555 000 0000" };
             var group = new VehicleGroup
             {
                 NameTr = "Test",
