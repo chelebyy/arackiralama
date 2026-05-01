@@ -22,11 +22,11 @@ import type { AvailableVehicleGroup } from "@/lib/api/types";
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
-  gzp: "gazipaşa",
+  gzp: "gazipasa",
   ayt: "antalya",
   mahmutlar: "mahmutlar",
-  kargicak: "kargıcak",
-  konakli: "konaklı",
+  kargicak: "kargicak",
+  konakli: "konakli",
   avsallar: "avsallar",
 };
 

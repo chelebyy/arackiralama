@@ -24,7 +24,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         using var dbContext = _dbContextFactory.CreateContext();
         var repository = new ReservationRepository(dbContext);
 
-        var office = new Office { Name = "Test Office", Address = "Test Address", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Test Office", Code = "test-office", Address = "Test Address", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Ekonomi",
@@ -91,7 +91,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
             Email = "mehmet@test.com",
             Phone = "+90 555 987 6543"
         };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -140,7 +140,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -195,7 +195,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -251,7 +251,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -307,7 +307,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -357,7 +357,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -412,7 +412,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var customer1 = new Customer { FullName = "Customer 1", Email = "c1@test.com", Phone = "+90 555 000 0001" };
         var customer2 = new Customer { FullName = "Customer 2", Email = "c2@test.com", Phone = "+90 555 000 0002" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -461,7 +461,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",
@@ -513,7 +513,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         var repository = new ReservationRepository(dbContext);
 
         var customer = new Customer { FullName = "Test User", Email = "test@test.com", Phone = "+90 555 000 0000" };
-        var office = new Office { Name = "Office", Address = "Addr", Phone = "+90 555 000 0000" };
+        var office = new Office { Name = "Office", Code = "office-test", Address = "Addr", Phone = "+90 555 000 0000" };
         var group = new VehicleGroup
         {
             NameTr = "Test",

@@ -25,6 +25,7 @@ public sealed class FleetRepositoryStandardsTests : IClassFixture<TestDbContextF
         var officeA = new Office
         {
             Name = "Merkez Ofis",
+            Code = "merkez-ofis",
             Address = "Adres 1",
             Phone = "+90 242 000 00 01",
             OpeningHours = "09:00-18:00"
@@ -32,6 +33,7 @@ public sealed class FleetRepositoryStandardsTests : IClassFixture<TestDbContextF
         var officeB = new Office
         {
             Name = "Havalimani",
+            Code = "havalimani-ofis",
             Address = "Adres 2",
             Phone = "+90 242 000 00 02",
             IsAirport = true,
@@ -102,6 +104,7 @@ public sealed class FleetRepositoryStandardsTests : IClassFixture<TestDbContextF
         var office = new Office
         {
             Name = "Yeni Ofis",
+            Code = "yeni-ofis",
             Address = "Adres",
             Phone = "+90 242 000 00 03",
             OpeningHours = "09:00-18:00"

@@ -33,6 +33,12 @@ namespace RentACar.Infrastructure.Data.Migrations
                 column: "code",
                 value: "gzp");
 
+            // Backfill any existing offices that don't have a code assigned
+            // to prevent unique constraint violation on non-empty databases.
+            // Uses the first 8 chars of the GUID as a deterministic unique code.
+            migrationBuilder.Sql(
+                "UPDATE offices SET code = SUBSTRING(id::text, 1, 8) WHERE code = '' OR code IS NULL");
+
             migrationBuilder.CreateIndex(
                 name: "IX_offices_code",
                 table: "offices",

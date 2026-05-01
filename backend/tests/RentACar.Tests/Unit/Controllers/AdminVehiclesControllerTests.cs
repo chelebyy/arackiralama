@@ -244,6 +244,7 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         var targetOffice = new Office
         {
             Name = "Havalimani",
+            Code = "gazipasa-havalimani",
             Address = "Gazipasa Havalimani",
             Phone = "+90 242 111 11 11",
             IsAirport = true,
@@ -464,6 +465,7 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
         var office = new Office
         {
             Name = "Merkez Ofis",
+            Code = "merkez-ofis",
             Address = "Saray Mah. Ataturk Cad. No:1",
             Phone = "+90 242 000 00 00",
             IsAirport = false,
