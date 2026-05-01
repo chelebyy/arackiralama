@@ -1,4 +1,4 @@
-﻿name: Dependabot Auto Merge (Bot Only)
+name: Dependabot Auto Merge (Bot Only)
 
 on:
   pull_request_target:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
