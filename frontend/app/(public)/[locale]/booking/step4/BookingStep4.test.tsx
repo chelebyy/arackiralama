@@ -21,7 +21,7 @@ const bookingState = {
     returnTime: "09:00",
   },
   vehicle: {
-    vehicleId: "economy",
+    vehicleGroupId: "economy",
     vehicleName: "Fiat Egea or similar",
     vehicleImage: "/images/vehicles/economy.png",
     dailyPrice: 45,
@@ -132,19 +132,15 @@ describe("BookingStep4Page", () => {
 
     await waitFor(() => {
       expect(createReservationMock).toHaveBeenCalledWith({
-        vehicleId: "economy",
+        vehicleGroupId: "economy",
         pickupOfficeId: "ala",
-        pickupDate: "2026-05-10",
-        pickupTime: "10:00",
         returnOfficeId: "gzp",
-        returnDate: "2026-05-13",
-        returnTime: "09:00",
+        pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+        returnDateTimeUtc: "2026-05-13T09:00:00Z",
         customer: bookingState.customer,
-        driver: bookingState.driver,
-        extras: [
-          { extraId: "gps", quantity: 1 },
-          { extraId: "additional_driver", quantity: 1 },
-        ],
+        extraDriverCount: 1,
+        childSeatCount: 0,
+        campaignCode: undefined,
       });
       expect(pushMock).toHaveBeenCalledWith(
         "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"

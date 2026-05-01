@@ -65,4 +65,16 @@ public sealed class VehiclesController(IFleetService fleetService) : BaseApiCont
 
         return OkResponse(availableGroups);
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var group = await fleetService.GetVehicleGroupByIdAsync(id, cancellationToken);
+        if (group is null)
+        {
+            return NotFoundResponse("Arac grubu bulunamadi.");
+        }
+
+        return OkResponse(group);
+    }
 }

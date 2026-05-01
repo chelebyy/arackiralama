@@ -19,111 +19,67 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAvailableVehicles } from "@/hooks/useVehicles";
+import type { AvailableVehicleGroup } from "@/lib/api/types";
 
-const mockVehicles = [
-  {
-    id: "1",
-    name: "Fiat Egea",
-    group: "Economy",
-    images: ["/images/vehicles/fiat-egea-1.png", "/images/vehicles/fiat-egea-2.png", "/images/vehicles/fiat-egea-3.png"],
+interface VehicleDetail {
+  id: string;
+  name: string;
+  group: string;
+  images: string[];
+  passengers: number;
+  luggage: number;
+  transmission: string;
+  fuelType: string;
+  dailyRate: number;
+  features: string[];
+  specifications: { engine: string; power: string; doors: number; minAge: number; license: string };
+  description: string;
+  rating: number;
+  reviews: number;
+}
+
+function mapAvailableToDetail(group: AvailableVehicleGroup): VehicleDetail {
+  return {
+    id: group.groupId,
+    name: group.groupNameEn || group.groupName,
+    group: group.groupNameEn || group.groupName,
+    images: group.imageUrl ? [group.imageUrl] : [],
     passengers: 5,
     luggage: 2,
     transmission: "Automatic",
     fuelType: "Gasoline",
-    dailyRate: 45,
-    features: ["Air Conditioning", "Bluetooth", "GPS Navigation", "USB Port", "Rear Camera"],
-    specifications: { engine: "1.6L", power: "110 HP", doors: 4, minAge: 21, license: "B" },
-    description:
-      "The Fiat Egea is a perfect choice for exploring Alanya and its surroundings. Compact yet spacious, fuel-efficient, and easy to drive in city traffic. Ideal for couples or small families.",
-    rating: 4.8,
-    reviews: 124,
-  },
-  {
-    id: "2",
-    name: "Renault Megane",
-    group: "Compact",
-    images: ["/images/vehicles/renault-megane-1.png", "/images/vehicles/renault-megane-2.png", "/images/vehicles/renault-megane-3.png"],
-    passengers: 5,
-    luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    dailyRate: 55,
-    features: ["Air Conditioning", "Cruise Control", "Parking Sensors", "Bluetooth", "GPS Navigation"],
-    specifications: { engine: "1.5L dCi", power: "115 HP", doors: 4, minAge: 21, license: "B" },
-    description:
-      "The Renault Megane offers a comfortable ride with ample space for luggage. Great for longer trips along the Mediterranean coast.",
-    rating: 4.7,
-    reviews: 98,
-  },
-  {
-    id: "3",
-    name: "VW Passat",
-    group: "Midsize",
-    images: ["/images/vehicles/vw-passat-1.png", "/images/vehicles/vw-passat-2.png", "/images/vehicles/vw-passat-3.png"],
-    passengers: 5,
-    luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    dailyRate: 75,
-    features: ["Leather Seats", "Sunroof", "Navigation", "Adaptive Cruise Control", "Parking Assistant"],
-    specifications: { engine: "2.0L TDI", power: "150 HP", doors: 4, minAge: 23, license: "B" },
-    description:
-      "The VW Passat is a premium midsize sedan offering superior comfort and advanced technology. Perfect for business trips or family holidays.",
-    rating: 4.9,
-    reviews: 156,
-  },
-  {
-    id: "4",
-    name: "BMW 3 Series",
-    group: "Premium",
-    images: ["/images/vehicles/bmw-3-1.png", "/images/vehicles/bmw-3-2.png", "/images/vehicles/bmw-3-3.png"],
-    passengers: 5,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
-    dailyRate: 95,
-    features: ["Leather Seats", "Premium Sound", "Parking Assistant", "Head-Up Display", "Wireless Charging"],
-    specifications: { engine: "2.0L Turbo", power: "184 HP", doors: 4, minAge: 25, license: "B" },
-    description:
-      "Experience driving pleasure with the BMW 3 Series. Sporty handling, luxurious interior, and cutting-edge technology.",
-    rating: 4.9,
-    reviews: 203,
-  },
-  {
-    id: "5",
-    name: "Mercedes Vito",
-    group: "Minivan",
-    images: ["/images/vehicles/mercedes-vito-1.png", "/images/vehicles/mercedes-vito-2.png", "/images/vehicles/mercedes-vito-3.png"],
-    passengers: 9,
-    luggage: 5,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    dailyRate: 120,
-    features: ["Extra Space", "Dual A/C", "Rear Camera", "Leather Seats", "Sliding Doors"],
-    specifications: { engine: "2.1L CDI", power: "163 HP", doors: 4, minAge: 25, license: "B" },
-    description:
-      "The Mercedes Vito is the ultimate group travel solution. Spacious, comfortable, and equipped with everything you need for large families or tour groups.",
-    rating: 4.8,
-    reviews: 87,
-  },
-  {
-    id: "6",
-    name: "Audi Q5",
-    group: "SUV",
-    images: ["/images/vehicles/audi-q5-1.png", "/images/vehicles/audi-q5-2.png", "/images/vehicles/audi-q5-3.png"],
-    passengers: 5,
-    luggage: 4,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    dailyRate: 110,
-    features: ["4WD", "Panoramic Roof", "Virtual Cockpit", "Adaptive Air Suspension", "Matrix LED"],
-    specifications: { engine: "2.0L TDI", power: "190 HP", doors: 5, minAge: 25, license: "B" },
-    description:
-      "The Audi Q5 combines SUV practicality with premium refinement. All-wheel drive makes it ideal for exploring mountain roads around Alanya.",
-    rating: 4.9,
-    reviews: 142,
-  },
-];
+    dailyRate: group.dailyPrice,
+    features: group.features,
+    specifications: {
+      engine: "2.0L",
+      power: "150 HP",
+      doors: 4,
+      minAge: group.minAge,
+      license: "B",
+    },
+    description: `The ${group.groupNameEn || group.groupName} is a perfect choice for exploring Alanya and its surroundings.`,
+    rating: 4.5,
+    reviews: 0,
+  };
+}
+
+const fallbackVehicle: VehicleDetail = {
+  id: "",
+  name: "Vehicle",
+  group: "",
+  images: [],
+  passengers: 5,
+  luggage: 2,
+  transmission: "Automatic",
+  fuelType: "Gasoline",
+  dailyRate: 0,
+  features: [],
+  specifications: { engine: "2.0L", power: "150 HP", doors: 4, minAge: 21, license: "B" },
+  description: "",
+  rating: 4.5,
+  reviews: 0,
+};
 
 const offices = [
   { id: "ala", name: "Alanya City Center" },
@@ -144,9 +100,24 @@ export default function VehicleDetailPage() {
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
+  const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const vehicle = mockVehicles.find((v) => v.id === params.id) || mockVehicles[0];
+  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
+    pickupDate && pickupTime && returnDate && returnTime
+      ? {
+          office_id: pickupOffice,
+          pickup_datetime: `${pickupDate}T${pickupTime}`,
+          return_datetime: `${returnDate}T${returnTime}`,
+        }
+      : null
+  );
+
+  const matchedGroup = availableGroups.find((g) => g.groupId === params.id);
+  const vehicle: VehicleDetail = matchedGroup
+    ? mapAvailableToDetail(matchedGroup)
+    : fallbackVehicle;
 
   const getDays = (start: string, end: string) => {
     const s = new Date(start);
@@ -168,6 +139,22 @@ export default function VehicleDetailPage() {
           <ChevronLeft className="h-4 w-4" />
           Back to search
         </Link>
+
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
+            <p className="mt-4 text-slate-600">Loading vehicle details...</p>
+          </div>
+        )}
+
+        {isError && (
+          <div className="text-center py-12">
+            <Car className="h-12 w-12 text-red-400 mx-auto" />
+            <p className="mt-4 text-slate-600">Failed to load vehicle details. Please try again.</p>
+          </div>
+        )}
+
+        {!isLoading && !isError && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -277,8 +264,8 @@ export default function VehicleDetailPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-24">
               <div className="text-center pb-6 border-b border-slate-200">
                 <p className="text-sm text-slate-500">Total for {days} days</p>
-                <p className="text-4xl font-bold text-sky-700">€{totalPrice}</p>
-                <p className="text-sm text-slate-500">€{vehicle.dailyRate} per day</p>
+                <p className="text-4xl font-bold text-sky-700">₺{totalPrice}</p>
+                <p className="text-sm text-slate-500">₺{vehicle.dailyRate} per day</p>
               </div>
 
               <div className="py-6 space-y-4">
@@ -323,6 +310,7 @@ export default function VehicleDetailPage() {
             </div>
           </div>
         </div>
+        )}
       </main>
     </div>
   );

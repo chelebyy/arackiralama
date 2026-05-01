@@ -70,7 +70,7 @@ const reservation: Reservation = {
     taxAmount: 18,
     discountAmount: 0,
     totalAmount: 108,
-    currency: "EUR",
+    currency: "TRY",
     depositAmount: 200,
   },
   createdAt: "2026-04-27T10:00:00.000Z",
@@ -79,15 +79,12 @@ const reservation: Reservation = {
 };
 
 const createData: CreateReservationData = {
-  vehicleId: "vehicle-1",
+  vehicleGroupId: "vehicle-1",
   pickupOfficeId: "ala",
-  pickupDate: "2026-05-10",
-  pickupTime: "10:00",
   returnOfficeId: "gzp",
-  returnDate: "2026-05-12",
-  returnTime: "09:00",
+  pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+  returnDateTimeUtc: "2026-05-12T09:00:00Z",
   customer: reservation.customer,
-  driver: reservation.driver,
 };
 
 describe("useReservations", () => {

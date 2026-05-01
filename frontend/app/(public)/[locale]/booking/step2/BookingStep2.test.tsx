@@ -17,6 +17,22 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a>,
 }));
 
+vi.mock("@/hooks/useVehicles", () => ({
+  useAvailableVehicles: () => ({
+    vehicles: [
+      { groupId: "economy", groupName: "Fiat Egea Or Similar", groupNameEn: "Fiat Egea Or Similar", availableCount: 5, dailyPrice: 45, currency: "TRY", depositAmount: 500, minAge: 21, minLicenseYears: 2, features: ["A/C", "Bluetooth", "GPS"], imageUrl: null },
+      { groupId: "compact", groupName: "Renault Megane Or Similar", groupNameEn: "Renault Megane Or Similar", availableCount: 3, dailyPrice: 55, currency: "TRY", depositAmount: 600, minAge: 21, minLicenseYears: 2, features: ["A/C", "Cruise Control", "Parking Sensors"], imageUrl: null },
+      { groupId: "midsize", groupName: "VW Passat Or Similar", groupNameEn: "VW Passat Or Similar", availableCount: 2, dailyPrice: 75, currency: "TRY", depositAmount: 800, minAge: 23, minLicenseYears: 3, features: ["Leather Seats", "Sunroof", "Navigation"], imageUrl: null },
+      { groupId: "luxury", groupName: "BMW 3 Series Or Similar", groupNameEn: "BMW 3 Series Or Similar", availableCount: 2, dailyPrice: 95, currency: "TRY", depositAmount: 1000, minAge: 25, minLicenseYears: 5, features: ["Leather Seats", "Premium Sound", "Parking Assistant"], imageUrl: null },
+      { groupId: "minivan", groupName: "Mercedes Vito Or Similar", groupNameEn: "Mercedes Vito Or Similar", availableCount: 1, dailyPrice: 120, currency: "TRY", depositAmount: 1200, minAge: 25, minLicenseYears: 5, features: ["Extra Space", "Dual A/C", "Rear Camera"], imageUrl: null },
+      { groupId: "suv", groupName: "Audi Q5 Or Similar", groupNameEn: "Audi Q5 Or Similar", availableCount: 2, dailyPrice: 110, currency: "TRY", depositAmount: 1000, minAge: 25, minLicenseYears: 5, features: ["4WD", "Panoramic Roof", "Virtual Cockpit"], imageUrl: null },
+    ],
+    isLoading: false,
+    isError: null,
+    mutate: vi.fn(),
+  }),
+}));
+
 describe("BookingStep2Page", () => {
   beforeEach(() => {
     pushMock.mockReset();
@@ -34,8 +50,8 @@ describe("BookingStep2Page", () => {
     render(<BookingStep2Page />);
 
     expect(screen.getAllByText("Total for 3 days:")).toHaveLength(6);
-    expect(screen.getByText("€135")).toBeInTheDocument();
-    expect(screen.getByText("€165")).toBeInTheDocument();
+    expect(screen.getByText("₺135")).toBeInTheDocument();
+    expect(screen.getByText("₺165")).toBeInTheDocument();
   });
 
   it("keeps the continue button disabled until a vehicle is selected", async () => {

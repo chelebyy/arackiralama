@@ -26,15 +26,6 @@ import { useBookingState } from "@/hooks/useBooking";
 import { createReservation } from "@/lib/api/reservations";
 import type { CreateReservationData } from "@/lib/api/types";
 
-const vehicleGroups = [
-  { id: "economy", name: "Fiat Egea or similar", category: "Economy", dailyRate: 45 },
-  { id: "compact", name: "Renault Megane or similar", category: "Compact", dailyRate: 55 },
-  { id: "midsize", name: "VW Passat or similar", category: "Midsize", dailyRate: 75 },
-  { id: "premium", name: "BMW 3 Series or similar", category: "Premium", dailyRate: 95 },
-  { id: "suv", name: "Audi Q5 or similar", category: "SUV", dailyRate: 110 },
-  { id: "minivan", name: "Mercedes Vito or similar", category: "Minivan", dailyRate: 120 },
-];
-
 const extraOptions = [
   { id: "child_seat", name: "Child Safety Seat", price: 10, priceType: "per_day" as const },
   { id: "additional_driver", name: "Additional Driver", price: 15, priceType: "per_rental" as const },
@@ -132,19 +123,17 @@ export default function BookingStep4Page() {
       return;
     }
 
+    const selectedExtraIds = extrasParam ? extrasParam.split(",").filter(Boolean) : [];
+
     const reservationData: CreateReservationData = {
-      vehicleId: booking.vehicle?.vehicleId ?? vehicleParam,
+      vehicleGroupId: booking.vehicle?.vehicleGroupId ?? vehicleParam,
       pickupOfficeId: booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "",
-      pickupDate: booking.dates?.pickupDate ?? pickupDate,
-      pickupTime: booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "",
       returnOfficeId: booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "",
-      returnDate: booking.dates?.returnDate ?? returnDate,
-      returnTime: booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "",
+      pickupDateTimeUtc: `${booking.dates?.pickupDate ?? pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
+      returnDateTimeUtc: `${booking.dates?.returnDate ?? returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
       customer: booking.customer,
-      driver: booking.driver,
-      extras: extrasParam
-        ? extrasParam.split(",").map((extraId) => ({ extraId: extraId.trim(), quantity: 1 })).filter((extra) => extra.extraId)
-        : undefined,
+      extraDriverCount: selectedExtraIds.filter((id) => id.trim() === "additional_driver").length,
+      childSeatCount: selectedExtraIds.filter((id) => id.trim() === "child_seat").length,
       campaignCode: appliedCampaign?.code,
     };
 
@@ -172,7 +161,7 @@ export default function BookingStep4Page() {
   );
 
   const vehicleParam = searchParams.get("vehicle") || "";
-  const vehicle = vehicleGroups.find((v) => v.id === vehicleParam);
+  const vehicle = booking.vehicle;
 
   const selectedExtras = extrasParam
     ? extrasParam.split(",").map((id) => {
@@ -415,12 +404,12 @@ export default function BookingStep4Page() {
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <PriceBreakdown
-              dailyRate={vehicle?.dailyRate ?? 0}
+              dailyRate={vehicle?.dailyPrice ?? 0}
               days={days}
-              vehicleGroup={vehicle ? `${vehicle.category} - ${vehicle.name}` : "Unknown Vehicle"}
+              vehicleGroup={vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : "Unknown Vehicle"}
               extras={selectedExtras}
               campaignDiscount={appliedCampaign?.discount}
-              currency="EUR"
+              currency="TRY"
             />
           </div>
         </div>

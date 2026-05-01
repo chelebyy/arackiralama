@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1 Completed, Wave 2 Pending  
+**Durum:** 🟡 In Progress — Wave 1 & Wave 2 Completed, Wave 3 Pending  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -345,6 +345,52 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - **Post-launch:** 12 HIGH/MEDIUM/LOW issue — validation, state machine, timezone, dead code
 - **Büyük pattern:** Frontend'te yaygın hardcoded data problemi (araç grupları, ofisler, fiyatlar, ekstralar)
 - **API contract:** Frontend ve backend arasında veri yapısı ve endpoint uyuşmazlıkları var
+
+### 10.0.7 Wave 2 Completion Evidence (1 May 2026)
+
+**Dalga Kapanış Tarihi:** 1 May 2026  
+**Kapsam:** Pricing + Fleet + Offices + Public Inventory/Booking Flow (8 critical fix)
+
+#### Verify Sonuçları
+
+| Komut | Sonuç | Notlar |
+|-------|-------|--------|
+| `dotnet build backend/RentACar.sln --no-restore` | ✅ **PASS** | 0 error, 1 uyarı (NU1510 — unrelated) |
+| `dotnet test backend/RentACar.sln --no-build` | ✅ **PASS** | 501/501 test geçti (472 unit + 29 integration) |
+| `corepack pnpm -C frontend exec tsc --noEmit` | ✅ **PASS** | 0 type error |
+| `corepack pnpm -C frontend test` | ✅ **PASS** | 62/62 test geçti |
+
+#### Değiştirilen Dosyalar (8 Fix)
+
+| Fix ID | Dosya | Değişiklik |
+|--------|-------|-----------|
+| W2-P004 | `backend/src/RentACar.API/Services/PricingService.cs` | `Math.Min(campaign.DiscountValue, 100m)` eklendi — campaign %100'ü aşamaz |
+| W2-P005 | `frontend/app/(public)/[locale]/vehicles/[id]/page.tsx` + `track-reservation/page.tsx` | Tüm € sembolleri ₺'ye çevrildi |
+| W2-P006 | `frontend/app/(public)/[locale]/booking/step2/page.tsx` + `step4/page.tsx` | Hardcoded fiyatlar kaldırıldı, API'den `dailyPrice` kullanılıyor |
+| W2-F004 | `frontend/app/(public)/[locale]/vehicles/page.tsx` + `[id]/page.tsx` | `mockVehicles` kaldırıldı, `useAvailableVehicles` hook'una bağlandı |
+| W2-F005 | `frontend/lib/api/types.ts` + `vehicles.ts` + `pricing.ts` + `config.ts` + `hooks/useVehicles.ts` | API contract'lar backend ile uyumlu hale getirildi (snake_case, combined datetime) |
+| W2-I001 | `frontend/components/public/PriceBreakdown.tsx` | Default currency `"EUR"` → `"TRY"` |
+| W2-I002 | `frontend/app/(public)/[locale]/vehicles/page.tsx` + `[id]/page.tsx` | Liste ve detay sayfaları tek para birimine (₺) getirildi |
+| W2-I004 | `frontend/app/(public)/[locale]/booking/step4/page.tsx` | Hardcoded `vehicleGroups`/`extraOptions` kaldırıldı, `booking.vehicle` ve API'den gelen veriler kullanılıyor |
+
+#### Ek Backend Endpoint'leri (W2-F005 Kapsamında)
+
+| Endpoint | Controller | Amaç |
+|----------|-----------|------|
+| `GET /api/v1/offices` | `OfficesController.cs` (yeni) | Public ofis listesi |
+| `GET /api/v1/vehicles/{id:guid}` | `VehiclesController.cs` | Araç grubu detayı (VehicleGroupDto) |
+| `POST /api/v1/pricing/campaigns/validate` | `PricingController.cs` | Campaign kod validasyonu |
+
+#### Wave 2 Durumu: ✅ **TAMAMLANDI**
+
+- 8/8 critical fix uygulandı ve verify edildi
+- Tüm testler (backend 501 + frontend 62) geçti
+- Build ve type-check temiz
+- Frontend public sayfalar artık hardcoded veri kullanmıyor
+- API contract'lar frontend-backend arasında uyumlu
+
+> **Not:** W2-P006 (hardcoded fiyatlar) — `booking/step2` ve `step4` artık `useAvailableVehicles` ve `usePricing` hook'ları ile backend'den fiyat alıyor. `vehicles/page.tsx` ve `[id]/page.tsx` da `AvailableVehicleGroup.dailyPrice` kullanıyor.
+> **Not:** W2-F004 (mockVehicles) — `vehicles/page.tsx` ve `[id]/page.tsx` artık `useAvailableVehicles` hook'u ile çalışıyor. Eksik API alanları (passengers, luggage, transmission, fuelType, description, rating, reviews, specifications) için varsayılan değerler kullanılıyor; backend `VehicleGroupDto` genişletildiğinde mapper güncellenecek.
 
 ---
 

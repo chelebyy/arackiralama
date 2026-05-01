@@ -19,13 +19,11 @@ const wrapper = ({ children }: { children: ReactNode }) =>
   createElement(SWRConfig, { value: { provider: () => new Map() } }, children);
 
 const pricingParams: PriceBreakdownParams = {
-  vehicleId: "vehicle-1",
-  pickupOfficeId: "ala",
-  pickupDate: "2026-05-10",
-  pickupTime: "10:00",
-  returnOfficeId: "gzp",
-  returnDate: "2026-05-12",
-  returnTime: "09:00",
+  vehicle_group_id: "vehicle-1",
+  pickup_office_id: "ala",
+  pickup_datetime: "2026-05-10T10:00:00",
+  return_office_id: "gzp",
+  return_datetime: "2026-05-12T09:00:00",
 };
 
 describe("usePricing", () => {
@@ -45,7 +43,7 @@ describe("usePricing", () => {
       taxAmount: 18,
       discountAmount: 0,
       totalAmount: 108,
-      currency: "EUR",
+      currency: "TRY",
       depositAmount: 200,
     });
 

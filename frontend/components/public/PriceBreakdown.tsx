@@ -21,7 +21,7 @@ export function PriceBreakdown({
   vehicleGroup,
   extras = [],
   campaignDiscount = 0,
-  currency = "EUR",
+  currency = "TRY",
 }: PriceBreakdownProps) {
   const subtotal = dailyRate * days;
   const extrasTotal = extras.reduce((sum, extra) => sum + extra.price, 0);

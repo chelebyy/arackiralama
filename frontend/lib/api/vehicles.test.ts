@@ -17,17 +17,13 @@ describe("vehicles API", () => {
 
   it("builds the available-vehicles query string without empty filters", async () => {
     await getAvailableVehicles({
-      pickupOfficeId: "ala",
-      pickupDate: "2026-05-10",
-      pickupTime: "10:00",
-      returnOfficeId: "gzp",
-      returnDate: "2026-05-12",
-      returnTime: "09:00",
-      campaignCode: "SUMMER15",
+      office_id: "ala",
+      pickup_datetime: "2026-05-10T10:00:00",
+      return_datetime: "2026-05-12T09:00:00",
     });
 
     expect(mockedGet).toHaveBeenCalledWith(
-      "/vehicles/available?pickupOfficeId=ala&pickupDate=2026-05-10&pickupTime=10%3A00&returnOfficeId=gzp&returnDate=2026-05-12&returnTime=09%3A00&campaignCode=SUMMER15"
+      "/vehicles/available?office_id=ala&pickup_datetime=2026-05-10T10%3A00%3A00&return_datetime=2026-05-12T09%3A00%3A00"
     );
   });
 

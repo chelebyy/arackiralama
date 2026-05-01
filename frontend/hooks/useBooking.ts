@@ -21,7 +21,7 @@ interface BookingDates {
 }
 
 interface BookingVehicle {
-  vehicleId: string;
+  vehicleGroupId: string;
   vehicleName: string;
   vehicleImage: string;
   dailyPrice: number;
@@ -162,7 +162,7 @@ export function useBookingActions() {
   const selectVehicle = useCallback(
     (vehicle: Vehicle, pickupOffice: Office, returnOffice: Office) => {
       store.setVehicle({
-        vehicleId: vehicle.id,
+        vehicleGroupId: vehicle.id,
         vehicleName: vehicle.name,
         vehicleImage: vehicle.imageUrl,
         dailyPrice: vehicle.dailyPrice,

@@ -527,7 +527,7 @@ public sealed class PricingService(
     {
         return NormalizeCampaignDiscountType(campaign.DiscountType) switch
         {
-            "percentage" => RoundAmount(subtotalBeforeDiscount * campaign.DiscountValue / 100m),
+            "percentage" => RoundAmount(subtotalBeforeDiscount * Math.Min(campaign.DiscountValue, 100m) / 100m),
             "fixed" => RoundAmount(campaign.DiscountValue),
             _ => 0m
         };

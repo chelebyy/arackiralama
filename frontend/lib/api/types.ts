@@ -35,6 +35,20 @@ export interface VehicleGroup {
   };
 }
 
+export interface AvailableVehicleGroup {
+  groupId: string;
+  groupName: string;
+  groupNameEn: string;
+  availableCount: number;
+  dailyPrice: number;
+  currency: string;
+  depositAmount: number;
+  minAge: number;
+  minLicenseYears: number;
+  features: string[];
+  imageUrl: string | null;
+}
+
 export enum TransmissionType {
   MANUAL = 'MANUAL',
   AUTOMATIC = 'AUTOMATIC',
@@ -288,45 +302,38 @@ export interface PaginatedResponse<T> {
 }
 
 export interface AvailableVehiclesParams {
-  pickupOfficeId: string;
-  pickupDate: string;
-  pickupTime: string;
-  returnOfficeId: string;
-  returnDate: string;
-  returnTime: string;
-  groupId?: string;
-  transmission?: TransmissionType;
-  fuelType?: FuelType;
-  minSeats?: number;
-  campaignCode?: string;
+  office_id: string;
+  pickup_datetime: string;
+  return_datetime: string;
+  vehicle_group_id?: string;
   page?: number;
-  pageSize?: number;
 }
 
 export interface PriceBreakdownParams {
-  vehicleId: string;
-  pickupOfficeId: string;
-  pickupDate: string;
-  pickupTime: string;
-  returnOfficeId: string;
-  returnDate: string;
-  returnTime: string;
-  extras?: { extraId: string; quantity: number }[];
-  campaignCode?: string;
+  vehicle_group_id: string;
+  pickup_office_id: string;
+  return_office_id: string;
+  pickup_datetime: string;
+  return_datetime: string;
+  campaign_code?: string;
+  extra_driver_count?: number;
+  child_seat_count?: number;
+  driver_age?: number;
+  full_coverage_waiver?: boolean;
 }
 
 export interface CreateReservationData {
-  vehicleId: string;
+  vehicleGroupId: string;
   pickupOfficeId: string;
-  pickupDate: string;
-  pickupTime: string;
   returnOfficeId: string;
-  returnDate: string;
-  returnTime: string;
+  pickupDateTimeUtc: string;
+  returnDateTimeUtc: string;
   customer: Customer;
-  driver: Driver;
-  extras?: { extraId: string; quantity: number }[];
   campaignCode?: string;
+  extraDriverCount?: number;
+  childSeatCount?: number;
+  driverAge?: number;
+  fullCoverageWaiver?: boolean;
   notes?: string;
 }
 

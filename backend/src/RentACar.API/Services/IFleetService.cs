@@ -6,6 +6,7 @@ namespace RentACar.API.Services;
 public interface IFleetService
 {
     Task<IReadOnlyList<VehicleGroupDto>> GetVehicleGroupsAsync(CancellationToken cancellationToken = default);
+    Task<VehicleGroupDto?> GetVehicleGroupByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<VehicleGroupDto> CreateVehicleGroupAsync(CreateVehicleGroupRequest request, CancellationToken cancellationToken = default);
     Task<VehicleGroupDto?> UpdateVehicleGroupAsync(Guid id, UpdateVehicleGroupRequest request, CancellationToken cancellationToken = default);
 

@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
     create: '/reservations',
     detail: (code: string) => `/reservations/${code}`,
     hold: (id: string) => `/reservations/${id}/hold`,
-    extendHold: (id: string) => `/reservations/${id}/extend-hold`,
+    extendHold: (id: string) => `/reservations/${id}/hold/extend`,
   },
   pricing: {
     breakdown: '/pricing/breakdown',

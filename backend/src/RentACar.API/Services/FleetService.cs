@@ -32,6 +32,12 @@ public sealed class FleetService(
         return vehicleGroups.Select(MapToDto).ToList();
     }
 
+    public async Task<VehicleGroupDto?> GetVehicleGroupByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var vehicleGroup = await vehicleGroupRepository.GetByIdAsync(id, cancellationToken);
+        return vehicleGroup is null ? null : MapToDto(vehicleGroup);
+    }
+
     public async Task<VehicleGroupDto> CreateVehicleGroupAsync(CreateVehicleGroupRequest request, CancellationToken cancellationToken = default)
     {
         var vehicleGroup = new VehicleGroup
