@@ -22,5 +22,9 @@ public sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<Backgr
             .IsRequired();
         builder.Property(x => x.RetryCount).HasColumnName("retry_count");
         builder.Property(x => x.ScheduledAt).HasColumnName("scheduled_at");
+
+        builder.HasIndex(x => new { x.Type, x.Payload })
+            .IsUnique()
+            .HasFilter("\"status\" IN ('Pending', 'Processing')");
     }
 }

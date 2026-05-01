@@ -18,6 +18,10 @@ public sealed class NotificationBackgroundJobProcessor(
 {
     private const int RetryLimit = 3;
     private const int BatchSize = 20;
+    private static readonly JsonSerializerOptions JobPayloadSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public async Task<int> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
@@ -86,7 +90,7 @@ public sealed class NotificationBackgroundJobProcessor(
 
     private async Task<NotificationJobResult> ProcessEmailJobAsync(BackgroundJob job, CancellationToken cancellationToken)
     {
-        var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload)
+        var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("Email job payload could not be deserialized.");
 
         var message = notificationTemplateService.RenderEmail(payload);
@@ -96,7 +100,7 @@ public sealed class NotificationBackgroundJobProcessor(
 
     private async Task<NotificationJobResult> ProcessSmsJobAsync(BackgroundJob job, CancellationToken cancellationToken)
     {
-        var payload = JsonSerializer.Deserialize<QueuedSmsNotificationRequest>(job.Payload)
+        var payload = JsonSerializer.Deserialize<QueuedSmsNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("SMS job payload could not be deserialized.");
 
         var message = notificationTemplateService.RenderSms(payload);

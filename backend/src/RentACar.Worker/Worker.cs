@@ -1,12 +1,11 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using RentACar.Core.Constants;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces.Notifications;
-using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 
@@ -69,37 +68,50 @@ public sealed class Worker(
 
         var enqueuedCount = 0;
         var now = DateTime.UtcNow;
-        var runnablePayloads = await dbContext.BackgroundJobs
-            .AsNoTracking()
-            .Where(x =>
-                x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
-                && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing))
-            .Select(x => x.Payload)
-            .ToListAsync(cancellationToken);
 
         foreach (var reservationId in expiredReservationIds)
         {
-            var hasRunnableJob = runnablePayloads.Any(payload =>
-                WorkerPayloadMatcher.HasReservationId(payload, reservationId));
+            var payload = JsonSerializer.Serialize(new ReleaseExpiredHoldPayload(reservationId));
+            var hasRunnableJob = await dbContext.BackgroundJobs
+                .AsNoTracking()
+                .AnyAsync(
+                    x => x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
+                        && x.Payload == payload
+                        && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing),
+                    cancellationToken);
 
             if (hasRunnableJob)
             {
                 continue;
             }
 
-            dbContext.BackgroundJobs.Add(new BackgroundJob
+            var job = new BackgroundJob
             {
                 Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
-                Payload = JsonSerializer.Serialize(new ReleaseExpiredHoldPayload(reservationId)),
+                Payload = payload,
                 Status = BackgroundJobStatus.Pending,
                 ScheduledAt = now
-            });
-            enqueuedCount++;
+            };
+
+            dbContext.BackgroundJobs.Add(job);
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                enqueuedCount++;
+            }
+            catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+            {
+                GetDbContext(dbContext).Entry(job).State = EntityState.Detached;
+                logger.LogInformation(
+                    ex,
+                    "Skipped concurrent duplicate expired hold job for reservation {ReservationId}",
+                    reservationId);
+            }
         }
 
         if (enqueuedCount > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
             logger.LogInformation("Enqueued {EnqueuedCount} expired hold release jobs", enqueuedCount);
         }
     }
@@ -111,31 +123,41 @@ public sealed class Worker(
         var reservationRepository = scope.ServiceProvider.GetRequiredService<IReservationRepository>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 
-        var jobs = await dbContext.BackgroundJobs
+        var jobIds = await dbContext.BackgroundJobs
             .Where(x =>
                 x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
                 && x.Status == BackgroundJobStatus.Pending
                 && x.ScheduledAt <= DateTime.UtcNow)
             .OrderBy(x => x.ScheduledAt)
+            .Select(x => x.Id)
             .Take(20)
             .ToListAsync(cancellationToken);
 
-        if (jobs.Count == 0)
+        if (jobIds.Count == 0)
         {
             return;
         }
 
         var processedCount = 0;
-        foreach (var job in jobs)
+        foreach (var jobId in jobIds)
         {
+            if (!await TryClaimExpiredHoldJobAsync(dbContext, jobId, cancellationToken))
+            {
+                continue;
+            }
+
+            var job = await dbContext.BackgroundJobs.SingleAsync(x => x.Id == jobId, cancellationToken);
+
             try
             {
-                job.Status = BackgroundJobStatus.Processing;
-                job.UpdatedAt = DateTime.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
-
                 var payload = JsonSerializer.Deserialize<ReleaseExpiredHoldPayload>(job.Payload)
                     ?? throw new InvalidOperationException("ReleaseExpiredHold payload çözümlenemedi.");
+
+                var released = await holdService.ReleaseHoldAsync(payload.ReservationId, cancellationToken);
+                if (!released)
+                {
+                    throw new InvalidOperationException($"Failed to release hold for reservation {payload.ReservationId}");
+                }
 
                 var reservation = await reservationRepository.GetByIdAsync(payload.ReservationId, cancellationToken);
                 if (reservation != null && reservation.Status is ReservationStatus.Hold or ReservationStatus.Draft)
@@ -144,8 +166,6 @@ public sealed class Worker(
                     reservation.UpdatedAt = DateTime.UtcNow;
                     await dbContext.SaveChangesAsync(cancellationToken);
                 }
-
-                await holdService.ReleaseHoldAsync(payload.ReservationId, cancellationToken);
 
                 job.Status = BackgroundJobStatus.Completed;
                 job.LastError = null;
@@ -308,6 +328,8 @@ public sealed class Worker(
         var timeoutSeconds = Math.Max(dailyBackupOptions.Value.TimeoutSeconds, 30);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
         try
         {
@@ -319,16 +341,17 @@ public sealed class Worker(
             {
                 process.Kill(entireProcessTree: true);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignored
+                logger.LogWarning(ex, "Failed to kill backup process");
             }
 
             throw new TimeoutException($"Daily backup process timed out after {timeoutSeconds} seconds.");
         }
 
-        var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+        await Task.WhenAll(stdoutTask, stderrTask);
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
 
         if (process.ExitCode != 0)
         {
@@ -339,6 +362,52 @@ public sealed class Worker(
         logger.LogInformation(
             "Daily backup command completed successfully. stdout: {Output}",
             DailyBackupCommandPolicy.SanitizeForLog(stdout));
+    }
+
+    private static DbContext GetDbContext(IApplicationDbContext dbContext)
+    {
+        return dbContext as DbContext
+            ?? throw new InvalidOperationException("IApplicationDbContext must also derive from DbContext.");
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        return exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+    }
+
+    private static async Task<bool> TryClaimExpiredHoldJobAsync(
+        IApplicationDbContext dbContext,
+        Guid jobId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var efDbContext = GetDbContext(dbContext);
+
+        if (!efDbContext.Database.IsRelational())
+        {
+            var job = await dbContext.BackgroundJobs.SingleOrDefaultAsync(
+                x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending,
+                cancellationToken);
+            if (job is null)
+            {
+                return false;
+            }
+
+            job.Status = BackgroundJobStatus.Processing;
+            job.UpdatedAt = now;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        var affectedRows = await dbContext.BackgroundJobs
+            .Where(x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.Status, BackgroundJobStatus.Processing)
+                    .SetProperty(x => x.UpdatedAt, now),
+                cancellationToken);
+
+        return affectedRows == 1;
     }
 }
 

@@ -245,6 +245,7 @@ public sealed class AdminUsersController(
                 adminUser.Email,
                 resetToken,
                 expiresAtUtc,
+                "tr-TR",
                 cancellationToken);
         }
         catch (Exception ex)

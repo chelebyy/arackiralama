@@ -228,8 +228,9 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
                 admin.Email,
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<AuthPrincipalType, string, string, DateTime, CancellationToken>((_, _, token, expiresAtUtc, _) =>
+            .Callback<AuthPrincipalType, string, string, DateTime, string, CancellationToken>((_, _, token, expiresAtUtc, _, _) =>
             {
                 expectedTokenHash = $"sha256:{token}";
                 expectedExpiresAtUtc = expiresAtUtc;
@@ -262,6 +263,7 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
                 admin.Email,
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -291,6 +293,7 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }

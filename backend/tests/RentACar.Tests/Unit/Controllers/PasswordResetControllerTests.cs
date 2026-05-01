@@ -49,6 +49,7 @@ public class PasswordResetControllerTests : IClassFixture<TestDbContextFactory>
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -80,6 +81,7 @@ public class PasswordResetControllerTests : IClassFixture<TestDbContextFactory>
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -107,8 +109,9 @@ public class PasswordResetControllerTests : IClassFixture<TestDbContextFactory>
                 admin.Email,
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<AuthPrincipalType, string, string, DateTime, CancellationToken>((_, _, token, expiresAtUtc, _) =>
+            .Callback<AuthPrincipalType, string, string, DateTime, string, CancellationToken>((_, _, token, expiresAtUtc, _, _) =>
             {
                 dispatchedTokenHash = $"sha256:hash:{token}";
                 dispatchedExpiresAtUtc = expiresAtUtc;
@@ -143,6 +146,7 @@ public class PasswordResetControllerTests : IClassFixture<TestDbContextFactory>
                 admin.Email,
                 It.IsAny<string>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

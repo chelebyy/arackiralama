@@ -182,6 +182,7 @@ public sealed class PasswordResetController(
                 destinationEmail,
                 resetToken,
                 expiresAtUtc,
+                "tr-TR",
                 cancellationToken);
         }
         catch (Exception ex)

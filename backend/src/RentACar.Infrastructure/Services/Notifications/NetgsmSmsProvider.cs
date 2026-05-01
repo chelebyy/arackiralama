@@ -101,7 +101,7 @@ public class NetgsmSmsProvider(
     <encoding>{EscapeXml(options.DefaultEncoding)}</encoding>
   </header>
   <body>
-    <msg><![CDATA[{body}]]></msg>
+    <msg>{EscapeXml(body)}</msg>
     <no>{recipient}</no>
   </body>
 </mainbody>

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces.Notifications;
 
@@ -15,9 +14,10 @@ public sealed class PasswordResetEmailDispatcher(
         string destinationEmail,
         string resetToken,
         DateTime expiresAtUtc,
-        CancellationToken cancellationToken)
+        string locale = "tr-TR",
+        CancellationToken cancellationToken = default)
     {
-        return DispatchInternalAsync(principalType, destinationEmail, resetToken, expiresAtUtc, cancellationToken);
+        return DispatchInternalAsync(principalType, destinationEmail, resetToken, expiresAtUtc, locale, cancellationToken);
     }
 
     private async Task DispatchInternalAsync(
@@ -25,6 +25,7 @@ public sealed class PasswordResetEmailDispatcher(
         string destinationEmail,
         string resetToken,
         DateTime expiresAtUtc,
+        string locale,
         CancellationToken cancellationToken)
     {
         var templateKey = principalType == AuthPrincipalType.Admin
@@ -36,7 +37,7 @@ public sealed class PasswordResetEmailDispatcher(
             {
                 ToEmail = destinationEmail,
                 TemplateKey = templateKey,
-                Locale = "tr-TR",
+                Locale = locale,
                 Variables = new Dictionary<string, string>
                 {
                     ["Token"] = resetToken,

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces;
@@ -42,14 +41,22 @@ public static class DependencyInjection
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IRepository<Customer>, CustomerRepository>();
         services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
-        services.AddScoped<NetgsmSmsProvider>(serviceProvider => new NetgsmSmsProvider(
-            new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
-            serviceProvider.GetRequiredService<ILogger<NetgsmSmsProvider>>()));
-        services.AddScoped<TwilioSmsProvider>(serviceProvider => new TwilioSmsProvider(
-            new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
-            serviceProvider.GetRequiredService<ILogger<TwilioSmsProvider>>()));
+        services.AddHttpClient<NetgsmSmsProvider>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+            });
+        services.AddHttpClient<TwilioSmsProvider>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+            });
         services.AddScoped<INotificationBackgroundJobProcessor, NotificationBackgroundJobProcessor>();
         services.AddScoped<INotificationQueueService, NotificationQueueService>();
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
