@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 using RentACar.API.Contracts.Payments;
 using RentACar.Core.Constants;
@@ -268,6 +269,28 @@ public sealed class PaymentService(
             return null;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+        {
+            var existingRefund = await _dbContext.PaymentIntents
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.ReservationId == reservationId
+                        && !x.Provider.EndsWith(DepositProviderSuffix)
+                        && x.RefundIdempotencyKey == request.IdempotencyKey,
+                    cancellationToken);
+
+            if (existingRefund != null)
+            {
+                return BuildRefundOperation(existingRefund, reservationId);
+            }
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Refund requested without idempotency key for reservation {ReservationId}.",
+                reservationId);
+        }
+
         var intent = await GetLatestRentalPaymentIntentAsync(reservationId, cancellationToken);
         if (intent == null || intent.Status is not (PaymentStatus.Succeeded or PaymentStatus.Authorized))
         {
@@ -297,6 +320,12 @@ public sealed class PaymentService(
         }
 
         intent.Status = PaymentStatus.Refunded;
+        intent.RefundIdempotencyKey = request.IdempotencyKey;
+        intent.RefundReferenceId = providerResult.ReferenceId;
+        intent.RefundedAmount = refundAmount;
+        intent.RefundReason = cancellationFee > 0
+            ? $"{request.Reason ?? "Cancellation"} | CancellationFee={cancellationFee:0.00}"
+            : request.Reason;
 
         if (reservation.Status is ReservationStatus.Paid or ReservationStatus.PendingPayment or ReservationStatus.Hold)
         {
@@ -307,20 +336,7 @@ public sealed class PaymentService(
         intent.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new PaymentOperationApiDto
-        {
-            ReservationId = reservationId,
-            PaymentIntentId = intent.Id,
-            PaymentKind = GetPaymentKind(intent),
-            Operation = "Refund",
-            Status = "Succeeded",
-            Amount = refundAmount,
-            Currency = _paymentOptions.Currency,
-            ReferenceId = providerResult.ReferenceId,
-            Reason = cancellationFee > 0
-                ? $"{request.Reason ?? "Cancellation"} | CancellationFee={cancellationFee:0.00}"
-                : request.Reason
-        };
+        return BuildRefundOperation(intent, reservationId);
     }
 
     public async Task<PaymentOperationApiDto?> ReleaseDepositAsync(
@@ -555,22 +571,28 @@ public sealed class PaymentService(
 
     public async Task<int> ProcessPendingWebhookJobsAsync(CancellationToken cancellationToken = default)
     {
-        var pendingJobs = await _dbContext.BackgroundJobs
+        var pendingJobIds = await _dbContext.BackgroundJobs
             .Where(x => x.Type == WebhookProcessingJobType
                 && x.Status == BackgroundJobStatus.Pending
                 && x.ScheduledAt <= DateTime.UtcNow)
             .OrderBy(x => x.ScheduledAt)
             .Take(Math.Max(_paymentOptions.WebhookJobBatchSize, 1))
+            .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 
         var processedCount = 0;
-        foreach (var job in pendingJobs)
+        foreach (var jobId in pendingJobIds)
         {
+            IDbContextTransaction? transaction = null;
             try
             {
+                var job = await _dbContext.BackgroundJobs
+                    .FirstAsync(x => x.Id == jobId, cancellationToken);
+
+                transaction = await TryBeginTransactionAsync(cancellationToken);
+
                 job.Status = BackgroundJobStatus.Processing;
                 job.UpdatedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync(cancellationToken);
 
                 var payload = JsonSerializer.Deserialize<QueuedWebhookPayload>(
                     job.Payload,
@@ -603,11 +625,24 @@ public sealed class PaymentService(
 
                 job.Status = BackgroundJobStatus.Completed;
                 job.UpdatedAt = DateTime.UtcNow;
+
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
                 processedCount++;
             }
             catch (Exception ex)
             {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                var job = await ReloadBackgroundJobAsync(jobId, cancellationToken);
+
                 job.RetryCount++;
                 job.UpdatedAt = DateTime.UtcNow;
                 if (job.RetryCount >= Math.Max(_paymentOptions.RetryLimit, 1))
@@ -623,9 +658,36 @@ public sealed class PaymentService(
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 _logger.LogError(ex, "Queued webhook job {BackgroundJobId} failed.", job.Id);
             }
+            finally
+            {
+                if (transaction != null)
+                {
+                    await transaction.DisposeAsync();
+                }
+            }
         }
 
         return processedCount;
+    }
+
+    private async Task<IDbContextTransaction?> TryBeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        if (_dbContext is not DbContext dbContext || !dbContext.Database.IsRelational())
+        {
+            return null;
+        }
+
+        return await dbContext.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    private async Task<BackgroundJob> ReloadBackgroundJobAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        if (_dbContext is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+
+        return await _dbContext.BackgroundJobs.FirstAsync(x => x.Id == jobId, cancellationToken);
     }
 
     private void EnsureOnlinePaymentEnabled()
@@ -1120,6 +1182,20 @@ public sealed class PaymentService(
             Currency = _paymentOptions.Currency,
             ReferenceId = null,
             Reason = reason
+        };
+
+    private PaymentOperationApiDto BuildRefundOperation(PaymentIntent intent, Guid reservationId) =>
+        new()
+        {
+            ReservationId = reservationId,
+            PaymentIntentId = intent.Id,
+            PaymentKind = GetPaymentKind(intent),
+            Operation = "Refund",
+            Status = "Succeeded",
+            Amount = intent.RefundedAmount ?? 0,
+            Currency = _paymentOptions.Currency,
+            ReferenceId = intent.RefundReferenceId,
+            Reason = intent.RefundReason
         };
 
     private static PaymentStatus MapToEntityStatus(PaymentProviderIntentStatus providerStatus) => providerStatus switch

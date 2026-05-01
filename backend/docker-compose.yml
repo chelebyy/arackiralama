@@ -61,6 +61,23 @@
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
       Redis__ConnectionString: redis:6379
 
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: rentacar-web
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://api:8080
+      NEXT_PUBLIC_API_BASE_URL: http://api:8080
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      AUTH_BACKEND_URL: http://api:8080
+    ports:
+      - "3001:3000"
+
 volumes:
   postgres_data:
   redis_data:

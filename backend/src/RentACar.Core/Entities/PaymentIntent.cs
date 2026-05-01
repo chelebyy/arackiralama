@@ -11,6 +11,10 @@ public class PaymentIntent : BaseEntity
     public string IdempotencyKey { get; set; } = string.Empty;
     public string? ProviderIntentId { get; set; }
     public string? ProviderTransactionId { get; set; }
+    public string? RefundIdempotencyKey { get; set; }
+    public string? RefundReferenceId { get; set; }
+    public decimal? RefundedAmount { get; set; }
+    public string? RefundReason { get; set; }
 
     public Reservation? Reservation { get; set; }
 }

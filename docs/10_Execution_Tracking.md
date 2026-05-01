@@ -10,7 +10,7 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10.2 Integration Tests Tamamlandı, Runtime Doğrulama Bekleniyor)
+**Durum:** 🟨 In Progress (Faz 10.0 Wave 1 Critical Fixes Tamamlandı, Wave 2 Assessment Tamamlandı, Wave 3-5 Bekleniyor)
 
 ---
 
@@ -27,7 +27,7 @@
 | Devam Eden Görev | 15+ |
 | Genel İlerleme | 85% |
 
-Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: API Endpoint (9 test), Database (5 test), Redis (4 test), Payment Provider Mock (10 test) olmak üzere toplam 28 yeni integration test eklendi. Build 0 warning/error. Runtime doğrulaması için PostgreSQL (localhost:5433) + Redis (localhost:6379) servisleri gereklidir.**
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Assessment tamamlandı: Pricing + Fleet + Offices + Public Inventory modüllerinde 20 yeni issue tespit edildi (8 CRITICAL, 8 HIGH, 3 MEDIUM, 1 LOW). En büyük pattern: Frontend hardcoded data kullanımı ve currency mismatch (backend TRY, frontend EUR).**
 
 ### Durum Sözlüğü
 
@@ -1767,7 +1767,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | 3D Secure complexity | Orta | Yüksek | Thorough testing, clear error messages | ⬜ |
 
-| Double booking in high concurrency | Kritik | Orta | DB transactions, row locking, testing | ⬜ |
+| Double booking in high concurrency | Kritik | Orta | Redis distributed lock (SETNX) eklendi; DB-level serializable transaction post-launch | 🟨 |
 
 | Redis failure | Orta | Düşük | DB fallback mode implemented | ⬜ |
 
@@ -1785,6 +1785,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
 
+| 01.05.2026 | Delivery | Faz 10.0 Wave 1 Critical Fixes tamamlandı: 8/8 fix uygulandı ve verify edildi (R002-R008, R018). Wave 2 Assessment tamamlandı: Pricing + Fleet + Offices + Public Inventory modüllerinde 20 yeni issue tespit edildi (8 CRITICAL, 8 HIGH, 3 MEDIUM, 1 LOW). EF migration `AddRefundIdempotencyKey` oluşturuldu. | 10.0.4 (Refactor Registry), 10.0.5 (Wave 1 Completion), 10.0.6 (Wave 2 Assessment) | Wave 2 CRITICAL fix'leri (currency mismatch, hardcoded data, API alignment) | `dotnet build` 0 error; `dotnet test` 501/501 pass (472 unit + 29 integration); `tsc --noEmit` 0 error; Docker compose stack (API + web + postgres + redis + worker) çalışır durumda. Session handoff dokümanı oluşturuldu. | AI |
 | 30.04.2026 | Delivery | Faz 10.1 Wave 3 backend test coverage expansion tamamlandı: `WorkerTests.cs` (10 test), `AdminPaymentsControllerTests.cs` (14), `AdminReservationsControllerTests.cs` (15), `AdminBackgroundJobsControllerTests.cs` (7), `AdminAuditLogsControllerTests.cs` (4), `AdminFeatureFlagsControllerTests.cs` (4), `AdminSecurityControllerTests.cs` (2). `INotificationBackgroundJobProcessor` interface extraction + DI wiring. Tüm build hataları ve test failure'ları çözüldü. | 10.1.1 (Wave 3) | Faz 10.1 Wave 4 (Frontend coverage) veya Faz 10.2 (Integration Tests) | `dotnet build` 0 warning/error; `dotnet test` 451/451 pass; Coverlet + ReportGenerator coverage report üretildi. PR #175 merge conflict çözüldü ve `refactore` branch'e push edildi. | AI |
 | 24.04.2026 | Delivery | Faz 8 admin panel tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser CRUD dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi (`/dashboard/settings/system`), tüm admin API modülleri mock'tan gerçek backend'e geçirildi (`USE_MOCK = false`) | Faz 8.12.2, 8.14.3, 8.16.3 | Faz 9 Infrastructure + Faz 10 Testing & Launch | 3D Secure ödeme akışı ödeme sağlayıcısı seçimi sonrasına ertelendi; Build: 103 sayfa, 0 TypeScript error | AI |
 | 23.04.2026 | Bugfix | Faz 8 i18n/language-switcher kritik bug-fix: LanguageSwitcher onBlur containerRef düzeltmesi, eksik `footer.newsletter.description` 4 dile eklendi, `de.json` eksik namespace'ler (`aboutUs`, `contactUs`) tamamlandı, Arabic RTL `dir` desteği eklendi. Tüm 5 dilde console error 0 | Faz 8.2 (i18n) | Backend API entegrasyonu + 3D Secure | Session handoff dokümanı oluşturuldu | AI |
@@ -1837,7 +1838,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
 
-| Test Coverage | > 70% | Not Measured Yet | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
+| Test Coverage | > 70% | Backend: %32.90, Frontend: %7.53 | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 
@@ -1863,9 +1864,9 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Webhook signature verification | ✅ Completed | Payment webhook signature verification ve integration test'leri tamamlandı |
 
-| PII masking in logs | ⬜ Not Started | Request / audit log maskeleme politikası henüz uygulanmadı |
+| PII masking in logs | 🟨 Partial | R007 fix: CVV console.log kaldırıldı. Genel PII maskeleme politikası henüz tanımlanmadı |
 
-| No credit card data storage | ⬜ Not Started | Payment akışı devreye alınmadan önce açık politika ve doğrulama gerekli |
+| No credit card data storage | 🟨 Partial | Payment akışı aktif; CVV frontend form'da toplanıyor ama backend'e gönderilmiyor (payment provider'a yönlendiriliyor). Açık politika dokümantasyonu gerekli |
 
 | Admin routes protected by middleware | ✅ Completed | Authorize + policy tabanlı koruma eklendi |
 

@@ -6,6 +6,7 @@ using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Core.Interfaces.Notifications;
+using StackExchange.Redis;
 
 namespace RentACar.API.Services;
 
@@ -23,10 +24,12 @@ public sealed class ReservationService : IReservationService
     private readonly IPaymentService _paymentService;
     private readonly INotificationQueueService _notificationQueueService;
     private readonly IMemoryCache _memoryCache;
+    private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<ReservationService> _logger;
     private readonly TimeSpan _defaultHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _maxHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _availabilityCacheTtl = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _holdCreationLockTtl = TimeSpan.FromSeconds(30);
 
     public ReservationService(
         IReservationRepository reservationRepository,
@@ -41,6 +44,7 @@ public sealed class ReservationService : IReservationService
         IPaymentService paymentService,
         INotificationQueueService notificationQueueService,
         IMemoryCache memoryCache,
+        IConnectionMultiplexer redis,
         ILogger<ReservationService> logger)
     {
         _reservationRepository = reservationRepository;
@@ -55,6 +59,7 @@ public sealed class ReservationService : IReservationService
         _paymentService = paymentService;
         _notificationQueueService = notificationQueueService;
         _memoryCache = memoryCache;
+        _redis = redis;
         _logger = logger;
     }
 
@@ -359,6 +364,8 @@ public sealed class ReservationService : IReservationService
         string sessionId,
         CancellationToken cancellationToken = default)
     {
+        string? holdCreationLockKey = null;
+
         var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
         if (reservation == null)
         {
@@ -382,121 +389,158 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
-        var existingHold = await _holdService.GetHoldAsync(reservationId, cancellationToken);
-        if (existingHold != null && existingHold.ExpiresAt > DateTime.UtcNow)
+        try
         {
-            if (!string.Equals(existingHold.SessionId, sessionId, StringComparison.Ordinal))
+            holdCreationLockKey = BuildHoldCreationLockKey(
+                reservation.VehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime);
+
+            var lockAcquired = await _redis.GetDatabase().StringSetAsync(
+                holdCreationLockKey,
+                reservationId.ToString("N"),
+                _holdCreationLockTtl,
+                When.NotExists,
+                CommandFlags.None);
+
+            if (!lockAcquired)
             {
                 _logger.LogWarning(
-                    "Reservation {ReservationId} is already held by another session",
+                    "CreateHoldAsync lock is already held for vehicle group {VehicleGroupId} between {PickupDate} and {ReturnDate}",
+                    reservation.VehicleId,
+                    reservation.PickupDateTime,
+                    reservation.ReturnDateTime);
+                return null;
+            }
+
+            var existingHold = await _holdService.GetHoldAsync(reservationId, cancellationToken);
+            if (existingHold != null && existingHold.ExpiresAt > DateTime.UtcNow)
+            {
+                if (!string.Equals(existingHold.SessionId, sessionId, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "Reservation {ReservationId} is already held by another session",
+                        reservationId);
+                    return null;
+                }
+
+                if (reservation.Status != ReservationStatus.Hold)
+                {
+                    reservation.Status = ReservationStatus.Hold;
+                    reservation.VehicleId = existingHold.VehicleId;
+                    reservation.UpdatedAt = DateTime.UtcNow;
+                    await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+                }
+
+                var remaining = Math.Max(0, (int)Math.Ceiling((existingHold.ExpiresAt - DateTime.UtcNow).TotalMinutes));
+                return new ReservationHoldDto
+                {
+                    Id = reservationId,
+                    ReservationId = reservationId,
+                    ExpiresAt = existingHold.ExpiresAt,
+                    SessionId = sessionId,
+                    RemainingMinutes = remaining,
+                    IsExpired = remaining <= 0
+                };
+            }
+
+            await using var transaction = await TryBeginTransactionAsync(cancellationToken);
+
+            // Find an available vehicle in the selected group
+            var vehicle = await FindAvailableVehicleAsync(
+                reservation.VehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                cancellationToken);
+
+            if (vehicle == null)
+            {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                _logger.LogWarning(
+                    "No available vehicle found for reservation {ReservationId}",
                     reservationId);
                 return null;
             }
 
-            if (reservation.Status != ReservationStatus.Hold)
+            var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
+                vehicle.Id,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                cancellationToken);
+
+            if (hasOverlap)
             {
-                reservation.Status = ReservationStatus.Hold;
-                reservation.VehicleId = existingHold.VehicleId;
-                reservation.UpdatedAt = DateTime.UtcNow;
-                await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                _logger.LogWarning(
+                    "Overlap detected while creating hold for reservation {ReservationId} and vehicle {VehicleId}",
+                    reservationId,
+                    vehicle.Id);
+                return null;
             }
 
-            var remaining = Math.Max(0, (int)Math.Ceiling((existingHold.ExpiresAt - DateTime.UtcNow).TotalMinutes));
+            reservation.Status = ReservationStatus.Hold;
+            reservation.VehicleId = vehicle.Id;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
+            // Create the hold
+            var success = await _holdService.CreateHoldAsync(
+                reservationId,
+                vehicle.Id,
+                sessionId,
+                _defaultHoldDuration,
+                cancellationToken);
+
+            if (!success)
+            {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                return null;
+            }
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            var expiresAt = DateTime.UtcNow.Add(_defaultHoldDuration);
+
+            _logger.LogInformation(
+                "Created hold for reservation {ReservationId}, vehicle {VehicleId}, expires {ExpiresAt}",
+                reservationId, vehicle.Id, expiresAt);
+
             return new ReservationHoldDto
             {
-                Id = reservationId,
+                Id = Guid.NewGuid(),
                 ReservationId = reservationId,
-                ExpiresAt = existingHold.ExpiresAt,
+                ExpiresAt = expiresAt,
                 SessionId = sessionId,
-                RemainingMinutes = remaining,
-                IsExpired = remaining <= 0
+                RemainingMinutes = (int)_defaultHoldDuration.TotalMinutes,
+                IsExpired = false
             };
         }
-
-        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
-
-        // Find an available vehicle in the selected group
-        var vehicle = await FindAvailableVehicleAsync(
-            reservation.VehicleId,
-            reservation.PickupDateTime,
-            reservation.ReturnDateTime,
-            cancellationToken);
-
-        if (vehicle == null)
+        finally
         {
-            if (transaction != null)
+            if (holdCreationLockKey is not null)
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await _redis.GetDatabase().KeyDeleteAsync(holdCreationLockKey);
             }
-            _logger.LogWarning(
-                "No available vehicle found for reservation {ReservationId}",
-                reservationId);
-            return null;
         }
+    }
 
-        var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
-            vehicle.Id,
-            reservation.PickupDateTime,
-            reservation.ReturnDateTime,
-            reservationId,
-            cancellationToken);
-
-        if (hasOverlap)
-        {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-            _logger.LogWarning(
-                "Overlap detected while creating hold for reservation {ReservationId} and vehicle {VehicleId}",
-                reservationId,
-                vehicle.Id);
-            return null;
-        }
-
-        reservation.Status = ReservationStatus.Hold;
-        reservation.VehicleId = vehicle.Id;
-        reservation.UpdatedAt = DateTime.UtcNow;
-
-        await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
-
-        // Create the hold
-        var success = await _holdService.CreateHoldAsync(
-            reservationId,
-            vehicle.Id,
-            sessionId,
-            _defaultHoldDuration,
-            cancellationToken);
-
-        if (!success)
-        {
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-            }
-            return null;
-        }
-
-        if (transaction != null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
-
-        var expiresAt = DateTime.UtcNow.Add(_defaultHoldDuration);
-
-        _logger.LogInformation(
-            "Created hold for reservation {ReservationId}, vehicle {VehicleId}, expires {ExpiresAt}",
-            reservationId, vehicle.Id, expiresAt);
-
-        return new ReservationHoldDto
-        {
-            Id = Guid.NewGuid(),
-            ReservationId = reservationId,
-            ExpiresAt = expiresAt,
-            SessionId = sessionId,
-            RemainingMinutes = (int)_defaultHoldDuration.TotalMinutes,
-            IsExpired = false
-        };
+    private static string BuildHoldCreationLockKey(Guid vehicleGroupId, DateTime pickupDate, DateTime returnDate)
+    {
+        return $"hold:{vehicleGroupId}:{pickupDate:yyyyMMddHHmm}:{returnDate:yyyyMMddHHmm}";
     }
 
     public async Task<ReservationHoldDto?> ExtendHoldAsync(

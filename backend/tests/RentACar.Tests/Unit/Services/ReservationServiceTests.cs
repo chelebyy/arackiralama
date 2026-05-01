@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MockQueryable.Moq;
 using Moq;
+using StackExchange.Redis;
 using System.Diagnostics;
 using FleetContracts = RentACar.API.Contracts.Fleet;
 using RentACar.API.Contracts.Payments;
@@ -27,6 +28,8 @@ public sealed class ReservationServiceTests
     private readonly Mock<IRepository<Office>> _officeRepositoryMock;
     private readonly Mock<IReservationHoldService> _holdServiceMock;
     private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
+    private readonly Mock<IConnectionMultiplexer> _redisMock;
+    private readonly Mock<IDatabase> _redisDatabaseMock;
     private readonly Mock<IFleetService> _fleetServiceMock;
     private readonly Mock<IPricingService> _pricingServiceMock;
     private readonly Mock<IPaymentService> _paymentServiceMock;
@@ -44,6 +47,8 @@ public sealed class ReservationServiceTests
         _officeRepositoryMock = new Mock<IRepository<Office>>();
         _holdServiceMock = new Mock<IReservationHoldService>();
         _applicationDbContextMock = new Mock<IApplicationDbContext>();
+        _redisMock = new Mock<IConnectionMultiplexer>();
+        _redisDatabaseMock = new Mock<IDatabase>();
         _fleetServiceMock = new Mock<IFleetService>();
         _pricingServiceMock = new Mock<IPricingService>();
         _paymentServiceMock = new Mock<IPaymentService>();
@@ -54,6 +59,25 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
+
+        _redisMock
+            .Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
+            .Returns(_redisDatabaseMock.Object);
+
+        _redisDatabaseMock
+            .Setup(x => x.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        _redisDatabaseMock
+            .Setup(x => x.KeyDeleteAsync(
+                It.IsAny<RedisKey>(),
+                CommandFlags.None))
+            .ReturnsAsync(true);
 
         _holdServiceMock
             .Setup(x => x.GetHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -113,6 +137,7 @@ public sealed class ReservationServiceTests
             _paymentServiceMock.Object,
             _notificationQueueServiceMock.Object,
             _memoryCache,
+            _redisMock.Object,
             _loggerMock.Object);
     }
 

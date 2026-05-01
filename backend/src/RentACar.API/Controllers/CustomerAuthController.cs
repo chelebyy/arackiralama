@@ -185,7 +185,7 @@ public sealed class CustomerAuthController(
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        if (!TryReadRefreshToken(out var refreshToken))
+        if (!TryReadRefreshToken(_refreshTokenCookieName, out var refreshToken))
         {
             return UnauthorizedResponse();
         }
@@ -381,34 +381,6 @@ public sealed class CustomerAuthController(
             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         return Guid.TryParse(principalIdClaim, out principalId);
-    }
-
-    private bool TryReadRefreshToken(out string refreshToken)
-    {
-        refreshToken = string.Empty;
-
-        if (!HttpContext.Request.Cookies.TryGetValue(_refreshTokenCookieName, out var cookieRefreshToken) ||
-            string.IsNullOrWhiteSpace(cookieRefreshToken))
-        {
-            return false;
-        }
-
-        refreshToken = cookieRefreshToken.Trim();
-        return true;
-    }
-
-    private bool TryReadSessionContext(out Guid principalId, out Guid sessionId)
-    {
-        principalId = Guid.Empty;
-        sessionId = Guid.Empty;
-
-        var principalIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var sessionIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sid)?.Value
-            ?? User.FindFirst(ClaimTypes.Sid)?.Value;
-
-        return Guid.TryParse(principalIdClaim, out principalId) &&
-               Guid.TryParse(sessionIdClaim, out sessionId);
     }
 
     private static void ApplyProfileUpdates(Customer customer, CustomerRegisterRequest request)

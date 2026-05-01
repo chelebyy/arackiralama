@@ -566,6 +566,79 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessPendingWebhookJobsAsync_WhenBusinessLogicThrows_RollsBackItemChangesBeforeRetryingJob()
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-ROLLBACK",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(2),
+            ReturnDateTime = DateTime.UtcNow.AddDays(4),
+            Status = ReservationStatus.PendingPayment,
+            TotalAmount = 2500m
+        };
+
+        _dbContext.Customers.Add(new Customer
+        {
+            Id = reservation.CustomerId,
+            FullName = "Rollback Customer",
+            Email = "rollback@example.com",
+            Phone = "+905551110001"
+        });
+
+        var paymentIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = reservation.TotalAmount,
+            Status = PaymentStatus.Pending,
+            Provider = "Mock",
+            IdempotencyKey = "intent-rollback",
+            ProviderIntentId = "provider-intent-rollback",
+            ProviderTransactionId = "provider-tx-rollback"
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(paymentIntent);
+        _dbContext.PaymentWebhookEvents.Add(new PaymentWebhookEvent
+        {
+            ProviderEventId = "evt-rollback",
+            Payload = "{}",
+            Processed = false
+        });
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = "payment-webhook-process",
+            Payload = $$"""{"ProviderEventId":"evt-rollback","EventType":"payment.succeeded","ProviderIntentId":"{{paymentIntent.ProviderIntentId}}","ProviderTransactionId":"{{paymentIntent.ProviderTransactionId}}","RawPayload":"{}"}""",
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
+        _notificationQueueServiceMock
+            .Setup(x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReservationConfirmed),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("notification failed"));
+
+        var processedCount = await _sut.ProcessPendingWebhookJobsAsync();
+
+        processedCount.Should().Be(0);
+
+        var reloadedIntent = _dbContext.PaymentIntents.Single(x => x.Id == paymentIntent.Id);
+        var reloadedReservation = _dbContext.Reservations.Single(x => x.Id == reservation.Id);
+        var webhookEvent = _dbContext.PaymentWebhookEvents.Single(x => x.ProviderEventId == "evt-rollback");
+        var job = _dbContext.BackgroundJobs.Single();
+
+        reloadedIntent.Status.Should().Be(PaymentStatus.Pending);
+        reloadedReservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        webhookEvent.Processed.Should().BeFalse();
+        job.Status.Should().Be(BackgroundJobStatus.Pending);
+        job.RetryCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task ReleaseDepositAsync_WhenNoDepositIntentExists_ReturnsSkippedOperation()
     {
         var reservation = await SeedReservationWithDepositAmountAsync(500m);
@@ -616,8 +689,56 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RefundReservationAsync_WhenMatchingRefundIdempotencyKeyExists_ReturnsExistingRefundWithoutCallingProvider()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = new Reservation
+        {
+            PublicCode = "RSV-REFUND-KEY",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            Status = ReservationStatus.Cancelled,
+            TotalAmount = 1000m
+        };
+        var refundedIntent = new PaymentIntent
+        {
+            ReservationId = reservation.Id,
+            Amount = 1000m,
+            Status = PaymentStatus.Refunded,
+            Provider = "Mock",
+            IdempotencyKey = "payment-intent-key",
+            ProviderIntentId = "provider-intent-refunded",
+            ProviderTransactionId = "provider-tx-refunded",
+            RefundIdempotencyKey = "refund-key-1",
+            RefundReferenceId = "refund-reference-existing",
+            RefundedAmount = 450m,
+            RefundReason = "manual"
+        };
+
+        _dbContext.Reservations.Add(reservation);
+        _dbContext.PaymentIntents.Add(refundedIntent);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await sut.RefundReservationAsync(
+            reservation.Id,
+            new AdminRefundApiRequest { Amount = 450m, Reason = "manual", IdempotencyKey = "refund-key-1" },
+            CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.PaymentIntentId.Should().Be(refundedIntent.Id);
+        result.ReferenceId.Should().Be("refund-reference-existing");
+        result.Amount.Should().Be(450m);
+        provider.RefundCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task RefundReservationAsync_WhenRefundSucceeds_MarksIntentAsRefunded()
     {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
         var reservation = new Reservation
         {
             PublicCode = "RSV-REFUND-2",
@@ -643,13 +764,18 @@ public sealed class PaymentServiceTests : IDisposable
         _dbContext.PaymentIntents.Add(successfulIntent);
         await _dbContext.SaveChangesAsync();
 
-        var result = await _sut.RefundReservationAsync(
+        var result = await sut.RefundReservationAsync(
             reservation.Id,
-            new AdminRefundApiRequest { Amount = 600m, Reason = "manual" },
+            new AdminRefundApiRequest { Amount = 600m, Reason = "manual", IdempotencyKey = "refund-key-2" },
             CancellationToken.None);
 
         result.Should().NotBeNull();
         successfulIntent.Status.Should().Be(PaymentStatus.Refunded);
+        successfulIntent.RefundIdempotencyKey.Should().Be("refund-key-2");
+        successfulIntent.RefundReferenceId.Should().Be("refund-1");
+        successfulIntent.RefundedAmount.Should().Be(600m);
+        successfulIntent.RefundReason.Should().Be("manual");
+        provider.RefundCallCount.Should().Be(1);
     }
 
     private PaymentService CreateSut(FakePaymentProvider? paymentProvider = null)
@@ -828,10 +954,12 @@ public sealed class PaymentServiceTests : IDisposable
         public int CreatePreAuthorizationCallCount { get; private set; }
         public int VerifyPaymentCallCount { get; private set; }
         public int CaptureDepositCallCount { get; private set; }
+        public int RefundCallCount { get; private set; }
         public CreatePaymentIntentProviderRequest? LastCreatePaymentIntentRequest { get; private set; }
         public CreatePreAuthorizationProviderRequest? LastCreatePreAuthorizationRequest { get; private set; }
         public PaymentCallbackProviderRequest? LastVerifyPaymentRequest { get; private set; }
         public ProviderCaptureDepositRequest? LastCaptureDepositRequest { get; private set; }
+        public ProviderRefundRequest? LastRefundRequest { get; private set; }
         public PaymentIntentProviderResult CreatePaymentIntentResult { get; set; } = new()
         {
             ProviderIntentId = "provider-intent-1",
@@ -894,8 +1022,12 @@ public sealed class PaymentServiceTests : IDisposable
         public Task<ProviderTransactionStatus> GetTransactionStatusAsync(string transactionId, CancellationToken cancellationToken = default) =>
             Task.FromResult(ProviderTransactionStatus.Succeeded);
 
-        public Task<ProviderRefundResult> RefundAsync(ProviderRefundRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProviderRefundResult { Success = true, ReferenceId = "refund-1" });
+        public Task<ProviderRefundResult> RefundAsync(ProviderRefundRequest request, CancellationToken cancellationToken = default)
+        {
+            RefundCallCount++;
+            LastRefundRequest = request;
+            return Task.FromResult(new ProviderRefundResult { Success = true, ReferenceId = "refund-1" });
+        }
 
         public Task<ProviderReleaseDepositResult> ReleaseDepositAsync(ProviderReleaseDepositRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProviderReleaseDepositResult { Success = true });
