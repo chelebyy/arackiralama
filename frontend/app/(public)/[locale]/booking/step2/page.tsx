@@ -17,8 +17,30 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
-import { useAvailableVehicles } from "@/hooks/useVehicles";
+import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
 import type { AvailableVehicleGroup } from "@/lib/api/types";
+
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipaşa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargıcak",
+  konakli: "konaklı",
+  avsallar: "avsallar",
+};
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
+  if (isGuid(slugOrGuid)) return slugOrGuid;
+  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+  if (!pattern) return slugOrGuid;
+  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+  return matched?.id ?? slugOrGuid;
+}
 
 interface VehicleGroup {
   id: string;
@@ -62,14 +84,17 @@ export default function BookingStep2Page() {
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "";
-  const pickupTime = searchParams.get("pickupTime") || "";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "";
-  const returnTime = searchParams.get("returnTime") || "";
+  const returnTime = searchParams.get("returnTime") || "09:00";
+
+  const { offices } = useOffices();
+  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
 
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && pickupTime && returnDate && returnTime
+    pickupDate && returnDate && pickupOfficeGuid
       ? {
-          office_id: pickupOffice,
+          office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,
           return_datetime: `${returnDate}T${returnTime}`,
         }

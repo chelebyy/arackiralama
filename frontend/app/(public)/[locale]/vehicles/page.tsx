@@ -20,7 +20,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAvailableVehicles } from "@/hooks/useVehicles";
+import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
 import type { AvailableVehicleGroup } from "@/lib/api/types";
 
 function mapAvailableToVehicle(group: AvailableVehicleGroup): Vehicle {
@@ -55,15 +55,27 @@ interface Vehicle {
 
 const vehicleGroups = ["all", "economy", "compact", "suv", "luxury", "minivan"];
 
-const offices = [
-  { id: "ala", name: "Alanya Şehir Merkezi" },
-  { id: "gzp", name: "Gazipaşa Havalimanı" },
-  { id: "ayt", name: "Antalya Havalimanı" },
-  { id: "mahmutlar", name: "Mahmutlar" },
-  { id: "kargicak", name: "Kargıcak" },
-  { id: "konakli", name: "Konaklı" },
-  { id: "avsallar", name: "Avsallar" },
-];
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipaşa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargıcak",
+  konakli: "konaklı",
+  avsallar: "avsallar",
+};
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
+  if (isGuid(slugOrGuid)) return slugOrGuid;
+  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+  if (!pattern) return slugOrGuid;
+  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+  return matched?.id ?? slugOrGuid;
+}
 
 export default function VehiclesPage() {
   const searchParams = useSearchParams();
@@ -82,22 +94,14 @@ export default function VehiclesPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const pickupOfficeObj = offices.find((o) => o.id === pickupOffice);
-  const locationKeyMap: Record<string, string> = {
-    ala: "cityCenter",
-    gzp: "airport",
-    ayt: "airportAntalya",
-    mahmutlar: "mahmutlar",
-    kargicak: "kargicak",
-    konakli: "konakli",
-    avsallar: "avsallar",
-  };
-  const locationKey = locationKeyMap[pickupOfficeObj?.id ?? ""] ?? "airport";
+  const { offices, isLoading: officesLoading } = useOffices();
+  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
+  const pickupOfficeObj = offices.find((o) => o.id === pickupOfficeGuid);
 
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && pickupTime && returnDate && returnTime
+    pickupDate && pickupTime && returnDate && returnTime && pickupOfficeGuid
       ? {
-          office_id: pickupOffice,
+          office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,
           return_datetime: `${returnDate}T${returnTime}`,
         }
@@ -122,7 +126,7 @@ export default function VehiclesPage() {
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <MapPin className="h-4 w-4 text-[#0369A1]" />
                 <span className="text-sm text-slate-700">
-                  {tSearch(`locationOptions.${locationKey}` as any)}
+                  {pickupOfficeObj?.name ?? pickupOffice}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />

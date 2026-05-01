@@ -31,6 +31,15 @@ vi.mock("@/hooks/useVehicles", () => ({
     isError: null,
     mutate: vi.fn(),
   }),
+  useOffices: () => ({
+    offices: [
+      { id: "11111111-1111-1111-1111-111111111111", name: "Alanya Şehir Merkezi" },
+      { id: "22222222-2222-2222-2222-222222222222", name: "Gazipaşa Havalimanı" },
+      { id: "33333333-3333-3333-3333-333333333333", name: "Antalya Havalimanı" },
+    ],
+    isLoading: false,
+    isError: null,
+  }),
 }));
 
 describe("BookingStep2Page", () => {
