@@ -80,39 +80,50 @@ public sealed class IdempotencyMiddleware
 
         var redisKey = $"{RedisKeyPrefix}{idempotencyKey}";
 
+        // Try to get cached response from Redis
+        CachedResponse? cached = null;
         try
         {
             var db = redis.GetDatabase();
-
-            // Check for cached response
             var cachedResponse = await db.StringGetAsync(redisKey);
             if (cachedResponse.HasValue)
             {
-                _logger.LogInformation(
-                    "Returning cached response for idempotency key {Key}",
-                    idempotencyKey);
-
-                var cached = JsonSerializer.Deserialize<CachedResponse>(cachedResponse.ToString());
-                if (cached != null)
-                {
-                    context.Response.StatusCode = cached.StatusCode;
-                    context.Response.ContentType = cached.ContentType ?? "application/json";
-                    context.Response.Headers[IdempotencyStatusHeader] = "HIT";
-                    await context.Response.WriteAsync(cached.Body);
-                    return;
-                }
+                cached = JsonSerializer.Deserialize<CachedResponse>(cachedResponse.ToString());
             }
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex, "Redis unavailable, skipping idempotency check");
+            context.Response.Headers[IdempotencyStatusHeader] = "BYPASS";
+            await _next(context);
+            return;
+        }
 
-            // No cached response - execute request and cache result
-            var originalBodyStream = context.Response.Body;
-            using var memoryStream = new MemoryStream();
-            context.Response.Body = memoryStream;
+        if (cached != null)
+        {
+            _logger.LogInformation(
+                "Returning cached response for idempotency key {Key}",
+                idempotencyKey);
 
+            context.Response.StatusCode = cached.StatusCode;
+            context.Response.ContentType = cached.ContentType ?? "application/json";
+            context.Response.Headers[IdempotencyStatusHeader] = "HIT";
+            await context.Response.WriteAsync(cached.Body);
+            return;
+        }
+
+        // No cached response - execute request and cache result
+        var originalBodyStream = context.Response.Body;
+        var memoryStream = new MemoryStream();
+        context.Response.Body = memoryStream;
+
+        try
+        {
             await _next(context);
 
             // Read response body
             memoryStream.Position = 0;
-            var responseBody = await new StreamReader(memoryStream).ReadToEndAsync();
+            var responseBody = await new StreamReader(memoryStream, leaveOpen: true).ReadToEndAsync();
 
             // Cache response if successful (2xx status codes)
             if (context.Response.StatusCode >= 200 && context.Response.StatusCode < 300)
@@ -125,29 +136,33 @@ public sealed class IdempotencyMiddleware
                 };
 
                 var expiration = TimeSpan.FromHours(idempotentAttribute.ExpirationHours);
-                await db.StringSetAsync(
-                    redisKey,
-                    JsonSerializer.Serialize(cacheEntry),
-                    expiration);
+                try
+                {
+                    var db = redis.GetDatabase();
+                    await db.StringSetAsync(
+                        redisKey,
+                        JsonSerializer.Serialize(cacheEntry),
+                        expiration);
 
-                _logger.LogInformation(
-                    "Cached response for idempotency key {Key}, expires in {Hours}h",
-                    idempotencyKey,
-                    idempotentAttribute.ExpirationHours);
+                    _logger.LogInformation(
+                        "Cached response for idempotency key {Key}, expires in {Hours}h",
+                        idempotencyKey,
+                        idempotentAttribute.ExpirationHours);
+                }
+                catch (RedisConnectionException ex)
+                {
+                    _logger.LogWarning(ex, "Redis unavailable, response not cached");
+                }
             }
 
-            // Write response to original stream
             context.Response.Headers[IdempotencyStatusHeader] = "MISS";
             memoryStream.Position = 0;
             await memoryStream.CopyToAsync(originalBodyStream);
-            context.Response.Body = originalBodyStream;
         }
-        catch (RedisConnectionException ex)
+        finally
         {
-            // Redis unavailable - proceed without idempotency protection
-            _logger.LogWarning(ex, "Redis unavailable, skipping idempotency check");
-            context.Response.Headers[IdempotencyStatusHeader] = "BYPASS";
-            await _next(context);
+            context.Response.Body = originalBodyStream;
+            await memoryStream.DisposeAsync();
         }
     }
 

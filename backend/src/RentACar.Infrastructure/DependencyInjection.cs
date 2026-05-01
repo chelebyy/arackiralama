@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RentACar.Core.Entities;
 using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
@@ -35,8 +36,11 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IVehicleGroupRepository, VehicleGroupRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();
+        services.AddScoped<IRepository<Vehicle>, VehicleRepository>();
         services.AddScoped<IOfficeRepository, OfficeRepository>();
+        services.AddScoped<IRepository<Office>, OfficeRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<IRepository<Customer>, CustomerRepository>();
         services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
         services.AddScoped<NetgsmSmsProvider>(serviceProvider => new NetgsmSmsProvider(
             new HttpClient { Timeout = TimeSpan.FromSeconds(10) },

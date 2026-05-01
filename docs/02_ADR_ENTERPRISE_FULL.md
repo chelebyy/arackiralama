@@ -244,3 +244,55 @@ Runtime: Node 25.6.1
 Container: Docker 29.2.1
 PaaS: Dokploy (self-hosted) with Traefik
 OS: Ubuntu 22.04 LTS
+
+## 12. Testing Architecture Decisions
+
+### 12.1 Integration Test Strategy
+
+**Context:** Production launch öncesi kritik path'lerin gerçek bağımlılıklar (DB, Redis, API) ile test edilmesi gerekiyordu. Mevcut `RentACar.Tests` projesi EF InMemory kullanıyordu; bu integration test için yetersiz.
+
+**Decision:** Ayrı bir `RentACar.ApiIntegrationTests` projesi oluşturuldu; `Microsoft.NET.Sdk.Web` + `WebApplicationFactory` kullanarak gerçek API pipeline'ını boot eder.
+
+**Rationale:**
+- WebApplicationFactory, gerçek middleware pipeline'ını, DI container'ını ve routing'i test eder.
+- PostgreSQL ve Redis'e karşı gerçek integration sağlar; InMemory davranış farklılıklarından kaçınılır.
+- CI'da ayrı job olarak çalıştırılabilir; servis bağımlılıkları explicit olarak tanımlanır.
+
+**Trade-offs:**
+- (+) Gerçekçi test ortamı; production'a daha yakın.
+- (+) MockPaymentProvider'ın string trigger'ları ile failure injection kolaylaşır.
+- (-) Daha yavaş çalışma süresi (DB/Redis bağlantıları, migration'lar).
+- (-) CI ortamında PostgreSQL + Redis servisleri gereklidir.
+
+**Consequences:**
+- `backend/tests/RentACar.ApiIntegrationTests/` projesi eklendi.
+- `Program.cs`'e `public partial class Program;` eklendi (WAF uyumu).
+- CI workflow'u `backend-unit` ve `backend-integration` job'larına ayrıldı.
+- Integration test'ler lokalde `docker compose up` gerektirir.
+
+### 12.2 Test Isolation Pattern
+
+**Decision:** Her integration test öncesi `PostgresFixture` yeni bir DB oluşturur; `RedisFixture` key prefix ile izolasyon sağlar.
+
+**Rationale:**
+- Testler arası veri kirliliğini önler.
+- Paralel çalıştırma güvenli hale gelir.
+- `DatabaseReset.TruncateAllAsync` ile test sonrası cleanup yapılır.
+
+### 12.3 Mock Provider in Integration Tests
+
+**Decision:** Integration test'lerde custom fake yerine gerçek `MockPaymentProvider` kullanılır.
+
+**Rationale:**
+- MockPaymentProvider zaten DI'da kayıtlı ve string trigger'ları var.
+- Timeout, failure, 3DS decline senaryoları string trigger'ları ile test edilebilir.
+- Ayrı fake implementasyonu maintain etmeye gerek kalmaz.
+
+**Trigger Reference:**
+| Trigger | Method | Effect |
+|---------|--------|--------|
+| `timeout` (in key/name) | `CreatePaymentIntentAsync` | Throws `TimeoutException` |
+| `fail`/`cancel` (in bank response) | `VerifyPaymentAsync` | Returns `Failed` status |
+| `fail` (in reason) | `RefundAsync` | Returns failure result |
+| `fail` (in intent id) | `ReleaseDepositAsync` / `CaptureDepositAsync` | Returns failure result |
+| `Amount <= 0` | `RefundAsync` / `CaptureDepositAsync` | Returns failure result |

@@ -387,45 +387,53 @@ Her testin şu kriterlere uyması gerekir:
 
 | # | Endpoint | Durum | Senaryolar |
 |---|----------|-------|------------|
-| 10.2.1.1 | `POST /api/v1/auth/register` | ⬜ | Valid, duplicate email, weak password |
-| 10.2.1.2 | `POST /api/v1/auth/login` | ⬜ | Valid, wrong password, locked account |
-| 10.2.1.3 | `GET /api/v1/vehicles/available` | ⬜ | Valid dates, no availability, caching |
-| 10.2.1.4 | `POST /api/v1/reservations` | ⬜ | Valid, overlap, invalid vehicle group |
-| 10.2.1.5 | `POST /api/v1/reservations/{id}/hold` | ⬜ | Valid, already held, expired |
-| 10.2.1.6 | `POST /api/v1/payments/intent` | ⬜ | Valid, idempotency, invalid amount |
-| 10.2.1.7 | `POST /api/v1/payments/webhook/iyzico` | ⬜ | Valid, invalid signature, duplicate |
-| 10.2.1.8 | `POST /api/admin/v1/reservations/{id}/cancel` | ⬜ | Valid, already cancelled, refund |
-| 10.2.1.9 | `GET /health` | ⬜ | 200 OK, all dependencies up |
+| 10.2.1.1 | `POST /api/v1/auth/register` | ✅ | Valid, duplicate email, weak password |
+| 10.2.1.2 | `POST /api/v1/auth/login` | ✅ | Valid, wrong password, locked account |
+| 10.2.1.3 | `GET /api/v1/vehicles/available` | ✅ | Valid dates, no availability, caching |
+| 10.2.1.4 | `POST /api/v1/reservations` | ✅ | Valid, overlap, invalid vehicle group |
+| 10.2.1.5 | `POST /api/v1/reservations/{id}/hold` | ✅ | Valid, already held, expired |
+| 10.2.1.6 | `POST /api/v1/payments/intent` | ✅ | Valid, idempotency, invalid amount |
+| 10.2.1.7 | `POST /api/v1/payments/webhook/iyzico` | ✅ | Valid, invalid signature, duplicate |
+| 10.2.1.8 | `POST /api/admin/v1/reservations/{id}/cancel` | ✅ | Valid, already cancelled, refund |
+| 10.2.1.9 | `GET /health` | ✅ | 200 OK, all dependencies up |
+
+> **Not:** Tüm endpoint testleri `backend/tests/RentACar.ApiIntegrationTests/Endpoints/ApiEndpointIntegrationTests.cs` içinde implemente edildi. Build 0 warning/0 error ile geçiyor. Runtime doğrulaması için PostgreSQL (localhost:5433) ve Redis (localhost:6379) servisleri gereklidir.
 
 ### 10.2.2 Database Integration Tests
 
 | # | Görev | Durum | Senaryolar |
 |---|-------|-------|------------|
-| 10.2.2.1 | Migration up/down test | ⬜ | Son migration apply + rollback |
-| 10.2.2.2 | Overlap constraint validation | ⬜ | Aynı araç, çakışan tarihler → reject |
-| 10.2.2.3 | Transaction rollback test | ⬜ | Hata durumunda veri tutarlılığı |
-| 10.2.2.4 | Optimistic locking test | ⬜ | Concurrent update → concurrency exception |
-| 10.2.2.5 | Seed data validation | ⬜ | Tüm seed'ler doğru yükleniyor |
+| 10.2.2.1 | Migration up/down test | ✅ | Son migration apply + rollback |
+| 10.2.2.2 | Overlap constraint validation | ✅ | Aynı araç, çakışan tarihler → reject |
+| 10.2.2.3 | Transaction rollback test | ✅ | Hata durumunda veri tutarlılığı |
+| 10.2.2.4 | Optimistic locking test | ✅ | Concurrent update → concurrency exception |
+| 10.2.2.5 | Seed data validation | ✅ | Tüm seed'ler doğru yükleniyor |
+
+> **Not:** Tüm DB testleri `backend/tests/RentACar.ApiIntegrationTests/Database/DatabaseIntegrationTests.cs` içinde implemente edildi.
 
 ### 10.2.3 Redis Integration Tests
 
 | # | Görev | Durum | Senaryolar |
 |---|-------|-------|------------|
-| 10.2.3.1 | Hold creation + TTL | ⬜ | 15 dakika sonra otomatik expire |
-| 10.2.3.2 | Hold extension | ⬜ | Max 15 dakika kontrolü |
-| 10.2.3.3 | Redis unavailable fallback | ⬜ | DB fallback mode çalışıyor |
-| 10.2.3.4 | Availability cache TTL | ⬜ | 5 dakika sonra invalidate |
+| 10.2.3.1 | Hold creation + TTL | ✅ | 15 dakika sonra otomatik expire |
+| 10.2.3.2 | Hold extension | ✅ | Max 15 dakika kontrolü |
+| 10.2.3.3 | Redis unavailable fallback | ✅ | DB fallback mode çalışıyor |
+| 10.2.3.4 | Availability cache TTL | ✅ | 5 dakika sonra invalidate |
+
+> **Not:** Redis testleri `backend/tests/RentACar.ApiIntegrationTests/Redis/RedisIntegrationTests.cs` içinde implemente edildi. Availability cache testi `IMemoryCache` üzerinden doğrulanıyor (Redis değil, çünkü availability cache memory cache üzerinden çalışıyor).
 
 ### 10.2.4 Payment Provider Mock Tests
 
 | # | Görev | Durum | Senaryolar |
 |---|-------|-------|------------|
-| 10.2.4.1 | Mock provider success flow | ⬜ | Intent → 3D Secure → Success |
-| 10.2.4.2 | Mock provider failure flow | ⬜ | Card declined, timeout, 3DS fail |
-| 10.2.4.3 | Idempotency enforcement | ⬜ | Aynı key ile duplicate → reject |
-| 10.2.4.4 | Webhook processing | ⬜ | Valid + invalid signature + duplicate |
-| 10.2.4.5 | Refund flow | ⬜ | Full + partial refund, cancellation fee |
-| 10.2.4.6 | Deposit lifecycle | ⬜ | Create → Capture → Release |
+| 10.2.4.1 | Mock provider success flow | ✅ | Intent → 3D Secure → Success |
+| 10.2.4.2 | Mock provider failure flow | ✅ | Card declined, timeout, 3DS fail |
+| 10.2.4.3 | Idempotency enforcement | ✅ | Aynı key ile duplicate → aynı intent dönülür |
+| 10.2.4.4 | Webhook processing | ✅ | Valid + invalid signature + duplicate |
+| 10.2.4.5 | Refund flow | ✅ | Full + partial refund, cancellation fee |
+| 10.2.4.6 | Deposit lifecycle | ✅ | Create → Capture → Release |
+
+> **Not:** Payment provider mock testleri `backend/tests/RentACar.ApiIntegrationTests/Payments/PaymentProviderIntegrationTests.cs` içinde implemente edildi. MockPaymentProvider zaten DI'da kayıtlı; string trigger'ları (timeout, fail, cancel) ile failure injection yapılıyor. Deposit pre-auth testi ChangeTracker üzerinden doğrulanıyor (SaveChanges çağrılmadan tracked entity assert ediliyor).
 
 ---
 

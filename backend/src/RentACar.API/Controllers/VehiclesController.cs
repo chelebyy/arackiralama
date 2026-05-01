@@ -26,6 +26,16 @@ public sealed class VehiclesController(IFleetService fleetService) : BaseApiCont
         [FromQuery(Name = "vehicle_group_id")] Guid? vehicleGroupId,
         CancellationToken cancellationToken)
     {
+        if (pickupDateTimeUtc.Kind == DateTimeKind.Unspecified)
+        {
+            pickupDateTimeUtc = DateTime.SpecifyKind(pickupDateTimeUtc, DateTimeKind.Utc);
+        }
+
+        if (returnDateTimeUtc.Kind == DateTimeKind.Unspecified)
+        {
+            returnDateTimeUtc = DateTime.SpecifyKind(returnDateTimeUtc, DateTimeKind.Utc);
+        }
+
         if (officeId == Guid.Empty)
         {
             return BadRequestResponse("Gecerli bir ofis secilmelidir.");
