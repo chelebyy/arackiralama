@@ -7,6 +7,7 @@ import {
   getVehicleGroups,
 } from '@/lib/api/vehicles';
 import type {
+  AvailableVehicleGroup,
   AvailableVehiclesParams,
   Office,
   PaginatedResponse,
@@ -31,7 +32,7 @@ const OFFICE_KEYS = {
 
 export function useAvailableVehicles(params: AvailableVehiclesParams | null) {
   const { data, error, isLoading, mutate } = useSWR<
-    PaginatedResponse<Vehicle>,
+    AvailableVehicleGroup[],
     Error
   >(
     params ? VEHICLE_KEYS.list(params) : null,
@@ -44,17 +45,7 @@ export function useAvailableVehicles(params: AvailableVehiclesParams | null) {
   );
 
   return {
-    vehicles: data?.items ?? [],
-    pagination: data
-      ? {
-          page: data.page,
-          pageSize: data.pageSize,
-          totalCount: data.totalCount,
-          totalPages: data.totalPages,
-          hasNextPage: data.hasNextPage,
-          hasPreviousPage: data.hasPreviousPage,
-        }
-      : null,
+    vehicles: data ?? [],
     isLoading,
     isError: error,
     mutate,
@@ -112,37 +103,4 @@ export function useOffices() {
   };
 }
 
-export function useInfiniteVehicles(params: Omit<AvailableVehiclesParams, 'page'>) {
-  const getKey = (pageIndex: number, previousPageData: PaginatedResponse<Vehicle> | null) => {
-    if (previousPageData && !previousPageData.hasNextPage) return null;
-    const pageParams: AvailableVehiclesParams = { ...params, page: pageIndex + 1 };
-    return VEHICLE_KEYS.list(pageParams);
-  };
 
-  const fetcher = async (key: ReturnType<typeof getKey>): Promise<PaginatedResponse<Vehicle>> => {
-    if (!key) throw new Error('Invalid key');
-    const pageParams = key[key.length - 1] as AvailableVehiclesParams;
-    return getAvailableVehicles(pageParams);
-  };
-
-  const { data, error, isLoading, size, setSize } = useSWRInfinite<
-    PaginatedResponse<Vehicle>,
-    Error
-  >(getKey, fetcher, {
-    revalidateOnFocus: false,
-  });
-
-  const vehicles = data?.flatMap((page) => page.items) ?? [];
-  const hasMore = data?.[data.length - 1]?.hasNextPage ?? false;
-  const isLoadingMore = isLoading || (size > 0 && data && typeof data[size - 1] === 'undefined');
-
-  return {
-    vehicles,
-    isLoading,
-    isLoadingMore,
-    isError: error,
-    size,
-    setSize,
-    hasMore,
-  };
-}

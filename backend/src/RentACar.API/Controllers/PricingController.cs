@@ -96,6 +96,36 @@ public sealed class PricingController(IPricingService pricingService) : BaseApiC
         return OkResponse(breakdown);
     }
 
+    [HttpPost("campaigns/validate")]
+    public async Task<IActionResult> ValidateCampaign(
+        [FromBody] ValidateCampaignRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequestResponse("Kampanya kodu zorunludur.");
+        }
+
+        if (request.VehicleGroupId == Guid.Empty)
+        {
+            return BadRequestResponse("Gecerli bir arac grubu secilmelidir.");
+        }
+
+        if (request.RentalDays < 1)
+        {
+            return BadRequestResponse("Kiralama suresi en az 1 gun olmalidir.");
+        }
+
+        var isValid = await pricingService.IsCampaignCodeValidAsync(
+            request.Code,
+            request.VehicleGroupId,
+            request.RentalDays,
+            request.PickupDate,
+            cancellationToken);
+
+        return OkResponse(new { valid = isValid });
+    }
+
     private static int CalculateRentalDays(DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc)
     {
         var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
@@ -103,3 +133,9 @@ public sealed class PricingController(IPricingService pricingService) : BaseApiC
         return Math.Max(1, returnDate.DayNumber - pickupDate.DayNumber);
     }
 }
+
+public sealed record ValidateCampaignRequest(
+    string Code,
+    Guid VehicleGroupId,
+    int RentalDays,
+    DateOnly PickupDate);

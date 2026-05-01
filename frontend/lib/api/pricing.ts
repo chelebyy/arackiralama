@@ -15,14 +15,16 @@ function buildQueryString(params: Record<string, string | number | boolean | und
 
 export async function getPriceBreakdown(params: PriceBreakdownParams): Promise<PriceBreakdown> {
   const queryString = buildQueryString({
-    vehicleId: params.vehicleId,
-    pickupOfficeId: params.pickupOfficeId,
-    pickupDate: params.pickupDate,
-    pickupTime: params.pickupTime,
-    returnOfficeId: params.returnOfficeId,
-    returnDate: params.returnDate,
-    returnTime: params.returnTime,
-    campaignCode: params.campaignCode,
+    vehicle_group_id: params.vehicle_group_id,
+    pickup_office_id: params.pickup_office_id,
+    return_office_id: params.return_office_id,
+    pickup_datetime: params.pickup_datetime,
+    return_datetime: params.return_datetime,
+    campaign_code: params.campaign_code,
+    extra_driver_count: params.extra_driver_count,
+    child_seat_count: params.child_seat_count,
+    driver_age: params.driver_age,
+    full_coverage_waiver: params.full_coverage_waiver,
   });
 
   return get<PriceBreakdown>(`${API_ENDPOINTS.pricing.breakdown}${queryString}`);

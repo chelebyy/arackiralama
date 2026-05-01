@@ -1,9 +1,9 @@
 import { get } from './client';
 import { API_ENDPOINTS } from './config';
 import type {
+  AvailableVehicleGroup,
   AvailableVehiclesParams,
   Office,
-  PaginatedResponse,
   Vehicle,
   VehicleGroup,
 } from './types';
@@ -21,22 +21,15 @@ function buildQueryString(params: Record<string, string | number | boolean | und
 
 export async function getAvailableVehicles(
   params: AvailableVehiclesParams
-): Promise<PaginatedResponse<Vehicle>> {
+): Promise<AvailableVehicleGroup[]> {
   const queryString = buildQueryString({
-    pickupOfficeId: params.pickupOfficeId,
-    pickupDate: params.pickupDate,
-    pickupTime: params.pickupTime,
-    returnOfficeId: params.returnOfficeId,
-    returnDate: params.returnDate,
-    returnTime: params.returnTime,
-    groupId: params.groupId,
-    transmission: params.transmission,
-    fuelType: params.fuelType,
-    minSeats: params.minSeats,
-    campaignCode: params.campaignCode,
+    office_id: params.office_id,
+    pickup_datetime: params.pickup_datetime,
+    return_datetime: params.return_datetime,
+    vehicle_group_id: params.vehicle_group_id,
   });
 
-  return get<PaginatedResponse<Vehicle>>(`${API_ENDPOINTS.vehicles.list}${queryString}`);
+  return get<AvailableVehicleGroup[]>(`${API_ENDPOINTS.vehicles.list}${queryString}`);
 }
 
 export async function getVehicleGroups(): Promise<VehicleGroup[]> {

@@ -5,7 +5,7 @@ import { SWRConfig } from "swr";
 
 import { useAvailableVehicles, useVehicle, useVehicleGroups } from "./useVehicles";
 import { getAvailableVehicles, getVehicleById, getVehicleGroups } from "@/lib/api/vehicles";
-import type { AvailableVehiclesParams, PaginatedResponse, Vehicle } from "@/lib/api/types";
+import type { AvailableVehicleGroup, AvailableVehiclesParams, Vehicle } from "@/lib/api/types";
 
 vi.mock("@/lib/api/vehicles", () => ({
   getAvailableVehicles: vi.fn(),
@@ -22,47 +22,50 @@ const wrapper = ({ children }: { children: ReactNode }) =>
   createElement(SWRConfig, { value: { provider: () => new Map() } }, children);
 
 const params: AvailableVehiclesParams = {
-  pickupOfficeId: "ala",
-  pickupDate: "2026-05-10",
-  pickupTime: "10:00",
-  returnOfficeId: "gzp",
-  returnDate: "2026-05-12",
-  returnTime: "09:00",
+  office_id: "ala",
+  pickup_datetime: "2026-05-10T10:00:00",
+  return_datetime: "2026-05-12T09:00:00",
 };
 
-const vehiclePage: PaginatedResponse<Vehicle> = {
-  items: [
-    {
-      id: "vehicle-1",
-      name: "Renault Clio",
-      description: "Economy hatchback",
-      imageUrl: "/images/clio.jpg",
-      images: [],
-      groupId: "group-1",
-      groupName: "Economy",
-      transmission: "AUTOMATIC" as Vehicle["transmission"],
-      fuelType: "PETROL" as Vehicle["fuelType"],
-      seatCount: 5,
-      luggageCapacity: 2,
-      hasAirConditioning: true,
-      minDriverAge: 21,
-      minLicenseYears: 2,
-      dailyPrice: 45,
-      weeklyPrice: 280,
-      monthlyPrice: 900,
-      features: [],
-      insuranceIncluded: true,
-      mileageLimit: null,
-      extraMileagePrice: null,
-      availableExtras: [],
-    },
-  ],
-  page: 1,
-  pageSize: 10,
-  totalCount: 1,
-  totalPages: 1,
-  hasNextPage: false,
-  hasPreviousPage: false,
+const availableGroups: AvailableVehicleGroup[] = [
+  {
+    groupId: "group-1",
+    groupName: "Economy",
+    groupNameEn: "Economy",
+    availableCount: 3,
+    dailyPrice: 45,
+    currency: "TRY",
+    depositAmount: 500,
+    minAge: 21,
+    minLicenseYears: 2,
+    features: ["A/C", "Bluetooth", "GPS"],
+    imageUrl: "/images/clio.jpg",
+  },
+];
+
+const sampleVehicle: Vehicle = {
+  id: "vehicle-1",
+  name: "Renault Clio",
+  description: "Economy hatchback",
+  imageUrl: "/images/clio.jpg",
+  images: [],
+  groupId: "group-1",
+  groupName: "Economy",
+  transmission: "AUTOMATIC" as Vehicle["transmission"],
+  fuelType: "PETROL" as Vehicle["fuelType"],
+  seatCount: 5,
+  luggageCapacity: 2,
+  hasAirConditioning: true,
+  minDriverAge: 21,
+  minLicenseYears: 2,
+  dailyPrice: 45,
+  weeklyPrice: 280,
+  monthlyPrice: 900,
+  features: [],
+  insuranceIncluded: true,
+  mileageLimit: null,
+  extraMileagePrice: null,
+  availableExtras: [],
 };
 
 describe("useVehicles", () => {
@@ -71,7 +74,7 @@ describe("useVehicles", () => {
   });
 
   it("fetches available vehicles and reuses cached data across rerenders", async () => {
-    mockedGetAvailableVehicles.mockResolvedValue(vehiclePage);
+    mockedGetAvailableVehicles.mockResolvedValue(availableGroups);
 
     const { result, rerender } = renderHook(({ currentParams }) => useAvailableVehicles(currentParams), {
       initialProps: { currentParams: params },
@@ -85,11 +88,11 @@ describe("useVehicles", () => {
     rerender({ currentParams: params });
 
     expect(mockedGetAvailableVehicles).toHaveBeenCalledTimes(1);
-    expect(result.current.pagination?.totalCount).toBe(1);
+    expect(result.current.vehicles[0].groupName).toBe("Economy");
   });
 
   it("returns vehicle details for an individual vehicle request", async () => {
-    mockedGetVehicleById.mockResolvedValue(vehiclePage.items[0]);
+    mockedGetVehicleById.mockResolvedValue(sampleVehicle);
 
     const { result } = renderHook(() => useVehicle("vehicle-1"), { wrapper });
 

@@ -21,18 +21,16 @@ describe("pricing API", () => {
 
   it("builds a price-breakdown query string from booking params", async () => {
     await getPriceBreakdown({
-      vehicleId: "vehicle-1",
-      pickupOfficeId: "ala",
-      pickupDate: "2026-05-10",
-      pickupTime: "10:00",
-      returnOfficeId: "gzp",
-      returnDate: "2026-05-12",
-      returnTime: "09:00",
-      campaignCode: "SUMMER15",
+      vehicle_group_id: "vehicle-1",
+      pickup_office_id: "ala",
+      pickup_datetime: "2026-05-10T10:00:00",
+      return_office_id: "gzp",
+      return_datetime: "2026-05-12T09:00:00",
+      campaign_code: "SUMMER15",
     });
 
     expect(mockedGet).toHaveBeenCalledWith(
-      "/pricing/breakdown?vehicleId=vehicle-1&pickupOfficeId=ala&pickupDate=2026-05-10&pickupTime=10%3A00&returnOfficeId=gzp&returnDate=2026-05-12&returnTime=09%3A00&campaignCode=SUMMER15"
+      "/pricing/breakdown?vehicle_group_id=vehicle-1&pickup_office_id=ala&return_office_id=gzp&pickup_datetime=2026-05-10T10%3A00%3A00&return_datetime=2026-05-12T09%3A00%3A00&campaign_code=SUMMER15"
     );
   });
 

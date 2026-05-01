@@ -30,24 +30,12 @@ describe("reservations API", () => {
 
   it("posts reservation creation payloads", async () => {
     const payload = {
-      vehicleId: "vehicle-1",
+      vehicleGroupId: "vehicle-1",
       pickupOfficeId: "ala",
-      pickupDate: "2026-05-10",
-      pickupTime: "10:00",
       returnOfficeId: "gzp",
-      returnDate: "2026-05-12",
-      returnTime: "09:00",
+      pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+      returnDateTimeUtc: "2026-05-12T09:00:00Z",
       customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.com", phone: "+905551234567" },
-      driver: {
-        firstName: "Jane",
-        lastName: "Doe",
-        dateOfBirth: "1990-05-10",
-        licenseNumber: "TR12345",
-        licenseCountry: "TR",
-        licenseIssueDate: "2015-05-10",
-        licenseExpiryDate: "2030-05-10",
-        isPrimaryDriver: true,
-      },
     };
 
     await createReservation(payload);
@@ -66,6 +54,6 @@ describe("reservations API", () => {
     await extendHold("reservation-1", { additionalMinutes: 15 });
 
     expect(mockedPost).toHaveBeenCalledWith("/reservations/reservation-1/hold", { durationMinutes: 30 });
-    expect(mockedPatch).toHaveBeenCalledWith("/reservations/reservation-1/extend-hold", { additionalMinutes: 15 });
+    expect(mockedPatch).toHaveBeenCalledWith("/reservations/reservation-1/hold/extend", { additionalMinutes: 15 });
   });
 });

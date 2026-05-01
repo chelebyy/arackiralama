@@ -277,7 +277,7 @@ export default function BookingStep3Page() {
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium text-slate-900">{option.name}</h3>
                       <span className="font-semibold text-sky-700">
-                        €{option.price}
+                        ₺{option.price}
                         <span className="text-xs text-slate-500 font-normal">/{option.priceType === "per_day" ? "day" : "rental"}</span>
                       </span>
                     </div>

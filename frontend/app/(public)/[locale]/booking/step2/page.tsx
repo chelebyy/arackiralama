@@ -17,6 +17,30 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
+import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
+import type { AvailableVehicleGroup } from "@/lib/api/types";
+
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipaşa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargıcak",
+  konakli: "konaklı",
+  avsallar: "avsallar",
+};
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
+  if (isGuid(slugOrGuid)) return slugOrGuid;
+  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+  if (!pattern) return slugOrGuid;
+  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+  return matched?.id ?? slugOrGuid;
+}
 
 interface VehicleGroup {
   id: string;
@@ -33,92 +57,22 @@ interface VehicleGroup {
   reviews: number;
 }
 
-const vehicleGroups: VehicleGroup[] = [
-  {
-    id: "economy",
-    name: "Fiat Egea or similar",
-    category: "Economy",
-    dailyRate: 45,
+function mapAvailableGroup(group: AvailableVehicleGroup): VehicleGroup {
+  return {
+    id: group.groupId,
+    name: group.groupName,
+    category: group.groupName,
+    dailyRate: group.dailyPrice,
     passengers: 5,
     luggage: 2,
     transmission: "Automatic",
     fuelType: "Gasoline",
-    features: ["A/C", "Bluetooth", "GPS"],
-    image: "/images/vehicles/economy.png",
-    rating: 4.6,
-    reviews: 234,
-  },
-  {
-    id: "compact",
-    name: "Renault Megane or similar",
-    category: "Compact",
-    dailyRate: 55,
-    passengers: 5,
-    luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    features: ["A/C", "Cruise Control", "Parking Sensors"],
-    image: "/images/vehicles/compact.png",
-    rating: 4.7,
-    reviews: 189,
-  },
-  {
-    id: "midsize",
-    name: "VW Passat or similar",
-    category: "Midsize",
-    dailyRate: 75,
-    passengers: 5,
-    luggage: 3,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    features: ["Leather Seats", "Sunroof", "Navigation"],
-    image: "/images/vehicles/midsize.png",
-    rating: 4.8,
-    reviews: 156,
-  },
-  {
-    id: "premium",
-    name: "BMW 3 Series or similar",
-    category: "Premium",
-    dailyRate: 95,
-    passengers: 5,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
-    features: ["Leather Seats", "Premium Sound", "Parking Assistant"],
-    image: "/images/vehicles/premium.png",
-    rating: 4.9,
-    reviews: 98,
-  },
-  {
-    id: "suv",
-    name: "Audi Q5 or similar",
-    category: "SUV",
-    dailyRate: 110,
-    passengers: 5,
-    luggage: 4,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    features: ["4WD", "Panoramic Roof", "Virtual Cockpit"],
-    image: "/images/vehicles/suv.png",
-    rating: 4.8,
-    reviews: 112,
-  },
-  {
-    id: "minivan",
-    name: "Mercedes Vito or similar",
-    category: "Minivan",
-    dailyRate: 120,
-    passengers: 9,
-    luggage: 5,
-    transmission: "Automatic",
-    fuelType: "Diesel",
-    features: ["Extra Space", "Dual A/C", "Rear Camera"],
-    image: "/images/vehicles/minivan.png",
-    rating: 4.7,
-    reviews: 76,
-  },
-];
+    features: group.features,
+    image: group.imageUrl ?? "",
+    rating: 4.5,
+    reviews: 0,
+  };
+}
 
 export default function BookingStep2Page() {
   const params = useParams();
@@ -130,9 +84,24 @@ export default function BookingStep2Page() {
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "";
-  const pickupTime = searchParams.get("pickupTime") || "";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "";
-  const returnTime = searchParams.get("returnTime") || "";
+  const returnTime = searchParams.get("returnTime") || "09:00";
+
+  const { offices } = useOffices();
+  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
+
+  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
+    pickupDate && returnDate && pickupOfficeGuid
+      ? {
+          office_id: pickupOfficeGuid,
+          pickup_datetime: `${pickupDate}T${pickupTime}`,
+          return_datetime: `${returnDate}T${returnTime}`,
+        }
+      : null
+  );
+
+  const vehicleGroups = availableGroups.map(mapAvailableGroup);
 
   const handleContinue = () => {
     if (!selectedVehicle) return;
@@ -159,6 +128,20 @@ export default function BookingStep2Page() {
         </h1>
         <p className="text-slate-600">Choose the vehicle group that best fits your needs.</p>
       </div>
+
+      {isLoading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
+          <p className="mt-4 text-slate-600">Loading available vehicles...</p>
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center py-12">
+          <Info className="h-12 w-12 text-red-400 mx-auto" />
+          <p className="mt-4 text-slate-600">Failed to load vehicles. Please try again.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {vehicleGroups.map((vehicle) => (
@@ -204,7 +187,7 @@ export default function BookingStep2Page() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-sky-700">€{vehicle.dailyRate}</p>
+                      <p className="text-2xl font-bold text-sky-700">₺{vehicle.dailyRate}</p>
                       <p className="text-sm text-slate-500">per day</p>
                     </div>
                   </div>
@@ -239,7 +222,7 @@ export default function BookingStep2Page() {
                     <p className="text-sm text-slate-600">
                       Total for {days} days:{" "}
                       <span className="font-semibold text-slate-900">
-                        €{vehicle.dailyRate * days}
+                        ₺{vehicle.dailyRate * days}
                       </span>
                     </p>
                   </div>

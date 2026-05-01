@@ -20,6 +20,24 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
+import type { AvailableVehicleGroup } from "@/lib/api/types";
+
+function mapAvailableToVehicle(group: AvailableVehicleGroup): Vehicle {
+  return {
+    id: group.groupId,
+    name: group.groupNameEn || group.groupName,
+    group: group.groupNameEn?.toLowerCase() || group.groupName.toLowerCase(),
+    image: group.imageUrl || "",
+    passengers: 5,
+    luggage: 2,
+    transmission: "automatic",
+    fuelType: "gasoline",
+    dailyRate: group.dailyPrice,
+    features: group.features,
+    available: group.availableCount > 0,
+  };
+}
 
 interface Vehicle {
   id: string;
@@ -35,98 +53,29 @@ interface Vehicle {
   available: boolean;
 }
 
-const mockVehicles: Vehicle[] = [
-  {
-    id: "1",
-    name: "Fiat Egea",
-    group: "economy",
-    image: "/images/vehicles/fiat-egea.png",
-    passengers: 5,
-    luggage: 2,
-    transmission: "automatic",
-    fuelType: "gasoline",
-    dailyRate: 45,
-    features: ["A/C", "Bluetooth", "GPS"],
-    available: true,
-  },
-  {
-    id: "2",
-    name: "Renault Megane",
-    group: "compact",
-    image: "/images/vehicles/renault-megane.png",
-    passengers: 5,
-    luggage: 3,
-    transmission: "automatic",
-    fuelType: "diesel",
-    dailyRate: 55,
-    features: ["A/C", "Cruise Control", "Parking Sensors"],
-    available: true,
-  },
-  {
-    id: "3",
-    name: "VW Passat",
-    group: "midsize",
-    image: "/images/vehicles/vw-passat.png",
-    passengers: 5,
-    luggage: 3,
-    transmission: "automatic",
-    fuelType: "diesel",
-    dailyRate: 75,
-    features: ["Leather Seats", "Sunroof", "Navigation"],
-    available: true,
-  },
-  {
-    id: "4",
-    name: "BMW 3 Series",
-    group: "luxury",
-    image: "/images/vehicles/bmw-3.png",
-    passengers: 5,
-    luggage: 2,
-    transmission: "automatic",
-    fuelType: "gasoline",
-    dailyRate: 95,
-    features: ["Leather Seats", "Premium Sound", "Parking Assistant"],
-    available: true,
-  },
-  {
-    id: "5",
-    name: "Mercedes Vito",
-    group: "minivan",
-    image: "/images/vehicles/mercedes-vito.png",
-    passengers: 9,
-    luggage: 5,
-    transmission: "automatic",
-    fuelType: "diesel",
-    dailyRate: 120,
-    features: ["Extra Space", "Dual A/C", "Rear Camera"],
-    available: true,
-  },
-  {
-    id: "6",
-    name: "Audi Q5",
-    group: "suv",
-    image: "/images/vehicles/audi-q5.png",
-    passengers: 5,
-    luggage: 4,
-    transmission: "automatic",
-    fuelType: "diesel",
-    dailyRate: 110,
-    features: ["4WD", "Panoramic Roof", "Virtual Cockpit"],
-    available: true,
-  },
-];
-
 const vehicleGroups = ["all", "economy", "compact", "suv", "luxury", "minivan"];
 
-const offices = [
-  { id: "ala", name: "Alanya Şehir Merkezi" },
-  { id: "gzp", name: "Gazipaşa Havalimanı" },
-  { id: "ayt", name: "Antalya Havalimanı" },
-  { id: "mahmutlar", name: "Mahmutlar" },
-  { id: "kargicak", name: "Kargıcak" },
-  { id: "konakli", name: "Konaklı" },
-  { id: "avsallar", name: "Avsallar" },
-];
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipaşa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargıcak",
+  konakli: "konaklı",
+  avsallar: "avsallar",
+};
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
+  if (isGuid(slugOrGuid)) return slugOrGuid;
+  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+  if (!pattern) return slugOrGuid;
+  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+  return matched?.id ?? slugOrGuid;
+}
 
 export default function VehiclesPage() {
   const searchParams = useSearchParams();
@@ -141,24 +90,30 @@ export default function VehiclesPage() {
 
   const pickupOffice = searchParams.get("pickup") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
+  const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const pickupOfficeObj = offices.find((o) => o.id === pickupOffice);
-  const locationKeyMap: Record<string, string> = {
-    ala: "cityCenter",
-    gzp: "airport",
-    ayt: "airportAntalya",
-    mahmutlar: "mahmutlar",
-    kargicak: "kargicak",
-    konakli: "konakli",
-    avsallar: "avsallar",
-  };
-  const locationKey = locationKeyMap[pickupOfficeObj?.id ?? ""] ?? "airport";
+  const { offices, isLoading: officesLoading } = useOffices();
+  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
+  const pickupOfficeObj = offices.find((o) => o.id === pickupOfficeGuid);
+
+  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
+    pickupDate && pickupTime && returnDate && returnTime && pickupOfficeGuid
+      ? {
+          office_id: pickupOfficeGuid,
+          pickup_datetime: `${pickupDate}T${pickupTime}`,
+          return_datetime: `${returnDate}T${returnTime}`,
+        }
+      : null
+  );
+
+  const vehicles = availableGroups.map(mapAvailableToVehicle);
 
   const filteredVehicles =
     selectedGroup === "all"
-      ? mockVehicles
-      : mockVehicles.filter((v) => v.group === selectedGroup);
+      ? vehicles
+      : vehicles.filter((v) => v.group === selectedGroup);
 
   const totalPages = Math.ceil(filteredVehicles.length / 6);
 
@@ -171,7 +126,7 @@ export default function VehiclesPage() {
               <div className="flex items-center gap-2 whitespace-nowrap">
                 <MapPin className="h-4 w-4 text-[#0369A1]" />
                 <span className="text-sm text-slate-700">
-                  {tSearch(`locationOptions.${locationKey}` as any)}
+                  {pickupOfficeObj?.name ?? pickupOffice}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
@@ -281,15 +236,31 @@ export default function VehiclesPage() {
               </div>
             </div>
 
-            <div
-              className={cn(
-                "grid gap-[var(--space-fluid-lg)]",
-                viewMode === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-                  : "grid-cols-1"
-              )}
-            >
-              {filteredVehicles.map((vehicle) => (
+            {isLoading && (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0369A1] mx-auto" />
+                <p className="mt-4 text-slate-600">Loading available vehicles...</p>
+              </div>
+            )}
+
+            {isError && (
+              <div className="text-center py-12">
+                <Car className="h-12 w-12 text-red-400 mx-auto" />
+                <p className="mt-4 text-slate-600">Failed to load vehicles. Please try again.</p>
+              </div>
+            )}
+
+            {!isLoading && !isError && (
+              <>
+              <div
+                className={cn(
+                  "grid gap-[var(--space-fluid-lg)]",
+                  viewMode === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                    : "grid-cols-1"
+                )}
+              >
+                {filteredVehicles.map((vehicle) => (
                 <div
                   key={vehicle.id}
                   className={cn(
@@ -438,6 +409,8 @@ export default function VehiclesPage() {
                 </button>
               </div>
             )}
+          </>
+          )}
           </div>
         </div>
       </main>

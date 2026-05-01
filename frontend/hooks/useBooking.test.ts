@@ -108,7 +108,7 @@ describe("useBooking", () => {
 
     expect(state.current.dates?.pickupOfficeId).toBe("ala");
     expect(state.current.vehicle).toMatchObject({
-      vehicleId: "vehicle-1",
+      vehicleGroupId: "vehicle-1",
       vehicleName: "Renault Clio",
       dailyPrice: 45,
       groupName: "Economy",

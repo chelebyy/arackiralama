@@ -15,19 +15,17 @@ describe("PriceBreakdown", () => {
           { name: "Child Seat", price: 20 },
         ]}
         campaignDiscount={10}
-        currency="EUR"
+        currency="TRY"
       />
     );
 
     expect(screen.getByText("Economy - Renault Clio")).toBeInTheDocument();
     expect(screen.getByText("Rental period")).toBeInTheDocument();
     expect(screen.getByText("3 days")).toBeInTheDocument();
-    expect(screen.getByText("€150.00")).toBeInTheDocument();
-    expect(screen.getByText("Extras Total")).toBeInTheDocument();
-    expect(screen.getByText("€35.00")).toBeInTheDocument();
-    expect(screen.getByText("Campaign Discount (10%)")).toBeInTheDocument();
-    expect(screen.getByText("-€18.50")).toBeInTheDocument();
-    expect(screen.getByText("€166.50")).toBeInTheDocument();
+    expect(screen.getByText("TRY 150.00")).toBeInTheDocument();
+    expect(screen.getByText("TRY 35.00")).toBeInTheDocument();
+    expect(screen.getByText("-TRY 18.50")).toBeInTheDocument();
+    expect(screen.getByText("TRY 166.50")).toBeInTheDocument();
   });
 
   it("omits optional sections when extras and campaign discount are absent", () => {

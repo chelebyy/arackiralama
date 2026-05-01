@@ -10,7 +10,7 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10.0 Wave 1 Critical Fixes Tamamlandı, Wave 2 Assessment Tamamlandı, Wave 3-5 Bekleniyor)
+**Durum:** 🟨 In Progress (Faz 10.0 Wave 1 & Wave 2 Critical Fixes Tamamlandı, Wave 3-5 Bekleniyor)
 
 ---
 
@@ -27,7 +27,7 @@
 | Devam Eden Görev | 15+ |
 | Genel İlerleme | 85% |
 
-Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Assessment tamamlandı: Pricing + Fleet + Offices + Public Inventory modüllerinde 20 yeni issue tespit edildi (8 CRITICAL, 8 HIGH, 3 MEDIUM, 1 LOW). En büyük pattern: Frontend hardcoded data kullanımı ve currency mismatch (backend TRY, frontend EUR).**
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Critical Fixes tamamlandı (8/8 fix uygulandı): W2-P004, W2-P005, W2-P006, W2-F004, W2-F005, W2-I001, W2-I002, W2-I004. Tüm testler geçti (backend 501/501 + frontend 62/62). Build ve type-check temiz. Frontend public sayfalar artık hardcoded veri kullanmıyor. API contract'lar frontend-backend arasında uyumlu. En büyük pattern çözüldü: currency mismatch ve hardcoded data.**
 
 ### Durum Sözlüğü
 
@@ -1785,6 +1785,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
 
+| 01.05.2026 | Delivery | Faz 10.0 Wave 2 Critical Fixes tamamlandı: 8/8 CRITICAL fix uygulandı ve verify edildi (W2-P004 campaign cap, W2-P005/W2-I001/W2-I002 currency EUR→TRY, W2-P006 hardcoded rates removed, W2-F004 mockVehicles→API, W2-F005 API contract alignment, W2-I004 step4 hardcoded data removed). Yeni backend endpoint'ler: `GET /api/v1/offices`, `GET /api/v1/vehicles/{id}`, `POST /api/v1/pricing/campaigns/validate`. | 10.0.7 (Wave 2 Completion) | Wave 3: Notifications + Worker + admin operation screens | `dotnet build` 0 error; `dotnet test` 501/501 pass; `corepack pnpm -C frontend test` 62/62 pass; `tsc --noEmit` 0 error. Session handoff dokümanı oluşturuldu (`docs/handoffs/2026-05-01-204038-phase10-wave2-critical-fixes.md`). | AI |
 | 01.05.2026 | Delivery | Faz 10.0 Wave 1 Critical Fixes tamamlandı: 8/8 fix uygulandı ve verify edildi (R002-R008, R018). Wave 2 Assessment tamamlandı: Pricing + Fleet + Offices + Public Inventory modüllerinde 20 yeni issue tespit edildi (8 CRITICAL, 8 HIGH, 3 MEDIUM, 1 LOW). EF migration `AddRefundIdempotencyKey` oluşturuldu. | 10.0.4 (Refactor Registry), 10.0.5 (Wave 1 Completion), 10.0.6 (Wave 2 Assessment) | Wave 2 CRITICAL fix'leri (currency mismatch, hardcoded data, API alignment) | `dotnet build` 0 error; `dotnet test` 501/501 pass (472 unit + 29 integration); `tsc --noEmit` 0 error; Docker compose stack (API + web + postgres + redis + worker) çalışır durumda. Session handoff dokümanı oluşturuldu. | AI |
 | 30.04.2026 | Delivery | Faz 10.1 Wave 3 backend test coverage expansion tamamlandı: `WorkerTests.cs` (10 test), `AdminPaymentsControllerTests.cs` (14), `AdminReservationsControllerTests.cs` (15), `AdminBackgroundJobsControllerTests.cs` (7), `AdminAuditLogsControllerTests.cs` (4), `AdminFeatureFlagsControllerTests.cs` (4), `AdminSecurityControllerTests.cs` (2). `INotificationBackgroundJobProcessor` interface extraction + DI wiring. Tüm build hataları ve test failure'ları çözüldü. | 10.1.1 (Wave 3) | Faz 10.1 Wave 4 (Frontend coverage) veya Faz 10.2 (Integration Tests) | `dotnet build` 0 warning/error; `dotnet test` 451/451 pass; Coverlet + ReportGenerator coverage report üretildi. PR #175 merge conflict çözüldü ve `refactore` branch'e push edildi. | AI |
 | 24.04.2026 | Delivery | Faz 8 admin panel tamamlandı: Vehicle/Campaign/PricingRule/Office/AdminUser CRUD dialogları oluşturuldu ve backend API'ye bağlandı, Sistem Ayarları sayfası eklendi (`/dashboard/settings/system`), tüm admin API modülleri mock'tan gerçek backend'e geçirildi (`USE_MOCK = false`) | Faz 8.12.2, 8.14.3, 8.16.3 | Faz 9 Infrastructure + Faz 10 Testing & Launch | 3D Secure ödeme akışı ödeme sağlayıcısı seçimi sonrasına ertelendi; Build: 103 sayfa, 0 TypeScript error | AI |
