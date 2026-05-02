@@ -12,8 +12,8 @@ using RentACar.Infrastructure.Data;
 namespace RentACar.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(RentACarDbContext))]
-    [Migration("20260501195452_AddOfficeCode")]
-    partial class AddOfficeCode
+    [Migration("20260502164644_20260502000000_SyncPendingChanges")]
+    partial class _20260502000000_SyncPendingChanges
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -295,6 +295,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Type", "Payload")
+                        .IsUnique()
+                        .HasFilter("\"status\" IN ('Pending', 'Processing')");
 
                     b.ToTable("background_jobs", (string)null);
                 });
