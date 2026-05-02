@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace RentACar.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
@@ -13,17 +11,9 @@ namespace RentACar.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<DateTime>(
-                name: "failed_at",
-                table: "background_jobs",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "last_error",
-                table: "background_jobs",
-                type: "text",
-                nullable: true);
+            // Note: failed_at and last_error columns are already added by Phase7 migration.
+            // Adding them here would cause duplicate column errors if Phase7 was already applied.
+            // Only add audit-specific columns.
 
             migrationBuilder.AddColumn<string>(
                 name: "ip_address",
@@ -44,13 +34,13 @@ namespace RentACar.Infrastructure.Data.Migrations
                 type: "jsonb",
                 nullable: true);
 
+            // Note: EnableSmsNotifications and EnableArabicLanguage already seeded by Phase7.
+            // Only insert MaintenanceMode here (not in Phase7).
             migrationBuilder.InsertData(
                 table: "feature_flags",
                 columns: new[] { "id", "created_at", "description", "enabled", "name", "updated_at" },
                 values: new object[,]
                 {
-                    { new Guid("33333333-3333-3333-3333-333333333333"), new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc), "SMS bildirimlerinin gönderimini etkinleştirir", true, "EnableSmsNotifications", new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { new Guid("33333333-3333-3333-3333-333333333334"), new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc), "Arabic (RTL) dil desteğini etkinleştirir", true, "EnableArabicLanguage", new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc) },
                     { new Guid("33333333-3333-3333-3333-333333333335"), new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc), "Sistemi bakım moduna alır", false, "MaintenanceMode", new DateTime(2026, 3, 2, 0, 0, 0, 0, DateTimeKind.Utc) }
                 });
         }
@@ -58,28 +48,14 @@ namespace RentACar.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DeleteData(
-                table: "feature_flags",
-                keyColumn: "id",
-                keyValue: new Guid("33333333-3333-3333-3333-333333333333"));
-
-            migrationBuilder.DeleteData(
-                table: "feature_flags",
-                keyColumn: "id",
-                keyValue: new Guid("33333333-3333-3333-3333-333333333334"));
-
+            // Only delete MaintenanceMode (added in Up above — Phase7 owns EnableSmsNotifications/EnableArabicLanguage).
             migrationBuilder.DeleteData(
                 table: "feature_flags",
                 keyColumn: "id",
                 keyValue: new Guid("33333333-3333-3333-3333-333333333335"));
 
-            migrationBuilder.DropColumn(
-                name: "failed_at",
-                table: "background_jobs");
-
-            migrationBuilder.DropColumn(
-                name: "last_error",
-                table: "background_jobs");
+            // Note: failed_at and last_error columns are NOT dropped here — Phase7 owns them.
+            // Only drop audit-specific columns added in Up above.
 
             migrationBuilder.DropColumn(
                 name: "ip_address",
