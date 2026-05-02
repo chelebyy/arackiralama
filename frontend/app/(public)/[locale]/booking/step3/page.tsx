@@ -238,6 +238,25 @@ export default function BookingStep3Page() {
                 <p className="mt-1 text-sm text-red-600">{errors.driverLicense.message}</p>
               )}
             </div>
+
+            <div>
+              <label htmlFor="driverLicenseCountry" className="block text-sm font-medium text-slate-700 mb-2">
+                License Issuing Country
+              </label>
+              <div className="relative">
+                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  id="driverLicenseCountry"
+                  {...register("driverLicenseCountry")}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  placeholder="e.g. Turkey, Germany, United Kingdom"
+                />
+              </div>
+              {errors.driverLicenseCountry && (
+                <p className="mt-1 text-sm text-red-600">{errors.driverLicenseCountry.message}</p>
+              )}
+            </div>
           </div>
         </div>
 

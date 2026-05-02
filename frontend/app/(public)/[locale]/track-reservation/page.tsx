@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReservationTimeline from "@/components/public/ReservationTimeline";
+import { getReservationByPublicCode } from "@/lib/api/reservations";
 
 interface ReservationDetails {
   id: string;
@@ -79,18 +80,66 @@ export default function TrackReservationPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setReservation(null);
     setIsSearching(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await getReservationByPublicCode(reservationCode.trim());
 
-    if (reservationCode.toUpperCase() === "ALN-2025-8842" || reservationCode.toUpperCase() === "DEMO") {
-      setReservation(mockReservation);
-    } else {
+      const statusMap: Record<string, ReservationDetails["status"]> = {
+        PENDING: "pending",
+        PENDINGPAYMENT: "pending",
+        PAID: "pending",
+        DRAFT: "pending",
+        HOLD: "confirmed",
+        CONFIRMED: "confirmed",
+        ACTIVE: "active",
+        COMPLETED: "completed",
+        CANCELLED: "cancelled",
+        EXPIRED: "cancelled",
+      };
+
+      const paymentStatusMap: Record<string, ReservationDetails["paymentStatus"]> = {
+        PENDING: "pending",
+        AUTHORIZED: "paid",
+        CAPTURED: "paid",
+        SUCCEEDED: "paid",
+        REFUNDED: "refunded",
+        PARTIALLY_REFUNDED: "refunded",
+        FAILED: "pending",
+        CANCELLED: "pending",
+      };
+
+      const mapped: ReservationDetails = {
+        id: result.id,
+        code: result.publicCode,
+        status: statusMap[result.status] ?? "pending",
+        vehicleName: result.vehicleName,
+        vehicleCategory: "",
+        customerName: `${result.customer.firstName} ${result.customer.lastName}`,
+        customerEmail: result.customer.email,
+        customerPhone: result.customer.phone,
+        pickupLocation: result.pickupOfficeName,
+        dropoffLocation: result.returnOfficeName,
+        pickupDate: result.pickupDate,
+        dropoffDate: result.returnDate,
+        pickupTime: result.pickupTime,
+        dropoffTime: result.returnTime,
+        totalAmount: (result as any).priceBreakdown?.totalAmount ?? (result as any).totalAmount ?? 0,
+        depositAmount: (result as any).priceBreakdown?.depositAmount ?? (result as any).depositAmount ?? 0,
+        paymentStatus: paymentStatusMap[(result as any).paymentStatus] ?? "pending",
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        confirmedAt: result.status === "CONFIRMED" || result.status === "ACTIVE" ? result.updatedAt : undefined,
+      };
+
+      setReservation(mapped);
+    } catch (err) {
       setError("No reservation found with this code. Please check and try again.");
       setReservation(null);
+    } finally {
+      setIsSearching(false);
     }
-
-    setIsSearching(false);
   };
 
   const handleCopyCode = () => {
