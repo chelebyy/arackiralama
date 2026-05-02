@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReservationTimeline from "@/components/public/ReservationTimeline";
+import { getReservationByPublicCode } from "@/lib/api/reservations";
 
 interface ReservationDetails {
   id: string;
@@ -79,18 +80,42 @@ export default function TrackReservationPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setReservation(null);
     setIsSearching(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await getReservationByPublicCode(reservationCode.trim());
 
-    if (reservationCode.toUpperCase() === "ALN-2025-8842" || reservationCode.toUpperCase() === "DEMO") {
-      setReservation(mockReservation);
-    } else {
+      const mapped: ReservationDetails = {
+        id: result.id,
+        code: result.publicCode,
+        status: result.status.toLowerCase() as ReservationDetails["status"],
+        vehicleName: result.vehicleName,
+        vehicleCategory: "",
+        customerName: `${result.customer.firstName} ${result.customer.lastName}`,
+        customerEmail: result.customer.email,
+        customerPhone: result.customer.phone,
+        pickupLocation: result.pickupOfficeName,
+        dropoffLocation: result.returnOfficeName,
+        pickupDate: result.pickupDate,
+        dropoffDate: result.returnDate,
+        pickupTime: result.pickupTime,
+        dropoffTime: result.returnTime,
+        totalAmount: result.priceBreakdown.totalAmount,
+        depositAmount: result.priceBreakdown.depositAmount,
+        paymentStatus: result.paymentStatus.toLowerCase() as ReservationDetails["paymentStatus"],
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        confirmedAt: result.status === "CONFIRMED" || result.status === "ACTIVE" ? result.updatedAt : undefined,
+      };
+
+      setReservation(mapped);
+    } catch (err) {
       setError("No reservation found with this code. Please check and try again.");
       setReservation(null);
+    } finally {
+      setIsSearching(false);
     }
-
-    setIsSearching(false);
   };
 
   const handleCopyCode = () => {
