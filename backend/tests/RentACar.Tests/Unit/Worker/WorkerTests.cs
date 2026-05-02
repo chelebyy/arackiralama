@@ -11,7 +11,7 @@ using RentACar.Core.Constants;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Core.Interfaces.Notifications;
-using RentACar.Infrastructure.Data;
+using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Tests.TestFixtures;
 using RentACar.Worker;
 using Xunit;
@@ -145,6 +145,8 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var reservationRepoMock = new Mock<IReservationRepository>();
         reservationRepoMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
@@ -183,6 +185,8 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var reservationRepoMock = new Mock<IReservationRepository>();
         reservationRepoMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
@@ -239,6 +243,66 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         job.Status.Should().Be(BackgroundJobStatus.Failed);
         job.RetryCount.Should().Be(3);
         job.LastError.Should().Contain("Redis error");
+        holdServiceMock.Verify(h => h.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Exactly(4));
+    }
+
+    [Fact]
+    public async Task ProcessExpiredHoldJobsAsync_WhenReleaseReturnsFalse_DoesNotExpireReservation()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var reservation = new Reservation
+        {
+            Status = ReservationStatus.Hold,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            TotalAmount = 1000m
+        };
+        dbContext.Reservations.Add(reservation);
+        var job = new BackgroundJob
+        {
+            Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
+            Status = BackgroundJobStatus.Pending,
+            Payload = JsonSerializer.Serialize(new { ReservationId = reservation.Id }),
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+        dbContext.BackgroundJobs.Add(job);
+        await dbContext.SaveChangesAsync();
+
+        var holdServiceMock = new Mock<IReservationHoldService>();
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var reservationRepoMock = new Mock<IReservationRepository>();
+        reservationRepoMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+
+        var loggerMock = new Mock<ILogger<RentACar.Worker.Worker>>();
+        var serviceProvider = CreateServiceProvider(dbContext, holdServiceMock: holdServiceMock.Object, reservationRepoMock: reservationRepoMock.Object, logger: loggerMock.Object);
+
+        var worker = new RentACar.Worker.Worker(serviceProvider, Options.Create(new DailyBackupOptions { Enabled = false }), loggerMock.Object);
+
+        await InvokePrivateAsync(worker, "ProcessExpiredHoldJobsAsync", CancellationToken.None);
+
+        reservation.Status.Should().Be(ReservationStatus.Hold);
+        job.Status.Should().Be(BackgroundJobStatus.Pending);
+        job.RetryCount.Should().Be(1);
+        job.LastError.Should().Contain($"Failed to release hold for reservation {reservation.Id}");
+    }
+
+    [Fact]
+    public void BackgroundJobConfiguration_ConfiguresUniqueFilteredIndexForRunnableDuplicatePayloads()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+
+        var entityType = dbContext.Model.FindEntityType(typeof(BackgroundJob));
+
+        entityType.Should().NotBeNull();
+        var duplicateGuardIndex = entityType!.GetIndexes().SingleOrDefault(index =>
+            index.IsUnique
+            && index.Properties.Select(property => property.Name)
+                .SequenceEqual([nameof(BackgroundJob.Type), nameof(BackgroundJob.Payload)]));
+
+        duplicateGuardIndex.Should().NotBeNull();
+        duplicateGuardIndex!.GetFilter().Should().Be("\"status\" IN ('Pending', 'Processing')");
     }
 
     [Fact]
@@ -293,6 +357,98 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await InvokePrivateAsync(worker, "EnsureDailyBackupJobScheduledAsync", CancellationToken.None);
 
         dbContext.BackgroundJobs.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ProcessExpiredHoldJobsAsync_WhenCancellationRequested_StopsGracefullyBeforeProcessingNextJob()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var firstReservationId = Guid.NewGuid();
+        var secondReservationId = Guid.NewGuid();
+
+        dbContext.BackgroundJobs.AddRange(
+            new BackgroundJob
+            {
+                Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
+                Status = BackgroundJobStatus.Pending,
+                Payload = JsonSerializer.Serialize(new { ReservationId = firstReservationId }),
+                ScheduledAt = DateTime.UtcNow.AddMinutes(-2)
+            },
+            new BackgroundJob
+            {
+                Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
+                Status = BackgroundJobStatus.Pending,
+                Payload = JsonSerializer.Serialize(new { ReservationId = secondReservationId }),
+                ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+            });
+        await dbContext.SaveChangesAsync();
+
+        using var cts = new CancellationTokenSource();
+        var holdServiceMock = new Mock<IReservationHoldService>();
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true)
+            .Callback(cts.Cancel);
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var reservationRepoMock = new Mock<IReservationRepository>();
+        reservationRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Reservation?)null);
+
+        var loggerMock = new Mock<ILogger<RentACar.Worker.Worker>>();
+        var serviceProvider = CreateServiceProvider(dbContext, holdServiceMock: holdServiceMock.Object, reservationRepoMock: reservationRepoMock.Object, logger: loggerMock.Object);
+        var worker = new RentACar.Worker.Worker(
+            serviceProvider,
+            Options.Create(new DailyBackupOptions { Enabled = false }),
+            loggerMock.Object,
+            Options.Create(new BackgroundJobProcessorOptions { BatchSize = 10 }));
+
+        await InvokePrivateAsync(worker, "ProcessExpiredHoldJobsAsync", cts.Token);
+
+        holdServiceMock.Verify(h => h.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
+        holdServiceMock.Verify(h => h.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Never);
+        dbContext.BackgroundJobs.OrderBy(x => x.ScheduledAt).First().Status.Should().Be(BackgroundJobStatus.Completed);
+        dbContext.BackgroundJobs.OrderBy(x => x.ScheduledAt).Last().Status.Should().Be(BackgroundJobStatus.Pending);
+    }
+
+    [Fact]
+    public async Task ProcessExpiredHoldJobsAsync_WhenBatchSizeConfigured_ProcessesUpToConfiguredCount()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var reservationIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+        var scheduledAt = DateTime.UtcNow.AddMinutes(-1);
+
+        foreach (var reservationId in reservationIds)
+        {
+            dbContext.BackgroundJobs.Add(new BackgroundJob
+            {
+                Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
+                Status = BackgroundJobStatus.Pending,
+                Payload = JsonSerializer.Serialize(new { ReservationId = reservationId }),
+                ScheduledAt = scheduledAt
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var holdServiceMock = new Mock<IReservationHoldService>();
+        holdServiceMock.Setup(h => h.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var reservationRepoMock = new Mock<IReservationRepository>();
+        reservationRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Reservation?)null);
+
+        var loggerMock = new Mock<ILogger<RentACar.Worker.Worker>>();
+        var serviceProvider = CreateServiceProvider(dbContext, holdServiceMock: holdServiceMock.Object, reservationRepoMock: reservationRepoMock.Object, logger: loggerMock.Object);
+        var worker = new RentACar.Worker.Worker(
+            serviceProvider,
+            Options.Create(new DailyBackupOptions { Enabled = false }),
+            loggerMock.Object,
+            Options.Create(new BackgroundJobProcessorOptions { BatchSize = 2 }));
+
+        await InvokePrivateAsync(worker, "ProcessExpiredHoldJobsAsync", CancellationToken.None);
+
+        dbContext.BackgroundJobs.Count(x => x.Status == BackgroundJobStatus.Completed).Should().Be(2);
+        dbContext.BackgroundJobs.Count(x => x.Status == BackgroundJobStatus.Pending).Should().Be(1);
     }
 
     private static IServiceProvider CreateServiceProvider(

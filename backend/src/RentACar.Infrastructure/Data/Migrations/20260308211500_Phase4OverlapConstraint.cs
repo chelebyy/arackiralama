@@ -33,6 +33,8 @@ namespace RentACar.Infrastructure.Data.Migrations
                 ALTER TABLE reservations
                 DROP CONSTRAINT IF EXISTS reservations_no_overlap;
                 """);
+
+            migrationBuilder.Sql("DROP EXTENSION IF EXISTS btree_gist;");
         }
     }
 }

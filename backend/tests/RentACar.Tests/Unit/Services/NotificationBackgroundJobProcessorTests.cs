@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces.Notifications;
@@ -92,8 +93,57 @@ public sealed class NotificationBackgroundJobProcessorTests : IDisposable
         var job = _dbContext.BackgroundJobs.Single();
         job.Status.Should().Be(BackgroundJobStatus.Pending);
         job.RetryCount.Should().Be(1);
+        job.LastError.Should().Be("SMS failed");
         smsProvider.LastRequest.Should().NotBeNull();
         smsProvider.LastRequest!.Body.Should().Contain("RSV-001");
+    }
+
+    [Fact]
+    public async Task ProcessPendingAsync_WhenBatchSizeConfigured_ProcessesOnlyConfiguredCount()
+    {
+        _dbContext.BackgroundJobs.AddRange(
+            new BackgroundJob
+            {
+                Type = NotificationQueueService.SendEmailJobType,
+                Payload = System.Text.Json.JsonSerializer.Serialize(new QueuedEmailNotificationRequest
+                {
+                    ToEmail = "first@example.com",
+                    TemplateKey = NotificationTemplateKeys.PaymentReceived,
+                    Locale = "tr-TR",
+                    Variables = new Dictionary<string, string> { ["PublicCode"] = "RSV-001" }
+                }),
+                Status = BackgroundJobStatus.Pending,
+                ScheduledAt = DateTime.UtcNow.AddMinutes(-2)
+            },
+            new BackgroundJob
+            {
+                Type = NotificationQueueService.SendEmailJobType,
+                Payload = System.Text.Json.JsonSerializer.Serialize(new QueuedEmailNotificationRequest
+                {
+                    ToEmail = "second@example.com",
+                    TemplateKey = NotificationTemplateKeys.PaymentReceived,
+                    Locale = "tr-TR",
+                    Variables = new Dictionary<string, string> { ["PublicCode"] = "RSV-002" }
+                }),
+                Status = BackgroundJobStatus.Pending,
+                ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+            });
+        await _dbContext.SaveChangesAsync();
+
+        var emailProvider = new FakeEmailProvider(success: true);
+        var sut = new NotificationBackgroundJobProcessor(
+            _dbContext,
+            new NotificationTemplateService(),
+            emailProvider,
+            new FakeSmsProvider(success: true),
+            NullLogger<NotificationBackgroundJobProcessor>.Instance,
+            Options.Create(new BackgroundJobProcessorOptions { BatchSize = 1 }));
+
+        var processedCount = await sut.ProcessPendingAsync();
+
+        processedCount.Should().Be(1);
+        _dbContext.BackgroundJobs.Count(x => x.Status == BackgroundJobStatus.Completed).Should().Be(1);
+        _dbContext.BackgroundJobs.Count(x => x.Status == BackgroundJobStatus.Pending).Should().Be(1);
     }
 
     public void Dispose()

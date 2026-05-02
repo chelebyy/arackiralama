@@ -1,24 +1,30 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using RentACar.Core.Constants;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces.Notifications;
-using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
+using RentACar.Infrastructure.Services.Notifications;
 
 namespace RentACar.Worker;
 
+/// <summary>
+/// Background worker that processes expired reservation holds and dispatches notifications.
+/// Runs as a <see cref="BackgroundService"/> hosted by the .NET generic host.
+/// </summary>
 public sealed class Worker(
     IServiceProvider serviceProvider,
     IOptions<DailyBackupOptions> dailyBackupOptions,
-    ILogger<Worker> logger) : BackgroundService
+    ILogger<Worker> logger,
+    IOptions<BackgroundJobProcessorOptions>? backgroundJobProcessorOptions = null) : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
     private const int HoldReleaseRetryLimit = 3;
+    private readonly BackgroundJobProcessorOptions _backgroundJobProcessorOptions = backgroundJobProcessorOptions?.Value ?? new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -69,37 +75,50 @@ public sealed class Worker(
 
         var enqueuedCount = 0;
         var now = DateTime.UtcNow;
-        var runnablePayloads = await dbContext.BackgroundJobs
-            .AsNoTracking()
-            .Where(x =>
-                x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
-                && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing))
-            .Select(x => x.Payload)
-            .ToListAsync(cancellationToken);
 
         foreach (var reservationId in expiredReservationIds)
         {
-            var hasRunnableJob = runnablePayloads.Any(payload =>
-                WorkerPayloadMatcher.HasReservationId(payload, reservationId));
+            var payload = JsonSerializer.Serialize(new ReleaseExpiredHoldPayload(reservationId));
+            var hasRunnableJob = await dbContext.BackgroundJobs
+                .AsNoTracking()
+                .AnyAsync(
+                    x => x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
+                        && x.Payload == payload
+                        && (x.Status == BackgroundJobStatus.Pending || x.Status == BackgroundJobStatus.Processing),
+                    cancellationToken);
 
             if (hasRunnableJob)
             {
                 continue;
             }
 
-            dbContext.BackgroundJobs.Add(new BackgroundJob
+            var job = new BackgroundJob
             {
                 Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
-                Payload = JsonSerializer.Serialize(new ReleaseExpiredHoldPayload(reservationId)),
+                Payload = payload,
                 Status = BackgroundJobStatus.Pending,
                 ScheduledAt = now
-            });
-            enqueuedCount++;
+            };
+
+            dbContext.BackgroundJobs.Add(job);
+
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                enqueuedCount++;
+            }
+            catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+            {
+                GetDbContext(dbContext).Entry(job).State = EntityState.Detached;
+                logger.LogInformation(
+                    ex,
+                    "Skipped concurrent duplicate expired hold job for reservation {ReservationId}",
+                    reservationId);
+            }
         }
 
         if (enqueuedCount > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
             logger.LogInformation("Enqueued {EnqueuedCount} expired hold release jobs", enqueuedCount);
         }
     }
@@ -111,47 +130,79 @@ public sealed class Worker(
         var reservationRepository = scope.ServiceProvider.GetRequiredService<IReservationRepository>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 
-        var jobs = await dbContext.BackgroundJobs
+        var jobIds = await dbContext.BackgroundJobs
             .Where(x =>
                 x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
                 && x.Status == BackgroundJobStatus.Pending
                 && x.ScheduledAt <= DateTime.UtcNow)
             .OrderBy(x => x.ScheduledAt)
-            .Take(20)
+            .Select(x => x.Id)
+            .Take(Math.Max(_backgroundJobProcessorOptions.BatchSize, 1))
             .ToListAsync(cancellationToken);
 
-        if (jobs.Count == 0)
+        if (jobIds.Count == 0)
         {
             return;
         }
 
         var processedCount = 0;
-        foreach (var job in jobs)
+        foreach (var jobId in jobIds)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Graceful shutdown requested while processing expired hold jobs");
+                break;
+            }
+
+            var iterationCancellationToken = CancellationToken.None;
+
+            if (!await TryClaimExpiredHoldJobAsync(dbContext, jobId, cancellationToken))
+            {
+                continue;
+            }
+
+            var job = await dbContext.BackgroundJobs.SingleAsync(x => x.Id == jobId, iterationCancellationToken);
+            ReleaseExpiredHoldPayload? payload = null;
+
             try
             {
-                job.Status = BackgroundJobStatus.Processing;
-                job.UpdatedAt = DateTime.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
-
-                var payload = JsonSerializer.Deserialize<ReleaseExpiredHoldPayload>(job.Payload)
+                payload = JsonSerializer.Deserialize<ReleaseExpiredHoldPayload>(job.Payload)
                     ?? throw new InvalidOperationException("ReleaseExpiredHold payload çözümlenemedi.");
 
-                var reservation = await reservationRepository.GetByIdAsync(payload.ReservationId, cancellationToken);
+                var released = await holdService.ReleaseHoldAsync(payload.ReservationId, iterationCancellationToken);
+
+                // If Redis hold already gone (TTL expired mid-flight or concurrent release),
+                // the reservation may already be Expired in DB — check before treating as failure.
+                if (!released)
+                {
+                    var existingReservation = await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken);
+                    if (existingReservation?.Status is ReservationStatus.Expired)
+                    {
+                        // Redis hold TTL expired naturally; DB already reflects correct state.
+                        // Mark job completed so no further retries.
+                        released = true;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Failed to release hold for reservation {payload.ReservationId}");
+                    }
+                }
+
+                var reservation = released
+                    ? await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken)
+                    : null;
                 if (reservation != null && reservation.Status is ReservationStatus.Hold or ReservationStatus.Draft)
                 {
                     reservation.Status = ReservationStatus.Expired;
                     reservation.UpdatedAt = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await dbContext.SaveChangesAsync(iterationCancellationToken);
                 }
-
-                await holdService.ReleaseHoldAsync(payload.ReservationId, cancellationToken);
 
                 job.Status = BackgroundJobStatus.Completed;
                 job.LastError = null;
                 job.FailedAt = null;
                 job.UpdatedAt = DateTime.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(iterationCancellationToken);
                 processedCount++;
             }
             catch (DbUpdateConcurrencyException ex)
@@ -167,8 +218,14 @@ public sealed class Worker(
                 job.UpdatedAt = DateTime.UtcNow;
                 if (job.RetryCount >= HoldReleaseRetryLimit)
                 {
+                    await TryReleaseExpiredHoldOnExhaustedRetryAsync(holdService, payload, job.Id, iterationCancellationToken);
                     job.Status = BackgroundJobStatus.Failed;
                     job.FailedAt = DateTime.UtcNow;
+                    logger.LogError(
+                        ex,
+                        "Release expired hold job {BackgroundJobId} exhausted retries after {RetryCount} attempts and was marked failed",
+                        job.Id,
+                        job.RetryCount);
                 }
                 else
                 {
@@ -176,7 +233,7 @@ public sealed class Worker(
                     job.ScheduledAt = DateTime.UtcNow.AddSeconds(15 * job.RetryCount);
                 }
 
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(iterationCancellationToken);
                 logger.LogError(ex, "Release expired hold job {BackgroundJobId} failed", job.Id);
             }
         }
@@ -257,19 +314,27 @@ public sealed class Worker(
 
         foreach (var job in jobs)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Graceful shutdown requested while processing daily backup jobs");
+                break;
+            }
+
+            var iterationCancellationToken = CancellationToken.None;
+
             try
             {
                 job.Status = BackgroundJobStatus.Processing;
                 job.UpdatedAt = DateTime.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(iterationCancellationToken);
 
-                await ExecuteDailyBackupCommandAsync(cancellationToken);
+                await ExecuteDailyBackupCommandAsync(iterationCancellationToken);
 
                 job.Status = BackgroundJobStatus.Completed;
                 job.LastError = null;
                 job.FailedAt = null;
                 job.UpdatedAt = DateTime.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(iterationCancellationToken);
             }
             catch (Exception ex)
             {
@@ -289,7 +354,7 @@ public sealed class Worker(
                     job.ScheduledAt = DateTime.UtcNow.AddMinutes(15 * job.RetryCount);
                 }
 
-                await dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(iterationCancellationToken);
                 logger.LogError(ex, "Daily backup job {BackgroundJobId} failed", job.Id);
             }
         }
@@ -308,6 +373,8 @@ public sealed class Worker(
         var timeoutSeconds = Math.Max(dailyBackupOptions.Value.TimeoutSeconds, 30);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
         try
         {
@@ -319,16 +386,17 @@ public sealed class Worker(
             {
                 process.Kill(entireProcessTree: true);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignored
+                logger.LogWarning(ex, "Failed to kill backup process");
             }
 
             throw new TimeoutException($"Daily backup process timed out after {timeoutSeconds} seconds.");
         }
 
-        var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+        await Task.WhenAll(stdoutTask, stderrTask);
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
 
         if (process.ExitCode != 0)
         {
@@ -340,8 +408,92 @@ public sealed class Worker(
             "Daily backup command completed successfully. stdout: {Output}",
             DailyBackupCommandPolicy.SanitizeForLog(stdout));
     }
+
+    private static DbContext GetDbContext(IApplicationDbContext dbContext)
+    {
+        return dbContext as DbContext
+            ?? throw new InvalidOperationException("IApplicationDbContext must also derive from DbContext.");
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        return exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+    }
+
+    private static async Task<bool> TryClaimExpiredHoldJobAsync(
+        IApplicationDbContext dbContext,
+        Guid jobId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var efDbContext = GetDbContext(dbContext);
+
+        if (!efDbContext.Database.IsRelational())
+        {
+            var job = await dbContext.BackgroundJobs.SingleOrDefaultAsync(
+                x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending,
+                cancellationToken);
+            if (job is null)
+            {
+                return false;
+            }
+
+            job.Status = BackgroundJobStatus.Processing;
+            job.UpdatedAt = now;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        var affectedRows = await dbContext.BackgroundJobs
+            .Where(x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.Status, BackgroundJobStatus.Processing)
+                    .SetProperty(x => x.UpdatedAt, now),
+                cancellationToken);
+
+        return affectedRows == 1;
+    }
+
+    private async Task TryReleaseExpiredHoldOnExhaustedRetryAsync(
+        IReservationHoldService holdService,
+        ReleaseExpiredHoldPayload? payload,
+        Guid backgroundJobId,
+        CancellationToken cancellationToken)
+    {
+        if (payload is null)
+        {
+            logger.LogWarning(
+                "Release expired hold job {BackgroundJobId} exhausted retries but payload could not be read for Redis cleanup",
+                backgroundJobId);
+            return;
+        }
+
+        try
+        {
+            var cleanupReleased = await holdService.ReleaseHoldAsync(payload.ReservationId, cancellationToken);
+            if (!cleanupReleased)
+            {
+                logger.LogWarning(
+                    "Release expired hold job {BackgroundJobId} exhausted retries and Redis cleanup returned false for reservation {ReservationId}",
+                    backgroundJobId,
+                    payload.ReservationId);
+            }
+        }
+        catch (Exception cleanupException)
+        {
+            logger.LogError(
+                cleanupException,
+                "Release expired hold job {BackgroundJobId} exhausted retries and Redis cleanup failed for reservation {ReservationId}",
+                backgroundJobId,
+                payload.ReservationId);
+        }
+    }
 }
 
+/// <summary>
+/// Configuration options for the daily backup subprocess execution.
+/// </summary>
 public sealed class DailyBackupOptions
 {
     public bool Enabled { get; set; }

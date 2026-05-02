@@ -101,7 +101,7 @@ public class NetgsmSmsProvider(
     <encoding>{EscapeXml(options.DefaultEncoding)}</encoding>
   </header>
   <body>
-    <msg><![CDATA[{body}]]></msg>
+    <msg>{EscapeXml(body)}</msg>
     <no>{recipient}</no>
   </body>
 </mainbody>
@@ -113,17 +113,22 @@ public class NetgsmSmsProvider(
         var digits = new string(phoneNumber.Where(char.IsDigit).ToArray());
         if (digits.Length == 10)
         {
-            return "90" + digits;
+            return "+90" + digits;
         }
 
         if (digits.Length == 11 && digits.StartsWith("0", StringComparison.Ordinal))
         {
-            return "90" + digits[1..];
+            return "+90" + digits[1..];
         }
 
         if (digits.Length == 12 && digits.StartsWith("90", StringComparison.Ordinal))
         {
-            return digits;
+            return "+" + digits;
+        }
+
+        if (phoneNumber.TrimStart().StartsWith('+') && digits.Length >= 11)
+        {
+            return "+" + digits;
         }
 
         return null;

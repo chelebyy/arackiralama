@@ -46,12 +46,12 @@ export default function SystemSettingsPage() {
   const form = useForm<SystemSettingsFormData>({
     resolver: zodResolver(systemSettingsSchema),
     defaultValues: {
-      companyName: "AYRAC Rent A Car",
-      companyAddress: "Saray Mah. Atatürk Cad. No:1 Alanya/Antalya",
-      companyPhone: "+90 242 123 45 67",
-      companyEmail: "info@ayrac.com",
-      taxNumber: "1234567890",
-      defaultCurrency: "EUR",
+      companyName: "",
+      companyAddress: "",
+      companyPhone: "",
+      companyEmail: "",
+      taxNumber: "",
+      defaultCurrency: "TRY",
       defaultPickupTime: "10:00",
       defaultReturnTime: "10:00",
       cancellationPolicyHours: 24,

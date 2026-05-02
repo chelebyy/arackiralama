@@ -29,20 +29,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { PricingRule, AdminVehicleGroup } from "@/lib/api/admin/types";
+import type {
+  PricingRule,
+  AdminVehicleGroup,
+  CreatePricingRuleData,
+} from "@/lib/api/admin/types";
 import { createPricingRule, updatePricingRule } from "@/lib/api/admin/pricing";
 
 const pricingRuleSchema = z.object({
   vehicleGroupId: z.string().min(1, "Araç grubu seçilmelidir"),
   startDate: z.string().min(1, "Başlangıç tarihi gereklidir"),
   endDate: z.string().min(1, "Bitiş tarihi gereklidir"),
-  dailyPrice: z.number().min(0, "Günlük fiyat 0 veya daha büyük olmalıdır"),
-  multiplier: z.number().min(0, "Çarpan 0 veya daha büyük olmalıdır"),
-  priority: z.number().min(0, "Öncelik 0 veya daha büyük olmalıdır"),
+  dailyPrice: z.coerce.number().min(0, "Günlük fiyat 0 veya daha büyük olmalıdır"),
+  multiplier: z.coerce.number().min(0, "Çarpan 0 veya daha büyük olmalıdır"),
+  priority: z.coerce.number().min(0, "Öncelik 0 veya daha büyük olmalıdır"),
   calculationType: z.enum(["multiplier", "fixed"]),
 });
 
-type PricingRuleFormData = z.infer<typeof pricingRuleSchema>;
+type PricingRuleFormInput = z.input<typeof pricingRuleSchema>;
+type PricingRuleFormData = z.output<typeof pricingRuleSchema>;
 
 interface PricingRuleDialogProps {
   open: boolean;
@@ -61,7 +66,7 @@ export default function PricingRuleDialog({
 }: PricingRuleDialogProps) {
   const isEditing = !!rule;
 
-  const form = useForm<PricingRuleFormData>({
+  const form = useForm<PricingRuleFormInput, unknown, PricingRuleFormData>({
     resolver: zodResolver(pricingRuleSchema),
     defaultValues: {
       vehicleGroupId: "",
@@ -98,13 +103,25 @@ export default function PricingRuleDialog({
     }
   }, [rule, form, open]);
 
+  const buildPricingRulePayload = (data: PricingRuleFormData): CreatePricingRuleData => ({
+    vehicleGroupId: data.vehicleGroupId,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    dailyPrice: data.dailyPrice,
+    multiplier: data.multiplier,
+    priority: data.priority,
+    calculationType: data.calculationType,
+  });
+
   const onSubmit = async (data: PricingRuleFormData) => {
     try {
+      const payload = buildPricingRulePayload(data);
+
       if (isEditing && rule) {
-        await updatePricingRule(rule.id, data as any);
+        await updatePricingRule(rule.id, payload);
         toast.success("Fiyat kuralı başarıyla güncellendi");
       } else {
-        await createPricingRule(data as any);
+        await createPricingRule(payload);
         toast.success("Fiyat kuralı başarıyla oluşturuldu");
       }
       onSuccess();
@@ -185,7 +202,14 @@ export default function PricingRuleDialog({
                   <FormItem>
                     <FormLabel>Günlük Fiyat (₺)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -199,7 +223,15 @@ export default function PricingRuleDialog({
                   <FormItem>
                     <FormLabel>Çarpan</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" {...field} />
+                      <Input
+                        type="number"
+                        step="0.1"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -215,7 +247,14 @@ export default function PricingRuleDialog({
                   <FormItem>
                     <FormLabel>Öncelik</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

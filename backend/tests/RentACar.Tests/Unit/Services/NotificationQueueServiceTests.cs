@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using RentACar.Core.Interfaces.Notifications;
 using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Tests.TestFixtures;
@@ -19,7 +20,7 @@ public sealed class NotificationQueueServiceTests : IDisposable
     [Fact]
     public async Task EnqueueEmailAsync_WhenCalled_CreatesPendingBackgroundJob()
     {
-        var sut = new NotificationQueueService(_dbContext);
+        var sut = new NotificationQueueService(_dbContext, NullLogger<NotificationQueueService>.Instance);
 
         var jobId = await sut.EnqueueEmailAsync(new QueuedEmailNotificationRequest
         {
@@ -42,7 +43,7 @@ public sealed class NotificationQueueServiceTests : IDisposable
     [Fact]
     public async Task EnqueueSmsAsync_WhenScheduledAtProvided_PersistsScheduledTime()
     {
-        var sut = new NotificationQueueService(_dbContext);
+        var sut = new NotificationQueueService(_dbContext, NullLogger<NotificationQueueService>.Instance);
         var scheduledAtUtc = DateTime.UtcNow.AddHours(6);
 
         var jobId = await sut.EnqueueSmsAsync(

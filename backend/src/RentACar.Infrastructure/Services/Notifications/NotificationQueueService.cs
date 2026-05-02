@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RentACar.Core.Constants;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -8,11 +9,12 @@ using RentACar.Core.Interfaces.Notifications;
 
 namespace RentACar.Infrastructure.Services.Notifications;
 
-public sealed class NotificationQueueService(IApplicationDbContext dbContext) : INotificationQueueService
+public sealed class NotificationQueueService(
+    IApplicationDbContext dbContext,
+    ILogger<NotificationQueueService> logger) : INotificationQueueService
 {
     public const string SendEmailJobType = BackgroundJobTypes.NotificationEmailSend;
     public const string SendSmsJobType = BackgroundJobTypes.NotificationSmsSend;
-    private const string EnableSmsNotificationsFlag = "EnableSmsNotifications";
 
     public Task<Guid> EnqueueEmailAsync(
         QueuedEmailNotificationRequest request,
@@ -55,9 +57,19 @@ public sealed class NotificationQueueService(IApplicationDbContext dbContext) : 
         DateTime? scheduledAtUtc,
         CancellationToken cancellationToken)
     {
-        var smsFlag = await dbContext.FeatureFlags
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Name == EnableSmsNotificationsFlag, cancellationToken);
+        FeatureFlag? smsFlag;
+
+        try
+        {
+            smsFlag = await dbContext.FeatureFlags
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Name == NotificationConstants.EnableSmsNotificationsFlag, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to query SMS feature flag. Continuing with SMS enqueue enabled.");
+            smsFlag = null;
+        }
 
         if (smsFlag is { Enabled: false })
         {

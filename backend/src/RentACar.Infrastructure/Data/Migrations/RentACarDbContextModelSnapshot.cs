@@ -293,6 +293,10 @@ namespace RentACar.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Type", "Payload")
+                        .IsUnique()
+                        .HasFilter("\"status\" IN ('Pending', 'Processing')");
+
                     b.ToTable("background_jobs", (string)null);
                 });
 

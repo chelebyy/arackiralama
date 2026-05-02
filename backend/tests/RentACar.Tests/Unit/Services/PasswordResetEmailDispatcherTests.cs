@@ -9,8 +9,8 @@ namespace RentACar.Tests.Unit.Services;
 
 public sealed class PasswordResetEmailDispatcherTests
 {
-    [Fact]
-    public async Task DispatchAsync_WhenCalled_ComposesPasswordResetEmail()
+[Fact]
+    public async Task DispatchAsync_WhenLocaleProvided_ComposesPasswordResetEmail()
     {
         var fakeQueueService = new FakeNotificationQueueService();
         var sut = new PasswordResetEmailDispatcher(fakeQueueService, NullLogger<PasswordResetEmailDispatcher>.Instance);
@@ -21,14 +21,32 @@ public sealed class PasswordResetEmailDispatcherTests
             "customer@example.com",
             "reset-token-123",
             expiresAtUtc,
+            "en-US",
             CancellationToken.None);
 
         fakeQueueService.LastEmailRequest.Should().NotBeNull();
         fakeQueueService.LastEmailRequest!.ToEmail.Should().Be("customer@example.com");
         fakeQueueService.LastEmailRequest.TemplateKey.Should().Be(NotificationTemplateKeys.PasswordResetCustomer);
-        fakeQueueService.LastEmailRequest.Locale.Should().Be("tr-TR");
+        fakeQueueService.LastEmailRequest.Locale.Should().Be("en-US");
         fakeQueueService.LastEmailRequest.Variables["Token"].Should().Be("reset-token-123");
         fakeQueueService.LastEmailRequest.Variables["ExpiresAtUtc"].Should().Be(expiresAtUtc.ToString("u"));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenLocaleNotProvided_UsesDefaultLocale()
+    {
+        var fakeQueueService = new FakeNotificationQueueService();
+        var sut = new PasswordResetEmailDispatcher(fakeQueueService, NullLogger<PasswordResetEmailDispatcher>.Instance);
+
+        await sut.DispatchAsync(
+            AuthPrincipalType.Customer,
+            "customer@example.com",
+            "reset-token-123",
+            DateTime.UtcNow,
+            cancellationToken: CancellationToken.None);
+
+        fakeQueueService.LastEmailRequest.Should().NotBeNull();
+        fakeQueueService.LastEmailRequest!.Locale.Should().Be("tr-TR");
     }
 
     [Fact]
@@ -42,7 +60,7 @@ public sealed class PasswordResetEmailDispatcherTests
             "admin@example.com",
             "token",
             DateTime.UtcNow,
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         await action.Should().NotThrowAsync();
     }

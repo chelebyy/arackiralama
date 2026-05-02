@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using RentACar.Core.Constants;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -14,10 +15,15 @@ public sealed class NotificationBackgroundJobProcessor(
     INotificationTemplateService notificationTemplateService,
     IEmailProvider emailProvider,
     ISmsProvider smsProvider,
-    ILogger<NotificationBackgroundJobProcessor> logger) : INotificationBackgroundJobProcessor
+    ILogger<NotificationBackgroundJobProcessor> logger,
+    IOptions<BackgroundJobProcessorOptions>? backgroundJobProcessorOptions = null) : INotificationBackgroundJobProcessor
 {
     private const int RetryLimit = 3;
-    private const int BatchSize = 20;
+    private readonly BackgroundJobProcessorOptions _backgroundJobProcessorOptions = backgroundJobProcessorOptions?.Value ?? new();
+    private static readonly JsonSerializerOptions JobPayloadSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public async Task<int> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
@@ -28,7 +34,7 @@ public sealed class NotificationBackgroundJobProcessor(
                 x.Status == BackgroundJobStatus.Pending &&
                 x.ScheduledAt <= now)
             .OrderBy(x => x.ScheduledAt)
-            .Take(BatchSize)
+            .Take(Math.Max(_backgroundJobProcessorOptions.BatchSize, 1))
             .ToListAsync(cancellationToken);
 
         var processedCount = 0;
@@ -62,6 +68,7 @@ public sealed class NotificationBackgroundJobProcessor(
             catch (Exception ex)
             {
                 job.RetryCount++;
+                job.LastError = ex.Message;
                 job.UpdatedAt = DateTime.UtcNow;
 
                 if (job.RetryCount >= RetryLimit)
@@ -75,7 +82,6 @@ public sealed class NotificationBackgroundJobProcessor(
                     job.ScheduledAt = DateTime.UtcNow.AddSeconds(15 * job.RetryCount);
                 }
 
-                job.LastError = ex.Message;
                 await dbContext.SaveChangesAsync(cancellationToken);
                 logger.LogError(ex, "Notification job {BackgroundJobId} failed.", job.Id);
             }
@@ -86,7 +92,7 @@ public sealed class NotificationBackgroundJobProcessor(
 
     private async Task<NotificationJobResult> ProcessEmailJobAsync(BackgroundJob job, CancellationToken cancellationToken)
     {
-        var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload)
+        var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("Email job payload could not be deserialized.");
 
         var message = notificationTemplateService.RenderEmail(payload);
@@ -96,7 +102,7 @@ public sealed class NotificationBackgroundJobProcessor(
 
     private async Task<NotificationJobResult> ProcessSmsJobAsync(BackgroundJob job, CancellationToken cancellationToken)
     {
-        var payload = JsonSerializer.Deserialize<QueuedSmsNotificationRequest>(job.Payload)
+        var payload = JsonSerializer.Deserialize<QueuedSmsNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("SMS job payload could not be deserialized.");
 
         var message = notificationTemplateService.RenderSms(payload);
