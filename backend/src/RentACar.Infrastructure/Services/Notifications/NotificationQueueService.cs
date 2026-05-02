@@ -15,7 +15,6 @@ public sealed class NotificationQueueService(
 {
     public const string SendEmailJobType = BackgroundJobTypes.NotificationEmailSend;
     public const string SendSmsJobType = BackgroundJobTypes.NotificationSmsSend;
-    private const string EnableSmsNotificationsFlag = "EnableSmsNotifications";
 
     public Task<Guid> EnqueueEmailAsync(
         QueuedEmailNotificationRequest request,
@@ -64,7 +63,7 @@ public sealed class NotificationQueueService(
         {
             smsFlag = await dbContext.FeatureFlags
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Name == EnableSmsNotificationsFlag, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Name == NotificationConstants.EnableSmsNotificationsFlag, cancellationToken);
         }
         catch (Exception ex)
         {

@@ -41,6 +41,7 @@ public sealed class NetgsmSmsProviderTests
         result.Success.Should().BeTrue();
         handler.LastRequestBody.Should().NotBeNull();
         handler.LastRequestBody.Should().Contain("<msg>code ]]&gt; more &amp; &lt;tag&gt;</msg>");
+        handler.LastRequestBody.Should().Contain("<no>+905551112233</no>");
         handler.LastRequestBody.Should().NotContain("<![CDATA[");
     }
 

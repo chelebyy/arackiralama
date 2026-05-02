@@ -30,7 +30,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import type { AdminVehicle, AdminVehicleGroup, AdminOffice } from "@/lib/api/admin/types";
+import type {
+  AdminVehicle,
+  AdminVehicleGroup,
+  AdminOffice,
+  CreateVehicleData,
+} from "@/lib/api/admin/types";
 import { createVehicle, updateVehicle } from "@/lib/api/admin/vehicles";
 
 const vehicleSchema = z.object({
@@ -39,11 +44,12 @@ const vehicleSchema = z.object({
   groupId: z.string().min(1, "Araç grubu seçilmelidir"),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
   status: z.enum(["Available", "Maintenance", "Retired"]),
-  mileage: z.number().min(0, "Kilometre 0 veya daha büyük olmalıdır"),
+  mileage: z.coerce.number().min(0, "Kilometre 0 veya daha büyük olmalıdır"),
   adminNotes: z.string().optional(),
 });
 
-type VehicleFormData = z.infer<typeof vehicleSchema>;
+type VehicleFormInput = z.input<typeof vehicleSchema>;
+type VehicleFormData = z.output<typeof vehicleSchema>;
 
 interface VehicleDialogProps {
   open: boolean;
@@ -64,7 +70,7 @@ export default function VehicleDialog({
 }: VehicleDialogProps) {
   const isEditing = !!vehicle;
 
-  const form = useForm<VehicleFormData>({
+  const form = useForm<VehicleFormInput, unknown, VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       plate: "",
@@ -101,13 +107,25 @@ export default function VehicleDialog({
     }
   }, [vehicle, form, open]);
 
+  const buildVehiclePayload = (data: VehicleFormData): CreateVehicleData => ({
+    plate: data.plate,
+    name: data.name,
+    groupId: data.groupId,
+    officeId: data.officeId,
+    status: data.status,
+    mileage: data.mileage,
+    adminNotes: data.adminNotes?.trim() || undefined,
+  });
+
   const onSubmit = async (data: VehicleFormData) => {
     try {
+      const payload = buildVehiclePayload(data);
+
       if (isEditing && vehicle) {
-        await updateVehicle(vehicle.id, data as any);
+        await updateVehicle(vehicle.id, payload);
         toast.success("Araç başarıyla güncellendi");
       } else {
-        await createVehicle(data as any);
+        await createVehicle(payload);
         toast.success("Araç başarıyla oluşturuldu");
       }
       onSuccess();
@@ -236,7 +254,14 @@ export default function VehicleDialog({
                   <FormItem>
                     <FormLabel>Kilometre</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

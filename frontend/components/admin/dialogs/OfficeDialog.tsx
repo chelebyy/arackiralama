@@ -29,8 +29,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { AdminOffice } from "@/lib/api/admin/types";
+import type { DayHours, OpeningHours } from "@/lib/api/types";
+import type { AdminOffice, CreateOfficeData } from "@/lib/api/admin/types";
 import { createOffice, updateOffice } from "@/lib/api/admin/vehicles";
+
+const defaultDayHours: DayHours = {
+  open: "09:00",
+  close: "18:00",
+  isClosed: false,
+};
+
+const defaultOpeningHours: OpeningHours = {
+  monday: { ...defaultDayHours },
+  tuesday: { ...defaultDayHours },
+  wednesday: { ...defaultDayHours },
+  thursday: { ...defaultDayHours },
+  friday: { ...defaultDayHours },
+  saturday: { ...defaultDayHours },
+  sunday: { ...defaultDayHours },
+};
+
+const dayHoursSchema = z.object({
+  open: z.string(),
+  close: z.string(),
+  isClosed: z.boolean(),
+});
 
 const officeSchema = z.object({
   name: z.string().min(1, "Ofis adı gereklidir"),
@@ -45,14 +68,23 @@ const officeSchema = z.object({
   isAirport: z.boolean(),
   isHotel: z.boolean(),
   coordinates: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
+    latitude: z.coerce.number(),
+    longitude: z.coerce.number(),
   }),
-  openingHours: z.any(),
+  openingHours: z.object({
+    monday: dayHoursSchema,
+    tuesday: dayHoursSchema,
+    wednesday: dayHoursSchema,
+    thursday: dayHoursSchema,
+    friday: dayHoursSchema,
+    saturday: dayHoursSchema,
+    sunday: dayHoursSchema,
+  }),
   services: z.array(z.string()),
 });
 
-type OfficeFormData = z.infer<typeof officeSchema>;
+type OfficeFormInput = z.input<typeof officeSchema>;
+type OfficeFormData = z.output<typeof officeSchema>;
 
 interface OfficeDialogProps {
   open: boolean;
@@ -69,7 +101,7 @@ export default function OfficeDialog({
 }: OfficeDialogProps) {
   const isEditing = !!office;
 
-  const form = useForm<OfficeFormData>({
+  const form = useForm<OfficeFormInput, unknown, OfficeFormData>({
     resolver: zodResolver(officeSchema),
     defaultValues: {
       name: "",
@@ -84,7 +116,7 @@ export default function OfficeDialog({
       isAirport: false,
       isHotel: false,
       coordinates: { latitude: 0, longitude: 0 },
-      openingHours: {},
+      openingHours: defaultOpeningHours,
       services: [],
     },
   });
@@ -104,7 +136,7 @@ export default function OfficeDialog({
         isAirport: office.isAirport,
         isHotel: office.isHotel,
         coordinates: office.coordinates || { latitude: 0, longitude: 0 },
-        openingHours: office.openingHours || {},
+        openingHours: office.openingHours || defaultOpeningHours,
         services: office.services || [],
       });
     } else {
@@ -121,19 +153,38 @@ export default function OfficeDialog({
         isAirport: false,
         isHotel: false,
         coordinates: { latitude: 0, longitude: 0 },
-        openingHours: {},
+        openingHours: defaultOpeningHours,
         services: [],
       });
     }
   }, [office, form, open]);
 
+  const buildOfficePayload = (data: OfficeFormData): CreateOfficeData => ({
+    name: data.name,
+    code: data.code,
+    type: data.type,
+    city: data.city,
+    district: data.district,
+    address: data.address,
+    phone: data.phone,
+    email: data.email,
+    isActive: data.isActive,
+    isAirport: data.isAirport,
+    isHotel: data.isHotel,
+    coordinates: data.coordinates,
+    openingHours: data.openingHours,
+    services: data.services,
+  });
+
   const onSubmit = async (data: OfficeFormData) => {
     try {
+      const payload = buildOfficePayload(data);
+
       if (isEditing && office) {
-        await updateOffice(office.id, data as any);
+        await updateOffice(office.id, payload);
         toast.success("Ofis başarıyla güncellendi");
       } else {
-        await createOffice(data as any);
+        await createOffice(payload);
         toast.success("Ofis başarıyla oluşturuldu");
       }
       onSuccess();

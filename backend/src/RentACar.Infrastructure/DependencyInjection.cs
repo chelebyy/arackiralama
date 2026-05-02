@@ -32,6 +32,8 @@ public static class DependencyInjection
             provider.GetRequiredService<RentACarDbContext>());
 
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+        services.Configure<BackgroundJobProcessorOptions>(configuration.GetSection(BackgroundJobProcessorOptions.SectionName));
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IVehicleGroupRepository, VehicleGroupRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();

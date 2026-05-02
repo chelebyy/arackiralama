@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using RentACar.Core.Interfaces.Notifications;
 using RentACar.Infrastructure.Services.Notifications;
 using Xunit;
@@ -212,6 +213,27 @@ public sealed class NotificationTemplateServiceTests
         Action act = () => _sut.RenderSms(request);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*SMS template could not be resolved*");
+    }
+
+    [Fact]
+    public void RenderEmail_WhenDefaultLocaleConfigured_UsesConfiguredFallback()
+    {
+        var sut = new NotificationTemplateService(Options.Create(new NotificationOptions
+        {
+            DefaultLocale = "en-US"
+        }));
+
+        var request = new QueuedEmailNotificationRequest
+        {
+            ToEmail = "user@example.com",
+            TemplateKey = NotificationTemplateKeys.ReservationCancelled,
+            Locale = "",
+            Variables = new Dictionary<string, string> { ["PublicCode"] = "R100" }
+        };
+
+        var result = sut.RenderEmail(request);
+
+        result.Subject.Should().Be("Reservation cancelled");
     }
 
     [Theory]

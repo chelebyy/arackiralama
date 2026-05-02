@@ -1,9 +1,12 @@
+using Microsoft.Extensions.Options;
 using RentACar.Core.Interfaces.Notifications;
 
 namespace RentACar.Infrastructure.Services.Notifications;
 
-public sealed class NotificationTemplateService : INotificationTemplateService
+public sealed class NotificationTemplateService(IOptions<NotificationOptions>? notificationOptions = null) : INotificationTemplateService
 {
+    private const string BuiltInDefaultLocale = "tr-TR";
+    private readonly string _defaultLocale = NormalizeLocale(notificationOptions?.Value.DefaultLocale, BuiltInDefaultLocale);
     private static readonly IReadOnlyDictionary<string, NotificationTemplateDefinition> EmailTemplates =
         new Dictionary<string, NotificationTemplateDefinition>(StringComparer.OrdinalIgnoreCase)
         {
@@ -228,14 +231,14 @@ public sealed class NotificationTemplateService : INotificationTemplateService
         };
     }
 
-    private static NotificationTemplateDefinition ResolveEmailTemplate(string templateKey, string locale)
+    private NotificationTemplateDefinition ResolveEmailTemplate(string templateKey, string locale)
     {
-        if (EmailTemplates.TryGetValue(BuildKey(templateKey, locale), out var localizedTemplate))
+        if (EmailTemplates.TryGetValue(BuildKey(templateKey, locale, _defaultLocale), out var localizedTemplate))
         {
             return localizedTemplate;
         }
 
-        if (EmailTemplates.TryGetValue(BuildKey(templateKey, "tr-TR"), out var fallbackTemplate))
+        if (EmailTemplates.TryGetValue(BuildKey(templateKey, _defaultLocale, _defaultLocale), out var fallbackTemplate))
         {
             return fallbackTemplate;
         }
@@ -243,14 +246,14 @@ public sealed class NotificationTemplateService : INotificationTemplateService
         throw new InvalidOperationException($"Email template could not be resolved for key '{templateKey}'.");
     }
 
-    private static string ResolveSmsTemplate(string templateKey, string locale)
+    private string ResolveSmsTemplate(string templateKey, string locale)
     {
-        if (SmsTemplates.TryGetValue(BuildKey(templateKey, locale), out var localizedTemplate))
+        if (SmsTemplates.TryGetValue(BuildKey(templateKey, locale, _defaultLocale), out var localizedTemplate))
         {
             return localizedTemplate;
         }
 
-        if (SmsTemplates.TryGetValue(BuildKey(templateKey, "tr-TR"), out var fallbackTemplate))
+        if (SmsTemplates.TryGetValue(BuildKey(templateKey, _defaultLocale, _defaultLocale), out var fallbackTemplate))
         {
             return fallbackTemplate;
         }
@@ -269,11 +272,13 @@ public sealed class NotificationTemplateService : INotificationTemplateService
         return result;
     }
 
-    private static string BuildKey(string templateKey, string locale) => $"{templateKey}:{NormalizeLocale(locale)}";
+    private static string BuildKey(string templateKey, string locale) => BuildKey(templateKey, locale, BuiltInDefaultLocale);
 
-    private static string NormalizeLocale(string locale)
+    private static string BuildKey(string templateKey, string locale, string defaultLocale) => $"{templateKey}:{NormalizeLocale(locale, defaultLocale)}";
+
+    private static string NormalizeLocale(string? locale, string defaultLocale)
     {
-        return string.IsNullOrWhiteSpace(locale) ? "tr-TR" : locale.Trim();
+        return string.IsNullOrWhiteSpace(locale) ? defaultLocale : locale.Trim();
     }
 
     private sealed record NotificationTemplateDefinition(string Subject, string PlainTextBody, string HtmlBody);

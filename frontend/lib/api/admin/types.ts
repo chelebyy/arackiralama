@@ -2,6 +2,7 @@ import type {
   ApiSuccessResponse,
   Campaign as PublicCampaign,
   Customer,
+  OpeningHours,
   Office,
   PaginatedResponse,
   Reservation,
@@ -197,8 +198,17 @@ export interface AuditLogListParams extends AdminListParams {
   endDate?: string;
 }
 
-export type CreateVehicleData = Omit<AdminVehicle, 'id'>;
-export type UpdateVehicleData = Partial<CreateVehicleData>;
+export interface CreateVehicleData {
+  plate: string;
+  name: string;
+  groupId: string;
+  officeId: string;
+  status: AdminVehicleStatus;
+  mileage: number;
+  adminNotes?: string;
+}
+
+export type UpdateVehicleData = CreateVehicleData;
 
 export interface TransferVehicleData {
   officeId: string;
@@ -213,8 +223,24 @@ export interface VehicleMaintenanceData {
 export type CreateVehicleGroupData = Omit<AdminVehicleGroup, 'id'>;
 export type UpdateVehicleGroupData = Partial<CreateVehicleGroupData>;
 
-export type CreateOfficeData = Omit<AdminOffice, 'id'>;
-export type UpdateOfficeData = Partial<CreateOfficeData>;
+export interface CreateOfficeData {
+  name: string;
+  code: string;
+  type: AdminOffice['type'];
+  city: string;
+  district: string;
+  address: string;
+  phone: string;
+  email: string;
+  isActive: boolean;
+  isAirport: boolean;
+  isHotel: boolean;
+  coordinates: AdminOffice['coordinates'];
+  openingHours: OpeningHours;
+  services: string[];
+}
+
+export type UpdateOfficeData = CreateOfficeData;
 
 export interface CancelReservationData {
   reason: string;
@@ -237,10 +263,21 @@ export interface ReservationCheckOutData {
 }
 
 export type CreatePricingRuleData = Omit<PricingRule, 'id'>;
-export type UpdatePricingRuleData = Partial<CreatePricingRuleData>;
+export type UpdatePricingRuleData = CreatePricingRuleData;
 
-export type CreateCampaignData = Omit<Campaign, 'id'>;
-export type UpdateCampaignData = Partial<CreateCampaignData>;
+export interface CreateCampaignData {
+  code: string;
+  name: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minRentalDays: number;
+  validFrom: string;
+  validUntil: string;
+  isActive: boolean;
+}
+
+export type UpdateCampaignData = CreateCampaignData;
 
 export interface CustomerListParams extends AdminListParams {
   createdAfter?: string;

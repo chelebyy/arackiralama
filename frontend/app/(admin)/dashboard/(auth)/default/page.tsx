@@ -28,8 +28,6 @@ import {
 import {
   CalendarCheck,
   Car,
-  Users,
-  CreditCard,
   ArrowRight,
   Wrench,
   Tag,
@@ -38,43 +36,6 @@ import {
 import Link from "next/link";
 import { useAdminReservations } from "@/hooks/admin";
 import { useAdminVehicles } from "@/hooks/admin";
-
-const stats = [
-  {
-    label: "Toplam Rezervasyon",
-    value: 187,
-    icon: CalendarCheck,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-  },
-  {
-    label: "Aktif Rezervasyon",
-    value: 32,
-    icon: TrendingUp,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-  },
-  {
-    label: "Müsait Araç",
-    value: 45,
-    icon: Car,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-  },
-  {
-    label: "Toplam Müşteri",
-    value: 523,
-    icon: Users,
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-  },
-];
-
-const vehicleStatusData = [
-  { name: "Müsait", count: 45, color: "#10b981" },
-  { name: "Bakımda", count: 8, color: "#f59e0b" },
-  { name: "Emekli", count: 3, color: "#6b7280" },
-];
 
 const statusBadgeVariant = (status: string) => {
   switch (status) {
@@ -115,12 +76,50 @@ const statusLabel = (status: string) => {
 };
 
 export default function DashboardPage() {
-  const { reservations, isLoading } = useAdminReservations({ pageSize: 5 });
-  const { vehicles } = useAdminVehicles();
+  const { reservations, isLoading: isRecentReservationsLoading } = useAdminReservations({ pageSize: 5 });
+  const { pagination: reservationPagination, isLoading: isReservationStatsLoading } = useAdminReservations({ pageSize: 1 });
+  const { pagination: activeReservationPagination, isLoading: isActiveReservationsLoading } = useAdminReservations({ pageSize: 1, status: "ACTIVE" });
+  const { vehicles, pagination: vehiclePagination, isLoading: isVehiclesLoading } = useAdminVehicles();
 
   const availableCount = vehicles.filter((v) => v.status === "Available").length;
   const maintenanceCount = vehicles.filter((v) => v.status === "Maintenance").length;
   const retiredCount = vehicles.filter((v) => v.status === "Retired").length;
+  const totalReservations = reservationPagination?.totalCount ?? 0;
+  const activeReservations = activeReservationPagination?.totalCount ?? 0;
+  const totalVehicles = vehiclePagination?.totalCount ?? vehicles.length;
+  const isStatsLoading =
+    isReservationStatsLoading || isActiveReservationsLoading || isVehiclesLoading;
+
+  const stats = [
+    {
+      label: "Toplam Rezervasyon",
+      value: totalReservations,
+      icon: CalendarCheck,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "Aktif Rezervasyon",
+      value: activeReservations,
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Müsait Araç",
+      value: availableCount,
+      icon: Car,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      label: "Toplam Araç",
+      value: totalVehicles,
+      icon: Wrench,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+  ];
 
   const dynamicVehicleData = [
     { name: "Müsait", count: availableCount },
@@ -147,7 +146,11 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{s.value}</div>
+              {isStatsLoading ? (
+                <div className="h-8 w-16 animate-pulse rounded-md bg-muted" />
+              ) : (
+                <div className="text-2xl font-bold">{s.value}</div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -185,7 +188,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Son Rezervasyonlar</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {isRecentReservationsLoading ? (
               <div className="text-sm text-muted-foreground">Yükleniyor...</div>
             ) : (
               <Table>
@@ -233,32 +236,36 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Araç Durumu Özeti</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dynamicVehicleData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip
-                    formatter={(value: number) => [`${value} araç`, ""]}
-                    cursor={{ fill: "rgba(0,0,0,0.04)" }}
-                  />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {isVehiclesLoading ? (
+              <div className="h-[240px] animate-pulse rounded-md bg-muted" />
+            ) : (
+              <div className="h-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dynamicVehicleData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value: number) => [`${value} araç`, ""]}
+                      cursor={{ fill: "rgba(0,0,0,0.04)" }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
             <div className="mt-4 flex items-center justify-around text-sm">
               <div className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-full bg-emerald-500" />
-                <span>Müsait ({availableCount || 45})</span>
+                <span>Müsait ({availableCount})</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                <span>Bakımda ({maintenanceCount || 8})</span>
+                <span>Bakımda ({maintenanceCount})</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-full bg-gray-400" />
-                <span>Emekli ({retiredCount || 3})</span>
+                <span>Emekli ({retiredCount})</span>
               </div>
             </div>
           </CardContent>

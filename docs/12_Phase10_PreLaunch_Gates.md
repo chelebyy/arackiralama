@@ -475,19 +475,20 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 | ID | Dosya | Sorun | Risk |
 |----|-------|-------|------|
-| W3-N07 | `NotificationQueueService.cs:15` | Magic string `"EnableSmsNotifications"` | Maintainability |
-| W3-N08 | `NotificationTemplateService.cs:276` | Hardcoded `"tr-TR"` fallback locale | i18n inconsistency |
-| W3-N09 | `TwilioSmsProvider.cs` vs `NetgsmSmsProvider.cs` | Inconsistent phone normalization (+90 vs 90) | Provider switch'te SMS format farkı |
-| W3-W07 | `Worker.cs:37-40` | Worker loop catches all exceptions, continues with 30s delay — no backoff | Sürekli fail eden job log spam'i |
-| W3-W08 | `Worker.cs:114-121` + `NotificationBackgroundJobProcessor.cs:20` | Hardcoded batch size = 20 | Configurability eksik |
-| W3-W09 | `Worker.cs` | No graceful shutdown mid-job protection | Job Processing'de kalabilir |
-| W3-A01 | `frontend/components/admin/dialogs/VehicleDialog.tsx` | `as any` cast kullanılıyor | Type safety |
-| W3-A02 | `frontend/app/(admin)/dashboard/(auth)/default/page.tsx` | Stats değerleri hardcoded/mock | Gerçek veri gösterilmiyor |
+| W3-N07 | `NotificationQueueService.cs:15` | Magic string `"EnableSmsNotifications"` | ✅ **FIXED 2 May 2026** — `NotificationConstants.EnableSmsNotificationsFlag` kullanılıyor |
+| W3-N08 | `NotificationTemplateService.cs:276` | Hardcoded `"tr-TR"` fallback locale | ✅ **FIXED 2 May 2026** — fallback `Notifications:DefaultLocale` ile options üzerinden yönetiliyor |
+| W3-N09 | `TwilioSmsProvider.cs` vs `NetgsmSmsProvider.cs` | Inconsistent phone normalization (+90 vs 90) | ✅ **FIXED 2 May 2026** — Netgsm normalizasyonu `+90XXXXXXXXXX` formatına hizalandı |
+| W3-W07 | `NotificationBackgroundJobProcessor.cs` | Notification processing fail olunca `LastError` persist edilmiyor | ✅ **FIXED 2 May 2026** — `ProcessPendingAsync` catch bloğu `job.LastError = ex.Message` set ediyor |
+| W3-W08 | `Worker.cs:114-121` + `NotificationBackgroundJobProcessor.cs:20` | Hardcoded batch size = 20 | ✅ **FIXED 2 May 2026** — `BackgroundJobs:Processor:BatchSize` options'a taşındı |
+| W3-W09 | `Worker.cs` | No graceful shutdown mid-job protection | ✅ **FIXED 2 May 2026** — job loop başlarında cancellation check + shutdown log eklendi |
+| W3-A01 | `frontend/components/admin/dialogs/VehicleDialog.tsx` + admin dialog siblings | ✅ Fixed (2026-05-02): `as any` cast'ler proper payload types ile kaldırıldı | Resolved |
+| W3-A02 | `frontend/app/(admin)/dashboard/(auth)/default/page.tsx` | ✅ Fixed (2026-05-02): dashboard stats/chart fallback'leri API-driven hale getirildi | Resolved |
 
 #### Değerlendirme Notları
 - **CRITICAL (4):** 3 tanesi Worker/Hold Release data consistency — production'da çift rezervasyon veya orphan hold riski
 - **HIGH (9):** 5 tanesi Worker, 4 tanesi Notifications — silent failure ve resource leak pattern'leri
 - **Admin screens:** Kritik yok, çoğunlukla mock data ve type safety issues
+- **Update (2026-05-02):** Admin MEDIUM bulguları (`W3-A01`, `W3-A02` ve ilgili dialog type-safety cleanup) frontend'de kapatıldı; kalan Wave 3 medium maddeleri Worker/Notifications tarafında
 - **Karar:** CRITICAL + HIGH fix'ler Wave 3 kapsamına alınmalı; MEDIUM/LOW post-launch technical debt olarak kaydedilebilir
 
 ---

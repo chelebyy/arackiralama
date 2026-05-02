@@ -4,6 +4,7 @@ public sealed class NotificationOptions
 {
     public const string SectionName = "Notifications";
 
+    public string DefaultLocale { get; init; } = "tr-TR";
     public SmsNotificationOptions Sms { get; init; } = new();
     public EmailNotificationOptions Email { get; init; } = new();
 }

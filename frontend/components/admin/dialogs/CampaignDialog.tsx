@@ -30,7 +30,11 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { Campaign, AdminVehicleGroup } from "@/lib/api/admin/types";
+import type {
+  Campaign,
+  AdminVehicleGroup,
+  CreateCampaignData,
+} from "@/lib/api/admin/types";
 import { createCampaign, updateCampaign } from "@/lib/api/admin/pricing";
 
 const campaignSchema = z.object({
@@ -38,14 +42,15 @@ const campaignSchema = z.object({
   name: z.string().min(1, "Kampanya adı gereklidir"),
   description: z.string().min(1, "Açıklama gereklidir"),
   discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
-  discountValue: z.number().min(0, "İndirim değeri 0 veya daha büyük olmalıdır"),
-  minRentalDays: z.number().min(1, "Minimum kiralama günü en az 1 olmalıdır"),
+  discountValue: z.coerce.number().min(0, "İndirim değeri 0 veya daha büyük olmalıdır"),
+  minRentalDays: z.coerce.number().min(1, "Minimum kiralama günü en az 1 olmalıdır"),
   validFrom: z.string().min(1, "Başlangıç tarihi gereklidir"),
   validUntil: z.string().min(1, "Bitiş tarihi gereklidir"),
   isActive: z.boolean(),
 });
 
-type CampaignFormData = z.infer<typeof campaignSchema>;
+type CampaignFormInput = z.input<typeof campaignSchema>;
+type CampaignFormData = z.output<typeof campaignSchema>;
 
 interface CampaignDialogProps {
   open: boolean;
@@ -63,7 +68,7 @@ export default function CampaignDialog({
 }: CampaignDialogProps) {
   const isEditing = !!campaign;
 
-  const form = useForm<CampaignFormData>({
+  const form = useForm<CampaignFormInput, unknown, CampaignFormData>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
       code: "",
@@ -106,18 +111,27 @@ export default function CampaignDialog({
     }
   }, [campaign, form, open]);
 
+  const buildCampaignPayload = (data: CampaignFormData): CreateCampaignData => ({
+    code: data.code,
+    name: data.name,
+    description: data.description,
+    discountType: data.discountType === "FIXED_AMOUNT" ? "fixed" : "percentage",
+    discountValue: data.discountValue,
+    minRentalDays: data.minRentalDays,
+    validFrom: data.validFrom,
+    validUntil: data.validUntil,
+    isActive: data.isActive,
+  });
+
   const onSubmit = async (data: CampaignFormData) => {
     try {
-      const payload = {
-        ...data,
-        discountType: (data.discountType === "FIXED_AMOUNT" ? "fixed" : "percentage") as "fixed" | "percentage",
-      };
+      const payload = buildCampaignPayload(data);
       
       if (isEditing && campaign) {
-        await updateCampaign(campaign.id, payload as any);
+        await updateCampaign(campaign.id, payload);
         toast.success("Kampanya başarıyla güncellendi");
       } else {
-        await createCampaign(payload as any);
+        await createCampaign(payload);
         toast.success("Kampanya başarıyla oluşturuldu");
       }
       onSuccess();
@@ -211,7 +225,14 @@ export default function CampaignDialog({
                       İndirim Değeri {discountType === "PERCENTAGE" ? "(%)" : "(₺)"}
                     </FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -223,13 +244,21 @@ export default function CampaignDialog({
               control={form.control}
               name="minRentalDays"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Minimum Kiralama Günü</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={1} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                  <FormItem>
+                    <FormLabel>Minimum Kiralama Günü</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
               )}
             />
 
