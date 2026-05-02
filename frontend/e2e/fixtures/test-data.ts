@@ -11,7 +11,7 @@
  *   3. Database seeded with test data
  */
 
-import { test as base, Page } from "@playwright/test";
+import { test as base, Page, expect } from "@playwright/test";
 export { AdminLoginPage } from "../pages/AdminLoginPage";
 export { AdminReservationsPage } from "../pages/AdminReservationsPage";
 export { AdminReservationDetailPage } from "../pages/AdminReservationDetailPage";
