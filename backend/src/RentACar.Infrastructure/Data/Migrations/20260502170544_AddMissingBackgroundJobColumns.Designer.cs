@@ -12,8 +12,8 @@ using RentACar.Infrastructure.Data;
 namespace RentACar.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(RentACarDbContext))]
-    [Migration("20260502165512_AddBackgroundJobFailedAtColumn")]
-    partial class AddBackgroundJobFailedAtColumn
+    [Migration("20260502170544_AddMissingBackgroundJobColumns")]
+    partial class AddMissingBackgroundJobColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

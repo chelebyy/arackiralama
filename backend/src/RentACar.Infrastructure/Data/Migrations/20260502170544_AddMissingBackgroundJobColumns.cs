@@ -5,11 +5,17 @@
 namespace RentACar.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddBackgroundJobFailedAtColumn : Migration
+    public partial class AddMissingBackgroundJobColumns : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "last_error",
+                table: "background_jobs",
+                type: "text",
+                nullable: true);
+
             migrationBuilder.AddColumn<DateTime>(
                 name: "failed_at",
                 table: "background_jobs",
@@ -22,6 +28,10 @@ namespace RentACar.Infrastructure.Data.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "failed_at",
+                table: "background_jobs");
+
+            migrationBuilder.DropColumn(
+                name: "last_error",
                 table: "background_jobs");
         }
     }
