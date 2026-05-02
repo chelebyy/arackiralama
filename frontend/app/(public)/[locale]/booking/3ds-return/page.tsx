@@ -12,13 +12,15 @@ export default function ThreeDsReturnPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"processing" | "error">("processing");
-  const [locale, setLocale] = useState<string>("tr");
+  const [locale, setLocale] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((p) => setLocale(p.locale));
   }, [params]);
 
   useEffect(() => {
+    if (!locale) return; // Wait for resolved locale before running
+
     async function handle3dsReturn() {
       const paymentIntentId = sessionStorage.getItem("pendingPaymentIntentId");
       const publicCode = sessionStorage.getItem("pendingReservationPublicCode");
@@ -50,7 +52,7 @@ export default function ThreeDsReturnPage({
     }
 
     handle3dsReturn();
-  }, [searchParams, router, locale]);
+  }, [locale, searchParams, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

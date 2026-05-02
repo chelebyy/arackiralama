@@ -79,7 +79,7 @@ jobs:
 
       - name: Start frontend server
         run: |
-          pnpm exec serve .next/standalone -p 3000 &
+          node .next/standalone/server.js &
           sleep 5
         working-directory: frontend
 
