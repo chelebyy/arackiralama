@@ -4,10 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { complete3dsReturn } from "@/lib/api/payments";
 
-export default function ThreeDsReturnPage() {
+export default function ThreeDsReturnPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"processing" | "error">("processing");
+  const [locale, setLocale] = useState<string>("tr");
+
+  useEffect(() => {
+    params.then((p) => setLocale(p.locale));
+  }, [params]);
 
   useEffect(() => {
     async function handle3dsReturn() {
@@ -17,7 +26,7 @@ export default function ThreeDsReturnPage() {
       if (!paymentIntentId || !publicCode) {
         setStatus("error");
         return;
-    }
+      }
 
       // Bank response may come as query param (GET redirect) or stored param
       const bankResponse =
@@ -29,18 +38,19 @@ export default function ThreeDsReturnPage() {
       try {
         await complete3dsReturn(paymentIntentId, { bankResponse });
       } catch {
-        // Payment may already be completed by webhook — proceed to confirmation
+        // Payment may already be completed by webhook — still proceed to confirmation
+        // as the webhook would have updated the reservation status
       }
 
       sessionStorage.removeItem("pendingPaymentIntentId");
       sessionStorage.removeItem("pendingReservationPublicCode");
       sessionStorage.removeItem("pendingBankResponse");
 
-      router.replace(`/tr/booking/confirmation?code=${publicCode}`);
+      router.replace(`/${locale}/booking/confirmation?code=${publicCode}`);
     }
 
     handle3dsReturn();
-  }, [searchParams, router]);
+  }, [searchParams, router, locale]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -54,7 +64,7 @@ export default function ThreeDsReturnPage() {
           <>
             <p className="text-red-600">Failed to process payment. Please try again.</p>
             <button
-              onClick={() => router.push("/tr/booking/step4")}
+              onClick={() => router.push(`/${locale}/booking/step4`)}
               className="mt-4 px-4 py-2 bg-sky-700 text-white rounded-lg"
             >
               Return to Payment

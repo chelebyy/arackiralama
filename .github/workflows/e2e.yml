@@ -40,15 +40,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Start backend services
+      # Build and start backend services
       - name: Docker Compose up
         run: |
           cd backend
-          docker compose up -d postgres redis
+          docker compose up -d --build postgres redis api
         continue-on-error: true
 
       - name: Wait for services
-        run: sleep 15
+        run: sleep 20
 
       # Start frontend dev server in background
       - name: Setup pnpm
@@ -79,7 +79,7 @@ jobs:
 
       - name: Start frontend server
         run: |
-          pnpm exec serve .nextstandalone -p 3000 &
+          pnpm exec serve .next/standalone -p 3000 &
           sleep 5
         working-directory: frontend
 
@@ -88,14 +88,12 @@ jobs:
         working-directory: frontend
         env:
           E2E_BASE_URL: ${{ inputs.base_url || 'http://localhost:3000' }}
-        continue-on-error: true
 
       - name: Run E2E tests (shard 2/2)
         run: npx playwright test --reporter=html,junit --shard=2/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2
         working-directory: frontend
         env:
           E2E_BASE_URL: ${{ inputs.base_url || 'http://localhost:3000' }}
-        continue-on-error: true
 
       - name: Upload E2E artifacts
         uses: actions/upload-artifact@v7
