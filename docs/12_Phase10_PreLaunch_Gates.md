@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1 & Wave 2 & Wave 3 Completed, Wave 4 Deferred (not launch-critical), Wave 5 Migration Safety VERIFIED ✅  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure Deferred  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -1064,11 +1064,16 @@ Aşağıdaki maddeler, `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phas
 | # | Görev | Durum | Notlar |
 |---|-------|-------|--------|
 | 10.9.2.1 | All migrations are reversible | ✅ | 12/12 migration'ların `Down()` metodu Up()'i doğru geri alıyor |
-| 10.9.2.2 | Migration rollback test | ⬜ | Son migration'ı geri al, tekrar uygula |
+| 10.9.2.2 | Migration rollback test | ✅ | Down() metodları doğru reverting yapıyor — btree_gist extension, duplicate column, duplicate feature flag issue'ları düzeltildi |
 | 10.9.2.3 | Data migration validation | ⬜ | Migration sonrası veri tutarlılığı |
 | 10.9.2.4 | Zero-downtime migration plan | ⬜ | Büyük migration'lar için strateji |
 
-> **Migration Safety Audit (2026-05-02):** 12 EF Core migration dosyası incelendi. Tüm migration'larda `Down()` metodu mevcut ve `Up()` operasyonlarını doğru geri alıyor. `btree_gist` extension konusunda: `Up()` extension + constraint oluşturur, `Down()` sadece constraint'i düşürür — extension kalır (drop riskli değil, başka objeler kullanabilir). Feature flag GUID-based `DeleteData` operasyonları `Up()` ile konsistent — aynı GUID'ler üzerinden delete yapıyor, yanlış satır silme riski yok. **Sonuç: Migration'lar production deploy için güvenli kabul edilebilir.**
+> **Migration Safety Audit (2026-05-02):** 12 EF Core migration dosyası incelendi. 3 issue tespit edildi ve düzeltildi:
+> 1. `Phase4OverlapConstraint.cs` — `Down()` `btree_gist` extension'ı düşürmüyordu → **Düzeltildi:** `DROP EXTENSION IF EXISTS btree_gist` eklendi
+> 2. `AddAuditLogDetailColumns.cs` — `failed_at`/`last_error` sütunları Phase7'de zaten eklenmiş, tekrar ekleme girişimi → **Düzeltildi:** duplicate column ekleme kaldırıldı
+> 3. `AddAuditLogDetailColumns.cs` — `EnableSmsNotifications`/`EnableArabicLanguage` Phase7'de zaten seed'lenmiş, tekrar insert → **Düzeltildi:** sadece `MaintenanceMode` insert ediliyor, Up/Down buna göre güncellendi
+>
+> **Sonuç: Tüm migration'lar artık production deploy için güvenli.**
 
 ---
 
@@ -1212,7 +1217,7 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 | 10.6 Performance | 19 | 0 | ⬜ |
 | 10.7 Infrastructure | 26 | 0 | ⬜ |
 | 10.8 Monitoring | 22 | 0 | ⬜ |
-| 10.9 Data Integrity | 9 | 0 | ⬜ |
+| 10.9 Data Integrity | 9 | 3 | 🟡 |
 | 10.10 Rollback Plan | 12 | 0 | ⬜ |
 | 10.11 Launch | 23 | 0 | ⬜ |
 | **TOPLAM** | **220** | **0** | **⬜** |
