@@ -25,6 +25,10 @@ export const API_ENDPOINTS = {
     breakdown: '/pricing/breakdown',
     validateCampaign: '/pricing/campaigns/validate',
   },
+  payments: {
+    createIntent: '/payments/intents',
+    complete3ds: (intentId: string) => `/payments/${intentId}/3ds-return`,
+  },
 } as const;
 
 export enum HttpStatus {
