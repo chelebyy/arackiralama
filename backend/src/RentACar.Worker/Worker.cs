@@ -170,12 +170,27 @@ public sealed class Worker(
                     ?? throw new InvalidOperationException("ReleaseExpiredHold payload çözümlenemedi.");
 
                 var released = await holdService.ReleaseHoldAsync(payload.ReservationId, iterationCancellationToken);
+
+                // If Redis hold already gone (TTL expired mid-flight or concurrent release),
+                // the reservation may already be Expired in DB — check before treating as failure.
                 if (!released)
                 {
-                    throw new InvalidOperationException($"Failed to release hold for reservation {payload.ReservationId}");
+                    var existingReservation = await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken);
+                    if (existingReservation?.Status is ReservationStatus.Expired)
+                    {
+                        // Redis hold TTL expired naturally; DB already reflects correct state.
+                        // Mark job completed so no further retries.
+                        released = true;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Failed to release hold for reservation {payload.ReservationId}");
+                    }
                 }
 
-                var reservation = await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken);
+                var reservation = released
+                    ? await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken)
+                    : null;
                 if (reservation != null && reservation.Status is ReservationStatus.Hold or ReservationStatus.Draft)
                 {
                     reservation.Status = ReservationStatus.Expired;

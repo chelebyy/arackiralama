@@ -79,16 +79,19 @@ export default function DashboardPage() {
   const { reservations, isLoading: isRecentReservationsLoading } = useAdminReservations({ pageSize: 5 });
   const { pagination: reservationPagination, isLoading: isReservationStatsLoading } = useAdminReservations({ pageSize: 1 });
   const { pagination: activeReservationPagination, isLoading: isActiveReservationsLoading } = useAdminReservations({ pageSize: 1, status: "ACTIVE" });
-  const { vehicles, pagination: vehiclePagination, isLoading: isVehiclesLoading } = useAdminVehicles();
+  const { pagination: vehiclePagination, isLoading: isVehiclesLoading } = useAdminVehicles();
+  const { pagination: availablePagination, isLoading: isAvailableLoading } = useAdminVehicles({ status: "Available", pageSize: 1 });
+  const { pagination: maintenancePagination, isLoading: isMaintenanceLoading } = useAdminVehicles({ status: "Maintenance", pageSize: 1 });
+  const { pagination: retiredPagination, isLoading: isRetiredLoading } = useAdminVehicles({ status: "Retired", pageSize: 1 });
 
-  const availableCount = vehicles.filter((v) => v.status === "Available").length;
-  const maintenanceCount = vehicles.filter((v) => v.status === "Maintenance").length;
-  const retiredCount = vehicles.filter((v) => v.status === "Retired").length;
+  const availableCount = availablePagination?.totalCount ?? 0;
+  const maintenanceCount = maintenancePagination?.totalCount ?? 0;
+  const retiredCount = retiredPagination?.totalCount ?? 0;
   const totalReservations = reservationPagination?.totalCount ?? 0;
   const activeReservations = activeReservationPagination?.totalCount ?? 0;
-  const totalVehicles = vehiclePagination?.totalCount ?? vehicles.length;
+  const totalVehicles = vehiclePagination?.totalCount ?? 0;
   const isStatsLoading =
-    isReservationStatsLoading || isActiveReservationsLoading || isVehiclesLoading;
+    isReservationStatsLoading || isActiveReservationsLoading || isVehiclesLoading || isAvailableLoading || isMaintenanceLoading || isRetiredLoading;
 
   const stats = [
     {
