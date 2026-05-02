@@ -618,6 +618,8 @@ Her testin şu kriterlere uyması gerekir:
 
 > **Not:** Integration test'ler her zaman izole test database'i (`RentACar.Tests` projesi) üzerinde çalıştırılır. `/test-driven-development` ile her testin Arrange-Act-Assert yapısı kontrol edilir.
 
+> **EF Migration Fix (2026-05-02):** Phase7BackgroundJobAndFeatureFlagHardening Designer.cs eksikligi nedeniyle `background_jobs` tablosunda `last_error` ve `failed_at` sutunlari test database'inde eksikti. `AddMissingBackgroundJobColumns` migration ile eklendi. CI artık gecerli: 29/29 PASS.
+
 ### 10.2.1 API Endpoint Integration Tests
 
 | # | Endpoint | Durum | Senaryolar |
@@ -1234,7 +1236,7 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 
 ---
 
-**Doküman Versiyonu:** 1.0.0  
+**Doküman Versiyonu:** 1.0.1  
 **Oluşturulma:** 25 Nisan 2026  
-**Son Güncelleme:** 25 Nisan 2026  
+**Son Güncelleme:** 2 Mayıs 2026 (EF migration fix - background_jobs last_error/failed_at)  
 **Durum:** Aktif Takip
