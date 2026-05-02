@@ -12,6 +12,10 @@ using RentACar.Infrastructure.Services.Notifications;
 
 namespace RentACar.Worker;
 
+/// <summary>
+/// Background worker that processes expired reservation holds and dispatches notifications.
+/// Runs as a <see cref="BackgroundService"/> hosted by the .NET generic host.
+/// </summary>
 public sealed class Worker(
     IServiceProvider serviceProvider,
     IOptions<DailyBackupOptions> dailyBackupOptions,
@@ -472,6 +476,9 @@ public sealed class Worker(
     }
 }
 
+/// <summary>
+/// Configuration options for the daily backup subprocess execution.
+/// </summary>
 public sealed class DailyBackupOptions
 {
     public bool Enabled { get; set; }

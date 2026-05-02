@@ -209,6 +209,7 @@ public sealed class NotificationTemplateService(IOptions<NotificationOptions>? n
 
     public EmailMessageRequest RenderEmail(QueuedEmailNotificationRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var template = ResolveEmailTemplate(request.TemplateKey, request.Locale);
 
         return new EmailMessageRequest

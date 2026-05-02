@@ -9,6 +9,7 @@ public sealed class ConfiguredSmsProvider(
     IOptions<NotificationOptions> notificationOptions) : ISmsProvider
 {
     private readonly NotificationOptions _options = notificationOptions.Value;
+    private static readonly string TwilioName = "Twilio";
 
     public async Task<SmsSendResult> SendAsync(
         SmsMessageRequest request,
@@ -33,14 +34,14 @@ public sealed class ConfiguredSmsProvider(
 
     private ISmsProvider ResolveProvider(string providerName)
     {
-        return providerName.Equals("Twilio", StringComparison.OrdinalIgnoreCase)
+        return providerName.Equals(TwilioName, StringComparison.OrdinalIgnoreCase)
             ? twilioSmsProvider
             : netgsmSmsProvider;
     }
 
     private ISmsProvider? ResolveFallback(string providerName)
     {
-        if (providerName.Equals("Twilio", StringComparison.OrdinalIgnoreCase))
+        if (providerName.Equals(TwilioName, StringComparison.OrdinalIgnoreCase))
         {
             return netgsmSmsProvider;
         }

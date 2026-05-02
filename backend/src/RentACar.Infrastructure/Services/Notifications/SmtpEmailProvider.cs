@@ -17,6 +17,7 @@ public sealed class SmtpEmailProvider(
         EmailMessageRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var emailOptions = _options.Email;
         if (!emailOptions.Enabled ||
             string.IsNullOrWhiteSpace(emailOptions.Smtp.Host) ||
