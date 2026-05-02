@@ -68,7 +68,7 @@ jobs:
         working-directory: frontend
 
       - name: Install Playwright browsers
-        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+        run: npx playwright install --with-deps chromium
         working-directory: frontend
 
       - name: Build frontend
@@ -84,14 +84,14 @@ jobs:
         working-directory: frontend
 
       - name: Run E2E tests (shard 1/2)
-        run: node node_modules/@playwright/test/cli.js test --reporter=html,junit --shard=1/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2
+        run: npx playwright test --reporter=html,junit --shard=1/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2
         working-directory: frontend
         env:
           E2E_BASE_URL: ${{ inputs.base_url || 'http://localhost:3000' }}
         continue-on-error: true
 
       - name: Run E2E tests (shard 2/2)
-        run: node node_modules/@playwright/test/cli.js test --reporter=html,junit --shard=2/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2
+        run: npx playwright test --reporter=html,junit --shard=2/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2
         working-directory: frontend
         env:
           E2E_BASE_URL: ${{ inputs.base_url || 'http://localhost:3000' }}
