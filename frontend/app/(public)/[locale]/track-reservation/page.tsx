@@ -86,10 +86,34 @@ export default function TrackReservationPage() {
     try {
       const result = await getReservationByPublicCode(reservationCode.trim());
 
+      const statusMap: Record<string, ReservationDetails["status"]> = {
+        PENDING: "pending",
+        PENDINGPAYMENT: "pending",
+        PAID: "pending",
+        DRAFT: "pending",
+        HOLD: "confirmed",
+        CONFIRMED: "confirmed",
+        ACTIVE: "active",
+        COMPLETED: "completed",
+        CANCELLED: "cancelled",
+        EXPIRED: "cancelled",
+      };
+
+      const paymentStatusMap: Record<string, ReservationDetails["paymentStatus"]> = {
+        PENDING: "pending",
+        AUTHORIZED: "paid",
+        CAPTURED: "paid",
+        SUCCEEDED: "paid",
+        REFUNDED: "refunded",
+        PARTIALLY_REFUNDED: "refunded",
+        FAILED: "pending",
+        CANCELLED: "pending",
+      };
+
       const mapped: ReservationDetails = {
         id: result.id,
         code: result.publicCode,
-        status: result.status.toLowerCase() as ReservationDetails["status"],
+        status: statusMap[result.status] ?? "pending",
         vehicleName: result.vehicleName,
         vehicleCategory: "",
         customerName: `${result.customer.firstName} ${result.customer.lastName}`,
@@ -101,9 +125,9 @@ export default function TrackReservationPage() {
         dropoffDate: result.returnDate,
         pickupTime: result.pickupTime,
         dropoffTime: result.returnTime,
-        totalAmount: result.priceBreakdown.totalAmount,
-        depositAmount: result.priceBreakdown.depositAmount,
-        paymentStatus: result.paymentStatus.toLowerCase() as ReservationDetails["paymentStatus"],
+        totalAmount: (result as any).priceBreakdown?.totalAmount ?? (result as any).totalAmount ?? 0,
+        depositAmount: (result as any).priceBreakdown?.depositAmount ?? (result as any).depositAmount ?? 0,
+        paymentStatus: paymentStatusMap[(result as any).paymentStatus] ?? "pending",
         createdAt: result.createdAt,
         updatedAt: result.updatedAt,
         confirmedAt: result.status === "CONFIRMED" || result.status === "ACTIVE" ? result.updatedAt : undefined,
