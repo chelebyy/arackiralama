@@ -42,6 +42,7 @@ test.describe("Booking Flow", () => {
   test("search form submits with default fallback values", async ({ page }) => {
     const homePage = new HomePage(page);
     await homePage.goto("tr");
+    await page.locator('[data-search-form-hydrated="true"]').waitFor({ state: "attached" });
 
     await page.getByRole("button", { name: /ara|search/i }).click();
 

@@ -48,7 +48,7 @@ test.describe("i18n", () => {
 
   test("booking flow works in English locale", async ({ page, testDates }) => {
     await page.goto("/en");
-    await page.waitForLoadState("networkidle");
+    await page.locator('[data-search-form-hydrated="true"]').waitFor({ state: "attached" });
 
     // Fill search form using specific ID selectors to avoid strict mode violations
     await page.locator("#pickupLocation").selectOption("gzp");

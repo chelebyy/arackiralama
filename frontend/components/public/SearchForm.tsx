@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -36,6 +36,7 @@ const getWeekLater = () => {
 
 export default function SearchForm({ className, variant = "default" }: SearchFormProps) {
   const t = useTranslations("searchForm");
+  const [isHydrated, setIsHydrated] = useState(false);
   const [sameLocation, setSameLocation] = useState(true);
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
@@ -72,8 +73,13 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
   const isHero = variant === "hero";
 
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   return (
     <div
+      data-search-form-hydrated={isHydrated ? "true" : "false"}
       className={cn(
         "w-full rounded-2xl bg-white",
         isHero ? "shadow-xl border border-[#E2E8F0]" : "shadow-lg border border-[#E2E8F0]",

@@ -38,11 +38,7 @@ export class HomePage {
   }
 
   async fillSearchForm(data: SearchFormData) {
-    // Wait for client-side hydration of SearchForm
-    await this.page.waitForFunction(() => {
-      const el = document.querySelector("#pickupLocation");
-      return el && el.children.length > 0;
-    });
+    await this.page.locator('[data-search-form-hydrated="true"]').waitFor({ state: "attached" });
 
     if (data.pickupOffice) {
       await this.pickupSelect.selectOption(data.pickupOffice);
