@@ -26,11 +26,11 @@ export class HomePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.pickupSelect = page.getByLabel(/pickup|alış/i);
-    this.returnSelect = page.getByLabel(/return|dönüş/i);
-    this.pickupDateInput = page.getByLabel(/pickup.*date|alış.*tarih/i);
-    this.returnDateInput = page.getByLabel(/return.*date|dönüş.*tarih/i);
-    this.searchButton = page.getByRole("button", { name: /ara|search|search/i });
+    this.pickupSelect = page.locator("#pickupOffice");
+    this.returnSelect = page.locator("#returnOffice");
+    this.pickupDateInput = page.locator("#pickupDate");
+    this.returnDateInput = page.locator("#returnDate");
+    this.searchButton = page.getByRole("button", { name: /ara|search/i });
   }
 
   async goto(locale = "tr") {
