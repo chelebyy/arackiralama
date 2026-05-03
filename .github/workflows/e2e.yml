@@ -14,6 +14,7 @@ on:
       - 'frontend/playwright.config.ts'
       - 'frontend/package.json'
       - 'frontend/app/**'
+      - 'frontend/components/**'
       - '.github/workflows/e2e.yml'
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - 'frontend/playwright.config.ts'
       - 'frontend/package.json'
       - 'frontend/app/**'
+      - 'frontend/components/**'
       - '.github/workflows/e2e.yml'
 
 concurrency:
