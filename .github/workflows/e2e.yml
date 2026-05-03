@@ -47,10 +47,20 @@ jobs:
         run: |
           cd backend
           docker compose up -d --build postgres redis api
-        continue-on-error: true
 
       - name: Wait for services
-        run: sleep 20
+        run: |
+          echo "Waiting for API to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:5000/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - API not ready, waiting..."
+            sleep 2
+          done
+          echo "API failed to start within 60 seconds"
+          exit 1
 
       # Start frontend dev server in background
       - name: Setup pnpm
@@ -78,6 +88,9 @@ jobs:
         working-directory: frontend
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_API_URL: http://localhost:5000
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
+          AUTH_BACKEND_URL: http://localhost:5000
 
       - name: Start frontend server
         run: |
