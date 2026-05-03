@@ -88,9 +88,9 @@ jobs:
         working-directory: frontend
         env:
           NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_API_URL: http://localhost:5000
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
-          AUTH_BACKEND_URL: http://localhost:5000
+          NEXT_PUBLIC_API_URL: http://localhost:5000/api
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api
+          AUTH_BACKEND_URL: http://localhost:5000/api
 
       - name: Start frontend server
         run: |
