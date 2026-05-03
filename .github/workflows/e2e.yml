@@ -25,6 +25,7 @@ on:
       - 'frontend/package.json'
       - 'frontend/app/**'
       - 'frontend/components/**'
+      - 'frontend/lib/**'
       - '.github/workflows/e2e.yml'
 
 concurrency:
