@@ -88,9 +88,9 @@ jobs:
         working-directory: frontend
         env:
           NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_API_URL: http://localhost:5000/api
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api
-          AUTH_BACKEND_URL: http://localhost:5000/api
+          NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+          AUTH_BACKEND_URL: http://localhost:5000
 
       - name: Start frontend server
         run: |
@@ -107,6 +107,10 @@ jobs:
           echo "Server failed to start within 60 seconds"
           exit 1
         working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
+          AUTH_BACKEND_URL: http://localhost:5000
 
       - name: Run E2E tests (shard 1/2)
         run: npx playwright test --reporter=html,junit --shard=1/2 --retries=2 --trace=on-first-retry --project=chromium --workers=2

@@ -40,15 +40,19 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!email.trim() || !password) {
-      toast.error(t("errors.required"));
+      const message = t("errors.required");
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
 
+    setErrorMessage(null);
     setIsSubmitting(true);
 
     try {
@@ -67,7 +71,9 @@ export function LoginForm({
       const payload = (await response.json()) as LoginApiResponse;
 
       if (!response.ok || !payload.success) {
-        toast.error(payload.message ?? "Login Error");
+        const message = payload.message ?? "Login Error";
+        setErrorMessage(message);
+        toast.error(message);
         return;
       }
 
@@ -82,7 +88,9 @@ export function LoginForm({
 
       router.refresh();
     } catch {
-      toast.error(t("errors.generic"));
+      const message = t("errors.generic");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -97,6 +105,11 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={onSubmit}>
+            {errorMessage ? (
+              <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            ) : null}
             <div className="grid gap-2">
               <Label htmlFor="email">{t("labels.email")}</Label>
               <Input
