@@ -6,10 +6,18 @@ import type {
   RefreshResponseData
 } from "@/lib/auth/types";
 
+function getBackendBaseUrl() {
+  return (
+    process.env.AUTH_BACKEND_URL ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    DEFAULT_BACKEND_BASE_URL
+  );
+}
+
 export function buildBackendUrl(path: string) {
-  const base = DEFAULT_BACKEND_BASE_URL.endsWith("/")
-    ? DEFAULT_BACKEND_BASE_URL.slice(0, -1)
-    : DEFAULT_BACKEND_BASE_URL;
+  const base = getBackendBaseUrl().endsWith("/")
+    ? getBackendBaseUrl().slice(0, -1)
+    : getBackendBaseUrl();
 
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
