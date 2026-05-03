@@ -51,8 +51,7 @@ export class HomePage {
     // When returnOffice differs from pickupOffice, we need to disable "same location"
     // to reveal the returnLocation select (which is conditionally rendered)
     if (data.returnOffice && data.returnOffice !== data.pickupOffice) {
-      // Click the label containing the "same location" toggle
-      await this.page.locator("label").filter({ hasText: /same|aynı/i }).click();
+      await this.page.getByRole("button", { name: /same|aynı/i }).click();
       // Wait for returnLocation select to be attached to DOM
       await this.returnSelect.waitFor({ state: "attached", timeout: 5000 });
       await this.returnSelect.selectOption(data.returnOffice);

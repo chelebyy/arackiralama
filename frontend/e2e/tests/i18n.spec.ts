@@ -52,6 +52,7 @@ test.describe("i18n", () => {
 
     // Fill search form using specific ID selectors to avoid strict mode violations
     await page.locator("#pickupLocation").selectOption("gzp");
+    await page.getByRole("button", { name: /same/i }).click();
     await page.locator("#returnLocation").selectOption("ayt");
     await page.locator("#pickupDate").fill(testDates.pickup);
     await page.locator("#returnDate").fill(testDates.returnDate);

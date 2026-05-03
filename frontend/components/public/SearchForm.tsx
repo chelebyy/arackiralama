@@ -169,6 +169,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           <label className="flex items-center gap-3 cursor-pointer group">
             <button
               type="button"
+              aria-label={t("sameLocation")}
               onClick={() => {
                 setSameLocation(!sameLocation);
                 if (!sameLocation) {

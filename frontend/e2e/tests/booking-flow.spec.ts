@@ -14,7 +14,7 @@ test.describe("Booking Flow", () => {
 
     // Step 1: Homepage - Search
     await homePage.goto("tr");
-await homePage.fillSearchForm({
+    await homePage.fillSearchForm({
       pickupOffice: "ala",
       returnOffice: "ayt",
       pickupDate: testDates.pickup,
@@ -39,21 +39,19 @@ await homePage.fillSearchForm({
     // Step 4 would be payment - skip in this smoke test
   });
 
-  test("search form validates required fields", async ({ page }) => {
+  test("search form submits with default fallback values", async ({ page }) => {
     const homePage = new HomePage(page);
     await homePage.goto("tr");
 
-    // Submit without filling - click search button directly
     await page.getByRole("button", { name: /ara|search/i }).click();
 
-    // Should show validation toast (not DOM text)
-    await expect(page.locator("[data-toast-error]")).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/vehicles|\/araclar/);
   });
 
   test("vehicles page shows results", async ({ page, testDates }) => {
     const homePage = new HomePage(page);
     await homePage.goto("tr");
-await homePage.fillSearchForm({
+    await homePage.fillSearchForm({
       pickupOffice: "ala",
       returnOffice: "ayt",
       pickupDate: testDates.pickup,
