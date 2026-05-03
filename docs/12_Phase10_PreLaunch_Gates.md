@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** | 3 May 2026: step3 driverLicenseCountry input + track-reservation API bağlantısı düzeltildi  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** | 3 May 2026: step3 driverLicenseCountry input + track-reservation API bağlantısı + E2E CI AUTH_BACKEND_URL runtime fix  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -88,7 +88,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS | ✅ GO |
-| 7 | **E2E Tests** | Booking + payment flow | 100% pass | ⚠️ PARTIAL — 4 Blocker: (1) step3 driverLicenseCountry input ✅ FIXED 3 May, (2) step4 payment-intent/3ds-return ⚠️ NOT wired, (3) track-reservation API ✅ FIXED 3 May, (4) admin refund UI not built | ⚠️ PARTIAL |
+| 7 | **E2E Tests** | Booking + payment flow | 100% pass | ⚠️ PARTIAL — 5 Blocker: (1) step3 driverLicenseCountry input ✅ FIXED 3 May, (2) step4 payment-intent/3ds-return ⚠️ NOT wired, (3) track-reservation API ✅ FIXED 3 May, (4) admin refund UI not built, (5) AUTH_BACKEND_URL runtime ✅ FIXED 3 May | ⚠️ PARTIAL |
 | 8 | **Load Tests** | Availability query p95 | < 300ms | ⬜ DEFERRED — Dokploy infra gerekli | ⬜ DEFERRED |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | ⬜ DEFERRED — Dokploy infra gerekli | ⬜ DEFERRED |
 | 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ⬜ DEFERRED — infra + runtime gerekli | ⬜ DEFERRED |
@@ -757,6 +757,7 @@ Her testin şu kriterlere uyması gerekir:
 | step4 doesn't call `POST /api/v1/payments/intent` or handle 3DS redirect | `booking/step4/page.tsx` | ⬜ **NOT FIXED** — step4 hâlâ reservation oluşturup direct yönlendiriyor, payment intent/3ds-return zinciri kopuk | True payment E2E blocked |
 | track-reservation page uses mock data, not `GET /api/v1/reservations/{publicCode}` | `track-reservation/page.tsx` | ✅ **FIXED 3 May 2026** — `getReservationByPublicCode` API'sine bağlandı, mock kaldırıldı | Real tracking API artık çalışıyor |
 | Admin reservation detail cancel/refund handlers wired but not E2E-verified | `reservations/[id]/page.tsx` | ⬜ **NOT FIXED** — Refund button mevcut ama backend refund endpoint'ine bağlı değil, sadece UI stub | Admin refund E2E blocked |
+| `AUTH_BACKEND_URL` not set at runtime in E2E CI (only set at build time) | `.github/workflows/e2e.yml` | ✅ **FIXED 3 May 2026** — Added `AUTH_BACKEND_URL` and `PORT` to "Start frontend server" step | Admin login now reaches backend auth API |
 
 #### Karar: Phase 10.3 Scaffold COMPLETED ✅
 

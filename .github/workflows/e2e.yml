@@ -110,6 +110,7 @@ jobs:
           exit 1
         working-directory: frontend
         env:
+          PORT: 3000
           NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
           NEXT_PUBLIC_API_BASE_URL: http://localhost:5000/api/v1
           AUTH_BACKEND_URL: http://localhost:5000
