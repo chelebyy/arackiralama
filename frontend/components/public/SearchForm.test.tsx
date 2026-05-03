@@ -63,10 +63,9 @@ describe("SearchForm", () => {
   it("allows a different return location when same-location mode is disabled", async () => {
     renderSearchForm();
 
-    const [sameLocationToggle] = screen.getAllByRole("button");
+    const sameLocationToggle = screen.getByRole("button", { name: "Same pickup and return location" });
 
-    expect(sameLocationToggle).not.toBeNull();
-    fireEvent.click(sameLocationToggle!);
+    fireEvent.click(sameLocationToggle);
 
     fireEvent.change(screen.getByLabelText("Pickup Location"), { target: { value: "ala" } });
     fireEvent.change(screen.getByLabelText("Return Location"), { target: { value: "ayt" } });

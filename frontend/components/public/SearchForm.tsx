@@ -166,7 +166,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
           </div>
 
           {/* Same Location Checkbox */}
-          <label className="flex items-center gap-3 cursor-pointer group">
+          <div className="flex items-center gap-3 group">
             <button
               type="button"
               aria-label={t("sameLocation")}
@@ -178,7 +178,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
               }}
               className={cn(
                 "flex h-5 w-5 items-center justify-center rounded-md border-2",
-                "transition-all duration-200",
+                "transition-all duration-200 cursor-pointer",
                 sameLocation
                   ? "bg-[#0369A1] border-[#0369A1]"
                   : "bg-white border-[#94A3B8] group-hover:border-[#0369A1]"
@@ -189,7 +189,7 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
             <span className="text-sm text-[#475569] group-hover:text-[#334155] transition-colors">
               {t("sameLocation")}
             </span>
-          </label>
+          </div>
 
           {/* Dates Grid */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
