@@ -47,7 +47,7 @@ test.describe("Mobile Responsiveness", () => {
 
   test("admin login is accessible on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/dashboard/login");
+    await page.goto("/dashboard/login/v2");
 
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();

@@ -13,19 +13,19 @@ test.describe("Smoke", () => {
     // Check page loaded
     await expect(page).toHaveURL(/\/tr/);
 
-    // Check key elements visible
-    await expect(page.getByRole("heading", { name: /kiralık|araç/i })).toBeVisible();
+    // Check key elements visible - use .first() to avoid strict mode violation
+    await expect(page.getByRole("heading", { name: /kiralık|araç/i }).first()).toBeVisible();
   });
 
   test("homepage loads in English locale", async ({ page }) => {
     await page.goto("/en");
 
     await expect(page).toHaveURL(/\/en/);
-    await expect(page.getByRole("heading", { name: /rent.*car|vehicle/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /rent.*car|vehicle/i }).first()).toBeVisible();
   });
 
   test("admin login page loads", async ({ page }) => {
-    await page.goto("/dashboard/login");
+    await page.goto("/dashboard/login/v2");
 
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();

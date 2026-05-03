@@ -22,15 +22,15 @@ test.describe("Payment Flow (Mock)", () => {
     // Navigate to vehicles
     await homePage.goto("tr");
     await homePage.fillSearchForm({
-      pickupOffice: "alanya",
-      returnOffice: "antalya",
+      pickupOffice: "ala",
+      returnOffice: "ayt",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
     await homePage.submitSearch();
 
     // Select vehicle
-    await page.waitForURL(/\/vehicles|\/booking\/step2/, { timeout: 10000 });
+    await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/, { timeout: 10000 });
     await page
       .locator("[data-testid='vehicle-card']")
       .first()
@@ -53,14 +53,14 @@ test.describe("Payment Flow (Mock)", () => {
     // Navigate to step4
     await homePage.goto("tr");
     await homePage.fillSearchForm({
-      pickupOffice: "alanya",
-      returnOffice: "antalya",
+      pickupOffice: "ala",
+      returnOffice: "ayt",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
     await homePage.submitSearch();
 
-    await page.waitForURL(/\/vehicles|\/booking\/step2/, { timeout: 10000 });
+    await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/, { timeout: 10000 });
     await page.locator("[data-testid='vehicle-card']").first().click();
     await expect(page).toHaveURL(/\/booking\/step3/);
     await page.getByRole("button", { name: /devam|continue/i }).click();

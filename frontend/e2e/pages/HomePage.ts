@@ -26,8 +26,8 @@ export class HomePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.pickupSelect = page.locator("#pickupOffice");
-    this.returnSelect = page.locator("#returnOffice");
+    this.pickupSelect = page.locator("#pickupLocation");
+    this.returnSelect = page.locator("#returnLocation");
     this.pickupDateInput = page.locator("#pickupDate");
     this.returnDateInput = page.locator("#returnDate");
     this.searchButton = page.getByRole("button", { name: /ara|search/i });
@@ -38,12 +38,26 @@ export class HomePage {
   }
 
   async fillSearchForm(data: SearchFormData) {
+    // Wait for client-side hydration of SearchForm
+    await this.page.waitForFunction(() => {
+      const el = document.querySelector("#pickupLocation");
+      return el && el.children.length > 0;
+    });
+
     if (data.pickupOffice) {
       await this.pickupSelect.selectOption(data.pickupOffice);
     }
-    if (data.returnOffice) {
+
+    // When returnOffice differs from pickupOffice, we need to disable "same location"
+    // to reveal the returnLocation select (which is conditionally rendered)
+    if (data.returnOffice && data.returnOffice !== data.pickupOffice) {
+      // Click the label containing the "same location" toggle
+      await this.page.locator("label").filter({ hasText: /same|aynı/i }).click();
+      // Wait for returnLocation select to be attached to DOM
+      await this.returnSelect.waitFor({ state: "attached", timeout: 5000 });
       await this.returnSelect.selectOption(data.returnOffice);
     }
+
     if (data.pickupDate) {
       await this.pickupDateInput.fill(data.pickupDate);
     }

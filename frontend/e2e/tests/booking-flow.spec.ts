@@ -14,16 +14,16 @@ test.describe("Booking Flow", () => {
 
     // Step 1: Homepage - Search
     await homePage.goto("tr");
-    await homePage.fillSearchForm({
-      pickupOffice: "alanya",
-      returnOffice: "antalya",
+await homePage.fillSearchForm({
+      pickupOffice: "ala",
+      returnOffice: "ayt",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
     await homePage.submitSearch();
 
     // Step 2: Vehicles page - Select first vehicle
-    await expect(page).toHaveURL(/\/vehicles|\/booking\/step2/);
+    await expect(page).toHaveURL(/\/vehicles|\/booking\/step2|\/araclar/);
     const vehicleCards = page.locator("[data-testid='vehicle-card']");
     await expect(vehicleCards.first()).toBeVisible({ timeout: 10000 });
     await vehicleCards.first().click();
@@ -43,26 +43,26 @@ test.describe("Booking Flow", () => {
     const homePage = new HomePage(page);
     await homePage.goto("tr");
 
-    // Submit without filling
-    await homePage.submitSearch();
+    // Submit without filling - click search button directly
+    await page.getByRole("button", { name: /ara|search/i }).click();
 
-    // Should show validation
-    await expect(page.getByText(/zorunlu|required/i)).toBeVisible();
+    // Should show validation toast (not DOM text)
+    await expect(page.locator("[data-toast-error]")).toBeVisible({ timeout: 5000 });
   });
 
   test("vehicles page shows results", async ({ page, testDates }) => {
     const homePage = new HomePage(page);
     await homePage.goto("tr");
-    await homePage.fillSearchForm({
-      pickupOffice: "alanya",
-      returnOffice: "antalya",
+await homePage.fillSearchForm({
+      pickupOffice: "ala",
+      returnOffice: "ayt",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
     await homePage.submitSearch();
 
     // Wait for vehicles page
-    await page.waitForURL(/\/vehicles|\/booking\/step2/, { timeout: 10000 });
+    await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/, { timeout: 10000 });
     await page.waitForLoadState("networkidle");
 
     const vehicleCards = page.locator("[data-testid='vehicle-card']");

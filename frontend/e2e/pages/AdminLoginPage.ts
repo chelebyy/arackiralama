@@ -18,14 +18,14 @@ export class AdminLoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.getByLabel(/email/i);
-    this.passwordInput = page.getByLabel(/password/i);
+    this.emailInput = page.locator("#email");
+    this.passwordInput = page.locator("#password");
     this.submitButton = page.getByRole("button", { name: /giriş|login|sign in/i });
     this.errorMessage = page.getByRole("alert");
   }
 
   async goto() {
-    await this.page.goto("/dashboard/login");
+    await this.page.goto("/dashboard/login/v2");
   }
 
   async login(email: string, password: string) {
