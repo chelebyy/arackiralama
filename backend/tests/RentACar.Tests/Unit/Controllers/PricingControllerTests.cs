@@ -254,6 +254,9 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var pricingRule = await dbContext.PricingRules.FirstAsync();
         pricingRule.WeekdayMultiplier = 1m;
         pricingRule.WeekendMultiplier = 1.2m;
+        // Extend validity window to cover any future test date (seed uses fixed relative dates)
+        pricingRule.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+        pricingRule.EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
         await dbContext.SaveChangesAsync();
 
         var controller = new PricingController(new PricingService(dbContext, new EfUnitOfWork(dbContext)));
@@ -408,7 +411,6 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var pickupOffice = new Office
         {
             Name = "Havalimani",
-            Code = "alanya-airport",
             Address = "Alanya Airport",
             Phone = "+90 242 000 00 00",
             IsAirport = true,
@@ -418,7 +420,6 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var returnOffice = new Office
         {
             Name = "Merkez",
-            Code = "alanya-merkez",
             Address = "Alanya Merkez",
             Phone = "+90 242 000 00 01",
             IsAirport = false,
