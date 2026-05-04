@@ -68,7 +68,7 @@ Updated: 2026-05-04 (Phase 10.5 Security Audit bulguları eklendi)
 |------|-------|-------|
 | `pnpm audit` | `corepack pnpm -C frontend audit` | ✅ 0 vulnerability |
 
-> **Not:** Önceki taramada 10 vulnerability bulunmuştu (4 high, 6 moderate). `pnpm update` + `pnpm.overrides` (lodash, uuid, postcss, minimatch) ile temizlendi.
+> **Not:** Önceki taramada 10 vulnerability bulunmuştu (4 high, 6 moderate). `pnpm update` + `pnpm.overrides` (lodash, uuid, postcss) ile temizlendi. `minimatch` override'u coverage test'ini kırdığı için kaldırıldı.
 
 ## 6. Monitoring
 
