@@ -88,7 +88,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS | ✅ GO |
-| 7 | **E2E Tests** | Booking + payment flow | 100% pass | ✅ **FIXED 4 May 2026** — All 5 blockers resolved: step3 driverLicenseCountry ✅, step4 payment-intent/3ds-return ✅, track-reservation API ✅, admin refund UI ✅, AUTH_BACKEND_URL ✅ | ✅ GO |
+| 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. **Strategy: Local execution only** — CI'da E2E çalıştırılmayacak, developer localde `docker compose up + pnpm dev + playwright test` ile doğrulayacak | ✅ GO |
 | 8 | **Load Tests** | Availability query p95 | < 300ms | 🟨 **SCRIPTS READY 4 May 2026** — k6 scripts created (`backend/tests/k6/`) but not yet executed against deployed infra | 🟨 SCRIPTS READY |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | 🟨 **SCRIPTS READY 4 May 2026** — `concurrent-booking.js` + `mixed-traffic.js` ready, awaiting Dokploy infra | 🟨 SCRIPTS READY |
 | 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ⬜ DEFERRED — infra + runtime gerekli | ⬜ DEFERRED |
@@ -768,6 +768,135 @@ Her testin şu kriterlere uyması gerekir:
 - CI workflow configured with retries, sharding, artifact upload
 - 4 blockers identified — **2 FIXED (3 May)**, 2 remaining
 - Full E2E execution requires running services (backend + DB + Redis + frontend)
+
+### 10.3.5 Local Testing Strategy (Full Stack)
+
+**Karar:** E2E ve full-stack testler **localde** çalıştırılacak. CI/CD (GitHub Actions) sadece unit/integration testleri ve build verification'ı kapsayacak.
+
+**Neden?**
+- E2E testleri CI'da çok uzun sürüyor (6+ dk per shard) ve flaky olabiliyor (hydration timing, network latency)
+- Full stack localde `docker-compose` ile daha hızlı ve güvenilir çalıştırılabilir
+- Geliştirici localde doğrulama yapabilir — CI'da beklemek yerine hızlı feedback loop
+- GitHub Actions runner'larında resource contention (CPU/memory) nedeniyle E2E timeout'ları artıyor
+
+**Local Full Stack Test Setup:**
+
+```bash
+# 1. Tüm servisleri ayağa kaldır (PostgreSQL + Redis + Backend)
+cd backend && docker compose up -d
+
+# 2. Frontend dev server başlat
+cd frontend && corepack pnpm dev
+
+# 3. E2E testleri çalıştır (başka bir terminalde)
+cd frontend && corepack pnpm exec playwright test
+```
+
+**CI/CD Stratejisi (GitHub Actions):**
+
+| Test Tipi | CI'da Çalıştır? | Neden |
+|-----------|----------------|-------|
+| Unit Tests (Vitest/xUnit) | ✅ **Evet** | Hızlı, deterministik, mock'lı |
+| Integration Tests | ✅ **Evet** | Test DB ile izole, hızlı |
+| Build Verification | ✅ **Evet** | Type-check, lint, build |
+| **E2E Tests (Playwright)** | ❌ **Hayır** | Localde çalıştırılacak — flaky ve zaman alıcı |
+| **Load Tests (k6)** | ❌ **Hayır** | Localde veya staging ortamında çalıştırılacak |
+
+**E2E CI Workflow Trigger Stratejisi (`.github/workflows/e2e.yml`):**
+
+| Trigger | Durum | Amaç |
+|---------|-------|------|
+| **Pull Request** | ❌ **KALDIRILDI** | PR check'lerinde E2E çalıştırılmayacak — flaky ve yavaş |
+| **Push to main** | ❌ **KALDIRILDI** | Main'de her push'ta çalıştırmak yerine... |
+| **Nightly (cron)** | ✅ **AKTIF** | Her gece 03:00 UTC'de main branch son state'ini test eder |
+| **Release tags (`v*.*.*`)** | ✅ **AKTIF** | Release öncesi son doğrulama — deployment gate |
+| **workflow_dispatch** | ✅ **AKTIF** | Manuel çalıştırma — isteğe bağlı |
+
+> **Neden main push'ta değil?** Main'de her push'ta E2E çalıştırmak = aynı flaky sorunları main build'inde de yaşamak. Nightly daha mantıklı: gece resource contention az, sabah rapor alınır. Release tag'lerinde çalıştırmak = deployment öncesi son kontrol.
+
+**E2E Pre-Commit Checklist (Developer Responsibility):**
+
+```markdown
+- [ ] `docker compose up -d` çalışıyor
+- [ ] `corepack pnpm dev` çalışıyor
+- [ ] `pnpm exec playwright test` geçiyor
+- [ ] En az 1 critical path (booking flow) test edildi
+```
+
+### 10.3.6 Browser Testing & Visual QA (Chrome DevTools)
+
+**Karar:** Tarayıcı tabanlı manuel testler ve visual QA **Chrome DevTools** ile yapılacak. Playwright'ın yanında, gerçek tarayıcıda kullanıcı deneyimi doğrulanacak.
+
+**Neden Chrome DevTools?**
+- React Developer Tools extension (Next.js App Router desteği)
+- Lighthouse entegrasyonu (Performance, Accessibility, SEO, Best Practices)
+- Network tab (API latency, caching, waterfall analysis)
+- Application tab (sessionStorage, localStorage, cookies, service workers)
+- Console (runtime errors, warnings, React Strict Mode double-render)
+- Performance tab (INP, LCP, CLS profiling — Core Web Vitals)
+- Elements tab (DOM inspection, CSS debugging)
+
+**Local Browser Test Setup:**
+
+```bash
+# 1. Full stack ayağa kaldır
+cd backend && docker compose up -d
+cd frontend && corepack pnpm dev
+
+# 2. Chrome'u aç ve DevTools ile inspect et
+# URL: http://localhost:3000
+```
+
+**Browser Test Checklist (Chrome DevTools ile):**
+
+```markdown
+#### A. Homepage / Search
+- [ ] Lighthouse Performance ≥ 90
+- [ ] Lighthouse Accessibility ≥ 90
+- [ ] Search form hydration — `data-search-form-hydrated="true"` attribute set oluyor mu? (Elements tab)
+- [ ] Network tab: `/api/v1/vehicles/available` API call latency < 300ms
+- [ ] No console errors (React Strict Mode double-render hariç)
+
+#### B. Booking Flow (Step 1 → 2 → 3 → 4)
+- [ ] Step 1: Date picker çalışıyor, office select'ler dolu
+- [ ] Step 2: Araç listesi geliyor, fiyatlar TRY olarak gösteriliyor
+- [ ] Step 3: Driver license country select çalışıyor (critical path!)
+- [ ] Step 4: Payment method switch (credit_card ↔ paypal), card form toggle
+- [ ] Step 4: Campaign code validation API call'ı gidiyor mu? (Network tab)
+- [ ] Application tab: `booking-storage` localStorage key'i step'ler arası korunuyor mu?
+
+#### C. Admin Panel
+- [ ] Login: Network tab'de `POST /api/admin/v1/auth/login` 200 dönüyor
+- [ ] Reservations list: Pagination çalışıyor
+- [ ] Reservation detail: Refund dialog açılıyor, amount/reason field'ları var
+- [ ] Refund API call: `POST /api/admin/v1/reservations/{id}/refund` 200 dönüyor
+
+#### D. 3DS / Payment
+- [ ] Payment intent creation: Network tab'de `POST /api/v1/payments/intent` 200
+- [ ] 3DS redirect: `redirectUrl` varsa window.location.assign çalışıyor
+- [ ] 3DS return: `pendingPaymentIntentId` ve `pendingReservationPublicCode` sessionStorage'dan siliniyor
+- [ ] Confirmation: reservation code URL'de `?code=` olarak görünüyor
+
+#### E. Responsive / Mobile
+- [ ] DevTools Device Toolbar: iPhone 14 (390×844), iPad (768×1024)
+- [ ] Search form mobilde kullanılabilir
+- [ ] Horizontal scroll yok
+- [ ] Touch target'lar ≥ 44×44px
+```
+
+**Chrome DevTools Kullanım Rehberi:**
+
+| Tab | Kullanım Amacı | Ne Kontrol Edilir |
+|-----|---------------|-------------------|
+| **Elements** | DOM inspection | `data-search-form-hydrated` attribute, CSS class'lar, React component tree |
+| **Console** | Runtime errors | React Strict Mode warnings, API error messages, `console.log` leftover'ları |
+| **Network** | API monitoring | Endpoint latency, status codes, request/response payload'ları, caching headers |
+| **Performance** | Core Web Vitals | LCP, INP, CLS — recording ile measure et |
+| **Lighthouse** | Automated audit | Performance, Accessibility, Best Practices, SEO — 4 kategori tek tıkla |
+| **Application** | Storage | localStorage (`booking-storage`), sessionStorage (`pendingPaymentIntentId`), cookies |
+| **React Developer Tools** | Component debugging | Component props/state, hooks, render count — özellikle booking flow state yönetimi |
+
+> **Not:** React Developer Tools browser extension'ı kurulu olmalı. Next.js App Router desteği için React DevTools v4.28+ gerekli.
 
 ---
 
