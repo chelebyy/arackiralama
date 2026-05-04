@@ -8,8 +8,13 @@ import {
   assignVehicle,
   checkIn,
   checkOut,
+  refundReservation,
 } from '@/lib/api/admin/reservations';
-import type { AdminReservation, PaginatedResponse } from '@/lib/api/admin';
+import type {
+  AdminRefundData,
+  AdminReservation,
+  PaginatedResponse,
+} from '@/lib/api/admin';
 
 const RESERVATION_KEYS = {
   all: ['admin', 'reservations'] as const,
@@ -72,4 +77,8 @@ export async function mutateCheckIn(id: string, data: Parameters<typeof checkIn>
 
 export async function mutateCheckOut(id: string, data: Parameters<typeof checkOut>[1]) {
   return checkOut(id, data);
+}
+
+export async function mutateRefundReservation(id: string, data: AdminRefundData) {
+  return refundReservation(id, data);
 }

@@ -1,25 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { complete3dsReturn } from "@/lib/api/payments";
 
-export default function ThreeDsReturnPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default function ThreeDsReturnPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const locale = params.locale as string;
   const [status, setStatus] = useState<"processing" | "error">("processing");
-  const [locale, setLocale] = useState<string | null>(null);
 
   useEffect(() => {
-    params.then((p) => setLocale(p.locale));
-  }, [params]);
-
-  useEffect(() => {
-    if (!locale) return; // Wait for resolved locale before running
+    if (!locale) return;
 
     async function handle3dsReturn() {
       const paymentIntentId = sessionStorage.getItem("pendingPaymentIntentId");
@@ -30,7 +23,6 @@ export default function ThreeDsReturnPage({
         return;
       }
 
-      // Bank response may come as query param (GET redirect) or stored param
       const bankResponse =
         searchParams.get("bankResponse") ||
         searchParams.get("threeDSResponse") ||
@@ -40,8 +32,7 @@ export default function ThreeDsReturnPage({
       try {
         await complete3dsReturn(paymentIntentId, { bankResponse });
       } catch {
-        // Payment may already be completed by webhook — still proceed to confirmation
-        // as the webhook would have updated the reservation status
+        // Payment may already be completed by webhook
       }
 
       sessionStorage.removeItem("pendingPaymentIntentId");

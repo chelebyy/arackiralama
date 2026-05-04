@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   ArrowLeft,
+  Banknote,
   Calendar,
   Car,
   CheckCircle,
@@ -24,6 +35,7 @@ import {
   mutateCancelReservation,
   mutateCheckIn,
   mutateCheckOut,
+  mutateRefundReservation,
 } from "@/hooks/admin";
 import { toast } from "sonner";
 
@@ -99,6 +111,11 @@ export default function ReservationDetailPage() {
 
   const { reservation, isLoading, isError, mutate } = useAdminReservation(id);
 
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [isRefunding, setIsRefunding] = useState(false);
+
   const handleCancel = async () => {
     if (!id) return;
     try {
@@ -129,6 +146,27 @@ export default function ReservationDetailPage() {
       mutate();
     } catch {
       toast.error("Check-out işlemi başarısız");
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!id) return;
+    setIsRefunding(true);
+    try {
+      await mutateRefundReservation(id, {
+        amount: refundAmount ? parseFloat(refundAmount) : undefined,
+        reason: refundReason || undefined,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      toast.success("İade işlemi tamamlandı");
+      setRefundDialogOpen(false);
+      setRefundAmount("");
+      setRefundReason("");
+      mutate();
+    } catch {
+      toast.error("İade işlemi başarısız");
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -190,6 +228,12 @@ export default function ReservationDetailPage() {
             <Button variant="destructive" size="sm" onClick={handleCancel}>
               <XCircle className="mr-2 h-4 w-4" />
               İptal Et
+            </Button>
+          )}
+          {(r.paymentStatus === "CAPTURED" || r.paymentStatus === "AUTHORIZED") && (
+            <Button variant="outline" size="sm" onClick={() => setRefundDialogOpen(true)}>
+              <Banknote className="mr-2 h-4 w-4" />
+              İade Et
             </Button>
           )}
           {canCheckIn && (
@@ -509,6 +553,43 @@ export default function ReservationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rezervasyon İadesi</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="refundAmount">İade Tutarı (opsiyonel)</Label>
+              <Input
+                id="refundAmount"
+                type="number"
+                placeholder="Boş bırakılırsa tam iade yapılır"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="refundReason">İade Nedeni (opsiyonel)</Label>
+              <Input
+                id="refundReason"
+                placeholder="İade nedeni girin"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)} disabled={isRefunding}>
+              Vazgeç
+            </Button>
+            <Button variant="default" onClick={handleRefund} disabled={isRefunding}>
+              {isRefunding ? "İşleniyor..." : "İade Et"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

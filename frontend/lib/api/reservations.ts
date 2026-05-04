@@ -17,9 +17,12 @@ export async function getReservationByPublicCode(code: string): Promise<Reservat
 
 export async function placeHold(
   reservationId: string,
+  sessionId: string,
   data?: HoldReservationData
 ): Promise<Reservation> {
-  return post<Reservation>(API_ENDPOINTS.reservations.hold(reservationId), data);
+  return post<Reservation>(API_ENDPOINTS.reservations.hold(reservationId), data, {
+    headers: { 'X-Session-Id': sessionId },
+  });
 }
 
 export async function extendHold(

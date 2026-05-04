@@ -262,6 +262,24 @@ export interface ReservationCheckOutData {
   adminNotes?: string;
 }
 
+export interface AdminRefundData {
+  amount?: number;
+  reason?: string;
+  idempotencyKey?: string;
+}
+
+export interface AdminPaymentOperation {
+  reservationId: string;
+  paymentIntentId?: string;
+  paymentKind?: string;
+  operation: string;
+  status: string;
+  amount?: number;
+  currency?: string;
+  referenceId?: string;
+  reason?: string;
+}
+
 export type CreatePricingRuleData = Omit<PricingRule, 'id'>;
 export type UpdatePricingRuleData = CreatePricingRuleData;
 
@@ -301,6 +319,24 @@ export interface UpdateAdminUserRoleData {
 
 export interface UpdateAdminUserStatusData {
   isActive: boolean;
+}
+
+export interface AdminRefundData {
+  amount?: number;
+  reason?: string;
+  idempotencyKey?: string;
+}
+
+export interface AdminPaymentOperation {
+  reservationId: string;
+  paymentIntentId?: string;
+  paymentKind?: string;
+  operation: string;
+  status: string;
+  amount?: number;
+  currency?: string;
+  referenceId?: string;
+  reason?: string;
 }
 
 export type AdminResponse<T> = T | ApiSuccessResponse<T>;
