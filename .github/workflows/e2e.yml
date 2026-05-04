@@ -8,25 +8,11 @@ on:
         required: false
         default: 'http://localhost:3000'
         type: string
-  pull_request:
-    paths:
-      - 'frontend/e2e/**'
-      - 'frontend/playwright.config.ts'
-      - 'frontend/package.json'
-      - 'frontend/app/**'
-      - 'frontend/components/**'
-      - '.github/workflows/e2e.yml'
+  schedule:
+    - cron: "0 3 * * *"
   push:
-    branches:
-      - main
-    paths:
-      - 'frontend/e2e/**'
-      - 'frontend/playwright.config.ts'
-      - 'frontend/package.json'
-      - 'frontend/app/**'
-      - 'frontend/components/**'
-      - 'frontend/lib/**'
-      - '.github/workflows/e2e.yml'
+    tags:
+      - "v*.*.*"
 
 concurrency:
   group: e2e-${{ github.ref }}

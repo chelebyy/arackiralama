@@ -22,11 +22,12 @@ function formatDate(d) {
 }
 
 function randomUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  // Deterministic UUID for load testing — unique per VU/iteration.
+  // Not cryptographically secure; acceptable for test session IDs.
+  const vu = String(__VU).padStart(4, '0');
+  const iter = String(__ITER).padStart(8, '0');
+  const ts = Date.now();
+  return `load-${vu}-${iter}-${ts}`;
 }
 
 export default function () {
