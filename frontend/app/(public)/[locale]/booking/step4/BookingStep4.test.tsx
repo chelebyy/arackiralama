@@ -74,6 +74,16 @@ vi.mock("@/lib/api/pricing", () => ({
   validateCampaign: (...args: unknown[]) => validateCampaignMock(...args),
 }));
 
+const placeHoldMock = vi.fn();
+
+vi.mock("@/hooks/useReservations", () => ({
+  usePlaceHold: () => ({
+    placeHold: (...args: unknown[]) => placeHoldMock(...args),
+    isPlacingHold: false,
+    error: null,
+  }),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     error: (...args: unknown[]) => toastErrorMock(...args),
@@ -84,7 +94,9 @@ describe("BookingStep4Page", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     createReservationMock.mockReset();
-    createReservationMock.mockResolvedValue({ publicCode: "ALN-REAL-123" });
+    createReservationMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
+    placeHoldMock.mockReset();
+    placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
     toastErrorMock.mockReset();
     pushMock.mockReset();
