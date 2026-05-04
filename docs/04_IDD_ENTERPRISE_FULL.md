@@ -230,12 +230,99 @@ Dokploy uses Traefik as its core reverse proxy. SSL certificates are automatical
 
 ## 4.2 Security Headers
 
-Security headers are configured via Traefik Middlewares in the Dokploy UI:
+> **⚠️ Phase 10.5 Bulgusu (4 Mayıs 2026):** Uygulama katmanında security headers middleware'i eksik. Traefik edge'de yapılandırılsa bile defense-in-depth için ASP.NET Core middleware'ı da eklenmeli.
 
-- `X-Frame-Options: SAMEORIGIN`
-- `X-Content-Type-Options: nosniff`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
+### Traefik Middleware (Dokploy UI)
+
+Traefik üzerinde şu middleware'ler yapılandırılmalı:
+
+```yaml
+# Dokploy UI → Middlewares → Add Headers
+headers:
+  customResponseHeaders:
+    X-Frame-Options: "DENY"  # API için; admin için SAMEORIGIN
+    X-Content-Type-Options: "nosniff"
+    Referrer-Policy: "strict-origin-when-cross-origin"
+    Permissions-Policy: "geolocation=(), microphone=(), camera=()"
+  contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.alanyarentacar.com; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+```
+
+> **Not:** `X-XSS-Protection: 1; mode=block` deprecated'tır ve modern tarayıcılar tarafından desteklenmez. CSP `script-src 'self'` yeterli korumadır.
+
+### ASP.NET Core Middleware (Uygulama Katmanı)
+
+```csharp
+// backend/src/RentACar.API/Configuration/ApplicationBuilderExtensions.cs
+// veya ayrı bir SecurityHeadersMiddleware
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
+    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; ...";
+    await next();
+});
+```
+
+### HSTS (HTTPS Strict Transport Security)
+
+```csharp
+// Production ortamında:
+app.UseHsts();  // HSTS başlığı ekler
+app.UseHttpsRedirection();  // HTTP → HTTPS redirect
+```
+
+| Header | Değer | Amaç |
+|--------|-------|------|
+| Strict-Transport-Security | `max-age=31536000; includeSubDomains` | HTTPS downgrade önleme |
+| Content-Security-Policy | `default-src 'self'; script-src 'self'; ...` | XSS ve injection önleme |
+| X-Frame-Options | `DENY` (API) / `SAMEORIGIN` (Admin) | Clickjacking önleme |
+| X-Content-Type-Options | `nosniff` | MIME sniffing önleme |
+| Referrer-Policy | `strict-origin-when-cross-origin` | Referrer bilgisi kontrolü |
+| Permissions-Policy | `geolocation=(), microphone=(), camera=()` | Tarayıcı API kısıtlaması |
+
+## 4.3 CORS Configuration
+
+> **⚠️ Phase 10.5 Bulgusu (4 Mayıs 2026):** CORS yapılandırması mevcut değil. Production'da frontend (`alanyarentacar.com`) ve API (`api.alanyarentacar.com`) farklı origin'lerde olacağı için CORS zorunludur.
+
+### ASP.NET Core CORS Setup
+
+```csharp
+// Program.cs veya ServiceCollectionExtensions.cs
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ProductionCors", policy =>
+    {
+        policy.WithOrigins(
+                "https://alanyarentacar.com",
+                "https://www.alanyarentacar.com",
+                "https://admin.alanyarentacar.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();  // Cookie-based auth için gerekli
+    });
+
+    options.AddPolicy("DevelopmentCors", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// Middleware pipeline:
+if (app.Environment.IsDevelopment())
+    app.UseCors("DevelopmentCors");
+else
+    app.UseCors("ProductionCors");
+```
+
+### CORS + Credentials Uyarısı
+
+`AllowCredentials()` ile `AllowAnyOrigin()` birlikte kullanılamaz (tarayıcı güvenlik kuralı). Production'da explicit domain listesi zorunludur.
 
 ------------------------------------------------------------------------
 
