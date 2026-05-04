@@ -88,11 +88,11 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS | ✅ GO |
-| 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. **Strategy: Local execution only** — CI'da E2E çalıştırılmayacak, developer localde `docker compose up + pnpm dev + playwright test` ile doğrulayacak | ✅ GO |
-| 8 | **Load Tests** | Availability query p95 | < 300ms | 🟨 **SCRIPTS READY 4 May 2026** — k6 scripts created (`backend/tests/k6/`) but not yet executed against deployed infra | 🟨 SCRIPTS READY |
+| 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. Flaky `data-search-form-hydrated` test replaced with stable selector. **CI Strategy: PR trigger REMOVED** — E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only. Developer verifies locally with `docker compose up + pnpm dev + playwright test` | ✅ GO |
+| 8 | **Load Tests** | Availability query p95 | < 300ms | 🟨 **SCRIPTS READY 4 May 2026** — k6 scripts created (`backend/tests/k6/`). CodeQL HIGH (`Math.random()` in `concurrent-booking.js`) fixed in `3d3b2f1`. Scripts not yet executed against deployed infra. | 🟨 SCRIPTS READY |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | 🟨 **SCRIPTS READY 4 May 2026** — `concurrent-booking.js` + `mixed-traffic.js` ready, awaiting Dokploy infra | 🟨 SCRIPTS READY |
 | 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ⬜ DEFERRED — infra + runtime gerekli | ⬜ DEFERRED |
-| 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ✅ 0 critical/high (NU1510 unrelated warning) | ✅ GO |
+| 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ⚠️ **9 vulnerabilities on `main`** (3 high, 6 moderate) — pre-existing, not introduced by PR #206. See `chelebyy/arackiralama/security/dependabot`. | 🔴 NO-GO |
 | 12 | **Performance** | Lighthouse Performance | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
 | 13 | **Performance** | Lighthouse Accessibility | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
 | 14 | **Performance** | API health check response | < 100ms | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
@@ -105,7 +105,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 21 | **Launch Readiness** | Rollback plan documented | Step-by-step | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 | 22 | **Launch Readiness** | Incident response plan | Escalation matrix | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 
-**Özet:** 4/22 GO | 1/22 PARTIAL | 17/22 DEFERRED veya NO-GO
+**Özet:** 4/22 GO | 1/22 PARTIAL (SCRIPTS READY) | 1/22 NO-GO | 16/22 DEFERRED
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.
