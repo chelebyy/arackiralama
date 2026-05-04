@@ -1,6 +1,7 @@
 # Security & Compliance Document
 
 Date: 2026-02-25
+Updated: 2026-05-04 (Phase 10.5 Security Audit bulguları eklendi)
 
 ## 1. Network Security
 
@@ -10,10 +11,36 @@ Date: 2026-02-25
 
 ## 2. Application Security
 
--   JWT authentication
--   RBAC authorization
--   Rate limiting (login, payment)
--   Idempotency enforcement
+### 2.1 Doğrulanan Kontroller (Phase 10.5 — 4 Mayıs 2026)
+
+| Kontrol | Durum | Kanıt |
+|---------|-------|-------|
+| JWT authentication | ✅ | HMAC-SHA256, 15 dk access / 7 gün refresh, session validation, custom OnChallenge |
+| RBAC authorization | ✅ | GuestOnly, CustomerOnly, AdminOnly, SuperAdminOnly policy'leri |
+| Rate limiting | ✅ | Tiered: Global 100/min, Strict 5/min, Payment 10/min, Standard 30/min, Health 10/min |
+| Idempotency enforcement | ✅ | IdempotencyMiddleware + IdempotentAttribute |
+| Password hashing | ✅ | BCrypt work factor 12 |
+| Auth cookies | ✅ | `__Host-rac_refresh`, SameSite=Strict, HttpOnly, Secure |
+| Error handling | ✅ | Generic client mesajı, stack trace log'a yazılır (sızdırılmaz) |
+| Request logging sanitization | ✅ | Newline sanitization (log injection önlemi) |
+| JWT secret validation | ✅ | `JwtSecretValidator`: 32+ char, placeholder blok (Production/Staging) |
+| Webhook signature verification | ✅ | Iyzico HMAC + MockProvider secret verify |
+| SQL Injection prevention | ✅ | EF Core parameterized queries; `ExecuteSqlRaw` sadece migration/test fixture'larda |
+
+### 2.2 Eksik Kontroller (Medium Risk — Production Öncesi Düzeltilmeli)
+
+| Kontrol | Durum | Etki | Önerilen Çözüm |
+|---------|-------|------|----------------|
+| CORS | 🔴 Yok | API çağrıları cross-origin'de başarısız olabilir | `AddCors` + `UseCors` ekle, explicit allowed origins tanımla |
+| Security Headers (6 adet) | 🔴 Yok | XSS, clickjacking, MIME sniffing riski | `SecurityHeadersMiddleware` veya NWebsec.AspNetCore.Middleware |
+| Swagger/OpenAPI exposure | 🟡 Koşulsuz açık | Production'da API dokümantasyonu public | `environment.IsDevelopment()` guard ekle |
+| AllowedHosts | 🟡 `"*"` | Herhangi bir domain'den istek kabul edilir | Production config'de domain kısıtlaması yap |
+| AutoMigrateOnStartup | 🟡 `true` | Migration hatası DB'yi bozabilir | `false` yap, deployment sırasında explicit migration çalıştır |
+
+### 2.3 Düşük Risk Bulgular
+
+- `dangerouslySetInnerHTML` kullanımı: `chart.tsx` ve `code-block.tsx`'te var. Veri internally generated (Shiki output, CSS variables) — kullanıcı girdisi değil.
+- `AutoMigrateOnStartup`: Sadece local dev için riskli değil; production config'de mutlaka `false` olmalı.
 
 ## 3. Payment Security
 
@@ -23,12 +50,43 @@ Date: 2026-02-25
 
 ## 4. Data Protection
 
--   TLS enforced
+-   TLS enforced (Traefik/Dokploy edge termination)
 -   PII masked in logs
 -   5-year payment log retention
 
-## 5. Monitoring
+## 5. Dependency Security
+
+### 5.1 Backend (4 Mayıs 2026)
+
+| Araç | Komut | Sonuç |
+|------|-------|-------|
+| `dotnet list package --vulnerable` | `dotnet list backend/RentACar.sln package --vulnerable` | ✅ 0 vulnerability |
+
+### 5.2 Frontend (4 Mayıs 2026)
+
+| Araç | Komut | Sonuç |
+|------|-------|-------|
+| `pnpm audit` | `corepack pnpm -C frontend audit` | ✅ 0 vulnerability |
+
+> **Not:** Önceki taramada 10 vulnerability bulunmuştu (4 high, 6 moderate). `pnpm update` + `pnpm.overrides` (lodash, uuid, postcss, minimatch) ile temizlendi.
+
+## 6. Monitoring
 
 -   Uptime monitoring
 -   5xx alerts
 -   Disk usage alerts
+
+## 7. OWASP Top 10 Değerlendirmesi (Phase 10.5)
+
+| # | Kategori | Durum | Notlar |
+|---|----------|-------|--------|
+| A01 | Broken Access Control | ✅ | RBAC policy'leri + `[Authorize]` attribute'ları aktif |
+| A02 | Cryptographic Failures | ✅ | BCrypt wf=12, JWT HMAC-SHA256, CSPRNG refresh token, timing-safe compare |
+| A03 | Injection | ✅ | EF Core parameterized queries, raw SQL yok (production) |
+| A04 | Insecure Design | 🟡 | CORS eksik, security headers eksik — medium risk |
+| A05 | Security Misconfiguration | 🟡 | `AllowedHosts: "*"`, Swagger unconditionally, `AutoMigrateOnStartup: true` |
+| A06 | Vulnerable Components | ✅ | Dependency scan: 0 vulnerability |
+| A07 | Auth Failures | ✅ | JWT + refresh + session validation + brute force lockout |
+| A08 | Data Integrity Failures | ✅ | Webhook HMAC verification, idempotency keys |
+| A09 | Logging Failures | ✅ | Audit log + request log + error log tam |
+| A10 | SSRF | ✅ | Outbound requests sadece configured payment provider URL'lerine |
