@@ -24,7 +24,10 @@ import { PriceBreakdown } from "@/components/public/PriceBreakdown";
 import { differenceInCalendarDays } from "date-fns";
 import { useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
+import { usePlaceHold } from "@/hooks/useReservations";
 import { createReservation } from "@/lib/api/reservations";
+import { createPaymentIntent } from "@/lib/api/payments";
+import type { PaymentIntentResponse } from "@/lib/api/payments";
 import type { CreateReservationData } from "@/lib/api/types";
 
 const extraOptions = [
@@ -91,6 +94,7 @@ export default function BookingStep4Page() {
   const locale = params.locale as string;
   const booking = useBookingState();
   const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
+  const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
 
@@ -162,7 +166,7 @@ export default function BookingStep4Page() {
     setValue("campaignCode", normalizedCode);
   };
 
-  const onSubmit = async (_data: Step4FormData) => {
+  const onSubmit = async (data: Step4FormData) => {
     if (!booking.customer || !booking.driver) {
       toast.error("Booking details are missing. Please return to the previous step.");
       return;
@@ -184,10 +188,38 @@ export default function BookingStep4Page() {
 
     try {
       const reservation = await createReservation(reservationData);
-      const code = reservation.publicCode;
+      const holdResult = await placeHold(reservation.id, { durationMinutes: 15 });
+
+      if (!holdResult) {
+        toast.error("Failed to hold reservation. Please try again.");
+        return;
+      }
+
+      if (data.paymentMethod === "credit_card" || data.paymentMethod === "debit_card") {
+        const [expiryMonth, expiryYear] = data.expiryDate?.split("/") ?? ["", ""];
+        const paymentResult: PaymentIntentResponse = await createPaymentIntent({
+          reservationId: reservation.id,
+          idempotencyKey: crypto.randomUUID(),
+          card: {
+            holderName: data.cardHolder ?? "",
+            number: data.cardNumber?.replace(/\s/g, "") ?? "",
+            expiryMonth,
+            expiryYear,
+            cvv: data.cvv ?? "",
+          },
+        });
+
+        sessionStorage.setItem("pendingPaymentIntentId", paymentResult.paymentIntentId);
+        sessionStorage.setItem("pendingReservationPublicCode", reservation.publicCode);
+
+        if (paymentResult.redirectUrl) {
+          window.location.assign(paymentResult.redirectUrl);
+          return;
+        }
+      }
 
       const queryParams = new URLSearchParams(searchParams.toString());
-      queryParams.set("code", code);
+      queryParams.set("code", reservation.publicCode);
       router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to complete booking";

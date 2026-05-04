@@ -75,12 +75,14 @@ export function usePlaceHold() {
   const placeHoldMutation = useCallback(
     async (
       reservationId: string,
-      data?: HoldReservationData
+      data?: HoldReservationData,
+      sessionId?: string
     ): Promise<Reservation | null> => {
       setIsPlacingHold(true);
       setError(null);
       try {
-        const reservation = await placeHold(reservationId, data);
+        const holdSessionId = sessionId ?? crypto.randomUUID();
+        const reservation = await placeHold(reservationId, holdSessionId, data);
         mutate(RESERVATION_KEYS.detail(reservation.publicCode), reservation, false);
         return reservation;
       } catch (err) {

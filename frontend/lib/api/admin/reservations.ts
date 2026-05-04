@@ -1,11 +1,13 @@
-import { get, patch } from '../client';
+import { get, patch, post } from '../client';
 import { mockReservations } from './mock';
 import type {
   AdminPaginatedResponse,
+  AdminPaymentOperation,
   AdminReservation,
   AdminResponse,
   AssignVehicleData,
   CancelReservationData,
+  AdminRefundData,
   PaginatedResponse,
   ReservationCheckInData,
   ReservationCheckOutData,
@@ -111,5 +113,16 @@ export async function checkOut(id: string, data: ReservationCheckOutData) {
     return mockReservations[0];
   }
   const response = await patch<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}/check-out`, data);
+  return unwrapResponse(response);
+}
+
+export async function refundReservation(
+  id: string,
+  data: AdminRefundData
+) {
+  if (USE_MOCK) {
+    return mockReservations[0];
+  }
+  const response = await post<AdminResponse<AdminPaymentOperation>>(`${RESERVATIONS_ENDPOINT}/${id}/refund`, data);
   return unwrapResponse(response);
 }

@@ -50,10 +50,10 @@ describe("reservations API", () => {
   });
 
   it("posts hold requests and patches hold extensions", async () => {
-    await placeHold("reservation-1", { durationMinutes: 30 });
+    await placeHold("reservation-1", "test-session-id", { durationMinutes: 30 });
     await extendHold("reservation-1", { additionalMinutes: 15 });
 
-    expect(mockedPost).toHaveBeenCalledWith("/reservations/reservation-1/hold", { durationMinutes: 30 });
+    expect(mockedPost).toHaveBeenCalledWith("/reservations/reservation-1/hold", { durationMinutes: 30 }, { headers: { 'X-Session-Id': 'test-session-id' } });
     expect(mockedPatch).toHaveBeenCalledWith("/reservations/reservation-1/hold/extend", { additionalMinutes: 15 });
   });
 });

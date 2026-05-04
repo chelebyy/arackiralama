@@ -35,10 +35,20 @@ export class AdminReservationDetailPage {
 
   async clickRefund() {
     await this.refundButton.click();
-    // Wait for toast notification
-    await this.page.waitForSelector("[data-sonner-toaster]", { state: "visible", timeout: 5000 }).catch(() => {
-      // Toast may not appear in all cases
-    });
+  }
+
+  async fillRefundDialog(options?: { amount?: string; reason?: string }) {
+    const dialog = this.page.locator("[role='dialog']");
+    await expect(dialog).toBeVisible();
+
+    if (options?.amount) {
+      await dialog.locator("input[id='refundAmount']").fill(options.amount);
+    }
+    if (options?.reason) {
+      await dialog.locator("input[id='refundReason']").fill(options.reason);
+    }
+
+    await dialog.getByRole("button", { name: /iade et|refund/i }).click();
   }
 
   async clickCancel() {
