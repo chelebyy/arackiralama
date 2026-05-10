@@ -9,6 +9,6 @@ public interface IPasswordResetEmailDispatcher
         string destinationEmail,
         string resetToken,
         DateTime expiresAtUtc,
-        string locale = "tr-TR",
+        string? locale = null,
         CancellationToken cancellationToken = default);
 }
