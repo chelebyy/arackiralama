@@ -1,6 +1,7 @@
 using System.Reflection;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
@@ -100,6 +101,60 @@ public class AuthEndpointSecurityConventionsTests
         // Assert
         rateLimiterOptions.GlobalLimiter.Should().NotBeNull();
         rateLimiterOptions.OnRejected.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddApiCors_WhenAllowedOriginsConfigured_RegistersNamedPolicy()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Cors:AllowedOrigins:0"] = "https://app.local.test"
+            })
+            .Build();
+
+        // Act
+        InvokePrivateServiceRegistration(
+            nameof(ServiceCollectionExtensions),
+            "AddApiCors",
+            services,
+            configuration,
+            new FakeHostEnvironment { EnvironmentName = Environments.Production });
+
+        using var provider = services.BuildServiceProvider();
+        var corsOptions = provider.GetRequiredService<IOptions<CorsOptions>>().Value;
+        var policy = corsOptions.GetPolicy(ServiceCollectionExtensions.ApiCorsPolicyName);
+
+        // Assert
+        policy.Should().NotBeNull();
+        policy!.Origins.Should().ContainSingle("https://app.local.test");
+        policy.SupportsCredentials.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddApiCors_WhenDevelopmentAndOriginsMissing_UsesLocalhostFallbacks()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        // Act
+        InvokePrivateServiceRegistration(
+            nameof(ServiceCollectionExtensions),
+            "AddApiCors",
+            services,
+            configuration,
+            new FakeHostEnvironment());
+
+        using var provider = services.BuildServiceProvider();
+        var corsOptions = provider.GetRequiredService<IOptions<CorsOptions>>().Value;
+        var policy = corsOptions.GetPolicy(ServiceCollectionExtensions.ApiCorsPolicyName);
+
+        // Assert
+        policy.Should().NotBeNull();
+        policy!.Origins.Should().Contain(["http://localhost:3000", "http://127.0.0.1:3000"]);
     }
 
     [Fact]
