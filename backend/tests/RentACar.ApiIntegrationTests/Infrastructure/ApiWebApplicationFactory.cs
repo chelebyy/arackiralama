@@ -18,7 +18,8 @@ namespace RentACar.ApiIntegrationTests.Infrastructure;
 public sealed class ApiWebApplicationFactory(
     PostgresFixture postgresFixture,
     RedisFixture redisFixture,
-    string redisKeyPrefix) : WebApplicationFactory<Program>
+    string redisKeyPrefix,
+    IReadOnlyDictionary<string, string?>? additionalConfiguration = null) : WebApplicationFactory<Program>
 {
     public string ConnectionString => postgresFixture.ConnectionString;
 
@@ -26,7 +27,7 @@ public sealed class ApiWebApplicationFactory(
     {
         builder.ConfigureHostConfiguration(config =>
         {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
+            var configurationValues = new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = postgresFixture.ConnectionString,
                 ["ConnectionStrings:Redis"] = redisFixture.ConnectionString,
@@ -35,7 +36,17 @@ public sealed class ApiWebApplicationFactory(
                 ["Jwt:Audience"] = TestJwtFactory.JwtAudience,
                 ["Jwt:Secret"] = TestJwtFactory.JwtSecret,
                 ["Database:AutoMigrateOnStartup"] = "false"
-            });
+            };
+
+            if (additionalConfiguration is not null)
+            {
+                foreach (var pair in additionalConfiguration)
+                {
+                    configurationValues[pair.Key] = pair.Value;
+                }
+            }
+
+            config.AddInMemoryCollection(configurationValues);
         });
 
         return base.CreateHost(builder);

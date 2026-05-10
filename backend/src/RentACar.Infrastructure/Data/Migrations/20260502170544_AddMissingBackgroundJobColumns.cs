@@ -10,29 +10,59 @@ namespace RentACar.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "last_error",
-                table: "background_jobs",
-                type: "text",
-                nullable: true);
+            migrationBuilder.Sql(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'background_jobs'
+                          AND column_name = 'last_error') THEN
+                        ALTER TABLE background_jobs ADD COLUMN last_error text;
+                    END IF;
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "failed_at",
-                table: "background_jobs",
-                type: "timestamp with time zone",
-                nullable: true);
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'background_jobs'
+                          AND column_name = 'failed_at') THEN
+                        ALTER TABLE background_jobs ADD COLUMN failed_at timestamp with time zone;
+                    END IF;
+                END
+                $$;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "failed_at",
-                table: "background_jobs");
+            migrationBuilder.Sql(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'background_jobs'
+                          AND column_name = 'failed_at') THEN
+                        ALTER TABLE background_jobs DROP COLUMN failed_at;
+                    END IF;
 
-            migrationBuilder.DropColumn(
-                name: "last_error",
-                table: "background_jobs");
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'background_jobs'
+                          AND column_name = 'last_error') THEN
+                        ALTER TABLE background_jobs DROP COLUMN last_error;
+                    END IF;
+                END
+                $$;
+                """);
         }
     }
 }

@@ -21,6 +21,7 @@ namespace RentACar.API.Configuration;
 
 public static class ServiceCollectionExtensions
 {
+    public const string ApiCorsPolicyName = "ApiCors";
     public static IServiceCollection AddApiApplicationServices(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddEndpointsApiExplorer();
         services.AddControllers();
         services.AddHealthChecks();
+        services.AddApiCors(configuration, environment);
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
@@ -54,6 +56,44 @@ public static class ServiceCollectionExtensions
         services.AddAdminAuthorization();
         services.AddApiRateLimiting();
         services.AddAdminAuditLogging();
+
+        return services;
+    }
+
+    private static IServiceCollection AddApiCors(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
+        if ((allowedOrigins is null || allowedOrigins.Length == 0) && environment.IsDevelopment())
+        {
+            allowedOrigins =
+            [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001"
+            ];
+        }
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(ApiCorsPolicyName, policy =>
+            {
+                if (allowedOrigins is null || allowedOrigins.Length == 0)
+                {
+                    return;
+                }
+
+                policy
+                    .WithOrigins(allowedOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
 
         return services;
     }

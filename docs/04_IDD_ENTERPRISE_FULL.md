@@ -259,9 +259,9 @@ app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; ...";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=()";
+    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'";
     await next();
 });
 ```
@@ -280,12 +280,12 @@ app.UseHttpsRedirection();  // HTTP → HTTPS redirect
 | Content-Security-Policy | `default-src 'self'; script-src 'self'; ...` | XSS ve injection önleme |
 | X-Frame-Options | `DENY` (API) / `SAMEORIGIN` (Admin) | Clickjacking önleme |
 | X-Content-Type-Options | `nosniff` | MIME sniffing önleme |
-| Referrer-Policy | `strict-origin-when-cross-origin` | Referrer bilgisi kontrolü |
+| Referrer-Policy | `no-referrer` | Referrer bilgisi kontrolü |
 | Permissions-Policy | `geolocation=(), microphone=(), camera=()` | Tarayıcı API kısıtlaması |
 
 ## 4.3 CORS Configuration
 
-> **⚠️ Phase 10.5 Bulgusu (4 Mayıs 2026):** CORS yapılandırması mevcut değil. Production'da frontend (`alanyarentacar.com`) ve API (`api.alanyarentacar.com`) farklı origin'lerde olacağı için CORS zorunludur.
+> **✅ Phase 10.5 Follow-up (10 Mayıs 2026):** CORS artık `ServiceCollectionExtensions` içindeki named `ApiCors` policy ile uygulanıyor. Production origin listesi config/environment üzerinden sağlanmalı; development ise localhost fallback'leri kullanıyor.
 
 ### ASP.NET Core CORS Setup
 

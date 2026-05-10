@@ -1,7 +1,7 @@
 # Security & Compliance Document
 
 Date: 2026-02-25
-Updated: 2026-05-04 (Phase 10.5 Security Audit bulguları eklendi)
+Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 
 ## 1. Network Security
 
@@ -27,15 +27,16 @@ Updated: 2026-05-04 (Phase 10.5 Security Audit bulguları eklendi)
 | Webhook signature verification | ✅ | Iyzico HMAC + MockProvider secret verify |
 | SQL Injection prevention | ✅ | EF Core parameterized queries; `ExecuteSqlRaw` sadece migration/test fixture'larda |
 
-### 2.2 Eksik Kontroller (Medium Risk — Production Öncesi Düzeltilmeli)
+### 2.2 Phase 10.5 Hardening Follow-up (10 Mayıs 2026)
 
-| Kontrol | Durum | Etki | Önerilen Çözüm |
-|---------|-------|------|----------------|
-| CORS | 🔴 Yok | API çağrıları cross-origin'de başarısız olabilir | `AddCors` + `UseCors` ekle, explicit allowed origins tanımla |
-| Security Headers (6 adet) | 🔴 Yok | XSS, clickjacking, MIME sniffing riski | `SecurityHeadersMiddleware` veya NWebsec.AspNetCore.Middleware |
-| Swagger/OpenAPI exposure | 🟡 Koşulsuz açık | Production'da API dokümantasyonu public | `environment.IsDevelopment()` guard ekle |
-| AllowedHosts | 🟡 `"*"` | Herhangi bir domain'den istek kabul edilir | Production config'de domain kısıtlaması yap |
-| AutoMigrateOnStartup | 🟡 `true` | Migration hatası DB'yi bozabilir | `false` yap, deployment sırasında explicit migration çalıştır |
+| Kontrol | Durum | Kanıt |
+|---------|-------|-------|
+| CORS | ✅ | `ServiceCollectionExtensions` named `ApiCors` policy + explicit `Cors:AllowedOrigins`; development localhost fallbacks in `appsettings.Development.json` |
+| Security Headers | ✅ | Non-development responses emit HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| Swagger/OpenAPI exposure | ✅ | `ApplicationBuilderExtensions` only maps OpenAPI + Swagger UI in Development |
+| AllowedHosts | ✅ | Base `appsettings.json` no longer uses `"*"`; local defaults restricted to localhost variants |
+| AutoMigrateOnStartup | ✅ | Base `appsettings.json` now defaults to `false`; explicit env opt-in required for startup migrations |
+| Drifted local migration safety | ✅ | `AddMissingBackgroundJobColumns` is idempotent against pre-existing `background_jobs.last_error` / `failed_at` columns |
 
 ### 2.3 Düşük Risk Bulgular
 
@@ -68,7 +69,7 @@ Updated: 2026-05-04 (Phase 10.5 Security Audit bulguları eklendi)
 |------|-------|-------|
 | `pnpm audit` | `corepack pnpm -C frontend audit` | ✅ 0 vulnerability |
 
-> **Not:** Önceki taramada 10 vulnerability bulunmuştu (4 high, 6 moderate). `pnpm update` + `pnpm.overrides` (lodash, uuid, postcss, minimatch) ile temizlendi.
+> **Not:** Önceki taramada 10 vulnerability bulunmuştu (4 high, 6 moderate). `pnpm update` + `pnpm.overrides` (lodash, uuid, postcss) ile temizlendi. `minimatch` override'u coverage test'ini kırdığı için kaldırıldı.
 
 ## 6. Monitoring
 

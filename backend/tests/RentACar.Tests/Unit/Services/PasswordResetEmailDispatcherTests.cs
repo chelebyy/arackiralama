@@ -1,8 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using RentACar.API.Services;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces.Notifications;
+using RentACar.Infrastructure.Services.Notifications;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Services;
@@ -13,7 +15,7 @@ public sealed class PasswordResetEmailDispatcherTests
     public async Task DispatchAsync_WhenLocaleProvided_ComposesPasswordResetEmail()
     {
         var fakeQueueService = new FakeNotificationQueueService();
-        var sut = new PasswordResetEmailDispatcher(fakeQueueService, NullLogger<PasswordResetEmailDispatcher>.Instance);
+        var sut = new PasswordResetEmailDispatcher(fakeQueueService, Options.Create(new NotificationOptions()), NullLogger<PasswordResetEmailDispatcher>.Instance);
         var expiresAtUtc = new DateTime(2026, 3, 20, 18, 0, 0, DateTimeKind.Utc);
 
         await sut.DispatchAsync(
@@ -33,10 +35,13 @@ public sealed class PasswordResetEmailDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenLocaleNotProvided_UsesDefaultLocale()
+    public async Task DispatchAsync_WhenLocaleNotProvided_UsesConfiguredDefaultLocale()
     {
         var fakeQueueService = new FakeNotificationQueueService();
-        var sut = new PasswordResetEmailDispatcher(fakeQueueService, NullLogger<PasswordResetEmailDispatcher>.Instance);
+        var sut = new PasswordResetEmailDispatcher(
+            fakeQueueService,
+            Options.Create(new NotificationOptions { DefaultLocale = "en-US" }),
+            NullLogger<PasswordResetEmailDispatcher>.Instance);
 
         await sut.DispatchAsync(
             AuthPrincipalType.Customer,
@@ -46,14 +51,14 @@ public sealed class PasswordResetEmailDispatcherTests
             cancellationToken: CancellationToken.None);
 
         fakeQueueService.LastEmailRequest.Should().NotBeNull();
-        fakeQueueService.LastEmailRequest!.Locale.Should().Be("tr-TR");
+        fakeQueueService.LastEmailRequest!.Locale.Should().Be("en-US");
     }
 
     [Fact]
     public async Task DispatchAsync_WhenCalled_QueuesEmailWithoutThrowing()
     {
         var fakeQueueService = new FakeNotificationQueueService();
-        var sut = new PasswordResetEmailDispatcher(fakeQueueService, NullLogger<PasswordResetEmailDispatcher>.Instance);
+        var sut = new PasswordResetEmailDispatcher(fakeQueueService, Options.Create(new NotificationOptions()), NullLogger<PasswordResetEmailDispatcher>.Instance);
 
         var action = () => sut.DispatchAsync(
             AuthPrincipalType.Admin,

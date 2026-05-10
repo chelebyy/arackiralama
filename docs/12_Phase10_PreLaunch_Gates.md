@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Audit COMPLETED** 🟡 | 4 May 2026: Dependency vulnerabilities cleared (backend 0, frontend 0), manual OWASP scan completed — 0 critical/high, 4 medium findings documented  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -91,7 +91,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. Flaky `data-search-form-hydrated` test replaced with stable selector. **CI Strategy: PR trigger REMOVED** — E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only. Developer verifies locally with `docker compose up + pnpm dev + playwright test` | ✅ GO |
 | 8 | **Load Tests** | Availability query p95 | < 300ms | 🟨 **SCRIPTS READY 4 May 2026** — k6 scripts created (`backend/tests/k6/`). CodeQL HIGH (`Math.random()` in `concurrent-booking.js`) fixed in `3d3b2f1`. Scripts not yet executed against deployed infra. | 🟨 SCRIPTS READY |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | 🟨 **SCRIPTS READY 4 May 2026** — `concurrent-booking.js` + `mixed-traffic.js` ready, awaiting Dokploy infra | 🟨 SCRIPTS READY |
-| 10 | **Security** | OWASP Top 10 scan | 0 critical/high | 🟡 **MANUAL SCAN COMPLETED 4 May 2026** — No critical/high vulnerabilities found. 4 medium findings documented (missing CORS, missing security headers, Swagger unconditionally exposed, `AllowedHosts: "*"`). No injection, broken auth, or XSS vectors in production code. | 🟡 CONDITIONAL GO |
+| 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ✅ **HARDENED 10 May 2026** — No critical/high vulnerabilities found. Previously documented medium findings were closed: named CORS policy added, non-development security headers enabled, Swagger/OpenAPI gated to Development, `AllowedHosts` restricted, and default `AutoMigrateOnStartup=false`. Manual production-style boot with `Database__AutoMigrateOnStartup=true` returned `/health` 200 and `/openapi/v1.json` 404. | ✅ GO |
 | 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ✅ **FIXED 4 May 2026** — Backend: `dotnet list package --vulnerable` = 0. Frontend: `pnpm audit` = 0 (was 4 high + 6 moderate, resolved via `pnpm update` + `pnpm.overrides` for lodash, uuid, postcss, minimatch). | ✅ GO |
 | 12 | **Performance** | Lighthouse Performance | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
 | 13 | **Performance** | Lighthouse Accessibility | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
@@ -995,7 +995,7 @@ cd frontend && corepack pnpm dev
 | 10.5.2.3 | OWASP Top 10 — Sensitive Data Exposure | ✅ | `RequestLoggingMiddleware` sanitizes newlines (log injection prevention). No credit card data stored locally (tokenized via Iyzico/Mock provider). Passwords hashed with bcrypt (work factor 12). JWT secret validated: 32+ chars, rejects placeholders in production. |
 | 10.5.2.4 | OWASP Top 10 — XML External Entities | ✅ | Netgsm XML payload constructed via `StringBuilder` with CDATA; no external entity parsing. XML is outbound-only (serialize), not deserialized. |
 | 10.5.2.5 | OWASP Top 10 — Broken Access Control | ✅ | `[Authorize]` policies: `GuestOnly`, `CustomerOnly`, `AdminOnly` (Admin + SuperAdmin), `SuperAdminOnly`. Role claims in JWT + `AuthClaimTypes.Permission`. Admin endpoints protected. Frontend middleware enforces scope-based route guards. |
-| 10.5.2.6 | OWASP Top 10 — Security Misconfiguration | 🟡 | `AllowedHosts: "*"` in `appsettings.json` — must restrict in production. `AutoMigrateOnStartup: true` — risky for production; disable and use explicit migration job. Swagger/OpenAPI exposed unconditionally — should be dev-only. **No default credentials in production config.** |
+| 10.5.2.6 | OWASP Top 10 — Security Misconfiguration | ✅ | Base config now restricts `AllowedHosts`, defaults `AutoMigrateOnStartup=false`, gates Swagger/OpenAPI to Development, and enables explicit API CORS plus non-development security headers. **No default credentials in production config.** |
 | 10.5.2.7 | OWASP Top 10 — XSS | 🟡 | `dangerouslySetInnerHTML` used in 2 frontend UI components (`chart.tsx`, `code-block.tsx`). Data is internally generated (Shiki syntax highlighting output, theme CSS variables) — no user input. **No CSP header configured.** |
 | 10.5.2.8 | OWASP Top 10 — Insecure Deserialization | ✅ | JSON only (`System.Text.Json` backend, native `JSON.parse` frontend). Type-safe DTOs with records/classes. No binary deserialization. |
 | 10.5.2.9 | OWASP Top 10 — Insufficient Logging | ✅ | `AuditLogActionFilter` + `AuditLogService` records admin actions. `ErrorHandlingMiddleware` logs exceptions (generic message to client). `RequestLoggingMiddleware` logs method/path/status/duration. |
@@ -1041,8 +1041,8 @@ cd frontend && corepack pnpm dev
 |----------|-------|----------|--------|
 | Critical | 0 | — | — |
 | High | 0 | — | — |
-| Medium | 4 | Missing CORS, Missing security headers (6), Swagger unconditionally exposed, `AllowedHosts: "*"` | Documented |
-| Low | 2 | `AutoMigrateOnStartup: true`, `dangerouslySetInnerHTML` in admin UI components (sanitized data) | Documented |
+| Medium | 0 | — | Closed on 10 May 2026 |
+| Low | 1 | `dangerouslySetInnerHTML` in admin UI components (sanitized data) | Accepted / monitor |
 
 #### Positive Security Controls (Verified)
 
@@ -1055,16 +1055,18 @@ cd frontend && corepack pnpm dev
 7. **No SQL Injection:** EF Core parameterized queries only in production code
 8. **CI/CD Security:** Minimal permissions, official actions, `--frozen-lockfile`, no hardcoded secrets
 
-#### Medium Risk Findings (Non-Blocker, Must Fix Before Production)
+#### Medium Risk Findings
 
-1. **Missing CORS Configuration:** No `AddCors`/`UseCors` found in `ServiceCollectionExtensions.cs` or `ApplicationBuilderExtensions.cs`. Must configure explicit allowed origins.
-2. **Missing Security Headers:** HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy all missing. Recommend `SecurityHeadersMiddleware` or reverse-proxy configuration.
-3. **Swagger/OpenAPI Unconditionally Exposed:** `app.MapOpenApi()` and `app.UseSwaggerUI()` registered without environment check. Should be development-only.
-4. **`AllowedHosts: "*"`:** `appsettings.json` allows any host. Must restrict to production domain in production config.
+All previously documented medium-risk backend findings were closed on 10 May 2026:
+
+1. **CORS:** Named `ApiCors` policy added with explicit `Cors:AllowedOrigins` configuration and development localhost fallbacks.
+2. **Security Headers:** Non-development responses now emit HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy.
+3. **Swagger/OpenAPI Exposure:** `MapOpenApi()` and `UseSwaggerUI()` now run only in Development.
+4. **AllowedHosts:** Base config no longer uses `"*"`; localhost-only defaults are documented and production should override with real domains.
 
 #### Low Risk Findings
 
-1. **`AutoMigrateOnStartup: true`:** Risky for production. Should disable and run migrations explicitly during deployment.
+1. **`AutoMigrateOnStartup`:** Base configuration now defaults to `false`; deployment should run migrations explicitly or opt in with `Database__AutoMigrateOnStartup=true` for controlled boots.
 2. **`dangerouslySetInnerHTML` in Admin UI:** `chart.tsx` and `code-block.tsx` use it with internally generated data (Shiki output, CSS variables). No user input — low risk.
 
 ---
