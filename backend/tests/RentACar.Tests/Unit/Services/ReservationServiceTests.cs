@@ -757,6 +757,158 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task ReleaseHoldAsync_WhenCalled_DelegatesToHoldService()
+    {
+        var holdId = Guid.NewGuid();
+
+        _holdServiceMock
+            .Setup(x => x.ReleaseHoldAsync(holdId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _sut.ReleaseHoldAsync(holdId, CancellationToken.None);
+
+        result.Should().BeTrue();
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(holdId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReleaseHoldByReservationIdAsync_WhenCalled_DelegatesToHoldService()
+    {
+        var reservationId = Guid.NewGuid();
+
+        _holdServiceMock
+            .Setup(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _sut.ReleaseHoldByReservationIdAsync(reservationId, CancellationToken.None);
+
+        result.Should().BeTrue();
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenReservationDoesNotExist_ReturnsNull()
+    {
+        var result = await _sut.ProcessPaymentAsync(Guid.NewGuid(), new PaymentInfoRequest(), CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenReservationStatusIsInvalid_ThrowsInvalidOperationException()
+    {
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Paid,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            TotalAmount = 1500m
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        var action = () => _sut.ProcessPaymentAsync(reservationId, new PaymentInfoRequest(), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Cannot process payment for reservation in Paid status");
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenPaymentIntentAlreadyExists_TransitionsReservationWithoutAddingAnotherIntent()
+    {
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            TotalAmount = 1500m
+        };
+        var existingIntent = new PaymentIntent
+        {
+            ReservationId = reservationId,
+            Amount = 1500m,
+            Status = PaymentStatus.Pending,
+            Provider = "Mock",
+            IdempotencyKey = "existing-intent"
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _applicationDbContextMock
+            .Setup(x => x.PaymentIntents)
+            .Returns(new List<PaymentIntent> { existingIntent }.BuildMockDbSet().Object);
+
+        var result = await _sut.ProcessPaymentAsync(
+            reservationId,
+            new PaymentInfoRequest { PaymentMethod = "MockCard" },
+            CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(ReservationStatus.PendingPayment.ToString());
+        reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenPaymentIntentDoesNotExist_AddsPendingIntentAndTransitionsReservation()
+    {
+        var reservationId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(2),
+            TotalAmount = 1500m
+        };
+        var paymentIntents = new List<PaymentIntent>();
+        var paymentIntentSetMock = paymentIntents.BuildMockDbSet();
+
+        paymentIntentSetMock
+            .Setup(x => x.AddAsync(It.IsAny<PaymentIntent>(), It.IsAny<CancellationToken>()))
+            .Callback<PaymentIntent, CancellationToken>((intent, _) => paymentIntents.Add(intent))
+            .ReturnsAsync((PaymentIntent intent, CancellationToken _) => null!);
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _applicationDbContextMock
+            .Setup(x => x.PaymentIntents)
+            .Returns(paymentIntentSetMock.Object);
+
+        var result = await _sut.ProcessPaymentAsync(
+            reservationId,
+            new PaymentInfoRequest(),
+            CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(ReservationStatus.PendingPayment.ToString());
+        reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        paymentIntents.Should().ContainSingle();
+        paymentIntents[0].ReservationId.Should().Be(reservationId);
+        paymentIntents[0].Amount.Should().Be(1500m);
+        paymentIntents[0].Status.Should().Be(PaymentStatus.Pending);
+        paymentIntents[0].Provider.Should().Be("Manual");
+        paymentIntents[0].IdempotencyKey.Should().StartWith($"reservation-{reservationId:N}-");
+        _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ConfirmPaymentAsync_WhenPaymentConfirmed_QueuesConfirmationAndReminderNotifications()
     {
         var reservationId = Guid.NewGuid();
@@ -1159,6 +1311,53 @@ public sealed class ReservationServiceTests
         secondReservation.Status.Should().Be(ReservationStatus.Expired);
         _holdServiceMock.Verify(x => x.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
         _holdServiceMock.Verify(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessExpiredReservationsAsync_WhenExpiringOneReservationThrows_LogsErrorAndContinues()
+    {
+        var firstReservationId = Guid.NewGuid();
+        var secondReservationId = Guid.NewGuid();
+        var secondReservation = new Reservation
+        {
+            Id = secondReservationId,
+            Status = ReservationStatus.Hold,
+            CustomerId = Guid.NewGuid(),
+            VehicleId = Guid.NewGuid(),
+            PickupDateTime = DateTime.UtcNow.AddDays(3),
+            ReturnDateTime = DateTime.UtcNow.AddDays(4)
+        };
+
+        _holdServiceMock
+            .Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { firstReservationId, secondReservationId });
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(firstReservationId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(secondReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(secondReservation);
+
+        _holdServiceMock
+            .Setup(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _sut.ProcessExpiredReservationsAsync(CancellationToken.None);
+
+        secondReservation.Status.Should().Be(ReservationStatus.Expired);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Once);
+        _loggerMock.Verify(
+            x => x.Log(
+                It.Is<LogLevel>(level => level == LogLevel.Error),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    state.ToString()!.Contains("Failed to process expired reservation", StringComparison.Ordinal) &&
+                    state.ToString()!.Contains(firstReservationId.ToString(), StringComparison.Ordinal)),
+                It.Is<Exception>(ex => ex is InvalidOperationException && ex.Message == "boom"),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]

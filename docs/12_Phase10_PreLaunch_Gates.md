@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**)  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -83,7 +83,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | # | Gate | Kriter | Eşik Değer | Mevcut | Karar |
 |---|------|--------|-----------|--------|--------|
 | 1 | **Code Quality** | Critical code smell count | = 0 | 0 | ✅ GO |
-| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%28.1** (API %73, Core %87, Worker %67, Infrastructure %8) | 🔴 NO-GO |
+| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — latest local rebaseline on 11 May 2026 with Postgres/Redis healthy and full solution coverage command passing after provider + hold-service test expansion | 🔴 NO-GO |
 | 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%7.5** (booking flow targeted: %88–100) | 🔴 NO-GO |
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
@@ -105,7 +105,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 21 | **Launch Readiness** | Rollback plan documented | Step-by-step | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 | 22 | **Launch Readiness** | Incident response plan | Escalation matrix | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 
-**Özet:** 5/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 0/22 NO-GO | 15/22 DEFERRED
+**Özet:** 5/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 4/22 NO-GO | 11/22 DEFERRED
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.

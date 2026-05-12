@@ -251,6 +251,87 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenReservationDoesNotExist_ReturnsNull()
+    {
+        var result = await _sut.CreateDepositPreAuthorizationAsync(Guid.NewGuid(), CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenSuccessfulMainPaymentDoesNotExist_ReturnsSkippedOperationWithReason()
+    {
+        var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Paid);
+        await SeedPaymentIntentAsync(
+            reservation.Id,
+            "main-payment-pending",
+            PaymentStatus.Pending,
+            providerIntentId: "main-provider-intent",
+            providerTransactionId: "main-provider-transaction");
+
+        var result = await _sut.CreateDepositPreAuthorizationAsync(reservation.Id, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Operation.Should().Be("CreatePreAuthorization");
+        result.Status.Should().Be("Skipped");
+        result.PaymentIntentId.Should().Be(Guid.Empty);
+        result.Reason.Should().Be("Depozito ön provizyonu için başarılı online ödeme kaydı bulunamadı.");
+    }
+
+    [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenDepositAmountIsZero_ReturnsSkippedOperationWithoutCallingProvider()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationWithDepositAmountAsync(0m, ReservationStatus.Paid);
+        await SeedPaymentIntentAsync(
+            reservation.Id,
+            "main-payment-succeeded",
+            PaymentStatus.Succeeded,
+            providerIntentId: "main-provider-intent",
+            providerTransactionId: "main-provider-transaction");
+
+        var result = await sut.CreateDepositPreAuthorizationAsync(reservation.Id, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Operation.Should().Be("CreatePreAuthorization");
+        result.Status.Should().Be("Skipped");
+        result.PaymentIntentId.Should().Be(Guid.Empty);
+        result.Reason.Should().BeNull();
+        provider.CreatePreAuthorizationCallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenActiveDepositIntentAlreadyExists_ReturnsExistingIntentWithoutCallingProvider()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Paid);
+        await SeedPaymentIntentAsync(
+            reservation.Id,
+            "main-payment-succeeded",
+            PaymentStatus.Succeeded,
+            providerIntentId: "main-provider-intent",
+            providerTransactionId: "main-provider-transaction");
+        var existingDepositIntent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            $"deposit-{reservation.Id:N}",
+            PaymentStatus.Authorized,
+            provider: "Mock:Deposit",
+            amount: 750m,
+            providerIntentId: "existing-deposit-intent",
+            providerTransactionId: "existing-deposit-transaction");
+
+        var result = await sut.CreateDepositPreAuthorizationAsync(reservation.Id, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.PaymentIntentId.Should().Be(existingDepositIntent.Id);
+        result.Status.Should().Be(PaymentStatus.Authorized.ToString());
+        result.ReferenceId.Should().Be("existing-deposit-transaction");
+        provider.CreatePreAuthorizationCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task CaptureDepositAsync_WhenAuthorizedDepositExists_CapturesDepositAndMarksIntentSucceeded()
     {
         var provider = new FakePaymentProvider

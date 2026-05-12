@@ -52,6 +52,25 @@ public sealed class IyzicoPaymentProviderTests
         Assert.False(string.IsNullOrWhiteSpace(result.ProviderIntentId));
     }
 
+    [Fact]
+    public async Task CreatePreAuthorizationAsync_WhenAmountIsZero_ReturnsFailedResult()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.CreatePreAuthorizationAsync(new CreatePreAuthorizationProviderRequest
+        {
+            ReservationId = Guid.NewGuid(),
+            Amount = 0m,
+            Currency = "TRY",
+            ReferenceTransactionId = "provider-reference",
+            IdempotencyKey = "idem-0"
+        });
+
+        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
+        Assert.Equal("IYZICO_INVALID_DEPOSIT_AMOUNT", result.FailureCode);
+        Assert.Equal("Deposit amount must be greater than zero.", result.FailureMessage);
+    }
+
     [Theory]
     [InlineData("timeout")]
     [InlineData("fail")]
@@ -103,6 +122,24 @@ public sealed class IyzicoPaymentProviderTests
     }
 
     [Fact]
+    public async Task RefundAsync_WhenAmountIsZero_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.RefundAsync(new ProviderRefundRequest
+        {
+            ProviderIntentId = "intent-1",
+            Amount = 0m,
+            Currency = "TRY",
+            Reason = "Invalid refund"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("IYZICO_INVALID_AMOUNT", result.FailureCode);
+        Assert.Equal("Refund amount must be greater than zero.", result.FailureMessage);
+    }
+
+    [Fact]
     public async Task ReleaseDepositAsync_DoesNotUseProviderIntentFailureTriggerStrings()
     {
         var sut = CreateSut();
@@ -114,6 +151,22 @@ public sealed class IyzicoPaymentProviderTests
         });
 
         Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenProviderIntentIdIsMissing_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.ReleaseDepositAsync(new ProviderReleaseDepositRequest
+        {
+            ProviderIntentId = "",
+            Note = "Release deposit"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("IYZICO_RELEASE_INVALID_INTENT", result.FailureCode);
+        Assert.Equal("Provider intent id is required.", result.FailureMessage);
     }
 
     [Fact]
@@ -131,6 +184,42 @@ public sealed class IyzicoPaymentProviderTests
 
         Assert.True(result.Success);
         Assert.False(string.IsNullOrWhiteSpace(result.ReferenceId));
+    }
+
+    [Fact]
+    public async Task CaptureDepositAsync_WhenProviderIntentIdIsMissing_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.CaptureDepositAsync(new ProviderCaptureDepositRequest
+        {
+            ProviderIntentId = "",
+            Amount = 125m,
+            Currency = "TRY",
+            Note = "Capture deposit"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("IYZICO_CAPTURE_INVALID_INTENT", result.FailureCode);
+        Assert.Equal("Provider intent id is required.", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task CaptureDepositAsync_WhenAmountIsZero_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.CaptureDepositAsync(new ProviderCaptureDepositRequest
+        {
+            ProviderIntentId = "intent-1",
+            Amount = 0m,
+            Currency = "TRY",
+            Note = "Capture deposit"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("IYZICO_CAPTURE_INVALID_AMOUNT", result.FailureCode);
+        Assert.Equal("Capture amount must be greater than zero.", result.FailureMessage);
     }
 
     private static IyzicoPaymentProvider CreateSut()

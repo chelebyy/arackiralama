@@ -81,6 +81,41 @@ public sealed class IyzicoPaymentProviderTests
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ParseWebhookAsync_WhenSnakeCasePayloadIsProvided_MapsKnownFields()
+    {
+        const string payload = """
+        {
+          "provider_event_id": "evt-1",
+          "payment_intent_id": "intent-1",
+          "provider_transaction_id": "tx-1",
+          "event_type": "payment.succeeded"
+        }
+        """;
+
+        var result = await _sut.ParseWebhookAsync("Iyzico", payload, null, CancellationToken.None);
+
+        result.ProviderEventId.Should().Be("evt-1");
+        result.ProviderIntentId.Should().Be("intent-1");
+        result.ProviderTransactionId.Should().Be("tx-1");
+        result.EventType.Should().Be("payment.succeeded");
+        result.RawPayload.Should().Be(payload);
+    }
+
+    [Fact]
+    public async Task ParseWebhookAsync_WhenPayloadFieldsAreMissing_UsesFallbackEventTypeAndGeneratedEventId()
+    {
+        const string payload = "{}";
+
+        var result = await _sut.ParseWebhookAsync("Iyzico", payload, null, CancellationToken.None);
+
+        result.ProviderEventId.Should().NotBeNullOrWhiteSpace();
+        result.EventType.Should().Be("unknown");
+        result.ProviderIntentId.Should().BeNull();
+        result.ProviderTransactionId.Should().BeNull();
+        result.RawPayload.Should().Be(payload);
+    }
+
     private static string CreateSignature(string payload, string secret)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
