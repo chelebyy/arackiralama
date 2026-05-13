@@ -162,7 +162,6 @@ function Calendar({
         weekdays: _weekdaysClassName,
         weekday: _weekdayClassName,
         month: _monthClassName,
-        caption: _captionClassName,
         caption_label: _captionLabelClassName,
         button_next: _buttonNextClassName,
         button_previous: _buttonPreviousClassName,
