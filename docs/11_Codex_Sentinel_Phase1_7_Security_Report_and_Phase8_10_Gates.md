@@ -285,6 +285,8 @@
 **Faz:** 10 - Testing & Launch  
 **Durum:** Başlatmaya Hazır
 
+> **Tarihsel snapshot notu:** Bu bölüm bir başlangıç şablonu/snapshot'tır. Aşağıdaki unchecked maddeleri current Phase 10 security state olarak yorumlamayın. Güncel Phase 10.5 güvenlik kapanışı ve launch-gate durumu için `docs/12_Phase10_PreLaunch_Gates.md` ile 10 Mayıs 2026 security hardening follow-up handoff'u esas alınmalıdır.
+
 ### 9.1 Başlangıç Kapısı
 
 - [ ] Faz 10 test stratejisi (unit/integration/e2e/load/security) netleştirildi

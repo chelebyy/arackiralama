@@ -823,6 +823,99 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         property.ValueGenerated.Should().Be(Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.OnAddOrUpdate);
     }
 
+    [Fact]
+    public async Task GetByCustomerIdPaginatedAsync_ReturnsPagedItemsWithTotalCount()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customer = new Customer { FullName = "Paged Customer", Email = "paged-customer@test.com", Phone = "+90 555 000 0500" };
+        var otherCustomer = new Customer { FullName = "Other Customer", Email = "other-customer@test.com", Phone = "+90 555 000 0501" };
+        var office = new Office { Name = "Office", Code = "office-paged-customer", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle = new Vehicle
+        {
+            Plate = "07PAGEC001",
+            Brand = "Test",
+            Model = "Test",
+            Group = group,
+            Office = office,
+            Status = VehicleStatus.Available
+        };
+
+        dbContext.Customers.AddRange(customer, otherCustomer);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(vehicle);
+
+        var baseCreatedAt = new DateTime(2026, 7, 1, 8, 0, 0, DateTimeKind.Utc);
+        dbContext.Reservations.AddRange(
+            new Reservation { PublicCode = "PAGE-CUST-1", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
+            new Reservation { PublicCode = "PAGE-CUST-2", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) },
+            new Reservation { PublicCode = "PAGE-CUST-3", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
+            new Reservation { PublicCode = "PAGE-OTHER-1", Customer = otherCustomer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(7), ReturnDateTime = baseCreatedAt.AddDays(8), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(4) });
+
+        await dbContext.SaveChangesAsync();
+
+        var (items, totalCount) = await repository.GetByCustomerIdPaginatedAsync(customer.Id, page: 2, pageSize: 2);
+
+        totalCount.Should().Be(3);
+        items.Should().HaveCount(1);
+        items.Select(x => x.PublicCode).Should().ContainSingle().Which.Should().Be("PAGE-CUST-1");
+    }
+
+    [Fact]
+    public async Task SearchReservationsAsync_WithVehicleFilterAndPaging_ReturnsVehicleMatchesInCreatedAtOrder()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customer = new Customer { FullName = "Vehicle Search", Email = "vehicle-search@test.com", Phone = "+90 555 000 0600" };
+        var office = new Office { Name = "Office", Code = "office-vehicle-search", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle1 = new Vehicle { Plate = "07VS001", Brand = "Test", Model = "Test", Group = group, Office = office, Status = VehicleStatus.Available };
+        var vehicle2 = new Vehicle { Plate = "07VS002", Brand = "Test", Model = "Test", Group = group, Office = office, Status = VehicleStatus.Available };
+
+        dbContext.Customers.Add(customer);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.AddRange(vehicle1, vehicle2);
+
+        var baseCreatedAt = new DateTime(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc);
+        dbContext.Reservations.AddRange(
+            new Reservation { PublicCode = "VEHICLE-1-OLD", Customer = customer, Vehicle = vehicle1, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
+            new Reservation { PublicCode = "VEHICLE-1-NEW", Customer = customer, Vehicle = vehicle1, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
+            new Reservation { PublicCode = "VEHICLE-2", Customer = customer, Vehicle = vehicle2, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) });
+
+        await dbContext.SaveChangesAsync();
+
+        var results = await repository.SearchReservationsAsync(vehicleId: vehicle1.Id, page: 1, pageSize: 2);
+
+        results.Should().HaveCount(2);
+        results.Select(x => x.PublicCode).Should().ContainInOrder("VEHICLE-1-NEW", "VEHICLE-1-OLD");
+        results.All(x => x.VehicleId == vehicle1.Id).Should().BeTrue();
+    }
+
     private static RentACarDbContext CreateSharedContext(string databaseName)
     {
         var options = new DbContextOptionsBuilder<RentACarDbContext>()

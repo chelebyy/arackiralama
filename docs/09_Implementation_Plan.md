@@ -879,6 +879,8 @@ POST /api/admin/v1/auth/logout
 
 ## 🔷 FAZ 9: Infrastructure & Deployment - Hafta 17-19
 
+> **Tarihsel plan notu:** Aşağıdaki Phase 9 checklist'i orijinal implementation plan ve hedef kabul kriterlerini yansıtır. Bunu tek başına güncel Dokploy/production hazır olma kanıtı olarak kullanmayın. Current launch-readiness status için `docs/10_Execution_Tracking.md`, `docs/12_Phase10_PreLaunch_Gates.md` ve ilgili handoff dokümanları esas alınmalıdır.
+
 ### 🎯 Hedefler
 - VPS ortamı kurulumu ve Dokploy (self-hosted PaaS) yapılandırması
 - Git-based otomatik deployment

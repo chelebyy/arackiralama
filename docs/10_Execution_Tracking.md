@@ -1645,6 +1645,8 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 ### 📝 Faz 10 İlerleme Notları
 
+> **Kaynak önceliği notu:** Bu bölümdeki kısa özetler ve aşağıdaki ilerleme sayaçları tarihsel takip kolaylığı içindir. Launch sequencing ve gate kararı için birincil kaynak `docs/12_Phase10_PreLaunch_Gates.md` ile `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md` olmalıdır.
+
 **10.0 Code Quality Assessment:**
 - Wave 1 (Auth + Reservation + Payment + Booking Flow): ✅ 8/8 critical fix tamamlandı
 - Wave 2 (Pricing + Fleet + Offices + Public Inventory): ✅ 8/8 critical fix tamamlandı
@@ -1654,11 +1656,11 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
-- Backend: 501 test, 0 failure. Coverage %32.90 (hedef %70). API katmanı %66.10.
+- Backend: 534/534 test pass (505 unit + 29 integration). Latest full-solution line coverage %29.86 (API %52.91, Core %92.00, Worker %63.49, Infrastructure %9.38) — 11 May 2026 local rebaseline with Postgres/Redis healthy.
 - Frontend: 63 test, 0 failure. Booking flow targeted coverage yüksek (%97-100). Project-wide %7.53 (hedef %60).
 
 **10.2 Integration Tests:**
-- ✅ 28 integration test tamamlandı. Endpoint, Database, Redis, Payment Provider testleri geçiyor.
+- ✅ 29/29 integration test pass. Endpoint, Database, Redis, and Payment Provider integration coverage are green in the latest verified backend run.
 - Build 0 warning/error.
 
 **10.3 E2E Tests:**
@@ -1812,6 +1814,7 @@ GENEL İLERLEME: [████████░░] 85%
 | Tarih | Kayıt Tipi | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
+| 11.05.2026 | Delivery | Phase 10 coverage rebaseline + first Infrastructure expansion tamamlandı: local Postgres/Redis ile full backend solution coverage yeniden çalıştırıldı, Phase 10 docs stale coverage değerlerinden arındırıldı, provider + hold-service testleri eklendi. Yeni güvenilir backend baseline: overall %29.86, Infrastructure %9.38, toplam 534/534 test pass. | Coverage rebaseline, docs reconciliation, Infrastructure first slice | Infrastructure coverage expansion'ın sonraki düşük-friction dilimleri + frontend coverage environment repair | `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` 534/534 pass; `RentACar.Tests` 505/505; `RentACar.ApiIntegrationTests` 29/29. Handoff: `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md`. | AI |
 | 10.05.2026 | Delivery | Phase 10.5 follow-up tamamlandı: backend CORS, non-development security headers, development-only Swagger/OpenAPI, restricted `AllowedHosts`, default `AutoMigrateOnStartup=false` uygulandı ve doğrulandı. `AddMissingBackgroundJobColumns` idempotent hale getirildi; production-style boot artık duplicate `background_jobs.last_error` hatasına düşmüyor. `RentACar.ApiIntegrationTests.csproj` içindeki gereksiz `System.Security.Cryptography.Algorithms` referansı kaldırıldı (`NU1510` temizlendi). Password reset email fallback locale artık `NotificationOptions.DefaultLocale` kullanıyor. | Phase 10.5 follow-up, migration/runtime hardening, Wave 3 locale fix | Coverage / infra-dependent launch gates | `dotnet build RentACar.sln -nodeReuse:false /p:UseSharedCompilation=false` 0 warning / 0 error; `HealthSmokeTests` 4/4 pass; production-style `/health` 200, `/openapi/v1.json` 404. Handoff: `docs/handoffs/2026-05-10-phase105-hardening-followup.md`. | AI |
 
 | 04.05.2026 | Delivery | Phase 10.3 E2E Blockers TAMAMLANDI: Step4 payment flow wired (createReservation → placeHold → createPaymentIntent → redirect/3DS), 3DS return page fixed (`useParams()`), admin refund UI + hook + types + E2E test eklendi, `placeHold` `X-Session-Id` header support eklendi. Phase 10.4 Load Testing SCRIPTS READY: 6 k6 scripts (`backend/tests/k6/`). PR #206 açıldı ve fix'ler push edildi: E2E flaky test fix (`i18n.spec.ts`), CodeQL HIGH (`Math.random()` in k6) fix, E2E PR trigger gerçekten kaldırıldı (`.github/workflows/e2e.yml`). Codex + GHAS: no actionable feedback. Dependabot: 9 pre-existing vulnerabilities (3 high, 6 moderate). Build: 108 pages, 0 TS error. | Phase 10.3 (17/17), Phase 10.4 (0/6 scripts) | Merge PR #206 → Phase 10.5 Security Audit + Dependabot fixes | `tsc --noEmit` 0 error; `next build` 108 pages; `dotnet build` assumed clean; E2E PR trigger removed; k6 CodeQL fixed. Handoff: `docs/handoffs/2026-05-04-phase103-pr206-fixes.md` | AI |

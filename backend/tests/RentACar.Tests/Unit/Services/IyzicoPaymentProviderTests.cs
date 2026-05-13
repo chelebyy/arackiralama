@@ -222,7 +222,57 @@ public sealed class IyzicoPaymentProviderTests
         Assert.Equal("Capture amount must be greater than zero.", result.FailureMessage);
     }
 
-    private static IyzicoPaymentProvider CreateSut()
+    [Fact]
+    public async Task CreatePaymentIntentAsync_WhenBaseUrlIsBlank_UsesSandboxFallbackRedirectUrl()
+    {
+        var sut = CreateSut(baseUrl: "   ");
+
+        var result = await sut.CreatePaymentIntentAsync(new CreatePaymentIntentProviderRequest
+        {
+            ReservationId = Guid.NewGuid(),
+            Amount = 1000m,
+            Currency = "TRY",
+            IdempotencyKey = "fallback-base-url",
+            InstallmentCount = 1,
+            Card = new ProviderCardData
+            {
+                HolderName = "Fallback User",
+                Number = "4111111111111111",
+                ExpiryMonth = "12",
+                ExpiryYear = "2030",
+                Cvv = "123"
+            }
+        });
+
+        Assert.StartsWith("https://sandbox-api.iyzipay.com/mock-3ds?token=", result.RedirectUrl);
+    }
+
+    [Fact]
+    public async Task CreatePaymentIntentAsync_WhenBaseUrlHasTrailingSlash_TrimsRedirectUrlBase()
+    {
+        var sut = CreateSut(baseUrl: "https://custom-iyzico.example/");
+
+        var result = await sut.CreatePaymentIntentAsync(new CreatePaymentIntentProviderRequest
+        {
+            ReservationId = Guid.NewGuid(),
+            Amount = 1000m,
+            Currency = "TRY",
+            IdempotencyKey = "trimmed-base-url",
+            InstallmentCount = 1,
+            Card = new ProviderCardData
+            {
+                HolderName = "Trimmed User",
+                Number = "4111111111111111",
+                ExpiryMonth = "12",
+                ExpiryYear = "2030",
+                Cvv = "123"
+            }
+        });
+
+        Assert.StartsWith("https://custom-iyzico.example/mock-3ds?token=", result.RedirectUrl);
+    }
+
+    private static IyzicoPaymentProvider CreateSut(string baseUrl = "https://sandbox-api.iyzipay.com")
     {
         return new IyzicoPaymentProvider(
             Options.Create(new PaymentOptions
@@ -230,7 +280,7 @@ public sealed class IyzicoPaymentProviderTests
                 IntentExpiresMinutes = 15,
                 Iyzico = new IyzicoProviderOptions
                 {
-                    BaseUrl = "https://sandbox-api.iyzipay.com"
+                    BaseUrl = baseUrl
                 }
             }),
             NullLogger<IyzicoPaymentProvider>.Instance);
