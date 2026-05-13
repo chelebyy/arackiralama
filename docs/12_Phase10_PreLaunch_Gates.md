@@ -105,7 +105,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 21 | **Launch Readiness** | Rollback plan documented | Step-by-step | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 | 22 | **Launch Readiness** | Incident response plan | Escalation matrix | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 
-**Özet:** 5/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 4/22 NO-GO | 11/22 DEFERRED
+**Özet:** 7/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 4/22 NO-GO | 9/22 DEFERRED
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.
@@ -766,7 +766,7 @@ Her testin şu kriterlere uyması gerekir:
 - Playwright workspace fully scaffolded
 - 8 critical user flow test files written (26 test cases total)
 - CI workflow configured with retries, sharding, artifact upload
-- 4 blockers identified — **2 FIXED (3 May)**, 2 remaining
+- 5 blockers identified and fully closed by 4 May 2026; Phase 10.3 no longer carries an open blocker list in this document
 - Full E2E execution requires running services (backend + DB + Redis + frontend)
 
 ### 10.3.5 Local Testing Strategy (Full Stack)
@@ -1006,7 +1006,9 @@ cd frontend && corepack pnpm dev
 | 10.5.2.14 | Rate limiting test | ✅ | Tiered rate limiting active: Global 100/min, Strict 5/min, Payment 10/min, Standard 30/min, Health 10/min. IP-based partitioning. Returns 429 JSON. |
 | 10.5.2.15 | Webhook signature verification | ✅ | `IyzicoPaymentProvider` validates webhook payload HMAC. `MockPaymentProvider` uses `WebhookSecret` config. Reject on invalid signature. |
 
-### 10.5.3 Security Headers Checklist
+### 10.5.3 Historical Security Header Findings (Superseded by 10 May 2026 hardening)
+
+> **Historical note:** The rows below capture the pre-hardening 4 May finding set. They are preserved for audit history, but they are **not** the current Phase 10.5 gate status. Current gate status is the hardened 10 May closure recorded in Gate 10 and the 10 May follow-up handoff. Use these rows only as historical context.
 
 | Header | Hedef Değer | Durum | Notlar |
 |--------|-------------|-------|--------|
@@ -1017,7 +1019,7 @@ cd frontend && corepack pnpm dev
 | Referrer-Policy | `strict-origin-when-cross-origin` | 🔴 **MISSING** | No referrer policy header. |
 | Permissions-Policy | Kısıtlayıcı | 🔴 **MISSING** | No permissions policy header. |
 
-**Action Required:** All 6 security headers must be added before production launch. Recommended approach: Add a `SecurityHeadersMiddleware` or use `NWebsec.AspNetCore.Middleware` package. Alternatively, configure via reverse proxy (Traefik/Dokploy) if headers are handled at the edge.
+**Historical resolution:** These 4 May header findings were the reason for the Phase 10.5 hardening follow-up. They should not be treated as an active launch blocker in isolation after the 10 May hardening closure; only deployed-environment parity checks remain part of the later infrastructure/deployment gates.
 
 ### 10.5.4 Security Audit Evidence (4 May 2026)
 

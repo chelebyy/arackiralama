@@ -60,7 +60,7 @@ public sealed class IyzicoPaymentProviderTests
     [Fact]
     public void VerifyWebhookSignature_WhenTimestampIsTooFarInTheFuture_ReturnsFalse()
     {
-        var timestamp = DateTimeOffset.UtcNow.AddSeconds(31).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+        var timestamp = DateTimeOffset.UtcNow.AddSeconds(32).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
         var signature = CreateSignature(Payload, Secret);
 
         var result = _sut.VerifyWebhookSignature(Payload, signature, timestamp);
@@ -114,6 +114,32 @@ public sealed class IyzicoPaymentProviderTests
         result.ProviderIntentId.Should().BeNull();
         result.ProviderTransactionId.Should().BeNull();
         result.RawPayload.Should().Be(payload);
+    }
+
+    [Fact]
+    public void VerifyWebhookSignature_WhenSignatureIsMissing_ReturnsFalse()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+
+        var result = _sut.VerifyWebhookSignature(Payload, "", timestamp);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ParseWebhookAsync_WhenExplicitEventTypeProvided_PrefersMethodArgument()
+    {
+        const string payload = """
+        {
+          "eventType": "payment.failed",
+          "eventId": "evt-2"
+        }
+        """;
+
+        var result = await _sut.ParseWebhookAsync("Iyzico", payload, "manual.override", CancellationToken.None);
+
+        result.ProviderEventId.Should().Be("evt-2");
+        result.EventType.Should().Be("manual.override");
     }
 
     private static string CreateSignature(string payload, string secret)
