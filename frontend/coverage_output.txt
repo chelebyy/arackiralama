@@ -1,0 +1,408 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/All_Project/Ara├ğ Kiralama/frontend[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32mÔ£ô[39m components/public/SearchForm.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 439[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/contact/ContactPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 474[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m ContactPage[2m > [22mrenders translated contact headings, key channels, and the contact form area [33m 367[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/privacy/PrivacyPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 474[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m PrivacyPage[2m > [22mrenders the privacy-policy hero and compliance notice [33m 380[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/about/AboutPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 599[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m AboutPage[2m > [22mrenders the translated hero and story content [33m 404[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/track-reservation/TrackReservationPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 831[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m TrackReservationPage[2m > [22mloads and maps reservation details returned by the public tracking API [33m 615[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/step1/BookingStep1.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 989[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep1Page[2m > [22mvalidates required date fields before navigation [33m 330[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep1Page[2m > [22mnavigates to step 2 with the pickup office reused when same-office mode is enabled [33m 319[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep1Page[2m > [22mnavigates with a distinct return office when same-office mode is disabled [33m 338[2mms[22m[39m
+ [32mÔ£ô[39m components/auth/login-form.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 742[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m LoginForm[2m > [22msubmits admin credentials through auth login API [33m 741[2mms[22m[39m
+ [32mÔ£ô[39m components/public/ContactForm.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1807[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m ContactForm[2m > [22msubmits valid input and shows the success state [33m 1593[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/step3/BookingStep3.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1867[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep3Page[2m > [22mvalidates required customer details before advancing [33m 425[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep3Page[2m > [22mlets customers toggle paid extras while completing visible driver fields [33m 1439[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/step2/BookingStep2.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1110[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep2Page[2m > [22mkeeps the continue button disabled until a vehicle is selected [33m 442[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep2Page[2m > [22mnavigates to step 3 with the selected vehicle id [33m 539[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/step4/BookingStep4.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1666[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep4Page[2m > [22mblocks card checkout until terms are accepted and valid card details are provided [33m 479[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m BookingStep4Page[2m > [22mvalidates a campaign code through the API before applying it [33m 389[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/terms/TermsPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 466[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m TermsPage[2m > [22mrenders the terms hero and important notice [33m 334[2mms[22m[39m
+ [32mÔ£ô[39m components/public/Header.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 387[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/vehicles/[id]/VehicleDetailPage.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 431[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/vehicles/VehiclesPage.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 369[2mms[22m[39m
+ [32mÔ£ô[39m components/public/Footer.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 397[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m Footer[2m > [22mrenders quick links, contact details, and social links [33m 349[2mms[22m[39m
+ [32mÔ£ô[39m components/public/Hero.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 364[2mms[22m[39m
+   [33m[2mÔ£ô[22m[39m Hero[2m > [22mrenders trust messaging, ctas, and the hero search form [33m 339[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/HomePage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 388[2mms[22m[39m
+ [32mÔ£ô[39m components/public/LanguageSwitcher.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 273[2mms[22m[39m
+ [32mÔ£ô[39m components/public/VehicleCard.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 259[2mms[22m[39m
+ [32mÔ£ô[39m hooks/useVehicles.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 244[2mms[22m[39m
+ [32mÔ£ô[39m components/public/ReservationTimeline.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 231[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/3ds-return/ThreeDsReturnPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32mÔ£ô[39m hooks/useReservations.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32mÔ£ô[39m components/public/PriceBreakdown.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 102[2mms[22m[39m
+ [32mÔ£ô[39m app/(public)/[locale]/booking/confirmation/BookingConfirmationPage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 194[2mms[22m[39m
+ [32mÔ£ô[39m hooks/usePricing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32mÔ£ô[39m lib/api/client.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m hooks/useBooking.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32mÔ£ô[39m components/public/BookingStepper.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32mÔ£ô[39m lib/utils.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m lib/api/pricing.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m lib/api/reservations.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m lib/api/vehicles.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m34 passed[39m[22m[90m (34)[39m
+[2m      Tests [22m [1m[32m100 passed[39m[22m[90m (100)[39m
+[2m   Start at [22m 01:05:41
+[2m   Duration [22m 13.29s[2m (transform 836ms, setup 6.60s, collect 16.91s, tests 15.63s, environment 73.30s, prepare 6.30s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    17.4 |       55 |   36.11 |    17.4 |                   
+ frontend          |       0 |        0 |       0 |       0 |                   
+  middleware.ts    |       0 |        0 |       0 |       0 | 1-233             
+ frontend/app      |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-65              
+  not-found.tsx    |       0 |        0 |       0 |       0 | 1-42              
+  page.tsx         |       0 |        0 |       0 |       0 | 1-5               
+ ...shboard/(auth) |       0 |        0 |       0 |       0 |                   
+  error.tsx        |       0 |        0 |       0 |       0 | 1-26              
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-46              
+ ...(auth)/default |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-279             
+ ...d/(auth)/fleet |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-35              
+ ...)/fleet/groups |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-76              
+ ...et/maintenance |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-102             
+ .../fleet/offices |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-137             
+ ...fleet/vehicles |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-214             
+ ...(auth)/pricing |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-29              
+ ...cing/campaigns |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-137             
+ .../pricing/rules |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-131             
+ ...(auth)/reports |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-32              
+ ...orts/occupancy |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-140             
+ ...eports/popular |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-139             
+ ...eports/revenue |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-138             
+ ...)/reservations |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-34              
+  page.tsx         |       0 |        0 |       0 |       0 | 1-229             
+ ...ervations/[id] |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-595             
+ ...tions/calendar |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-110             
+ ...auth)/settings |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-29              
+ ...ngs/audit-logs |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-147             
+ .../feature-flags |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-63              
+ ...ettings/system |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-257             
+ ...d/(auth)/users |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-29              
+ ...)/users/admins |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-152             
+ ...sers/customers |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-107             
+ ...hboard/(guest) |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-15              
+ ...ustomer-portal |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-5               
+ ...est)/forbidden |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-27              
+ ...orgot-password |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-5               
+ ...uest)/login/v1 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-27              
+ ...uest)/login/v2 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-21              
+ ...ages/error/404 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-53              
+ ...ages/error/500 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-41              
+ ...t)/register/v1 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-14              
+ ...t)/register/v2 |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-5               
+ ...reset-password |       0 |        0 |       0 |       0 |                   
+  page.tsx         |       0 |        0 |       0 |       0 | 1-20              
+ ...blic)/[locale] |   71.79 |       80 |      50 |   71.79 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-88              
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...[locale]/about |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ocale]/booking |       0 |        0 |       0 |       0 |                   
+  layout.tsx       |       0 |        0 |       0 |       0 | 1-19              
+  page.tsx         |       0 |        0 |       0 |       0 | 1-10              
+ ...ing/3ds-return |   96.22 |       80 |     100 |   96.22 |                   
+  page.tsx         |   96.22 |       80 |     100 |   96.22 | 30,36             
+ ...g/confirmation |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ .../booking/step1 |   99.06 |     87.5 |     100 |   99.06 |                   
+  page.tsx         |   99.06 |     87.5 |     100 |   99.06 | 116,199           
+ .../booking/step2 |      95 |       50 |     100 |      95 |                   
+  page.tsx         |      95 |       50 |     100 |      95 | ...33-136,140-143 
+ .../booking/step3 |   98.18 |    95.23 |      75 |   98.18 |                   
+  page.tsx         |   98.18 |    95.23 |      75 |   98.18 | 100,109-112       
+ .../booking/step4 |   90.12 |    55.69 |     100 |   90.12 |                   
+  page.tsx         |   90.12 |    55.69 |     100 |   90.12 | ...96,199-219,239 
+ ...ocale]/contact |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ocale]/privacy |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...[locale]/terms |     100 |      100 |     100 |     100 |                   
+  page.tsx         |     100 |      100 |     100 |     100 |                   
+ ...ck-reservation |      98 |    51.61 |   83.33 |      98 |                   
+  page.tsx         |      98 |    51.61 |   83.33 |      98 | 146-151,261       
+ ...cale]/vehicles |   84.91 |    42.85 |   38.46 |   84.91 |                   
+  page.tsx         |   84.91 |    42.85 |   38.46 |   84.91 | ...80-289,376-410 
+ .../vehicles/[id] |   99.62 |    60.52 |      75 |   99.62 |                   
+  page.tsx         |   99.62 |    60.52 |      75 |   99.62 | 139               
+ ...api/auth/login |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-90              
+ ...pi/auth/logout |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-46              
+ ...pp/api/auth/me |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-77              
+ ...-reset/confirm |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-54              
+ ...-reset/request |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-53              
+ ...i/auth/refresh |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-66              
+ .../auth/register |       0 |        0 |       0 |       0 |                   
+  route.ts         |       0 |        0 |       0 |       0 | 1-56              
+ ...end/components |       0 |        0 |       0 |       0 |                   
+  ...tionMenus.tsx |       0 |        0 |       0 |       0 | 1-31              
+  active-theme.tsx |       0 |        0 |       0 |       0 | 1-77              
+  ...ge-picker.tsx |       0 |        0 |       0 |       0 | 1-218             
+  ...me-picker.tsx |       0 |        0 |       0 |       0 | 1-116             
+  icon.tsx         |       0 |        0 |       0 |       0 | 1-26              
+ .../admin/dialogs |       0 |        0 |       0 |       0 |                   
+  ...serDialog.tsx |       0 |        0 |       0 |       0 | 1-164             
+  ...ignDialog.tsx |       0 |        0 |       0 |       0 | 1-334             
+  OfficeDialog.tsx |       0 |        0 |       0 |       0 | 1-337             
+  ...uleDialog.tsx |       0 |        0 |       0 |       0 | 1-308             
+  ...cleDialog.tsx |       0 |        0 |       0 |       0 | 1-311             
+  index.ts         |       0 |        0 |       0 |       0 | 1-5               
+ ...omponents/auth |   15.95 |    33.33 |      50 |   15.95 |                   
+  ...er-portal.tsx |       0 |        0 |       0 |       0 | 1-97              
+  ...ster-form.tsx |       0 |        0 |       0 |       0 | 1-146             
+  ...word-form.tsx |       0 |        0 |       0 |       0 | 1-139             
+  login-form.tsx   |   82.57 |    42.85 |     100 |   82.57 | ...09-111,156-161 
+  ...word-form.tsx |       0 |        0 |       0 |       0 | 1-169             
+ ...ponents/layout |       0 |        0 |       0 |       0 |                   
+  logo.tsx         |       0 |        0 |       0 |       0 | 1-13              
+ .../layout/header |       0 |        0 |       0 |       0 |                   
+  data.ts          |       0 |        0 |       0 |       0 | 1-114             
+  index.tsx        |       0 |        0 |       0 |       0 | 1-36              
+  ...fications.tsx |       0 |        0 |       0 |       0 | 1-88              
+  search.tsx       |       0 |        0 |       0 |       0 | 1-88              
+  theme-switch.tsx |       0 |        0 |       0 |       0 | 1-31              
+  user-menu.tsx    |       0 |        0 |       0 |       0 | 1-83              
+ ...layout/sidebar |       0 |        0 |       0 |       0 |                   
+  app-sidebar.tsx  |       0 |        0 |       0 |       0 | 1-63              
+  nav-main.tsx     |       0 |        0 |       0 |       0 | 1-260             
+  nav-user.tsx     |       0 |        0 |       0 |       0 | 1-169             
+ ...ponents/public |   96.34 |    87.91 |   69.04 |   96.34 |                   
+  ...ngStepper.tsx |     100 |      100 |     100 |     100 |                   
+  ContactForm.tsx  |   93.63 |    86.53 |   66.66 |   93.63 | ...16-117,151-154 
+  Footer.tsx       |     100 |      100 |     100 |     100 |                   
+  Header.tsx       |     100 |    91.66 |      40 |     100 | 49                
+  Hero.tsx         |     100 |      100 |     100 |     100 |                   
+  ...eSwitcher.tsx |    94.8 |      100 |      50 |    94.8 | 25-28             
+  ...Breakdown.tsx |     100 |      100 |     100 |     100 |                   
+  ...nTimeline.tsx |     100 |    89.18 |     100 |     100 | 83,166-169        
+  SearchForm.tsx   |   88.92 |    69.69 |   66.66 |   88.92 | ...81-288,314-321 
+  VehicleCard.tsx  |     100 |      100 |     100 |     100 |                   
+ ...eme-customizer |       0 |        0 |       0 |       0 |                   
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-30              
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-30              
+  index.ts         |       0 |        0 |       0 |       0 | 1-8               
+  panel.tsx        |       0 |        0 |       0 |       0 | 1-46              
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-46              
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-49              
+  reset-theme.tsx  |       0 |        0 |       0 |       0 | 1-19              
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-39              
+  ...-selector.tsx |       0 |        0 |       0 |       0 | 1-29              
+ .../components/ui |     1.5 |    12.69 |    12.5 |     1.5 |                   
+  accordion.tsx    |       0 |        0 |       0 |       0 | 1-66              
+  alert-dialog.tsx |       0 |        0 |       0 |       0 | 1-135             
+  alert.tsx        |       0 |        0 |       0 |       0 | 1-66              
+  aspect-ratio.tsx |       0 |        0 |       0 |       0 | 1-11              
+  avatar.tsx       |       0 |        0 |       0 |       0 | 1-79              
+  badge.tsx        |       0 |        0 |       0 |       0 | 1-44              
+  breadcrumb.tsx   |       0 |        0 |       0 |       0 | 1-109             
+  button-group.tsx |       0 |        0 |       0 |       0 | 1-83              
+  button.tsx       |     100 |       50 |     100 |     100 | 56                
+  calendar.tsx     |       0 |        0 |       0 |       0 | 1-447             
+  card.tsx         |   72.41 |      100 |   71.42 |   72.41 | 51-59,65-73       
+  carousel.tsx     |       0 |        0 |       0 |       0 | 1-241             
+  chart.tsx        |       0 |        0 |       0 |       0 | 1-316             
+  checkbox.tsx     |       0 |        0 |       0 |       0 | 1-27              
+  collapsible.tsx  |       0 |        0 |       0 |       0 | 1-33              
+  command.tsx      |       0 |        0 |       0 |       0 | 1-177             
+  context-menu.tsx |       0 |        0 |       0 |       0 | 1-221             
+  dialog.tsx       |       0 |        0 |       0 |       0 | 1-125             
+  drawer.tsx       |       0 |        0 |       0 |       0 | 1-132             
+  ...down-menu.tsx |       0 |        0 |       0 |       0 | 1-257             
+  empty.tsx        |       0 |        0 |       0 |       0 | 1-104             
+  field.tsx        |       0 |        0 |       0 |       0 | 1-248             
+  form.tsx         |       0 |        0 |       0 |       0 | 1-167             
+  hover-card.tsx   |       0 |        0 |       0 |       0 | 1-44              
+  input-group.tsx  |       0 |        0 |       0 |       0 | 1-170             
+  input-otp.tsx    |       0 |        0 |       0 |       0 | 1-77              
+  input.tsx        |     100 |      100 |     100 |     100 |                   
+  item.tsx         |       0 |        0 |       0 |       0 | 1-193             
+  kanban.tsx       |       0 |        0 |       0 |       0 | 1-1035            
+  kbd.tsx          |       0 |        0 |       0 |       0 | 1-28              
+  label.tsx        |     100 |      100 |     100 |     100 |                   
+  menubar.tsx      |       0 |        0 |       0 |       0 | 1-276             
+  ...ve-select.tsx |       0 |        0 |       0 |       0 | 1-48              
+  ...tion-menu.tsx |       0 |        0 |       0 |       0 | 1-168             
+  pagination.tsx   |       0 |        0 |       0 |       0 | 1-127             
+  popover.tsx      |       0 |        0 |       0 |       0 | 1-48              
+  progress.tsx     |       0 |        0 |       0 |       0 | 1-33              
+  radio-group.tsx  |       0 |        0 |       0 |       0 | 1-45              
+  reel.tsx         |       0 |        0 |       0 |       0 | 1-632             
+  resizable.tsx    |       0 |        0 |       0 |       0 | 1-73              
+  scroll-area.tsx  |       0 |        0 |       0 |       0 | 1-58              
+  select.tsx       |       0 |        0 |       0 |       0 | 1-185             
+  separator.tsx    |       0 |        0 |       0 |       0 | 1-28              
+  sheet.tsx        |       0 |        0 |       0 |       0 | 1-133             
+  sidebar.tsx      |       0 |        0 |       0 |       0 | 1-686             
+  skeleton.tsx     |       0 |        0 |       0 |       0 | 1-13              
+  slider.tsx       |       0 |        0 |       0 |       0 | 1-63              
+  sonner.tsx       |       0 |        0 |       0 |       0 | 1-25              
+  spinner.tsx      |       0 |        0 |       0 |       0 | 1-16              
+  switch.tsx       |       0 |        0 |       0 |       0 | 1-31              
+  table.tsx        |       0 |        0 |       0 |       0 | 1-116             
+  tabs.tsx         |       0 |        0 |       0 |       0 | 1-66              
+  textarea.tsx     |       0 |        0 |       0 |       0 | 1-18              
+  timeline.tsx     |       0 |        0 |       0 |       0 | 1-174             
+  toast.tsx        |       0 |        0 |       0 |       0 | 1-129             
+  toggle-group.tsx |       0 |        0 |       0 |       0 | 1-73              
+  toggle.tsx       |       0 |        0 |       0 |       0 | 1-47              
+  tooltip.tsx      |       0 |        0 |       0 |       0 | 1-61              
+ ...ents/ui/custom |       0 |        0 |       0 |       0 |                   
+  ...animation.tsx |       0 |        0 |       0 |       0 | 1-24              
+ .../custom/prompt |       0 |        0 |       0 |       0 |                   
+  ...container.tsx |       0 |        0 |       0 |       0 | 1-243             
+  code-block.tsx   |       0 |        0 |       0 |       0 | 1-82              
+  input.tsx        |       0 |        0 |       0 |       0 | 1-166             
+  loader.tsx       |       0 |        0 |       0 |       0 | 1-445             
+  markdown.tsx     |       0 |        0 |       0 |       0 | 1-102             
+  message.tsx      |       0 |        0 |       0 |       0 | 1-100             
+  ...ll-button.tsx |       0 |        0 |       0 |       0 | 1-78              
+  suggestion.tsx   |       0 |        0 |       0 |       0 | 1-99              
+ .../custom/tiptap |       0 |        0 |       0 |       0 |                   
+  ...xt-editor.tsx |       0 |        0 |       0 |       0 | 1-154             
+  utils.tsx        |       0 |        0 |       0 |       0 | 1-44              
+ ...tap/extensions |       0 |        0 |       0 |       0 |                   
+  ...ting-menu.tsx |       0 |        0 |       0 |       0 | 1-381             
+  ...g-toolbar.tsx |       0 |        0 |       0 |       0 | 1-91              
+  ...aceholder.tsx |       0 |        0 |       0 |       0 | 1-284             
+  image.tsx        |       0 |        0 |       0 |       0 | 1-412             
+  ...d-replace.tsx |       0 |        0 |       0 |       0 | 1-438             
+ ...m/tiptap/hooks |       0 |        0 |       0 |       0 |                   
+  ...ge-upload.tsx |       0 |        0 |       0 |       0 | 1-97              
+ ...iptap/toolbars |       0 |        0 |       0 |       0 |                   
+  alignment.tsx    |       0 |        0 |       0 |       0 | 1-124             
+  blockquote.tsx   |       0 |        0 |       0 |       0 | 1-51              
+  bold.tsx         |       0 |        0 |       0 |       0 | 1-51              
+  bullet-list.tsx  |       0 |        0 |       0 |       0 | 1-47              
+  code-block.tsx   |       0 |        0 |       0 |       0 | 1-51              
+  code.tsx         |       0 |        0 |       0 |       0 | 1-46              
+  ...highlight.tsx |       0 |        0 |       0 |       0 | 1-215             
+  ...bar-basic.tsx |       0 |        0 |       0 |       0 | 1-42              
+  ...r-toolbar.tsx |       0 |        0 |       0 |       0 | 1-80              
+  hard-break.tsx   |       0 |        0 |       0 |       0 | 1-41              
+  headings.tsx     |       0 |        0 |       0 |       0 | 1-106             
+  ...ntal-rule.tsx |       0 |        0 |       0 |       0 | 1-41              
+  ...r-toolbar.tsx |       0 |        0 |       0 |       0 | 1-45              
+  italic.tsx       |       0 |        0 |       0 |       0 | 1-47              
+  link.tsx         |       0 |        0 |       0 |       0 | 1-112             
+  ...bar-group.tsx |       0 |        0 |       0 |       0 | 1-86              
+  ordered-list.tsx |       0 |        0 |       0 |       0 | 1-51              
+  redo.tsx         |       0 |        0 |       0 |       0 | 1-43              
+  ...e-toolbar.tsx |       0 |        0 |       0 |       0 | 1-220             
+  ...kethrough.tsx |       0 |        0 |       0 |       0 | 1-47              
+  ...-provider.tsx |       0 |        0 |       0 |       0 | 1-35              
+  underline.tsx    |       0 |        0 |       0 |       0 | 1-47              
+  undo.tsx         |       0 |        0 |       0 |       0 | 1-47              
+ ...d/e2e/fixtures |       0 |        0 |       0 |       0 |                   
+  test-data.ts     |       0 |        0 |       0 |       0 | 1-88              
+ ...tend/e2e/pages |       0 |        0 |       0 |       0 |                   
+  ...nLoginPage.ts |       0 |        0 |       0 |       0 | 1-48              
+  ...DetailPage.ts |       0 |        0 |       0 |       0 | 1-73              
+  ...ationsPage.ts |       0 |        0 |       0 |       0 | 1-60              
+  HomePage.ts      |       0 |        0 |       0 |       0 | 1-72              
+  ...vationPage.ts |       0 |        0 |       0 |       0 | 1-54              
+ frontend/hooks    |   35.16 |    77.27 |   80.95 |   35.16 |                   
+  ...ile-upload.ts |       0 |        0 |       0 |       0 | 1-413             
+  use-mobile.ts    |       0 |        0 |       0 |       0 | 1-36              
+  use-toast.ts     |       0 |        0 |       0 |       0 | 1-194             
+  useBooking.ts    |   94.63 |    95.65 |   86.66 |   94.63 | 204-205,223-230   
+  usePricing.ts    |     100 |    72.72 |      80 |     100 | 19,49-52          
+  ...servations.ts |   94.54 |     62.5 |     100 |   94.54 | ...,86-87,119-120 
+  useVehicles.ts   |   81.81 |    84.61 |   83.33 |   81.81 | 90-104            
+ ...nd/hooks/admin |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-6               
+  ...minPricing.ts |       0 |        0 |       0 |       0 | 1-93              
+  ...minReports.ts |       0 |        0 |       0 |       0 | 1-49              
+  ...servations.ts |       0 |        0 |       0 |       0 | 1-84              
+  ...inSettings.ts |       0 |        0 |       0 |       0 | 1-54              
+  useAdminUsers.ts |       0 |        0 |       0 |       0 | 1-85              
+  ...inVehicles.ts |       0 |        0 |       0 |       0 | 1-150             
+ frontend/i18n     |       0 |        0 |       0 |       0 |                   
+  config.ts        |       0 |        0 |       0 |       0 | 1-15              
+  request.ts       |       0 |        0 |       0 |       0 | 1-15              
+  routing.ts       |       0 |        0 |       0 |       0 | 1-80              
+ frontend/lib      |    6.71 |    69.23 |    37.5 |    6.71 |                   
+  compose-refs.ts  |       0 |        0 |       0 |       0 | 1-62              
+  fonts.ts         |       0 |        0 |       0 |       0 | 1-86              
+  ga.ts            |       0 |        0 |       0 |       0 | 1-20              
+  themes.ts        |       0 |        0 |       0 |       0 | 1-51              
+  utils.ts         |      50 |      100 |      75 |      50 | 17-36             
+ frontend/lib/api  |   39.21 |    69.84 |   68.57 |   39.21 |                   
+  client.ts        |   72.31 |    52.94 |   57.14 |   72.31 | ...03-212,215-216 
+  config.ts        |     100 |      100 |   66.66 |     100 |                   
+  payments.ts      |    12.5 |      100 |       0 |    12.5 | 35-49             
+  pricing.ts       |     100 |     87.5 |     100 |     100 | 18                
+  reservations.ts  |     100 |      100 |     100 |     100 |                   
+  types.ts         |       0 |        0 |       0 |       0 | 1-357             
+  vehicles.ts      |     100 |       90 |     100 |     100 | 19                
+ .../lib/api/admin |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-9               
+  mock.ts          |       0 |        0 |       0 |       0 | 1-1054            
+  pricing.ts       |       0 |        0 |       0 |       0 | 1-127             
+  reports.ts       |       0 |        0 |       0 |       0 | 1-43              
+  reservations.ts  |       0 |        0 |       0 |       0 | 1-128             
+  settings.ts      |       0 |        0 |       0 |       0 | 1-85              
+  types.ts         |       0 |        0 |       0 |       0 | 1-345             
+  users.ts         |       0 |        0 |       0 |       0 | 1-120             
+  vehicles.ts      |       0 |        0 |       0 |       0 | 1-184             
+ frontend/lib/auth |       0 |        0 |       0 |       0 |                   
+  backend.ts       |       0 |        0 |       0 |       0 | 1-226             
+  constants.ts     |       0 |        0 |       0 |       0 | 1-24              
+  http.ts          |       0 |        0 |       0 |       0 | 1-85              
+  jwt.ts           |       0 |        0 |       0 |       0 | 1-70              
+  types.ts         |       0 |        0 |       0 |       0 | 1-36              
+-------------------|---------|----------|---------|---------|-------------------

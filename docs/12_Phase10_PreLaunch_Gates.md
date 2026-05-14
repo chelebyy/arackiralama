@@ -83,8 +83,8 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | # | Gate | Kriter | Eşik Değer | Mevcut | Karar |
 |---|------|--------|-----------|--------|--------|
 | 1 | **Code Quality** | Critical code smell count | = 0 | 0 | ✅ GO |
-| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — **last healthy full-solution baseline** from 11 May 2026 with Postgres/Redis healthy. Follow-up unit-side Infrastructure slices on 14 May raised `RentACar.Tests` to **544/544 PASS** (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), but a fresh full-solution coverage rerun in the current shell failed to connect to PostgreSQL `127.0.0.1:5433`, so no newer trustworthy overall percentage is available yet. | 🔴 NO-GO |
-| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%7.5** (booking flow targeted: %88–100) | 🔴 NO-GO |
+| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — **last healthy full-solution baseline** from 11 May 2026 with Postgres/Redis healthy. Follow-up unit-side Infrastructure slices on 14 May raised `RentACar.Tests` to **544/544 PASS** (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`). A fresh full-solution coverage rerun in the current shell failed to connect to PostgreSQL `127.0.0.1:5433`, so no newer trustworthy overall percentage is available yet. | 🔴 NO-GO |
+| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%17.40** (fresh Vitest run 15 May 2026, 100/100 PASS) — all 10 public components + all 11 public pages tested; booking flow targeted: %88–100; remaining gap is `SearchForm.tsx` (88.92%), `BookingLayout` (0%), `BookingStep2Page` (95%), `BookingStep4Page` (90.12%) | 🔴 NO-GO |
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS — last healthy 11 May full-environment baseline; not freshly rerun in the current PostgreSQL-blocked 14 May shell | ✅ GO |
@@ -106,6 +106,8 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 22 | **Launch Readiness** | Incident response plan | Escalation matrix | ⬜ DEFERRED — Dokploy deployment sonrası | ⬜ DEFERRED |
 
 **Özet:** 7/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 4/22 NO-GO | 9/22 DEFERRED
+
+**15 May 2026 Fresh Update:** Frontend Vitest 100/100 PASS ✅, coverage **17.40%** overall (up from 7.5%); all public surfaces tested; no new cheap slices remain; `BookingLayout` at 0% and `SearchForm` at 88.92% are next targeted branch gaps; backend PostgreSQL block unchanged (`127.0.0.1:5433` refused); Phase 10.1 gates remain unmet until backend overall ≥70%, frontend overall ≥60%, payment ≥80%, reservation ≥80%.
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.

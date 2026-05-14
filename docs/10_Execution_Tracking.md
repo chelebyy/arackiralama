@@ -10,7 +10,7 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **11 May 2026 backend coverage rebaseline CONFIRMED 🟡** — local Postgres/Redis ile full backend coverage command geçti, active slice Infrastructure coverage ve fresh rebaseline ile yukarı taşındı; **14 May 2026 Infrastructure provider follow-up COMPLETED 🟡** — MockPaymentProvider, ConfiguredSmsProvider ve NetgsmSmsProvider test genişletmeleri ile `RentACar.Tests` 544/544'e yükseldi, ancak fresh full-solution coverage rerun mevcut shell'de PostgreSQL `127.0.0.1:5433` erişim hatası nedeniyle yeni genel yüzde üretemedi)
+**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **11 May 2026 backend coverage rebaseline CONFIRMED 🟡** — local Postgres/Redis ile full backend coverage command geçti, active slice Infrastructure coverage ve fresh rebaseline ile yukarı taşındı; **14 May 2026 Infrastructure provider follow-up COMPLETED 🟡** — MockPaymentProvider, ConfiguredSmsProvider ve NetgsmSmsProvider test genişletmeleri ile `RentACar.Tests` 544/544'e yükseldi, ancak fresh full-solution coverage rerun mevcut shell'de PostgreSQL `127.0.0.1:5433` erişim hatası nedeniyle yeni genel yüzde üretemedi; **15 May 2026 frontend coverage fresh rebaseline COMPLETED ✅** — Vitest 100/100 PASS, coverage **17.40%** overall (up from 7.5%), all public surfaces (10 components + 11 pages) already have tests, `BookingLayout` at 0% and `SearchForm` at 88.92% are next targeted gaps, Phase 10.1 gates still unmet until backend ≥70%, frontend ≥60%, payment ≥80%, reservation ≥80%)
 
 ---
 
@@ -1874,7 +1874,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
 
-| Test Coverage | > 70% | Backend: %29.86 (last healthy full-solution baseline, 11 May), Frontend: %7.53 | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
+| Test Coverage | > 70% | Backend: %29.86 (last healthy full-solution baseline, 11 May), Frontend: %17.40 (fresh 15 May Vitest 100/100 PASS); all public surfaces tested; Phase 10.1 gates still unmet | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 

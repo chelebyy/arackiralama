@@ -146,6 +146,86 @@ public sealed class NotificationBackgroundJobProcessorTests : IDisposable
         _dbContext.BackgroundJobs.Count(x => x.Status == BackgroundJobStatus.Pending).Should().Be(1);
     }
 
+    [Fact]
+    public async Task ProcessPendingAsync_WhenSmsJobSucceeds_CompletesJob()
+    {
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = NotificationQueueService.SendSmsJobType,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new QueuedSmsNotificationRequest
+            {
+                ToPhoneNumber = "+905551112233",
+                TemplateKey = NotificationTemplateKeys.ReservationCancelled,
+                Locale = "tr-TR",
+                Variables = new Dictionary<string, string>
+                {
+                    ["PublicCode"] = "RSV-SMS-SUCCESS"
+                }
+            }),
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var smsProvider = new FakeSmsProvider(success: true);
+        var sut = new NotificationBackgroundJobProcessor(
+            _dbContext,
+            new NotificationTemplateService(),
+            new FakeEmailProvider(success: true),
+            smsProvider,
+            NullLogger<NotificationBackgroundJobProcessor>.Instance);
+
+        var processedCount = await sut.ProcessPendingAsync();
+
+        processedCount.Should().Be(1);
+        var job = _dbContext.BackgroundJobs.Single();
+        job.Status.Should().Be(BackgroundJobStatus.Completed);
+        job.LastError.Should().BeNull();
+        job.FailedAt.Should().BeNull();
+        smsProvider.LastRequest.Should().NotBeNull();
+        smsProvider.LastRequest!.Body.Should().Contain("RSV-SMS-SUCCESS");
+    }
+
+    [Fact]
+    public async Task ProcessPendingAsync_WhenRetryLimitReached_MarksJobFailed()
+    {
+        _dbContext.BackgroundJobs.Add(new BackgroundJob
+        {
+            Type = NotificationQueueService.SendSmsJobType,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new QueuedSmsNotificationRequest
+            {
+                ToPhoneNumber = "+905551112233",
+                TemplateKey = NotificationTemplateKeys.ReservationCancelled,
+                Locale = "tr-TR",
+                Variables = new Dictionary<string, string>
+                {
+                    ["PublicCode"] = "RSV-SMS-FAILED"
+                }
+            }),
+            Status = BackgroundJobStatus.Pending,
+            RetryCount = 2,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var smsProvider = new FakeSmsProvider(success: false);
+        var sut = new NotificationBackgroundJobProcessor(
+            _dbContext,
+            new NotificationTemplateService(),
+            new FakeEmailProvider(success: true),
+            smsProvider,
+            NullLogger<NotificationBackgroundJobProcessor>.Instance);
+
+        var processedCount = await sut.ProcessPendingAsync();
+
+        processedCount.Should().Be(0);
+        var job = _dbContext.BackgroundJobs.Single();
+        job.Status.Should().Be(BackgroundJobStatus.Failed);
+        job.RetryCount.Should().Be(3);
+        job.FailedAt.Should().NotBeNull();
+        job.LastError.Should().Be("SMS failed");
+    }
+
     public void Dispose()
     {
         _dbContext.Dispose();
