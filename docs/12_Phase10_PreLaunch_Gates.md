@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**)  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (Dokploy bekleniyor), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**) | 14 May 2026: cheap Infrastructure provider slices continued successfully (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), lifting the latest verified `RentACar.Tests` count to **544/544**; a fresh full-solution coverage rerun in the current shell was blocked by PostgreSQL `127.0.0.1:5433` connection failure, so overall percentages remain pinned to the 11 May healthy baseline  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -83,11 +83,11 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | # | Gate | Kriter | Eşik Değer | Mevcut | Karar |
 |---|------|--------|-----------|--------|--------|
 | 1 | **Code Quality** | Critical code smell count | = 0 | 0 | ✅ GO |
-| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — latest local rebaseline on 11 May 2026 with Postgres/Redis healthy and full solution coverage command passing after provider + hold-service test expansion | 🔴 NO-GO |
+| 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — **last healthy full-solution baseline** from 11 May 2026 with Postgres/Redis healthy. Follow-up unit-side Infrastructure slices on 14 May raised `RentACar.Tests` to **544/544 PASS** (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), but a fresh full-solution coverage rerun in the current shell failed to connect to PostgreSQL `127.0.0.1:5433`, so no newer trustworthy overall percentage is available yet. | 🔴 NO-GO |
 | 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%7.5** (booking flow targeted: %88–100) | 🔴 NO-GO |
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
-| 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS | ✅ GO |
+| 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS — last healthy 11 May full-environment baseline; not freshly rerun in the current PostgreSQL-blocked 14 May shell | ✅ GO |
 | 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. Flaky `data-search-form-hydrated` test replaced with stable selector. **CI Strategy: PR trigger REMOVED** — E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only. Developer verifies locally with `docker compose up + pnpm dev + playwright test` | ✅ GO |
 | 8 | **Load Tests** | Availability query p95 | < 300ms | 🟨 **SCRIPTS READY 4 May 2026** — k6 scripts created (`backend/tests/k6/`). CodeQL HIGH (`Math.random()` in `concurrent-booking.js`) fixed in `3d3b2f1`. Scripts not yet executed against deployed infra. | 🟨 SCRIPTS READY |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | 🟨 **SCRIPTS READY 4 May 2026** — `concurrent-booking.js` + `mixed-traffic.js` ready, awaiting Dokploy infra | 🟨 SCRIPTS READY |
@@ -517,8 +517,8 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.1.1 | Generate coverage report (`coverlet`) | ✅ | %70+ overall | **Mevcut: %32.90** (önce %30.69) — henüz hedefe ulaşılmadı |
-| 10.1.1.2 | Review all existing unit tests | ✅ | Tüm testler geçiyor | **395/395 geçti** (önce 309) |
+| 10.1.1.1 | Generate coverage report (`coverlet`) | ✅ | %70+ overall | **Mevcut güvenilir full-solution baseline: %29.86** (11 May 2026, Postgres/Redis healthy). 14 May unit-side provider follow-up `RentACar.Tests` sayısını 544/544'e çıkardı, ancak fresh full-solution rerun PostgreSQL `127.0.0.1:5433` bağlantı hatası nedeniyle yeni overall yüzde üretemedi. |
+| 10.1.1.2 | Review all existing unit tests | ✅ | Tüm testler geçiyor | Son unit-project doğrulaması **544/544 geçti**; son sağlıklı integration baseline ayrıca **29/29 PASS** olarak korunuyor. |
 | 10.1.1.3 | Payment module coverage | ✅ | %80+ | **19 yeni test** eklendi: CreateIntentAsync, CompleteThreeDsAsync, RetryPaymentAsync, deposit lifecycle |
 | 10.1.1.4 | Reservation module coverage | ✅ | %80+ | **33 yeni test** eklendi: UpdateReservationAsync, ExpireReservationAsync, AssignVehicleAsync, overlap prevention, optimistic locking |
 | 10.1.1.5 | Auth module coverage | ✅ | %75+ | **48 yeni test** eklendi: JwtTokenService, negative authorization, role-based access control |
@@ -565,7 +565,7 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - RentACar.Infrastructure: **10.22%** line, 19.37% branch
 - RentACar.Worker: **21.67%** line, 30.85% branch
 
-**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. Wave 3 ile Worker tests ve 6 eksik admin controller testi tamamlandı. Admin panel controller coverage önemli ölçüde arttı. Bir sonraki adım: Integration tests (10.2) veya frontend test coverage devamı.
+**Karar:** Backend overall %70 hedefine henüz ulaşılmadı. 11 May 2026 sağlıklı full-solution baseline hâlâ `%29.86` overall / `%9.38` Infrastructure olarak geçerli. 14 May provider follow-up ile `MockPaymentProvider`, `ConfiguredSmsProvider` ve `NetgsmSmsProvider` birim testleri genişletildi ve `RentACar.Tests` 544/544'e yükseldi; bir sonraki düşük-friction backend coverage hedefi `NotificationBackgroundJobProcessor` veya `NotificationQueueService` olmalı. Yeni overall yüzde için Docker/Postgres sağlıklıyken full-solution coverage rerun gerekir.
 
 ### 10.1.2 Frontend Test Review
 

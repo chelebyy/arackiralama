@@ -10,7 +10,7 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **11 May 2026 backend coverage rebaseline CONFIRMED 🟡** — local Postgres/Redis ile full backend coverage command geçti, active slice Infrastructure coverage ve fresh rebaseline ile yukarı taşındı)
+**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **11 May 2026 backend coverage rebaseline CONFIRMED 🟡** — local Postgres/Redis ile full backend coverage command geçti, active slice Infrastructure coverage ve fresh rebaseline ile yukarı taşındı; **14 May 2026 Infrastructure provider follow-up COMPLETED 🟡** — MockPaymentProvider, ConfiguredSmsProvider ve NetgsmSmsProvider test genişletmeleri ile `RentACar.Tests` 544/544'e yükseldi, ancak fresh full-solution coverage rerun mevcut shell'de PostgreSQL `127.0.0.1:5433` erişim hatası nedeniyle yeni genel yüzde üretemedi)
 
 ---
 
@@ -1645,7 +1645,7 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 ### 📝 Faz 10 İlerleme Notları
 
-> **Kaynak önceliği notu:** Bu bölümdeki kısa özetler ve aşağıdaki ilerleme sayaçları tarihsel takip kolaylığı içindir. Launch sequencing ve gate kararı için birincil kaynak `docs/12_Phase10_PreLaunch_Gates.md` ile `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md` olmalıdır.
+> **Kaynak önceliği notu:** Bu bölümdeki kısa özetler ve aşağıdaki ilerleme sayaçları tarihsel takip kolaylığı içindir. Launch sequencing ve gate kararı için birincil kaynak `docs/12_Phase10_PreLaunch_Gates.md` olmalıdır; overall/full-solution backend coverage yüzdeleri için `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md`, 14 May unit-side Infrastructure ilerlemesi için `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md` kullanılmalıdır.
 
 **10.0 Code Quality Assessment:**
 - Wave 1 (Auth + Reservation + Payment + Booking Flow): ✅ 8/8 critical fix tamamlandı
@@ -1656,11 +1656,11 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
-- Backend: 534/534 test pass (505 unit + 29 integration). Latest full-solution line coverage %29.86 (API %52.91, Core %92.00, Worker %63.49, Infrastructure %9.38) — 11 May 2026 local rebaseline with Postgres/Redis healthy.
+- Backend: Last healthy full-solution baseline remains **534/534** test pass with line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) from the **11 May 2026** local rebaseline with Postgres/Redis healthy. Latest unit-project-only verification on **14 May 2026** reached **544/544 PASS** after `MockPaymentProvider`, `ConfiguredSmsProvider`, and `NetgsmSmsProvider` test expansions, but a fresh full-solution coverage rerun was blocked in the current shell by PostgreSQL connection failure on `127.0.0.1:5433`.
 - Frontend: 63 test, 0 failure. Booking flow targeted coverage yüksek (%97-100). Project-wide %7.53 (hedef %60).
 
 **10.2 Integration Tests:**
-- ✅ 29/29 integration test pass. Endpoint, Database, Redis, and Payment Provider integration coverage are green in the latest verified backend run.
+- ✅ 29/29 integration test pass in the **last healthy full-environment backend baseline** (11–13 May evidence). Endpoint, Database, Redis, and Payment Provider integration coverage are green in that baseline, but they were not freshly revalidated in the current PostgreSQL-blocked 14 May shell.
 - Build 0 warning/error.
 
 **10.3 E2E Tests:**
@@ -1814,6 +1814,7 @@ GENEL İLERLEME: [████████░░] 85%
 | Tarih | Kayıt Tipi | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
+| 14.05.2026 | Delivery | Phase 10 Infrastructure provider follow-up tamamlandı: `MockPaymentProviderTests`, `ConfiguredSmsProviderTests` ve `NetgsmSmsProviderTests` mevcut harness'ler üzerinden genişletildi. `RentACar.Tests` proje doğrulaması 544/544 PASS'e yükseldi. Taze full-solution coverage rerun denendi ancak `RentACar.ApiIntegrationTests` PostgreSQL `127.0.0.1:5433` bağlantı hatası nedeniyle yeni genel yüzde üretemedi; bu nedenle overall `%29.86` / Infrastructure `%9.38` değerleri son sağlıklı 11 May baseline olarak korunuyor. | Notification/provider coverage slices, latest unit-project verification | PR aç, ardından `NotificationBackgroundJobProcessor` veya `NotificationQueueService` dilimine geç; Docker/Postgres sağlıklıyken coverage rerun yap | `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore --no-build` 544/544 pass; targeted suites: MockPaymentProvider 16/16, ConfiguredSmsProvider 5/5, NetgsmSmsProvider 9/9; `dotnet build backend/RentACar.sln --no-restore` 0 warning / 0 error. Handoff: `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md`. | AI |
 | 11.05.2026 | Delivery | Phase 10 coverage rebaseline + first Infrastructure expansion tamamlandı: local Postgres/Redis ile full backend solution coverage yeniden çalıştırıldı, Phase 10 docs stale coverage değerlerinden arındırıldı, provider + hold-service testleri eklendi. Yeni güvenilir backend baseline: overall %29.86, Infrastructure %9.38, toplam 534/534 test pass. | Coverage rebaseline, docs reconciliation, Infrastructure first slice | Infrastructure coverage expansion'ın sonraki düşük-friction dilimleri + frontend coverage environment repair | `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` 534/534 pass; `RentACar.Tests` 505/505; `RentACar.ApiIntegrationTests` 29/29. Handoff: `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md`. | AI |
 | 10.05.2026 | Delivery | Phase 10.5 follow-up tamamlandı: backend CORS, non-development security headers, development-only Swagger/OpenAPI, restricted `AllowedHosts`, default `AutoMigrateOnStartup=false` uygulandı ve doğrulandı. `AddMissingBackgroundJobColumns` idempotent hale getirildi; production-style boot artık duplicate `background_jobs.last_error` hatasına düşmüyor. `RentACar.ApiIntegrationTests.csproj` içindeki gereksiz `System.Security.Cryptography.Algorithms` referansı kaldırıldı (`NU1510` temizlendi). Password reset email fallback locale artık `NotificationOptions.DefaultLocale` kullanıyor. | Phase 10.5 follow-up, migration/runtime hardening, Wave 3 locale fix | Coverage / infra-dependent launch gates | `dotnet build RentACar.sln -nodeReuse:false /p:UseSharedCompilation=false` 0 warning / 0 error; `HealthSmokeTests` 4/4 pass; production-style `/health` 200, `/openapi/v1.json` 404. Handoff: `docs/handoffs/2026-05-10-phase105-hardening-followup.md`. | AI |
 
@@ -1873,7 +1874,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
 
-| Test Coverage | > 70% | Backend: %32.90, Frontend: %7.53 | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
+| Test Coverage | > 70% | Backend: %29.86 (last healthy full-solution baseline, 11 May), Frontend: %7.53 | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 
@@ -1941,6 +1942,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 3 Mayıs 2026 (Phase 10 E2E Bug Düzeltmeleri: step3 driverLicenseCountry input eklendi, track-reservation API'ye bağlandı, E2E CI AUTH_BACKEND_URL runtime fix eklendi. Pre-Launch Gates Go/No-Go matrisi güncellendi: 4/22 GO, 1/22 PARTIAL, 17/22 DEFERRED/NO-GO. 3/5 E2E blocker FIXED, 2 kaldı (step4 payment-intent, admin refund UI). Backend coverage: %28.1, Frontend coverage: %7.5. docs/12_Phase10_PreLaunch_Gates.md güncellendi. docs/handoffs/2026-05-03-013531-phase10-prelaunch-progress.md, docs/handoffs/2026-05-03-030000-e2e-auth-fix-phase10-3.md oluşturuldu.)
+**Son Güncelleme:** 14 Mayıs 2026 (Phase 10 backend Infrastructure provider follow-up: `MockPaymentProviderTests`, `ConfiguredSmsProviderTests` ve `NetgsmSmsProviderTests` genişletildi; `RentACar.Tests` 544/544 PASS ve `dotnet build backend/RentACar.sln --no-restore` 0 warning / 0 error doğrulandı. Full-solution coverage rerun denendi fakat `RentACar.ApiIntegrationTests` PostgreSQL `127.0.0.1:5433` bağlantı hatası nedeniyle yeni overall yüzde üretemedi; bu nedenle backend `%29.86` / Infrastructure `%9.38` değerleri son sağlıklı 11 May baseline olarak korunuyor. docs/12 ve yeni handoff `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md` bu ayrımı yansıtacak şekilde güncellendi.)
 
 **Durum:** Aktif Takip
