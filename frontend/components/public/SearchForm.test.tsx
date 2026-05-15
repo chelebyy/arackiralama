@@ -6,6 +6,7 @@ import messages from "@/i18n/messages/en.json";
 import SearchForm from "./SearchForm";
 
 const pushMock = vi.fn();
+const originalShowPicker = HTMLInputElement.prototype.showPicker;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -33,6 +34,13 @@ describe("SearchForm", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+
+    if (originalShowPicker) {
+      HTMLInputElement.prototype.showPicker = originalShowPicker;
+    } else {
+      delete HTMLInputElement.prototype.showPicker;
+    }
   });
 
   it("renders deterministic default pickup and return dates", () => {
@@ -74,5 +82,54 @@ describe("SearchForm", () => {
     expect(pushMock).toHaveBeenCalledWith(
       "/en/vehicles?pickup=ala&return=ayt&pickupDate=2026-04-27&pickupTime=10%3A00&returnDate=2026-05-04&returnTime=10%3A00"
     );
+  });
+
+  it("reuses the pickup location again when same-location mode is re-enabled", async () => {
+    renderSearchForm();
+
+    const sameLocationToggle = screen.getByRole("button", { name: "Same pickup and return location" });
+
+    fireEvent.click(sameLocationToggle);
+    fireEvent.change(screen.getByLabelText("Pickup Location"), { target: { value: "ala" } });
+    fireEvent.change(screen.getByLabelText("Return Location"), { target: { value: "ayt" } });
+
+    fireEvent.click(sameLocationToggle);
+    fireEvent.click(screen.getByRole("button", { name: "Search Vehicles" }));
+
+    expect(screen.queryByLabelText("Return Location")).not.toBeInTheDocument();
+    expect(pushMock).toHaveBeenCalledWith(
+      "/en/vehicles?pickup=ala&return=ala&pickupDate=2026-04-27&pickupTime=10%3A00&returnDate=2026-05-04&returnTime=10%3A00"
+    );
+  });
+
+  it("opens the native pickers for date and time fields when showPicker is available", () => {
+    const showPickerMock = vi.fn();
+    HTMLInputElement.prototype.showPicker = showPickerMock;
+
+    renderSearchForm();
+
+    fireEvent.click(screen.getByLabelText("Pickup Date"));
+    fireEvent.click(screen.getByLabelText("Pickup Time"));
+    fireEvent.click(screen.getByLabelText("Return Date"));
+    fireEvent.click(screen.getByLabelText("Return Time"));
+
+    expect(showPickerMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("logs picker errors without breaking the form when showPicker throws", () => {
+    const consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {});
+    HTMLInputElement.prototype.showPicker = vi.fn(() => {
+      throw new Error("picker unavailable");
+    });
+
+    renderSearchForm();
+
+    fireEvent.click(screen.getByLabelText("Pickup Date"));
+    fireEvent.click(screen.getByLabelText("Pickup Time"));
+    fireEvent.click(screen.getByLabelText("Return Date"));
+    fireEvent.click(screen.getByLabelText("Return Time"));
+
+    expect(consoleErrorMock).toHaveBeenCalledTimes(4);
+    expect(consoleErrorMock).toHaveBeenCalledWith("Picker error:", expect.any(Error));
   });
 });
