@@ -122,11 +122,6 @@ describe("BookingStep4Page", () => {
       value: { randomUUID: () => "uuid-123" },
       configurable: true,
     });
-    Object.defineProperty(window, "location", {
-      value: { assign: vi.fn() },
-      writable: true,
-      configurable: true,
-    });
     sessionStorage.clear();
   });
 
@@ -276,13 +271,11 @@ describe("BookingStep4Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("creates a payment intent and redirects to 3DS for card payments", async () => {
+  it("creates a payment intent for card payments and continues to confirmation when no redirect is required", async () => {
     const user = userEvent.setup();
-    const assignMock = vi.mocked(window.location.assign);
 
     createPaymentIntentMock.mockResolvedValueOnce({
       paymentIntentId: "pi-redirect",
-      redirectUrl: "https://bank.example/3ds",
     });
 
     render(<BookingStep4Page />);
@@ -310,7 +303,8 @@ describe("BookingStep4Page", () => {
 
     expect(sessionStorage.getItem("pendingPaymentIntentId")).toBe("pi-redirect");
     expect(sessionStorage.getItem("pendingReservationPublicCode")).toBe("ALN-REAL-123");
-    expect(assignMock).toHaveBeenCalledWith("https://bank.example/3ds");
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith(
+      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"
+    );
   });
 });
