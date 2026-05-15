@@ -5,10 +5,30 @@ import userEvent from "@testing-library/user-event";
 import BookingStep4Page from "./page";
 
 const createReservationMock = vi.fn();
+const createPaymentIntentMock = vi.fn();
 const validateCampaignMock = vi.fn();
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 let searchParams = new URLSearchParams();
+
+type BookingDates = {
+  pickupOfficeId: string;
+  pickupOfficeName: string;
+  pickupDate: string;
+  pickupTime: string;
+  returnOfficeId: string;
+  returnOfficeName: string;
+  returnDate: string;
+  returnTime: string;
+};
+
+type BookingVehicle = {
+  vehicleGroupId: string;
+  vehicleName: string;
+  vehicleImage: string;
+  dailyPrice: number;
+  groupName: string;
+};
 
 const bookingState = {
   dates: {
@@ -20,14 +40,14 @@ const bookingState = {
     returnOfficeName: "Gazipasa Airport",
     returnDate: "2026-05-13",
     returnTime: "09:00",
-  },
+  } as BookingDates | undefined,
   vehicle: {
     vehicleGroupId: "economy",
     vehicleName: "Fiat Egea or similar",
     vehicleImage: "/images/vehicles/economy.png",
     dailyPrice: 45,
     groupName: "Economy",
-  },
+  } as BookingVehicle | undefined,
   extras: { items: [], total: 0 },
   customer: {
     firstName: "Jane",
@@ -52,6 +72,25 @@ const bookingState = {
   isComplete: true,
 };
 
+const baseVehicle: BookingVehicle = {
+  vehicleGroupId: "economy",
+  vehicleName: "Fiat Egea or similar",
+  vehicleImage: "/images/vehicles/economy.png",
+  dailyPrice: 45,
+  groupName: "Economy",
+};
+
+const baseDates: BookingDates = {
+  pickupOfficeId: "ala",
+  pickupOfficeName: "Alanya City Center",
+  pickupDate: "2026-05-10",
+  pickupTime: "10:00",
+  returnOfficeId: "gzp",
+  returnOfficeName: "Gazipasa Airport",
+  returnDate: "2026-05-13",
+  returnTime: "09:00",
+};
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
   useRouter: () => ({ push: pushMock }),
@@ -68,6 +107,10 @@ vi.mock("@/hooks/useBooking", () => ({
 
 vi.mock("@/lib/api/reservations", () => ({
   createReservation: (...args: unknown[]) => createReservationMock(...args),
+}));
+
+vi.mock("@/lib/api/payments", () => ({
+  createPaymentIntent: (...args: unknown[]) => createPaymentIntentMock(...args),
 }));
 
 vi.mock("@/lib/api/pricing", () => ({
@@ -95,17 +138,26 @@ describe("BookingStep4Page", () => {
     vi.restoreAllMocks();
     createReservationMock.mockReset();
     createReservationMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
+    createPaymentIntentMock.mockReset();
+    createPaymentIntentMock.mockResolvedValue({ paymentIntentId: "pi-123" });
     placeHoldMock.mockReset();
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
     toastErrorMock.mockReset();
     pushMock.mockReset();
+    bookingState.vehicle = { ...baseVehicle };
+    bookingState.dates = { ...baseDates };
     searchParams = new URLSearchParams({
       vehicle: "economy",
       pickupDate: "2026-05-10",
       returnDate: "2026-05-13",
       extras: "gps,additional_driver",
     });
+    Object.defineProperty(globalThis, "crypto", {
+      value: { randomUUID: () => "uuid-123" },
+      configurable: true,
+    });
+    sessionStorage.clear();
   });
 
   it("blocks card checkout until terms are accepted and valid card details are provided", async () => {
@@ -160,6 +212,36 @@ describe("BookingStep4Page", () => {
     expect(screen.queryByText(/applied!/i)).not.toBeInTheDocument();
   });
 
+  it("shows an error toast when campaign validation cannot run because booking details are missing", async () => {
+    const user = userEvent.setup();
+
+    bookingState.vehicle = undefined;
+    bookingState.dates = undefined;
+    searchParams = new URLSearchParams();
+
+    render(<BookingStep4Page />);
+
+    await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(toastErrorMock).toHaveBeenCalledWith("Missing booking details for campaign validation.");
+    expect(validateCampaignMock).not.toHaveBeenCalled();
+  });
+
+  it("shows an error toast when campaign validation returns no response", async () => {
+    const user = userEvent.setup();
+    validateCampaignMock.mockResolvedValue(null);
+
+    render(<BookingStep4Page />);
+
+    await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("Failed to validate campaign code.");
+    });
+  });
+
   it("allows PayPal checkout without card details and navigates to confirmation", async () => {
     const user = userEvent.setup();
 
@@ -204,5 +286,60 @@ describe("BookingStep4Page", () => {
       expect(toastErrorMock).toHaveBeenCalledWith("Reservation service unavailable");
     });
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("shows an error toast and stops when the reservation hold cannot be created", async () => {
+    const user = userEvent.setup();
+
+    placeHoldMock.mockResolvedValueOnce(null);
+
+    render(<BookingStep4Page />);
+
+    await user.click(screen.getByRole("radio", { name: /paypal/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("Failed to hold reservation. Please try again.");
+    });
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a payment intent for card payments and continues to confirmation when no redirect is required", async () => {
+    const user = userEvent.setup();
+
+    createPaymentIntentMock.mockResolvedValueOnce({
+      paymentIntentId: "pi-redirect",
+    });
+
+    render(<BookingStep4Page />);
+
+    await user.type(screen.getByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Card Holder Name"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+
+    await waitFor(() => {
+      expect(createPaymentIntentMock).toHaveBeenCalledWith({
+        reservationId: "res-123",
+        idempotencyKey: "uuid-123",
+        card: {
+          holderName: "Jane Doe",
+          number: "4111111111111111",
+          expiryMonth: "12",
+          expiryYear: "30",
+          cvv: "123",
+        },
+      });
+    });
+
+    expect(sessionStorage.getItem("pendingPaymentIntentId")).toBe("pi-redirect");
+    expect(sessionStorage.getItem("pendingReservationPublicCode")).toBe("ALN-REAL-123");
+    expect(pushMock).toHaveBeenCalledWith(
+      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"
+    );
   });
 });

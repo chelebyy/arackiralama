@@ -84,7 +84,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 |---|------|--------|-----------|--------|--------|
 | 1 | **Code Quality** | Critical code smell count | = 0 | 0 | ✅ GO |
 | 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) — **last healthy full-solution baseline** from 11 May 2026 with Postgres/Redis healthy. Follow-up unit-side Infrastructure slices on 14 May raised `RentACar.Tests` to **544/544 PASS** (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`). A fresh full-solution coverage rerun in the current shell failed to connect to PostgreSQL `127.0.0.1:5433`, so no newer trustworthy overall percentage is available yet. | 🔴 NO-GO |
-| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%17.40** (fresh Vitest run 15 May 2026, 100/100 PASS) — all 10 public components + all 11 public pages tested; booking flow targeted: %88–100; remaining gap is `SearchForm.tsx` (88.92%), `BookingLayout` (0%), `BookingStep2Page` (95%), `BookingStep4Page` (90.12%) | 🔴 NO-GO |
+| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%17.93** (fresh Vitest coverage run 15 May 2026, **121/121 PASS**) — `(public)/[locale]/layout.tsx`, `booking/layout.tsx`, and `booking/page.tsx` remain **100%**; `TrackReservationPage` reached **100% / 85.71% branch**, `booking/step2/page.tsx` holds **99% / 62.06% branch**, and `booking/step4/page.tsx` holds **98.76% / 78.35% branch**. The clearest remaining public-route gap is now `VehiclesPage` **84.91% / 42.85% branch** | 🔴 NO-GO |
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | **%66** (API layer; true end-to-end coverage lower) | 🔴 NO-GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ~%60 (service + repository layer) | 🔴 NO-GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ 29/29 PASS — last healthy 11 May full-environment baseline; not freshly rerun in the current PostgreSQL-blocked 14 May shell | ✅ GO |
@@ -107,7 +107,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 
 **Özet:** 7/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 4/22 NO-GO | 9/22 DEFERRED
 
-**15 May 2026 Fresh Update:** Frontend Vitest 100/100 PASS ✅, coverage **17.40%** overall (up from 7.5%); all public surfaces tested; no new cheap slices remain; `BookingLayout` at 0% and `SearchForm` at 88.92% are next targeted branch gaps; backend PostgreSQL block unchanged (`127.0.0.1:5433` refused); Phase 10.1 gates remain unmet until backend overall ≥70%, frontend overall ≥60%, payment ≥80%, reservation ≥80%.
+**15 May 2026 Fresh Update:** Frontend Vitest coverage rerun reached **121/121 PASS** and **17.93%** overall (up from 17.91% earlier the same day). `TrackReservationPage` improved to **100%** statements and **85.71%** branches, while `booking/step2/page.tsx` stayed at **99%** statements and `booking/step4/page.tsx` at **98.76%** statements. Backend PostgreSQL block is still unchanged (`127.0.0.1:5433` refused); Phase 10.1 gates remain unmet until backend overall ≥70%, frontend overall ≥60%, payment ≥80%, reservation ≥80%.
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.
@@ -573,27 +573,31 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %7.53** (önce %0.76) — hedefe henüz ulaşılmadı |
+| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %17.93** (`121/121 PASS`, 15 May 2026) — hedefe henüz ulaşılmadı |
 | 10.1.2.2 | Utility function tests | ✅ | %80+ | `lib/api/client.ts` %72.31, `lib/api/pricing.ts` %100, `lib/api/vehicles.ts` %100 |
-| 10.1.2.3 | Component tests (critical) | ✅ | %50+ | SearchForm %88.7, VehicleCard %100, PriceBreakdown %100 |
+| 10.1.2.3 | Component tests (critical) | ✅ | %50+ | SearchForm **%100 statements / 78.04% branches**, VehicleCard %100, PriceBreakdown %100 |
 | 10.1.2.4 | Hook tests (critical) | ✅ | %50+ | useBooking %94.63, usePricing %100, useReservations %94.44 |
 | 10.1.2.5 | Test gap listesi oluştur | ✅ | Eksik testleri belgele | Booking flow kapsamında kapatıldı |
-| 10.1.2.6 | Eksik testleri yaz | ✅ | Gap kapatma | **44 yeni test** eklendi (17→61 test) |
+| 10.1.2.6 | Eksik testleri yaz | ✅ | Gap kapatma | Public pages/components + booking shell + branch-heavy booking/track slices ile suite **121 teste** yükseltildi |
 
-**Booking Flow Targeted Coverage (Yüksek):**
-- step1/page.tsx: **%99.06**
-- step2/page.tsx: **%99.56**
-- step3/page.tsx: **%98.06**
-- step4/page.tsx: **%97.90**
-- SearchForm.tsx: **%88.70**
-- VehicleCard.tsx: **%100**
-- PriceBreakdown.tsx: **%100**
-- useBooking.ts: **%94.63**
-- usePricing.ts: **%100**
+**Booking / Public Route Coverage Snapshot (15 May 2026):**
+- `(public)/[locale]/layout.tsx`: **%100** statements
+- `booking/page.tsx`: **%100** statements
+- `booking/layout.tsx`: **%100** statements
+- `booking/step1/page.tsx`: **%99.06** statements
+- `booking/step2/page.tsx`: **%99.00** statements, **62.06%** branches
+- `booking/step3/page.tsx`: **%98.18** statements
+- `booking/step4/page.tsx`: **%98.76** statements, **78.35%** branches
+- `track-reservation/page.tsx`: **%100** statements, **85.71%** branches
+- `SearchForm.tsx`: **%100** statements, **78.04%** branches
+- `VehicleCard.tsx`: **%100** statements
+- `PriceBreakdown.tsx`: **%100** statements
+- `useBooking.ts`: **%94.63** statements
+- `usePricing.ts`: **%100** statements
 
-**Not:** Project-wide coverage %7.53'te kaldı çünkü admin sayfaları, dashboard, public pages (about, contact, vehicles, etc.) ve shadcn/ui bileşenleri hâlâ test edilmemiş durumda. Booking flow'u hedefleyen coverage çok güçlü.
+**Not:** Project-wide coverage artık **%17.93** seviyesine çıktı çünkü `TrackReservationPage` de branch-heavy public sayfalar listesinden büyük ölçüde temizlendi. Buna rağmen admin/dashboard ve çok sayıdaki shadcn/ui dosyası hâlâ büyük bir uncovered yüzey oluşturuyor; bu yüzden overall frontend yüzdesi Phase 10.1 hedefinin çok altında kalıyor.
 
-**Karar:** Frontend overall %60 hedefine henüz ulaşılmadı. Booking flow hedefleri aşıldı. Admin/public modülleri test edilmedikçe overall coverage artmayacak. Wave 2'ye geçilebilir veya overall hedefi booking-flow-targeted coverage olarak revize edilebilir.
+**Karar:** Frontend overall %60 hedefine henüz ulaşılmadı. `BookingStep2Page`, `BookingStep4Page`, ve `TrackReservationPage` büyük ölçüde temizlendi; bundan sonraki en görünür frontend artışları daha çok `VehiclesPage` veya daha pahalı admin/dashboard yüzeylerinden gelecek.
 
 ### 10.1.3 Test Quality Criteria
 
