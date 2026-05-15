@@ -11,6 +11,25 @@ const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 let searchParams = new URLSearchParams();
 
+type BookingDates = {
+  pickupOfficeId: string;
+  pickupOfficeName: string;
+  pickupDate: string;
+  pickupTime: string;
+  returnOfficeId: string;
+  returnOfficeName: string;
+  returnDate: string;
+  returnTime: string;
+};
+
+type BookingVehicle = {
+  vehicleGroupId: string;
+  vehicleName: string;
+  vehicleImage: string;
+  dailyPrice: number;
+  groupName: string;
+};
+
 const bookingState = {
   dates: {
     pickupOfficeId: "ala",
@@ -21,14 +40,14 @@ const bookingState = {
     returnOfficeName: "Gazipasa Airport",
     returnDate: "2026-05-13",
     returnTime: "09:00",
-  },
+  } as BookingDates | undefined,
   vehicle: {
     vehicleGroupId: "economy",
     vehicleName: "Fiat Egea or similar",
     vehicleImage: "/images/vehicles/economy.png",
     dailyPrice: 45,
     groupName: "Economy",
-  },
+  } as BookingVehicle | undefined,
   extras: { items: [], total: 0 },
   customer: {
     firstName: "Jane",
@@ -53,8 +72,24 @@ const bookingState = {
   isComplete: true,
 };
 
-const baseVehicle = { ...bookingState.vehicle };
-const baseDates = { ...bookingState.dates };
+const baseVehicle: BookingVehicle = {
+  vehicleGroupId: "economy",
+  vehicleName: "Fiat Egea or similar",
+  vehicleImage: "/images/vehicles/economy.png",
+  dailyPrice: 45,
+  groupName: "Economy",
+};
+
+const baseDates: BookingDates = {
+  pickupOfficeId: "ala",
+  pickupOfficeName: "Alanya City Center",
+  pickupDate: "2026-05-10",
+  pickupTime: "10:00",
+  returnOfficeId: "gzp",
+  returnOfficeName: "Gazipasa Airport",
+  returnDate: "2026-05-13",
+  returnTime: "09:00",
+};
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),

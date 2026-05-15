@@ -7,6 +7,7 @@ import SearchForm from "./SearchForm";
 
 const pushMock = vi.fn();
 const originalShowPicker = HTMLInputElement.prototype.showPicker;
+const originalShowPickerDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "showPicker");
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -36,10 +37,16 @@ describe("SearchForm", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
 
-    if (originalShowPicker) {
+    if (originalShowPickerDescriptor) {
+      Object.defineProperty(HTMLInputElement.prototype, "showPicker", originalShowPickerDescriptor);
+    } else if (originalShowPicker) {
       HTMLInputElement.prototype.showPicker = originalShowPicker;
     } else {
-      delete HTMLInputElement.prototype.showPicker;
+      Object.defineProperty(HTMLInputElement.prototype, "showPicker", {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
     }
   });
 
