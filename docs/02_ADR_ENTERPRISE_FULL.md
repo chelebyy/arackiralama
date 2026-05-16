@@ -296,3 +296,26 @@ OS: Ubuntu 22.04 LTS
 | `fail` (in reason) | `RefundAsync` | Returns failure result |
 | `fail` (in intent id) | `ReleaseDepositAsync` / `CaptureDepositAsync` | Returns failure result |
 | `Amount <= 0` | `RefundAsync` / `CaptureDepositAsync` | Returns failure result |
+
+### 12.4 Frontend Coverage Expansion Strategy
+
+**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active NO-GO gate. Public-facing pages already have strong file-level coverage, so further gains require admin/dashboard, route-handler/auth, and shared UI surfaces.
+
+**Decision:** Continue frontend coverage expansion with Vitest + Testing Library page-level tests. Admin/dashboard pages should mock `@/hooks/admin` data hooks and external UI side effects, while verifying user-visible behavior instead of implementation details.
+
+**Rationale:**
+- Keeps admin page tests deterministic without real backend or SWR/network dependencies.
+- Preserves the existing Next.js App Router test pattern used by public route tests.
+- Avoids brittle Radix/shadcn portal behavior by replacing complex primitives only where they block page-level behavior checks.
+- Moves the remaining frontend coverage gate through broad, previously uncovered admin surfaces rather than over-farming already-covered public pages.
+
+**Current Evidence (17 May 2026):**
+- Frontend Vitest: **136/136 PASS**
+- Frontend overall coverage: **19.76%**
+- `frontend/app/(admin)/dashboard/(auth)/reservations/page.tsx`: **97.42% statements / 75.55% branches**
+- Remaining gap: admin/dashboard pages, route handlers, auth screens/utilities, and shared UI components.
+
+**Consequences:**
+- New admin page tests should use row-scoped Testing Library queries for icon-only actions.
+- Complex shadcn/Radix primitives may be mocked at the component boundary when the test target is a page workflow rather than the primitive itself.
+- Phase 10.1 remains NO-GO until frontend overall coverage reaches **>=60%**.

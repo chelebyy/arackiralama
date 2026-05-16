@@ -84,7 +84,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 |---|------|--------|-----------|--------|--------|
 | 1 | **Code Quality** | Critical code smell count | = 0 | 0 | ✅ GO |
 | 2 | **Test Coverage** | Backend overall coverage | ≥ %70 | **%91.09** merged fresh full backend rerun on 16 May 2026 after restoring local `rentacar-postgres` and `rentacar-redis` containers. Fresh merged ReportGenerator summary from new Cobertura artifacts: API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**. | ✅ GO |
-| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%18.08** (fresh Vitest coverage run 16 May 2026, **125/125 PASS**) — `(public)/[locale]/layout.tsx`, `booking/layout.tsx`, and `booking/page.tsx` remain **100%**; `TrackReservationPage` stays **100% / 85.71% branch**, `booking/step2/page.tsx` stays **99% / 62.06% branch**, `booking/step4/page.tsx` is **98.02% / 78%**, and `vehicles/page.tsx` improved to **99.7% / 92.42%**. The clearest remaining public-route branch gap has shifted away from `VehiclesPage` toward other public booking/detail surfaces or broader admin/dashboard uncovered area. | 🔴 NO-GO |
+| 3 | **Test Coverage** | Frontend overall coverage | ≥ %60 | **%19.76** (fresh Vitest coverage run 17 May 2026, **136/136 PASS**) — admin dashboard coverage continued with `reservations/page.tsx` now **97.42% statements / 75.55% branches**. Public-route evidence remains strong: `(public)/[locale]/layout.tsx`, `booking/layout.tsx`, and `booking/page.tsx` stay **100%**; `TrackReservationPage` stays **100% / 85.71% branch**, `booking/step2/page.tsx` stays **99% / 62.06% branch**, `booking/step4/page.tsx` is **98.02% / 78%**, and `vehicles/page.tsx` remains **99.7% / 92.42%**. The remaining gap is now broader admin/dashboard, route-handler, auth, and UI/shared uncovered surface area. | 🔴 NO-GO |
 | 4 | **Test Coverage** | Payment module coverage | ≥ %80 | ✅ **%91.71** fresh module-scope aggregate from the 16 May 2026 unit-project Cobertura artifact (**564/615 covered lines**) across payment source files (`PaymentService`, payment controllers/contracts/entities/configuration/providers/helpers). Supporting evidence from the same day: `PaymentServiceTests` **33/33 PASS**, `RentACar.Tests` **582/582 PASS**, `PaymentService.cs` **74.78%** line coverage. | ✅ GO |
 | 5 | **Test Coverage** | Reservation module coverage | ≥ %80 | ✅ **%82.47** fresh module-scope aggregate from the 16 May 2026 unit-project Cobertura artifact (**320/388 covered lines**) across reservation source files (`ReservationService`, reservation controllers/contracts/entities/configuration/repository/hold surfaces). Supporting evidence from the same day: `ReservationServiceTests` **64/64 PASS**, `RentACar.Tests` **590/590 PASS**, `ReservationService.cs` **88.88%** line coverage. | ✅ GO |
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ **32/32 PASS** on the fresh 16 May 2026 full backend rerun with local Postgres/Redis healthy | ✅ GO |
@@ -107,7 +107,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 
 **Özet:** 10/22 GO | 2/22 PARTIAL (SCRIPTS READY / CONDITIONAL) | 1/22 NO-GO | 9/22 DEFERRED
 
-**16 May 2026 Fresh Update:** The PostgreSQL blocker was operational, not config-related: existing `rentacar-postgres` and `rentacar-redis` containers were present locally but stopped. After restarting them and rerunning the full Release backend flow, the fresh backend evidence became: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, and merged backend line coverage **91.09%** (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**). A follow-up frontend Vitest coverage rerun on the same day reached **125/125 PASS** and **18.08%** overall; `vehicles/page.tsx` improved sharply to **99.7%** statements and **92.42%** branches. Later same-day deterministic application-service slices expanded `PaymentServiceTests` to **33/33 PASS** and `ReservationServiceTests` to **64/64 PASS**, lifting `RentACar.Tests` first to **582/582 PASS** and then to **590/590 PASS**. Fresh unit-project Cobertura aggregates now show **payment module %91.71** (564/615) and **reservation module %82.47** (320/388), so the backend-side module-threshold blockers are now closed. Phase 10.1 is still blocked by frontend overall ≥60%.
+**17 May 2026 Fresh Update:** The 16 May PostgreSQL blocker was operational, not config-related: existing `rentacar-postgres` and `rentacar-redis` containers were present locally but stopped. After restarting them and rerunning the full Release backend flow, the fresh backend evidence became: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, and merged backend line coverage **91.09%** (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**). Same-day deterministic application-service slices expanded `PaymentServiceTests` to **33/33 PASS** and `ReservationServiceTests` to **64/64 PASS**, lifting `RentACar.Tests` first to **582/582 PASS** and then to **590/590 PASS**. Fresh unit-project Cobertura aggregates now show **payment module %91.71** (564/615) and **reservation module %82.47** (320/388), so backend-side coverage gates are closed. A 17 May frontend admin reservations slice then lifted Vitest to **136/136 PASS** and **19.76%** overall; `reservations/page.tsx` is now **97.42%** statements and **75.55%** branches. Phase 10.1 is still blocked by frontend overall ≥60%.
 
 **Karar Kuralı:** Yukarıdaki 22 maddenin tamamı "Go" olmadan **soft launch bile yapılamaz**.  
 "No-Go" olan her madde için aksiyon planı oluşturulur ve tekrar değerlendirilir.
@@ -567,13 +567,13 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - RentACar.Infrastructure: **10.22%** line, 19.37% branch
 - RentACar.Worker: **21.67%** line, 30.85% branch
 
-**Karar:** Backend overall gate is now cleared by the fresh 16 May rerun (**91.09%** merged line coverage), so the remaining Phase 10.1 backend-side blockers are no longer environment-related. `SmtpEmailProvider` is still not a cheap next slice because it constructs real `SmtpClient` instances without a delivery seam; the remaining open Phase 10.1 gates are frontend overall coverage and the module-specific payment/reservation thresholds.
+**Karar:** Backend overall gate is now cleared by the fresh 16 May rerun (**91.09%** merged line coverage), and module-specific payment/reservation thresholds are also GO (**%91.71** / **%82.47**). `SmtpEmailProvider` is still not a cheap next slice because it constructs real `SmtpClient` instances without a delivery seam; the remaining open Phase 10.1 gate is frontend overall coverage.
 
 ### 10.1.2 Frontend Test Review
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %18.08** (`125/125 PASS`, 16 May 2026) — hedefe henüz ulaşılmadı |
+| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %19.76** (`136/136 PASS`, 17 May 2026) — hedefe henüz ulaşılmadı |
 | 10.1.2.2 | Utility function tests | ✅ | %80+ | `lib/api/client.ts` %72.31, `lib/api/pricing.ts` %100, `lib/api/vehicles.ts` %100 |
 | 10.1.2.3 | Component tests (critical) | ✅ | %50+ | SearchForm **%100 statements / 78.04% branches**, VehicleCard %100, PriceBreakdown %100 |
 | 10.1.2.4 | Hook tests (critical) | ✅ | %50+ | useBooking %94.63, usePricing %100, useReservations %94.44 |
@@ -596,10 +596,11 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - `usePricing.ts`: **%100** statements
 
  - `vehicles/page.tsx`: **%99.7** statements, **92.42%** branches
+ - `admin/dashboard/reservations/page.tsx`: **%97.42** statements, **75.55%** branches
 
-**Not:** Project-wide coverage artık **%18.08** seviyesine çıktı. `VehiclesPage` artık branch-heavy public sayfalar içindeki ana açık olmaktan büyük ölçüde çıktı. Buna rağmen admin/dashboard ve çok sayıdaki shadcn/ui dosyası hâlâ büyük bir uncovered yüzey oluşturuyor; bu yüzden overall frontend yüzdesi Phase 10.1 hedefinin çok altında kalıyor.
+**Not:** Project-wide coverage artık **%19.76** seviyesine çıktı. `VehiclesPage` artık branch-heavy public sayfalar içindeki ana açık olmaktan büyük ölçüde çıktı; ilk admin dashboard rezervasyon slice'ı da yüksek dosya coverage'ına ulaştı. Buna rağmen admin/dashboard, route-handler, auth ve çok sayıdaki shadcn/ui dosyası hâlâ büyük bir uncovered yüzey oluşturuyor; bu yüzden overall frontend yüzdesi Phase 10.1 hedefinin çok altında kalıyor.
 
-**Karar:** Frontend overall %60 hedefine henüz ulaşılmadı. `BookingStep2Page`, `BookingStep4Page`, `TrackReservationPage`, ve artık `VehiclesPage` büyük ölçüde temizlendi; bundan sonraki görünür frontend artışları daha çok diğer public booking/detail branch gap'lerinden veya daha pahalı admin/dashboard yüzeylerinden gelecek.
+**Karar:** Frontend overall %60 hedefine henüz ulaşılmadı. `BookingStep2Page`, `BookingStep4Page`, `TrackReservationPage`, `VehiclesPage`, ve admin `ReservationsPage` büyük ölçüde temizlendi; bundan sonraki görünür frontend artışları daha çok kalan admin/dashboard, route-handler/auth ve shared UI yüzeylerinden gelecek.
 
 ### 10.1.3 Test Quality Criteria
 
