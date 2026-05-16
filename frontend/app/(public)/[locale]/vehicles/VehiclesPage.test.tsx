@@ -184,4 +184,112 @@ describe("VehiclesPage", () => {
     expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
   });
+
+  it("uses fallback search params when required query params are missing", () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
+
+    render(<VehiclesPage />);
+
+    expect(useAvailableVehiclesMock).toHaveBeenCalledWith({
+      office_id: "office-1",
+      pickup_datetime: "2025-04-01T10:00",
+      return_datetime: "2025-04-08T09:00",
+    });
+    expect(screen.getByText("Alanya City Center")).toBeInTheDocument();
+  });
+
+  it("keeps a guid pickup value when office resolution cannot map it", () => {
+    const guid = "123e4567-e89b-12d3-a456-426614174000";
+    useSearchParamsMock.mockReturnValue(
+      new URLSearchParams({
+        pickup: guid,
+        pickupDate: "2026-06-10",
+        pickupTime: "10:00",
+        returnDate: "2026-06-14",
+        returnTime: "09:00",
+      }),
+    );
+    useAvailableVehiclesMock.mockReturnValue({
+      vehicles: [
+        {
+          groupId: "group-1",
+          groupName: "Economy",
+          groupNameEn: "Economy",
+          imageUrl: "",
+          dailyPrice: 1200,
+          features: ["Air Conditioning"],
+          availableCount: 1,
+          minAge: 21,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehiclesPage />);
+
+    expect(useAvailableVehiclesMock).toHaveBeenCalledWith({
+      office_id: guid,
+      pickup_datetime: "2026-06-10T10:00",
+      return_datetime: "2026-06-14T09:00",
+    });
+    expect(screen.getByText(guid)).toBeInTheDocument();
+  });
+
+  it("updates pagination controls as the active page changes", () => {
+    useAvailableVehiclesMock.mockReturnValue({
+      vehicles: Array.from({ length: 7 }, (_, index) => ({
+        groupId: `group-${index + 1}`,
+        groupName: "Economy",
+        groupNameEn: `Economy ${index + 1}`,
+        imageUrl: "",
+        dailyPrice: 1000 + index,
+        features: ["Air Conditioning"],
+        availableCount: 1,
+        minAge: 21,
+      })),
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehiclesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+    fireEvent.click(screen.getByRole("button", { name: "buttons.next" }));
+
+    expect(screen.getByRole("button", { name: "buttons.back" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "buttons.next" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "1" }));
+
+    expect(screen.getByRole("button", { name: "buttons.back" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "buttons.next" })).toBeEnabled();
+  });
+
+  it("hides a broken vehicle image and keeps the fallback visible", () => {
+    useAvailableVehiclesMock.mockReturnValue({
+      vehicles: [
+        {
+          groupId: "group-1",
+          groupName: "SUV",
+          groupNameEn: "SUV Elite",
+          imageUrl: "https://example.test/car.png",
+          dailyPrice: 2500,
+          features: ["Bluetooth"],
+          availableCount: 1,
+          minAge: 24,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehiclesPage />);
+
+    const image = screen.getByRole("img", { name: "SUV Elite" });
+    fireEvent.error(image);
+
+    expect(image).toHaveStyle({ display: "none" });
+    expect(image.parentElement?.querySelector(".fallback")?.className).toContain("flex");
+  });
 });
