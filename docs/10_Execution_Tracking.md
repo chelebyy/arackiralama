@@ -10,7 +10,7 @@
 
 **Hedef Tamamlama:** \***\*\_\_\_\*\***
 
-**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **11 May 2026 backend coverage rebaseline CONFIRMED 🟡** — local Postgres/Redis ile full backend coverage command geçti, active slice Infrastructure coverage ve fresh rebaseline ile yukarı taşındı; **14 May 2026 Infrastructure provider follow-up COMPLETED 🟡** — MockPaymentProvider, ConfiguredSmsProvider ve NetgsmSmsProvider test genişletmeleri ile `RentACar.Tests` 544/544'e yükseldi, ancak fresh full-solution coverage rerun mevcut shell'de PostgreSQL `127.0.0.1:5433` erişim hatası nedeniyle yeni genel yüzde üretemedi; **15 May 2026 frontend coverage fresh rebaseline COMPLETED ✅** — Vitest **121/121 PASS**, coverage **17.93%** overall; `TrackReservationPage` **100% / 85.71% branch** seviyesine çıktı, `booking/step2/page.tsx` **99% / 62.06% branch** ve `booking/step4/page.tsx` **98.76% / 78.35% branch** seviyelerini korudu; sonraki en görünür public-route gap artık ağırlıklı olarak `VehiclesPage`; Phase 10.1 gates still unmet until backend ≥70%, frontend ≥60%, payment ≥80%, reservation ≥80%)
+**Durum:** 🟨 In Progress (Faz 10.0 Wave 1–3 COMPLETED ✅; Wave 4 DEFERRED; Wave 5 Migration Safety COMPLETED ✅ (3 migration fix); Wave 6+ Infrastructure DEFERRED; **Phase 10.3 E2E Scaffold COMPLETED ✅**; **Phase 10.4 Load Testing SCRIPTS READY 🟡** — Dokploy bekleniyor; **Phase 10.5 Security Hardening Follow-up COMPLETED ✅** — CORS, security headers, Swagger dev-gate, restricted AllowedHosts, default `AutoMigrateOnStartup=false`, idempotent background-job column migration, NU1510 cleanup, password reset locale fallback fix; **16 May 2026 fresh full backend rerun COMPLETED ✅** — stopped local `rentacar-postgres` and `rentacar-redis` containers were restarted, Release build passed with **0 warning / 0 error**, `RentACar.Tests` reached **574/574 PASS**, `RentACar.ApiIntegrationTests` reached **32/32 PASS**, and merged ReportGenerator summary produced **91.09%** backend line coverage overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**); **16 May 2026 frontend VehiclesPage coverage follow-up COMPLETED ✅** — Vitest **125/125 PASS**, coverage **18.08%** overall; `vehicles/page.tsx` improved to **99.7% / 92.42% branch**, while `TrackReservationPage` stayed **100% / 85.71% branch**, `booking/step2/page.tsx` stayed **99% / 62.06% branch**, and `booking/step4/page.tsx` landed at **98.02% / 78%**; Phase 10.1 gates are now blocked primarily by frontend overall coverage plus payment/reservation module thresholds.)
 
 ---
 
@@ -1656,11 +1656,11 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
-- Backend: Last healthy full-solution baseline remains **534/534** test pass with line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**) from the **11 May 2026** local rebaseline with Postgres/Redis healthy. Latest unit-project-only verification on **14 May 2026** reached **544/544 PASS** after `MockPaymentProvider`, `ConfiguredSmsProvider`, and `NetgsmSmsProvider` test expansions, but a fresh full-solution coverage rerun was blocked in the current shell by PostgreSQL connection failure on `127.0.0.1:5433`.
-- Frontend: **121/121 PASS**. Public layout + booking entry/layout slices **%100** kaldı; `TrackReservationPage` **%100 / 85.71% branch**, `BookingStep2Page` **%99 / 62.06% branch**, `BookingStep4Page` **%98.76 / 78.35% branch**, SearchForm **%100 statements / 78.04% branches**. Project-wide frontend coverage **%17.93** (hedef %60) ve sonraki en görünür gap büyük ölçüde `VehiclesPage` üzerinde yoğunlaşıyor.
+- Backend: fresh full-solution rerun succeeded on **16 May 2026** after restarting the previously stopped `rentacar-postgres` and `rentacar-redis` containers. New Release evidence: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, merged backend line coverage **91.09%** overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**).
+- Frontend: **125/125 PASS**. Public layout + booking entry/layout slices **%100** kaldı; `TrackReservationPage` **%100 / 85.71% branch**, `BookingStep2Page` **%99 / 62.06% branch**, `BookingStep4Page` **%98.02 / 78% branch**, `VehiclesPage` **%99.7 / 92.42% branch**, SearchForm **%100 statements / 78.04% branches**. Project-wide frontend coverage **%18.08** (hedef %60) ve `VehiclesPage` artık ana public-route branch gap olmaktan büyük ölçüde çıktı.
 
 **10.2 Integration Tests:**
-- ✅ 29/29 integration test pass in the **last healthy full-environment backend baseline** (11–13 May evidence). Endpoint, Database, Redis, and Payment Provider integration coverage are green in that baseline, but they were not freshly revalidated in the current PostgreSQL-blocked 14 May shell.
+- ✅ 32/32 integration test pass in the fresh **16 May 2026** full-environment backend rerun. Endpoint, Database, Redis, and Payment Provider integration coverage were revalidated with local Postgres/Redis healthy.
 - Build 0 warning/error.
 
 **10.3 E2E Tests:**
@@ -1874,7 +1874,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
 
-| Test Coverage | > 70% | Backend: %29.86 (last healthy full-solution baseline, 11 May), Frontend: %17.40 (fresh 15 May Vitest 100/100 PASS); all public surfaces tested; Phase 10.1 gates still unmet | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
+| Test Coverage | > 70% | Backend: **%91.09** merged fresh full rerun (16 May, 574/574 unit + 32/32 integration PASS); Frontend: **%18.08** (fresh 16 May Vitest 125/125 PASS). Backend overall gate is now green; Phase 10.1 remains blocked by frontend overall plus payment/reservation thresholds. | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 
@@ -1942,6 +1942,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 14 Mayıs 2026 (Phase 10 backend Infrastructure provider follow-up: `MockPaymentProviderTests`, `ConfiguredSmsProviderTests` ve `NetgsmSmsProviderTests` genişletildi; `RentACar.Tests` 544/544 PASS ve `dotnet build backend/RentACar.sln --no-restore` 0 warning / 0 error doğrulandı. Full-solution coverage rerun denendi fakat `RentACar.ApiIntegrationTests` PostgreSQL `127.0.0.1:5433` bağlantı hatası nedeniyle yeni overall yüzde üretemedi; bu nedenle backend `%29.86` / Infrastructure `%9.38` değerleri son sağlıklı 11 May baseline olarak korunuyor. docs/12 ve yeni handoff `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md` bu ayrımı yansıtacak şekilde güncellendi.)
+**Son Güncelleme:** 16 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü ve hemen ardından frontend `VehiclesPage` branch follow-up tamamlandı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` **574/574 PASS**, `RentACar.ApiIntegrationTests` **32/32 PASS**, merged backend line coverage **91.09%** overall; frontend Vitest **125/125 PASS**, overall frontend coverage **18.08%**, `vehicles/page.tsx` **99.7% / 92.42%**. docs/12 ve handoff'lar bu güncel durumu yansıtacak şekilde güncellendi.)
 
 **Durum:** Aktif Takip
