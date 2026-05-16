@@ -127,6 +127,26 @@ public sealed class IyzicoPaymentProviderTests
     }
 
     [Fact]
+    public void VerifyWebhookSignature_WhenWebhookSecretIsMissing_ReturnsFalse()
+    {
+        var sut = new IyzicoPaymentProvider(
+            Options.Create(new PaymentOptions
+            {
+                Iyzico = new IyzicoProviderOptions
+                {
+                    WebhookSecret = string.Empty
+                }
+            }),
+            NullLogger<IyzicoPaymentProvider>.Instance);
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+        var signature = CreateSignature(Payload, Secret);
+
+        var result = sut.VerifyWebhookSignature(Payload, signature, timestamp);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ParseWebhookAsync_WhenExplicitEventTypeProvided_PrefersMethodArgument()
     {
         const string payload = """
