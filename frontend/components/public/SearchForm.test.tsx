@@ -42,11 +42,7 @@ describe("SearchForm", () => {
     } else if (originalShowPicker) {
       HTMLInputElement.prototype.showPicker = originalShowPicker;
     } else {
-      Object.defineProperty(HTMLInputElement.prototype, "showPicker", {
-        value: undefined,
-        writable: true,
-        configurable: true,
-      });
+      delete HTMLInputElement.prototype.showPicker;
     }
   });
 
