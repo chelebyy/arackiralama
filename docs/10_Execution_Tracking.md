@@ -1656,7 +1656,7 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
-- Backend: fresh full-solution rerun succeeded on **16 May 2026** after restarting the previously stopped `rentacar-postgres` and `rentacar-redis` containers. New Release evidence: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, merged backend line coverage **91.09%** overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**).
+- Backend: fresh full-solution rerun succeeded on **16 May 2026** after restarting the previously stopped `rentacar-postgres` and `rentacar-redis` containers. New Release evidence: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, merged backend line coverage **91.09%** overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**). Same-day deterministic application-service follow-ups then expanded `PaymentServiceTests` to **33/33 PASS** and `ReservationServiceTests` to **64/64 PASS**, lifting `RentACar.Tests` first to **582/582 PASS** and then to **590/590 PASS**. Fresh unit-project Cobertura aggregates now show **payment module %91.71** (564/615) and **reservation module %82.47** (320/388); the remaining explicit Phase 10.1 blocker is frontend overall coverage.
 - Frontend: **125/125 PASS**. Public layout + booking entry/layout slices **%100** kaldı; `TrackReservationPage` **%100 / 85.71% branch**, `BookingStep2Page` **%99 / 62.06% branch**, `BookingStep4Page` **%98.02 / 78% branch**, `VehiclesPage` **%99.7 / 92.42% branch**, SearchForm **%100 statements / 78.04% branches**. Project-wide frontend coverage **%18.08** (hedef %60) ve `VehiclesPage` artık ana public-route branch gap olmaktan büyük ölçüde çıktı.
 
 **10.2 Integration Tests:**
@@ -1874,7 +1874,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Cache Hit Rate | > 80% | Not Measured Yet | ⬜ Not Started | Backend | Redis metrics | Haftalık |
 
-| Test Coverage | > 70% | Backend: **%91.09** merged fresh full rerun (16 May, 574/574 unit + 32/32 integration PASS); Frontend: **%18.08** (fresh 16 May Vitest 125/125 PASS). Backend overall gate is now green; Phase 10.1 remains blocked by frontend overall plus payment/reservation thresholds. | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
+| Test Coverage | > 70% | Backend: **%91.09** merged fresh full rerun (16 May, 574/574 unit + 32/32 integration PASS), plus same-day module aggregates **payment %91.71** and **reservation %82.47** after deterministic follow-up slices; Frontend: **%18.08** (fresh 16 May Vitest 125/125 PASS). Backend-side Phase 10.1 coverage gates are now green; remaining blocker is frontend overall coverage. | 🟨 Partial | QA / Backend / Frontend | Coverage reports (backend + frontend) | Her CI run |
 
 ---
 
@@ -1942,6 +1942,6 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 16 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü ve hemen ardından frontend `VehiclesPage` branch follow-up tamamlandı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` **574/574 PASS**, `RentACar.ApiIntegrationTests` **32/32 PASS**, merged backend line coverage **91.09%** overall; frontend Vitest **125/125 PASS**, overall frontend coverage **18.08%**, `vehicles/page.tsx` **99.7% / 92.42%**. docs/12 ve handoff'lar bu güncel durumu yansıtacak şekilde güncellendi.)
+**Son Güncelleme:** 16 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü, hemen ardından frontend `VehiclesPage` branch follow-up tamamlandı ve aynı gün deterministic payment + reservation application-service coverage slice'ları eklendi. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` önce **574/574 PASS** + `RentACar.ApiIntegrationTests` **32/32 PASS** ile merged backend line coverage **91.09%** overall üretti; sonra payment follow-up ile `PaymentServiceTests` **33/33 PASS** ve `RentACar.Tests` **582/582 PASS**, ardından reservation follow-up ile `ReservationServiceTests` **64/64 PASS** ve `RentACar.Tests` **590/590 PASS** oldu. Unit-project Cobertura aggregates payment için **%91.71** (564/615) ve reservation için **%82.47** (320/388) gösterdi; supporting single-file evidence `PaymentService.cs` **74.78%** ve `ReservationService.cs` **88.88%** line coverage. Frontend Vitest **125/125 PASS**, overall frontend coverage **18.08%**, `vehicles/page.tsx` **99.7% / 92.42%**. docs/12 bu güncel durumu yansıtacak şekilde hizalandı.)
 
 **Durum:** Aktif Takip
