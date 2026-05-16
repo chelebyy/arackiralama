@@ -272,12 +272,119 @@ public sealed class IyzicoPaymentProviderTests
         Assert.StartsWith("https://custom-iyzico.example/mock-3ds?token=", result.RedirectUrl);
     }
 
-    private static IyzicoPaymentProvider CreateSut(string baseUrl = "https://sandbox-api.iyzipay.com")
+    [Fact]
+    public async Task CreatePaymentIntentAsync_WhenIntentExpiresMinutesIsZero_ClampsExpiryToAtLeastOneMinute()
+    {
+        var sut = CreateSut(intentExpiresMinutes: 0);
+
+        var before = DateTime.UtcNow.AddSeconds(50);
+        var result = await sut.CreatePaymentIntentAsync(new CreatePaymentIntentProviderRequest
+        {
+            ReservationId = Guid.NewGuid(),
+            Amount = 1000m,
+            Currency = "TRY",
+            IdempotencyKey = "clamped-expiry",
+            InstallmentCount = 1,
+            Card = new ProviderCardData
+            {
+                HolderName = "Clamp User",
+                Number = "4111111111111111",
+                ExpiryMonth = "12",
+                ExpiryYear = "2030",
+                Cvv = "123"
+            }
+        });
+
+        Assert.True(result.ExpiresAtUtc >= before);
+    }
+
+    [Fact]
+    public async Task ParseWebhookAsync_WhenCamelCaseFieldsProvided_MapsKnownFields()
+    {
+        var sut = CreateSut();
+        const string payload = """
+        {
+          "eventId": "evt-camel",
+          "paymentConversationId": "intent-camel",
+          "paymentId": "tx-camel",
+          "eventType": "payment.success"
+        }
+        """;
+
+        var result = await sut.ParseWebhookAsync("Iyzico", payload, null, CancellationToken.None);
+
+        Assert.Equal("evt-camel", result.ProviderEventId);
+        Assert.Equal("intent-camel", result.ProviderIntentId);
+        Assert.Equal("tx-camel", result.ProviderTransactionId);
+        Assert.Equal("payment.success", result.EventType);
+    }
+
+    [Fact]
+    public async Task GetTransactionStatusAsync_WhenTransactionIdIsBlank_ReturnsUnknown()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.GetTransactionStatusAsync(string.Empty);
+
+        Assert.Equal(ProviderTransactionStatus.Unknown, result);
+    }
+
+    [Fact]
+    public async Task RefundAsync_WhenRequestIsValid_ReturnsSuccessReference()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.RefundAsync(new ProviderRefundRequest
+        {
+            ProviderIntentId = "intent-1",
+            Amount = 100m,
+            Currency = "TRY",
+            Reason = "Customer request"
+        });
+
+        Assert.True(result.Success);
+        Assert.StartsWith("iyzico-refund-", result.ReferenceId);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenRequestIsValid_ReturnsSuccess()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.ReleaseDepositAsync(new ProviderReleaseDepositRequest
+        {
+            ProviderIntentId = "intent-1",
+            Note = "release"
+        });
+
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CaptureDepositAsync_WhenRequestIsValid_ReturnsSuccessReference()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.CaptureDepositAsync(new ProviderCaptureDepositRequest
+        {
+            ProviderIntentId = "intent-1",
+            Amount = 125m,
+            Currency = "TRY",
+            Note = "capture"
+        });
+
+        Assert.True(result.Success);
+        Assert.StartsWith("iyzico-capture-", result.ReferenceId);
+    }
+
+    private static IyzicoPaymentProvider CreateSut(
+        string baseUrl = "https://sandbox-api.iyzipay.com",
+        int intentExpiresMinutes = 15)
     {
         return new IyzicoPaymentProvider(
             Options.Create(new PaymentOptions
             {
-                IntentExpiresMinutes = 15,
+                IntentExpiresMinutes = intentExpiresMinutes,
                 Iyzico = new IyzicoProviderOptions
                 {
                     BaseUrl = baseUrl

@@ -80,6 +80,18 @@ public sealed class MockPaymentProviderTests
     }
 
     [Fact]
+    public void VerifyWebhookSignature_WhenSignatureMatchesWithSha256Prefix_ReturnsTrue()
+    {
+        var sut = CreateSut();
+        const string payload = "{\"event\":\"payment\"}";
+        var signature = "sha256=" + CreateSignature(payload, "mock-secret");
+
+        var isValid = sut.VerifyWebhookSignature(payload, signature, timestamp: null);
+
+        Assert.True(isValid);
+    }
+
+    [Fact]
     public async Task ParseWebhookAsync_WhenExplicitEventTypeAndNumericFallbackFieldsProvided_PrefersExplicitEventType()
     {
         var sut = CreateSut();
@@ -99,6 +111,38 @@ public sealed class MockPaymentProviderTests
         Assert.Equal("intent-42", result.ProviderIntentId);
         Assert.Equal("67890", result.ProviderTransactionId);
         Assert.Equal(payload, result.RawPayload);
+    }
+
+    [Fact]
+    public async Task ParseWebhookAsync_WhenFallbackFieldsAndNoEventTypeProvided_UsesFallbackValuesAndUnknownEvent()
+    {
+        var sut = CreateSut();
+        const string payload = """
+        {
+          "intent_id": "intent-fallback",
+          "transaction_id": "tx-fallback"
+        }
+        """;
+
+        var result = await sut.ParseWebhookAsync("mock", payload, eventType: null);
+
+        Assert.False(string.IsNullOrWhiteSpace(result.ProviderEventId));
+        Assert.Equal("unknown", result.EventType);
+        Assert.Equal("intent-fallback", result.ProviderIntentId);
+        Assert.Equal("tx-fallback", result.ProviderTransactionId);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_WhenBankResponseContainsTimeout_ThrowsTimeoutException()
+    {
+        var sut = CreateSut();
+
+        await Assert.ThrowsAsync<TimeoutException>(() =>
+            sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+            {
+                ProviderIntentId = "mock-intent",
+                BankResponse = "timeout-response"
+            }));
     }
 
     [Theory]
@@ -132,6 +176,39 @@ public sealed class MockPaymentProviderTests
     }
 
     [Fact]
+    public async Task RefundAsync_WhenReasonContainsFail_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.RefundAsync(new ProviderRefundRequest
+        {
+            ProviderIntentId = "mock-transaction",
+            Amount = 100m,
+            Reason = "force fail"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("MOCK_REFUND_FAILED", result.FailureCode);
+        Assert.Equal("Mock provider forced refund failure.", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task RefundAsync_WhenRequestIsValid_ReturnsSuccessReference()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.RefundAsync(new ProviderRefundRequest
+        {
+            ProviderIntentId = "mock-transaction",
+            Amount = 100m,
+            Reason = "customer request"
+        });
+
+        Assert.True(result.Success);
+        Assert.StartsWith("mock-refund-", result.ReferenceId);
+    }
+
+    [Fact]
     public async Task ReleaseDepositAsync_WhenProviderIntentIdContainsFail_ReturnsFailure()
     {
         var sut = CreateSut();
@@ -144,6 +221,34 @@ public sealed class MockPaymentProviderTests
         Assert.False(result.Success);
         Assert.Equal("MOCK_RELEASE_FAILED", result.FailureCode);
         Assert.Equal("Mock provider forced release failure.", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenProviderIntentIdIsBlank_ReturnsFailure()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.ReleaseDepositAsync(new ProviderReleaseDepositRequest
+        {
+            ProviderIntentId = string.Empty
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal("MOCK_RELEASE_INVALID_INTENT", result.FailureCode);
+        Assert.Equal("Provider intent id is required.", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenRequestIsValid_ReturnsSuccess()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.ReleaseDepositAsync(new ProviderReleaseDepositRequest
+        {
+            ProviderIntentId = "mock-intent"
+        });
+
+        Assert.True(result.Success);
     }
 
     [Fact]
@@ -189,6 +294,21 @@ public sealed class MockPaymentProviderTests
 
         Assert.False(result.Success);
         Assert.Equal("MOCK_CAPTURE_FAILED", result.FailureCode);
+    }
+
+    [Fact]
+    public async Task CaptureDepositAsync_WhenRequestIsValid_ReturnsSuccessReference()
+    {
+        var sut = CreateSut();
+
+        var result = await sut.CaptureDepositAsync(new ProviderCaptureDepositRequest
+        {
+            ProviderIntentId = "mock-intent",
+            Amount = 100m
+        });
+
+        Assert.True(result.Success);
+        Assert.StartsWith("mock-capture-", result.ReferenceId);
     }
 
     private static MockPaymentProvider CreateSut(int intentExpiresMinutes = 15, TestLogger<MockPaymentProvider>? logger = null)
@@ -239,6 +359,13 @@ public sealed class MockPaymentProviderTests
             ReferenceTransactionId = referenceTransactionId,
             IdempotencyKey = "preauth-idem"
         };
+    }
+
+    private static string CreateSignature(string payload, string secret)
+    {
+        using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
+        var hashBytes = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(payload));
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
     private sealed class TestLogger<T> : ILogger<T>
