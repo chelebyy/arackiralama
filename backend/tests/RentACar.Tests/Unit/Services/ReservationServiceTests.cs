@@ -751,7 +751,7 @@ public sealed class ReservationServiceTests
                 vehicleId,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime,
-                null,
+                reservationId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 

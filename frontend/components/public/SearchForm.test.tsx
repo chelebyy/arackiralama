@@ -42,8 +42,8 @@ describe("SearchForm", () => {
     } else if (originalShowPicker) {
       HTMLInputElement.prototype.showPicker = originalShowPicker;
     } else {
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (HTMLInputElement.prototype as any).showPicker = undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Reflect.deleteProperty(HTMLInputElement.prototype as any, "showPicker");
     }
   });
 
