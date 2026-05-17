@@ -11,6 +11,7 @@ public static class ApplicationBuilderExtensions
     public static async Task<WebApplication> InitializeApiAsync(this WebApplication app, CancellationToken cancellationToken = default)
     {
         await app.Services.ApplyDatabaseMigrationsAsync(cancellationToken);
+        await app.Services.ApplyConcurrentBookingInventorySeedAsync(cancellationToken);
 
         if (app.Environment.IsDevelopment())
         {

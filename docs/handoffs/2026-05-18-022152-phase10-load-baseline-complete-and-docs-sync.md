@@ -14,7 +14,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 ## Important Context
 - The last blocker was not inventory shortage anymore; it was an occasional `reservations_no_overlap` race during hold creation.
 - The accepted fix is local-load-test-safe rather than a production relaxation: keep the exclusion constraint intact, but retry with the next vehicle candidate when a rare overlap violation is thrown during the hold save path.
-- The load-test path now depends on the local `RateLimiting:LoadTestSessionPartition` flag, `X-Session-Id` headers, and the inventory seed expansion for the target office/group.
+- The load-test path now depends on the local `RateLimiting:LoadTestSessionPartition` flag, `X-Session-Id` headers, and the local startup inventory seed expansion for the target office/group.
 - Do not stage unrelated noise in the working tree:
   - deleted historical handoff files under `docs/handoffs/`
   - `.sisyphus/`
@@ -39,7 +39,8 @@ The docs layer was updated to match the verified state. The launch gates, execut
 | `docs/09_Implementation_Plan.md` | Implementation checklist | No longer says the 100-user baseline is pending |
 | `docs/02_ADR_ENTERPRISE_FULL.md` | Architecture decision record | Documents the local-Docker-first load validation strategy and the verified baseline |
 | `docs/04_IDD_ENTERPRISE_FULL.md` | Infrastructure/deployment architecture | Captures the validation sequencing and local baseline note |
-| `backend/src/RentACar.Infrastructure/Data/Migrations/20260517222000_AddConcurrentBookingVehicleSeed.cs` | Inventory seed migration | Adds 120 economy vehicles to the target office/group |
+| `backend/src/RentACar.Infrastructure/Data/ConcurrentBookingInventorySeedExtensions.cs` | Local startup inventory seed | Adds 120 economy vehicles only when the local load-test flag is enabled |
+| `backend/src/RentACar.Infrastructure/Data/Migrations/20260517222000_AddConcurrentBookingVehicleSeed.cs` | No-op migration shell | Keeps the migration history intact without seeding shared environments |
 | `backend/src/RentACar.API/Services/ReservationService.cs` | Hold creation / vehicle selection | Adds load-test-aware ordering and overlap-violation retry handling |
 | `backend/tests/RentACar.Tests/Unit/Services/ReservationServiceTests.cs` | Unit coverage | Verifies the retry-on-overlap behavior |
 | `backend/tests/k6/concurrent-booking.js` | Load test script | Runs the 100-user baseline with session headers and cleanup |
@@ -54,7 +55,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 ## Work Completed
 
 ### Tasks Finished
-- [x] Expanded inventory seed for the target office/group with 120 additional economy vehicles.
+- [x] Added a local-only startup inventory seed for the target office/group with 120 additional economy vehicles.
 - [x] Made `concurrent-booking.js` operate as a 100-user baseline with `X-Session-Id` cleanup-aware requests.
 - [x] Added local load-test rate-limit partitioning keyed by session header.
 - [x] Made hold creation lock keys session-aware in local load-test mode.
@@ -86,7 +87,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 
 | File | Changes | Rationale |
 |------|---------|-----------|
-| `backend/src/RentACar.Infrastructure/Data/Migrations/20260517222000_AddConcurrentBookingVehicleSeed.cs` | Added 120 seeded vehicles | Remove inventory starvation from the load baseline |
+| `backend/src/RentACar.Infrastructure/Data/ConcurrentBookingInventorySeedExtensions.cs` | Added 120 seeded vehicles at startup | Remove inventory starvation from the load baseline without touching shared migrations |
 | `backend/src/RentACar.API/Services/ReservationService.cs` | Added load-test-aware candidate ordering and overlap-violation retry handling | Prevent rare exclusion-constraint failures from breaking the baseline |
 | `backend/tests/RentACar.Tests/Unit/Services/ReservationServiceTests.cs` | Added retry-path unit test and configuration fixture update | Lock the new hold behavior in tests |
 | `backend/tests/k6/concurrent-booking.js` | Brought the script to a 100-user baseline with cleanup headers | Make the benchmark representative and repeatable |
@@ -144,7 +145,7 @@ The authoritative current state is:
 
 ### Potential Gotchas
 - If the API is rebuilt without the load-test partition flag in local compose, the benchmark may regress into rate-limit noise.
-- If the inventory seed migration is removed, the 100-user baseline may become unstable again.
+- If the local startup inventory seed is removed, the 100-user baseline may become unstable again.
 - `backend/tests/k6/results/` contains generated artifacts and should stay out of the commit unless explicitly needed.
 - The load baseline uses a Docker-to-host route; the host header must remain aligned with backend host filtering.
 
@@ -170,4 +171,5 @@ The authoritative current state is:
 - `backend/tests/k6/README.md`
 - `backend/tests/k6/concurrent-booking.js`
 - `backend/src/RentACar.API/Services/ReservationService.cs`
+- `backend/src/RentACar.Infrastructure/Data/ConcurrentBookingInventorySeedExtensions.cs`
 - `backend/src/RentACar.Infrastructure/Data/Migrations/20260517222000_AddConcurrentBookingVehicleSeed.cs`

@@ -513,7 +513,7 @@ jobs:
 - Document smoke-only assumptions in the k6 README when a scenario depends on a feature flag, reduced VUs, or skipped admin auth.
 - When invoking the suite from Docker against the host backend, set `HOST_HEADER=localhost:5000` so the backend host filter accepts the request.
 - If admin-dashboard smoke is required on a clean local database, seed the integration admin user before the run.
-- The 100-user concurrent-booking baseline is now verified locally; preserve the seed expansion and overlap-retry pattern for future reruns.
+- The 100-user concurrent-booking baseline is now verified locally; preserve the local startup seed expansion and overlap-retry pattern for future reruns.
 
 ------------------------------------------------------------------------
 
