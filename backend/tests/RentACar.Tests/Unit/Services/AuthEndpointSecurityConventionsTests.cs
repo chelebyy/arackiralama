@@ -92,9 +92,19 @@ public class AuthEndpointSecurityConventionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:LoadTestSessionPartition"] = "false"
+            })
+            .Build();
 
         // Act
-        InvokePrivateServiceRegistration(nameof(ServiceCollectionExtensions), "AddApiRateLimiting", services);
+        InvokePrivateServiceRegistration(
+            nameof(ServiceCollectionExtensions),
+            "AddApiRateLimiting",
+            services,
+            configuration);
         using var provider = services.BuildServiceProvider();
         var rateLimiterOptions = provider.GetRequiredService<IOptions<RateLimiterOptions>>().Value;
 
