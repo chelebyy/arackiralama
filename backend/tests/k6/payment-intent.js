@@ -154,12 +154,16 @@ export function setup() {
     return { reservationId: RESERVATION_ID };
   }
 
-  const reservationId = createHeldReservation();
-  return reservationId ? { reservationId } : {};
+  if (SMOKE_MODE) {
+    const reservationId = createHeldReservation();
+    return reservationId ? { reservationId } : {};
+  }
+
+  return {};
 }
 
 export default function (data) {
-  const reservationId = RESERVATION_ID || data?.reservationId;
+  const reservationId = RESERVATION_ID || data?.reservationId || createHeldReservation();
   if (!reservationId) {
     sleep(1);
     return;

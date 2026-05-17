@@ -80,6 +80,74 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
     }
 
     [Fact]
+    public async Task GetByIdAsync_WhenReservationExists_ReturnsReservationWithVehicleGraph()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var office = new Office
+        {
+            Name = "Test Office",
+            Code = "test-office",
+            Address = "Test Address",
+            Phone = "+90 555 000 0000"
+        };
+        var group = new VehicleGroup
+        {
+            NameTr = "Ekonomi",
+            NameEn = "Economy",
+            NameRu = "Economy",
+            NameAr = "Economy",
+            NameDe = "Economy",
+            DepositAmount = 2000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var vehicle = new Vehicle
+        {
+            Plate = "07XYZ002",
+            Brand = "Renault",
+            Model = "Clio",
+            Group = group,
+            Office = office,
+            Status = VehicleStatus.Available
+        };
+        var customer = new Customer
+        {
+            FullName = "Ayse Yilmaz",
+            Email = "ayse@example.com",
+            Phone = "+90 555 123 4568"
+        };
+        var reservation = new Reservation
+        {
+            PublicCode = "RES-67890",
+            Customer = customer,
+            Vehicle = vehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(4),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1800
+        };
+
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(vehicle);
+        dbContext.Customers.Add(customer);
+        dbContext.Reservations.Add(reservation);
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var result = await repository.GetByIdAsync(reservation.Id);
+
+        result.Should().NotBeNull();
+        result!.Vehicle.Should().NotBeNull();
+        result.Vehicle!.Group.Should().NotBeNull();
+        result.Vehicle.GroupId.Should().Be(group.Id);
+        result.Vehicle.Office.Should().NotBeNull();
+        result.Vehicle.OfficeId.Should().Be(office.Id);
+    }
+
+    [Fact]
     public async Task GetByCustomerIdAsync_ReturnsCustomerReservations()
     {
         using var dbContext = _dbContextFactory.CreateContext();

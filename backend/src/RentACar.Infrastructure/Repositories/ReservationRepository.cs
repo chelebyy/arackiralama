@@ -8,29 +8,37 @@ namespace RentACar.Infrastructure.Repositories;
 public sealed class ReservationRepository(IApplicationDbContext dbContext)
     : Repository<Reservation>(dbContext, dbContext.Reservations), IReservationRepository
 {
-    protected override IQueryable<Reservation> BuildListQuery()
+    private static IQueryable<Reservation> IncludeReservationDetails(IQueryable<Reservation> query)
     {
-        return Entities
-            .AsNoTracking()
+        return query
             .Include(r => r.Customer)
             .Include(r => r.Vehicle)
+                .ThenInclude(v => v!.Group)
+            .Include(r => r.Vehicle)
+                .ThenInclude(v => v!.Office);
+    }
+
+    protected override IQueryable<Reservation> BuildListQuery()
+    {
+        return IncludeReservationDetails(Entities.AsNoTracking())
             .OrderByDescending(r => r.CreatedAt);
+    }
+
+    public override Task<Reservation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return IncludeReservationDetails(Entities.AsNoTracking())
+            .FirstOrDefaultAsync(entity => entity.Id == id, cancellationToken);
     }
 
     public Task<Reservation?> GetByPublicCodeAsync(string publicCode, CancellationToken cancellationToken = default)
     {
-        return Entities
-            .AsNoTracking()
-            .Include(r => r.Customer)
-            .Include(r => r.Vehicle)
+        return IncludeReservationDetails(Entities.AsNoTracking())
             .FirstOrDefaultAsync(r => r.PublicCode == publicCode, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Reservation>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
-        var results = await Entities
-            .AsNoTracking()
-            .Include(r => r.Vehicle)
+        var results = await IncludeReservationDetails(Entities.AsNoTracking())
             .Where(r => r.CustomerId == customerId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -40,9 +48,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
 
     public async Task<IReadOnlyList<Reservation>> GetByVehicleIdAsync(Guid vehicleId, CancellationToken cancellationToken = default)
     {
-        var results = await Entities
-            .AsNoTracking()
-            .Include(r => r.Customer)
+        var results = await IncludeReservationDetails(Entities.AsNoTracking())
             .Where(r => r.VehicleId == vehicleId)
             .OrderBy(r => r.PickupDateTime)
             .ToListAsync(cancellationToken);
@@ -103,10 +109,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
         ReservationStatus status,
         CancellationToken cancellationToken = default)
     {
-        var results = await Entities
-            .AsNoTracking()
-            .Include(r => r.Customer)
-            .Include(r => r.Vehicle)
+        var results = await IncludeReservationDetails(Entities.AsNoTracking())
             .Where(r => r.Status == status)
             .OrderBy(r => r.PickupDateTime)
             .ToListAsync(cancellationToken);
@@ -164,9 +167,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
             query = query.Where(r => r.ReturnDateTime <= toDate.Value);
         }
 
-        var results = await query
-            .Include(r => r.Customer)
-            .Include(r => r.Vehicle)
+        var results = await IncludeReservationDetails(query)
             .OrderByDescending(r => r.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -181,9 +182,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = Entities
-            .AsNoTracking()
-            .Include(r => r.Vehicle)
+        var query = IncludeReservationDetails(Entities.AsNoTracking())
             .Where(r => r.CustomerId == customerId);
 
         var totalCount = await query.CountAsync(cancellationToken);
