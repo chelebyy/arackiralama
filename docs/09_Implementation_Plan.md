@@ -961,6 +961,7 @@ POST /api/admin/v1/auth/logout
 - [x] Payment module target: > 80% coverage — fresh module aggregate **91.71%**
 - [x] Reservation module target: > 80% coverage — fresh module aggregate **82.47%**
 - [x] Frontend overall target: > 60% coverage — fresh 17 May 2026 Vitest **190/190 PASS**, overall **63.17%**; Phase 10.1 frontend launch gate closed
+- [x] Validator-backed handoff for frontend coverage PR follow-through — `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md`
 - [x] Frontend public-route high-value coverage slices
 - [x] First admin/dashboard coverage slice — `reservations/page.tsx` **97.42% statements / 75.55% branches**
 - [x] Admin API/mock fixture + auth helper coverage slice — `frontend/lib/api/admin/mock.ts` **100%**, `frontend/lib/api/admin` **72.84%**, `frontend/lib/auth` **63.43%**

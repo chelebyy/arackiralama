@@ -312,6 +312,7 @@ OS: Ubuntu 22.04 LTS
 **Current Evidence (17 May 2026):**
 - Frontend Vitest: **190/190 PASS**
 - Frontend overall coverage: **63.17%**
+- Validator-backed PR follow-through handoff: `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md`
 - `frontend/app/(admin)/dashboard/(auth)/reservations/page.tsx`: **97.42% statements / 75.55% branches**
 - `frontend/app/(admin)/dashboard/(auth)/reservations/[id]/page.tsx`: **97.37% statements / 72.09% branches**
 - `frontend/hooks/admin`: **97.23% statements / 84.15% branches**
