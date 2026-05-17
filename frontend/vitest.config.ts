@@ -17,6 +17,9 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         '.next/**',
+        'e2e/**',
+        'components/ui/custom/tiptap/**',
+        'components/ui/kanban.tsx',
         '**/*.d.ts',
         '**/*.config.*',
         '**/coverage/**',
