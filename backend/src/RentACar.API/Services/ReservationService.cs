@@ -264,14 +264,26 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Could not calculate pricing for the reservation");
         }
 
+        var vehicle = await FindAvailableVehicleAsync(
+            request.VehicleGroupId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            cancellationToken);
+
+        if (vehicle is null)
+        {
+            throw new InvalidOperationException("Vehicle group is not available for the selected dates");
+        }
+
         // Create reservation
-        // VehicleId carries the selected vehicle group until a concrete vehicle is held/assigned.
+        // Persist the concrete vehicle that matched the selected group.
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
             CustomerId = customer.Id,
             Customer = customer, // Set navigation property for mapping
-            VehicleId = request.VehicleGroupId,
+            VehicleId = vehicle.Id,
+            Vehicle = vehicle,
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Draft,
@@ -384,15 +396,33 @@ public sealed class ReservationService : IReservationService
         if (reservation.VehicleId == Guid.Empty)
         {
             _logger.LogWarning(
-                "Reservation {ReservationId} has no selected vehicle group",
+                "Reservation {ReservationId} has no selected vehicle",
                 reservationId);
+            return null;
+        }
+
+        var vehicleGroupId = reservation.Vehicle?.GroupId;
+        if (vehicleGroupId == null)
+        {
+            var selectedVehicle = await _vehicleRepository
+                .GetByIdAsync(reservation.VehicleId, cancellationToken);
+
+            vehicleGroupId = selectedVehicle?.GroupId;
+        }
+
+        if (vehicleGroupId == null)
+        {
+            _logger.LogWarning(
+                "Reservation {ReservationId} could not resolve a vehicle group from vehicle {VehicleId}",
+                reservationId,
+                reservation.VehicleId);
             return null;
         }
 
         try
         {
             holdCreationLockKey = BuildHoldCreationLockKey(
-                reservation.VehicleId,
+                vehicleGroupId.Value,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime);
 
@@ -409,7 +439,7 @@ public sealed class ReservationService : IReservationService
                     "CreateHoldAsync lock is already held for vehicle group {VehicleGroupId} between {PickupDate} and {ReturnDate}",
                     reservation.VehicleId,
                     reservation.PickupDateTime,
-                    reservation.ReturnDateTime);
+                reservation.ReturnDateTime);
                 return null;
             }
 
@@ -448,7 +478,7 @@ public sealed class ReservationService : IReservationService
 
             // Find an available vehicle in the selected group
             var vehicle = await FindAvailableVehicleAsync(
-                reservation.VehicleId,
+                vehicleGroupId.Value,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime,
                 cancellationToken);

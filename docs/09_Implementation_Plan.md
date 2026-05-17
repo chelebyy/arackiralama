@@ -983,8 +983,10 @@ POST /api/admin/v1/auth/logout
 
 #### 10.4 Load Testing
 - [x] k6 scripts prepared
-- [ ] Availability query performance — awaiting deployed infra
-- [ ] Concurrent booking simulation — awaiting deployed infra
+- [ ] Availability query performance — local Docker first, then Dokploy rerun if deployed infra exists
+- [x] Concurrent booking simulation — local Docker smoke passed; full 100-user baseline still pending
+- [x] Payment intent smoke — local Docker smoke passed after enabling `EnableOnlinePayment` in local DB
+- [x] Mixed traffic smoke — local Docker smoke passed with smoke-mode admin login bypassed
 - [ ] Target: 100 concurrent users
 
 #### 10.5 Security Audit

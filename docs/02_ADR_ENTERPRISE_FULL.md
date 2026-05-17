@@ -326,3 +326,18 @@ OS: Ubuntu 22.04 LTS
 - Complex shadcn/Radix primitives may be mocked at the component boundary when the test target is a page workflow rather than the primitive itself.
 - API and auth helper tests may mock `../client` or `fetch`, but should assert endpoint construction, payload shape, and error/fallback branches rather than only importing modules for coverage.
 - Phase 10.1 coverage gates are GO; further frontend work should prioritize meaningful auth route/screen and admin dialog behavior coverage instead of raw percentage gains.
+
+### 12.5 Load Testing Validation Strategy
+
+**Context:** Phase 10.4 load validation is being executed in the local Docker stack before any Dokploy rerun. This avoids coupling smoke verification to deployment readiness and lets the team exercise booking/payment/traffic scenarios against the same compose-backed runtime used in development.
+
+**Decision:** Treat local Docker as the first validation environment for Phase 10.4 k6 runs, and defer Dokploy reruns until deployment infrastructure is actually available.
+
+**Rationale:**
+- Keeps load-validation work unblocked while Dokploy remains deferred.
+- Lets smoke-mode test tuning happen against reproducible local containers.
+- Preserves the distinction between local smoke evidence and deployed-infra evidence.
+
+**Consequences:**
+- `backend/tests/k6/` scripts should document any smoke-only assumptions, such as reduced VUs or feature-flag prerequisites.
+- The launch-gate docs must explicitly distinguish local smoke partials from full load-baseline completion.

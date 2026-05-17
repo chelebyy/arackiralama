@@ -4,12 +4,14 @@
 set -e
 
 BASE_URL="${BASE_URL:-http://localhost:5000}"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@rentacar.test}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-password}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-integration-admin@rentacar.test}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-IntegrationTestPassword123!}"
+SMOKE_MODE="${SMOKE_MODE:-0}"
 
 echo "================================"
 echo "RentACar Load Test Suite"
 echo "BASE_URL: $BASE_URL"
+echo "SMOKE_MODE: $SMOKE_MODE"
 echo "================================"
 echo ""
 
@@ -23,6 +25,7 @@ run_test() {
     --env BASE_URL="$BASE_URL" \
     --env ADMIN_EMAIL="$ADMIN_EMAIL" \
     --env ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+    --env SMOKE_MODE="$SMOKE_MODE" \
     "$file"
   echo ""
 }
@@ -31,7 +34,11 @@ run_test "availability-query.js" "Availability Query"
 run_test "concurrent-search.js" "Concurrent Search"
 run_test "concurrent-booking.js" "Concurrent Booking"
 run_test "payment-intent.js" "Payment Intent"
-run_test "admin-dashboard.js" "Admin Dashboard"
+if [ "$SMOKE_MODE" = "1" ]; then
+  echo "Skipping Admin Dashboard in smoke mode (local admin seed not required)."
+else
+  run_test "admin-dashboard.js" "Admin Dashboard"
+fi
 run_test "mixed-traffic.js" "Mixed Traffic"
 
 echo "================================"
