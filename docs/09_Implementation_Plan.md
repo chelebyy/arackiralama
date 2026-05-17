@@ -960,12 +960,13 @@ POST /api/admin/v1/auth/logout
 - [x] Backend overall target: > 70% coverage — fresh 16 May 2026 merged backend coverage **91.09%**
 - [x] Payment module target: > 80% coverage — fresh module aggregate **91.71%**
 - [x] Reservation module target: > 80% coverage — fresh module aggregate **82.47%**
-- [ ] Frontend overall target: > 60% coverage — fresh 17 May 2026 Vitest **168/168 PASS**, overall **28.41%**; user-requested interim **25%** target closed and follow-up advanced
+- [x] Frontend overall target: > 60% coverage — fresh 17 May 2026 Vitest **190/190 PASS**, overall **63.17%**; Phase 10.1 frontend launch gate closed
+- [x] Validator-backed handoff for frontend coverage PR follow-through — `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md`
 - [x] Frontend public-route high-value coverage slices
 - [x] First admin/dashboard coverage slice — `reservations/page.tsx` **97.42% statements / 75.55% branches**
 - [x] Admin API/mock fixture + auth helper coverage slice — `frontend/lib/api/admin/mock.ts` **100%**, `frontend/lib/api/admin` **72.84%**, `frontend/lib/auth` **63.43%**
 - [x] Admin reservation detail + admin hook wrapper coverage slice — `reservations/[id]/page.tsx` **97.37% statements / 72.09% branches**, `frontend/hooks/admin` **97.23%**
-- [ ] Continue admin/dashboard pages, route handlers, auth screens, and shared UI coverage expansion toward the **60%** launch gate
+- [x] Admin/dashboard + shared UI + UI hook completion slice — `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, overall frontend **63.17%**
 
 #### 10.2 Integration Tests
 - [x] API endpoint tests
@@ -1015,8 +1016,8 @@ POST /api/admin/v1/auth/logout
 
 ### ✅ Kabul Kriterleri
 - [x] Backend tests passing
-- [x] Frontend tests passing — 17 May 2026 Vitest **168/168 PASS**
-- [ ] Frontend coverage gate — **28.41% / 60%**; interim user target **25%** achieved
+- [x] Frontend tests passing — 17 May 2026 Vitest **190/190 PASS**
+- [x] Frontend coverage gate — **63.17% / 60%**
 - [x] Security scan clean for current local scope
 - [ ] Performance targets met
 - [ ] UAT sign-off

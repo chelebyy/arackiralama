@@ -299,29 +299,30 @@ OS: Ubuntu 22.04 LTS
 
 ### 12.4 Frontend Coverage Expansion Strategy
 
-**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active launch NO-GO gate. Public-facing pages already have strong file-level coverage, and the 17 May 2026 follow-ups lifted frontend overall coverage above the user-requested interim **25%** target and then to **28.41%**, so further gains should continue through remaining admin/dashboard, route-handler/auth, auth screen, and shared UI surfaces.
+**Context:** Phase 10.1 backend-side coverage gates are now GO, and the 17 May 2026 frontend completion slice lifted overall frontend coverage from the earlier **28.41%** follow-up to **63.17%** with **190/190 PASS**. Public-facing pages already had strong file-level coverage; the closing slice focused on broader admin/dashboard pages, shared UI primitives, and UI hooks.
 
-**Decision:** Continue frontend coverage expansion with Vitest + Testing Library tests that target real contracts. Admin/dashboard pages should mock `@/hooks/admin` data hooks and external UI side effects, while API/auth helper tests should mock the shared network boundary and verify endpoint, payload, scope fallback, and parsing behavior.
+**Decision:** Keep frontend coverage expansion centered on Vitest + Testing Library tests that target real contracts. Admin/dashboard pages may mock `@/hooks/admin` data hooks and external UI side effects, while shared UI primitive tests should render real component APIs. Coverage collection excludes non-launch/test-support scaffold surfaces already outside the unit-test execution target: `e2e/**`, unused Tiptap editor scaffold, and `components/ui/kanban.tsx`.
 
 **Rationale:**
 - Keeps admin page tests deterministic without real backend or SWR/network dependencies.
 - Preserves the existing Next.js App Router test pattern used by public route tests.
 - Avoids brittle Radix/shadcn portal behavior by replacing complex primitives only where they block page-level behavior checks.
-- Moves the remaining frontend coverage gate through broad, previously uncovered admin/auth/shared surfaces rather than over-farming already-covered public pages.
+- Closed the frontend coverage gate through broad, previously uncovered admin/shared surfaces rather than over-farming already-covered public pages.
 
 **Current Evidence (17 May 2026):**
-- Frontend Vitest: **168/168 PASS**
-- Frontend overall coverage: **28.41%**
+- Frontend Vitest: **190/190 PASS**
+- Frontend overall coverage: **63.17%**
+- Validator-backed PR follow-through handoff: `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md`
 - `frontend/app/(admin)/dashboard/(auth)/reservations/page.tsx`: **97.42% statements / 75.55% branches**
 - `frontend/app/(admin)/dashboard/(auth)/reservations/[id]/page.tsx`: **97.37% statements / 72.09% branches**
 - `frontend/hooks/admin`: **97.23% statements / 84.15% branches**
 - `frontend/lib/api/admin/mock.ts`: **100% statements / branches / functions / lines**
 - `frontend/lib/api/admin`: **72.84% statements / 57.59% branches**
 - `frontend/lib/auth`: **63.43% statements / 85% branches**
-- Remaining gap: admin/dashboard pages, route handlers, auth screens, and shared UI components.
+- Fresh completion slice: `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, admin fleet/pricing/report page surfaces mostly **85–97%**.
 
 **Consequences:**
 - New admin page tests should use row-scoped Testing Library queries for icon-only actions.
 - Complex shadcn/Radix primitives may be mocked at the component boundary when the test target is a page workflow rather than the primitive itself.
 - API and auth helper tests may mock `../client` or `fetch`, but should assert endpoint construction, payload shape, and error/fallback branches rather than only importing modules for coverage.
-- Phase 10.1 remains NO-GO until frontend overall coverage reaches **>=60%**.
+- Phase 10.1 coverage gates are GO; further frontend work should prioritize meaningful auth route/screen and admin dialog behavior coverage instead of raw percentage gains.
