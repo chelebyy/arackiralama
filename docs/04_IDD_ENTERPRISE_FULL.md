@@ -505,6 +505,13 @@ jobs:
 4. **Auto-Deploy:** Enable "Automatic Deployment" on push to `main`.
 5. **Health Checks:** Ensure `docker-compose.yml` has proper health checks for Traefik routing.
 
+## 7.3 Local Load Validation Before Dokploy
+
+- Run Phase 10.4 load scenarios against the local Docker stack first.
+- Treat `backend/tests/k6/` smoke runs as validation of booking, payment, and mixed traffic behavior before any Dokploy rerun.
+- Keep Dokploy load reruns as a later deployment-verification step, not a prerequisite for local smoke work.
+- Document smoke-only assumptions in the k6 README when a scenario depends on a feature flag, reduced VUs, or skipped admin auth.
+
 ------------------------------------------------------------------------
 
 # 8. Monitoring & Alerting

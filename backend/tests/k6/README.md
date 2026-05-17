@@ -6,6 +6,7 @@ Load testing scripts for the RentACar backend API.
 
 - [k6](https://k6.io/docs/get-started/installation/) installed
 - Backend running locally or staging environment
+- Local Docker is the default validation target; keep Dokploy reruns for later deployment verification only
 
 ## Quick Start
 
@@ -56,3 +57,9 @@ k6 run --env BASE_URL=http://localhost:5000 --env ADMIN_EMAIL=admin@rentacar.tes
 ## Results
 
 Test results are written to `results/*.json` and printed to stdout in summary format.
+
+## Smoke Notes
+
+- `SMOKE_MODE=1` reduces load for local Docker verification.
+- `payment-intent.js` expects the online payment feature flag to be enabled in the local database.
+- `mixed-traffic.js` skips admin login in smoke mode so it can run against local fixtures without seeded admin credentials.
