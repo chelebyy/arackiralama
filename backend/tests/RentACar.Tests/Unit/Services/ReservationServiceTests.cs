@@ -318,7 +318,18 @@ public sealed class ReservationServiceTests
     {
         // Arrange
         var groupId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
         var request = CreateValidReservationRequest() with { VehicleGroupId = groupId };
+        var availableVehicle = new Vehicle
+        {
+            Id = vehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34ABC123",
+            Brand = "Renault",
+            Model = "Clio"
+        };
 
         _fleetServiceMock.Setup(x => x.SearchAvailableVehicleGroupsAsync(
                 request.PickupOfficeId,
@@ -361,6 +372,19 @@ public sealed class ReservationServiceTests
                 Currency: "TRY",
                 AppliedCampaignCode: null));
 
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { availableVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicleId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
         // Setup customer repository mock - no existing customer
         _customerRepositoryMock.Setup(x => x.GetQueryable())
             .Returns(new List<Customer>().BuildMockDbSet().Object);
@@ -378,7 +402,7 @@ public sealed class ReservationServiceTests
             It.Is<Reservation>(r =>
                 r.Status == ReservationStatus.Draft
                 && r.TotalAmount == 1700
-                && r.VehicleId == request.VehicleGroupId),
+                && r.VehicleId == vehicleId),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -389,6 +413,7 @@ public sealed class ReservationServiceTests
         // Arrange
         var groupId = Guid.NewGuid();
         var existingCustomerId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
         var request = CreateValidReservationRequest() with
         {
             VehicleGroupId = groupId,
@@ -410,6 +435,16 @@ public sealed class ReservationServiceTests
             IdentityNumber = string.Empty,
             Nationality = "TR"
         };
+        var availableVehicle = new Vehicle
+        {
+            Id = vehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34DEF456",
+            Brand = "Renault",
+            Model = "Clio"
+        };
 
         _fleetServiceMock.Setup(x => x.SearchAvailableVehicleGroupsAsync(
                 request.PickupOfficeId,
@@ -451,6 +486,19 @@ public sealed class ReservationServiceTests
                 PreAuthorizationAmount: 2000,
                 Currency: "TRY",
                 AppliedCampaignCode: null));
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { availableVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicleId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         _customerRepositoryMock
             .Setup(x => x.GetQueryable())
@@ -483,18 +531,6 @@ public sealed class ReservationServiceTests
         var vehicleId = Guid.NewGuid();
         var sessionId = "session-123";
 
-        var reservation = new Reservation
-        {
-            Id = reservationId,
-            PublicCode = "ABC-1234-DEF",
-            CustomerId = Guid.NewGuid(),
-            VehicleId = groupId,
-            PickupDateTime = DateTime.UtcNow.AddDays(1),
-            ReturnDateTime = DateTime.UtcNow.AddDays(3),
-            Status = ReservationStatus.Draft,
-            TotalAmount = 1500
-        };
-
         var availableVehicle = new Vehicle
         {
             Id = vehicleId,
@@ -504,6 +540,19 @@ public sealed class ReservationServiceTests
             Plate = "34ABC123",
             Brand = "Renault",
             Model = "Clio"
+        };
+
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "ABC-1234-DEF",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            Vehicle = availableVehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500
         };
 
         _reservationRepositoryMock
@@ -554,12 +603,23 @@ public sealed class ReservationServiceTests
     {
         // Arrange
         var reservationId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
         var reservation = new Reservation
         {
             Id = reservationId,
             PublicCode = "ABC-1234-DEF",
             CustomerId = Guid.NewGuid(),
-            VehicleId = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            Vehicle = new Vehicle
+            {
+                Id = vehicleId,
+                GroupId = Guid.NewGuid(),
+                Status = VehicleStatus.Available,
+                OfficeId = Guid.NewGuid(),
+                Plate = "34HOLD123",
+                Brand = "Renault",
+                Model = "Clio"
+            },
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
             Status = ReservationStatus.Hold,
@@ -678,12 +738,24 @@ public sealed class ReservationServiceTests
     {
         var reservationId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
+        var vehicleId = Guid.NewGuid();
+        var availableVehicle = new Vehicle
+        {
+            Id = vehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34NONE123",
+            Brand = "Renault",
+            Model = "Clio"
+        };
         var reservation = new Reservation
         {
             Id = reservationId,
             PublicCode = "ABC-1234-DEF",
             CustomerId = Guid.NewGuid(),
-            VehicleId = groupId,
+            VehicleId = vehicleId,
+            Vehicle = availableVehicle,
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
             Status = ReservationStatus.Draft,
@@ -716,17 +788,6 @@ public sealed class ReservationServiceTests
         var reservationId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
-        var reservation = new Reservation
-        {
-            Id = reservationId,
-            PublicCode = "ABC-1234-DEF",
-            CustomerId = Guid.NewGuid(),
-            VehicleId = groupId,
-            PickupDateTime = DateTime.UtcNow.AddDays(1),
-            ReturnDateTime = DateTime.UtcNow.AddDays(3),
-            Status = ReservationStatus.Draft,
-            TotalAmount = 1500
-        };
         var availableVehicle = new Vehicle
         {
             Id = vehicleId,
@@ -736,6 +797,18 @@ public sealed class ReservationServiceTests
             Plate = "34ABC123",
             Brand = "Renault",
             Model = "Clio"
+        };
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "ABC-1234-DEF",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            Vehicle = availableVehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500
         };
 
         _reservationRepositoryMock
@@ -1909,17 +1982,6 @@ public sealed class ReservationServiceTests
         var reservationId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
-        var reservation = new Reservation
-        {
-            Id = reservationId,
-            PublicCode = "RSV-CONFLICT",
-            CustomerId = Guid.NewGuid(),
-            VehicleId = groupId,
-            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
-            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
-            Status = ReservationStatus.Draft,
-            TotalAmount = 1500m
-        };
         var availableVehicle = new Vehicle
         {
             Id = vehicleId,
@@ -1929,6 +1991,18 @@ public sealed class ReservationServiceTests
             Plate = "34CON123",
             Brand = "Renault",
             Model = "Clio"
+        };
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-CONFLICT",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            Vehicle = availableVehicle,
+            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500m
         };
 
         _reservationRepositoryMock

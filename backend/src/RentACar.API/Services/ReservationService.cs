@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Caching.Memory;
 using RentACar.API.Contracts.Reservations;
@@ -1131,10 +1132,13 @@ public sealed class ReservationService : IReservationService
         CancellationToken cancellationToken)
     {
         // Get vehicles in the same group
-        var vehicles = await _vehicleRepository
+        var vehicleQuery = _vehicleRepository
             .GetQueryable()
-            .Where(v => v.GroupId == vehicleGroupId && v.Status == VehicleStatus.Available)
-            .ToListAsync(cancellationToken);
+            .Where(v => v.GroupId == vehicleGroupId && v.Status == VehicleStatus.Available);
+
+        var vehicles = vehicleQuery.Provider is IAsyncQueryProvider
+            ? await vehicleQuery.ToListAsync(cancellationToken)
+            : vehicleQuery.ToList();
 
         foreach (var vehicle in vehicles)
         {
