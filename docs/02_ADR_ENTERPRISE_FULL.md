@@ -341,3 +341,4 @@ OS: Ubuntu 22.04 LTS
 **Consequences:**
 - `backend/tests/k6/` scripts should document any smoke-only assumptions, such as reduced VUs or feature-flag prerequisites.
 - The launch-gate docs must explicitly distinguish local smoke partials from full load-baseline completion.
+- Docker-local k6 runs that target the host backend may need an explicit `Host` header that matches `AllowedHosts`, and admin-dashboard smoke validation may require a seeded local admin account.

@@ -23,6 +23,8 @@ k6 run --env BASE_URL=http://localhost:5000 --env ADMIN_EMAIL=admin@rentacar.tes
 k6 run --env BASE_URL=http://localhost:5000 --env ADMIN_EMAIL=admin@rentacar.test --env ADMIN_PASSWORD=password mixed-traffic.js
 ```
 
+When running the scripts from Docker against the local backend, set `HOST_HEADER=localhost:5000` and point `BASE_URL` at the host gateway URL, for example `http://host.docker.internal:5000`.
+
 ## Scenarios
 
 | Script | Duration | Max VUs | Target |
@@ -61,5 +63,6 @@ Test results are written to `results/*.json` and printed to stdout in summary fo
 ## Smoke Notes
 
 - `SMOKE_MODE=1` reduces load for local Docker verification.
+- Local Docker runs that target the host backend should use `HOST_HEADER=localhost:5000` so the ASP.NET Core `AllowedHosts` check accepts the request.
 - `payment-intent.js` expects the online payment feature flag to be enabled in the local database.
 - `mixed-traffic.js` skips admin login in smoke mode so it can run against local fixtures without seeded admin credentials.

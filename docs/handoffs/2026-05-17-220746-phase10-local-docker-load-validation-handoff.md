@@ -7,12 +7,12 @@
 - Session duration: Approximately 3-4 hours of intermittent follow-up work
 
 ## Current State Summary
-Phase 10.4 is now documented as **local-Docker-first** validation, not Dokploy-first. The local smoke runs that were executed in Docker passed for `concurrent-booking`, `payment-intent`, and `mixed-traffic`, while `availability-query`, `concurrent-search`, and `admin-dashboard` remain queued for the same local-first sequence. The working tree also contains a backend reservation fix and multiple k6 smoke-mode adjustments that were necessary to make the local Docker smoke runs deterministic. The remaining user-facing task is to commit, push, open the PR, and keep tracking checks.
+Phase 10.4 is now documented as **local-Docker-first** validation, not Dokploy-first. The local smoke runs that were executed in Docker passed for `concurrent-booking`, `payment-intent`, `mixed-traffic`, `availability-query`, `concurrent-search`, and `admin-dashboard` after the Docker Host-header fix and the local admin seed adjustment. The working tree also contains the backend reservation fix and multiple k6 smoke-mode adjustments that were necessary to make the local Docker smoke runs deterministic. The remaining user-facing task is to commit, push, open the PR, and keep tracking checks.
 
 ## Important Context
 - Phase 10.4 is local Docker first until the user says otherwise.
 - `concurrent-booking`, `payment-intent`, and `mixed-traffic` smoke runs passed in Docker.
-- `availability-query`, `concurrent-search`, and `admin-dashboard` remain queued.
+- `availability-query`, `concurrent-search`, and `admin-dashboard` were completed in this session.
 - `ReservationService` now resolves holds against a real vehicle in the correct group.
 - `payment-intent.js` requires `EnableOnlinePayment=true` in the local DB.
 - `mixed-traffic.js` smoke mode bypasses admin login because local fixtures do not guarantee seeded admin credentials.
@@ -89,20 +89,20 @@ Phase 10.4 is now documented as **local-Docker-first** validation, not Dokploy-f
 
 ### Immediate Next Steps
 1. Validate this handoff with `python C:\Users\muham\.agents\skills\session-handoff\scripts\validate_handoff.py docs\handoffs\2026-05-17-220746-phase10-local-docker-load-validation-handoff.md`.
-2. Review the remaining `Phase 10.4` local-first queue: `availability-query`, `concurrent-search`, and `admin-dashboard`.
-3. Decide whether to keep the current smoke-mode test changes as permanent suite defaults or narrow them further after the remaining scenarios pass.
+2. Review whether the smoke-mode Host-header and threshold adjustments should stay as permanent suite defaults or be narrowed further after the local Docker validation pass.
+3. Confirm whether the local admin seed should be documented as a repeatable precondition for future admin-dashboard smoke runs.
 4. Stage only the relevant docs, handoff, backend reservation fix, and k6 changes for commit.
 5. Commit, push, open the PR, and follow checks until they settle.
 
 ## Immediate Next Steps
 1. Validate this handoff with `python C:\Users\muham\.agents\skills\session-handoff\scripts\validate_handoff.py docs\handoffs\2026-05-17-220746-phase10-local-docker-load-validation-handoff.md`.
-2. Run the remaining local-first load scenarios in Docker.
-3. Decide whether the smoke-mode k6 changes should remain permanent or be narrowed after the remaining scenarios pass.
+2. Decide whether the smoke-mode k6 changes should remain permanent or be narrowed after the local Docker validation pass.
+3. Confirm whether the local admin seed should be documented as a repeatable precondition for future admin-dashboard smoke runs.
 4. Stage only the relevant docs, handoff, backend fix, and k6 changes.
 5. Commit, push, open the PR, and watch checks to completion.
 
 ### Blockers/Open Questions
-- [ ] `availability-query`, `concurrent-search`, and `admin-dashboard` were not yet run in this session.
+- [x] `availability-query`, `concurrent-search`, and `admin-dashboard` were run and validated in this session.
 - [ ] No PR has been created for this latest local-Docker-first Phase 10.4 sync yet.
 - [ ] The working tree still contains unrelated noise from previous sessions:
   - Deleted older historical handoff files under `docs/handoffs/`
