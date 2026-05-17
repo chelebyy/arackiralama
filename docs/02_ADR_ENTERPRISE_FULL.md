@@ -299,23 +299,27 @@ OS: Ubuntu 22.04 LTS
 
 ### 12.4 Frontend Coverage Expansion Strategy
 
-**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active NO-GO gate. Public-facing pages already have strong file-level coverage, so further gains require admin/dashboard, route-handler/auth, and shared UI surfaces.
+**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active launch NO-GO gate. Public-facing pages already have strong file-level coverage, and the 17 May 2026 follow-up lifted frontend overall coverage above the user-requested interim **25%** target, so further gains should continue through admin/dashboard, route-handler/auth, and shared UI surfaces.
 
-**Decision:** Continue frontend coverage expansion with Vitest + Testing Library page-level tests. Admin/dashboard pages should mock `@/hooks/admin` data hooks and external UI side effects, while verifying user-visible behavior instead of implementation details.
+**Decision:** Continue frontend coverage expansion with Vitest + Testing Library tests that target real contracts. Admin/dashboard pages should mock `@/hooks/admin` data hooks and external UI side effects, while API/auth helper tests should mock the shared network boundary and verify endpoint, payload, scope fallback, and parsing behavior.
 
 **Rationale:**
 - Keeps admin page tests deterministic without real backend or SWR/network dependencies.
 - Preserves the existing Next.js App Router test pattern used by public route tests.
 - Avoids brittle Radix/shadcn portal behavior by replacing complex primitives only where they block page-level behavior checks.
-- Moves the remaining frontend coverage gate through broad, previously uncovered admin surfaces rather than over-farming already-covered public pages.
+- Moves the remaining frontend coverage gate through broad, previously uncovered admin/auth/shared surfaces rather than over-farming already-covered public pages.
 
 **Current Evidence (17 May 2026):**
-- Frontend Vitest: **136/136 PASS**
-- Frontend overall coverage: **19.76%**
+- Frontend Vitest: **151/151 PASS**
+- Frontend overall coverage: **25.42%**
 - `frontend/app/(admin)/dashboard/(auth)/reservations/page.tsx`: **97.42% statements / 75.55% branches**
-- Remaining gap: admin/dashboard pages, route handlers, auth screens/utilities, and shared UI components.
+- `frontend/lib/api/admin/mock.ts`: **100% statements / branches / functions / lines**
+- `frontend/lib/api/admin`: **72.84% statements / 57.59% branches**
+- `frontend/lib/auth`: **63.43% statements / 85% branches**
+- Remaining gap: admin/dashboard pages, route handlers, auth screens, and shared UI components.
 
 **Consequences:**
 - New admin page tests should use row-scoped Testing Library queries for icon-only actions.
 - Complex shadcn/Radix primitives may be mocked at the component boundary when the test target is a page workflow rather than the primitive itself.
+- API and auth helper tests may mock `../client` or `fetch`, but should assert endpoint construction, payload shape, and error/fallback branches rather than only importing modules for coverage.
 - Phase 10.1 remains NO-GO until frontend overall coverage reaches **>=60%**.
