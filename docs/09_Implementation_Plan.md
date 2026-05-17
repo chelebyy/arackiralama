@@ -960,10 +960,11 @@ POST /api/admin/v1/auth/logout
 - [x] Backend overall target: > 70% coverage — fresh 16 May 2026 merged backend coverage **91.09%**
 - [x] Payment module target: > 80% coverage — fresh module aggregate **91.71%**
 - [x] Reservation module target: > 80% coverage — fresh module aggregate **82.47%**
-- [ ] Frontend overall target: > 60% coverage — fresh 17 May 2026 Vitest **151/151 PASS**, overall **25.42%**; user-requested interim **25%** target closed
+- [ ] Frontend overall target: > 60% coverage — fresh 17 May 2026 Vitest **168/168 PASS**, overall **28.41%**; user-requested interim **25%** target closed and follow-up advanced
 - [x] Frontend public-route high-value coverage slices
 - [x] First admin/dashboard coverage slice — `reservations/page.tsx` **97.42% statements / 75.55% branches**
 - [x] Admin API/mock fixture + auth helper coverage slice — `frontend/lib/api/admin/mock.ts` **100%**, `frontend/lib/api/admin` **72.84%**, `frontend/lib/auth` **63.43%**
+- [x] Admin reservation detail + admin hook wrapper coverage slice — `reservations/[id]/page.tsx` **97.37% statements / 72.09% branches**, `frontend/hooks/admin` **97.23%**
 - [ ] Continue admin/dashboard pages, route handlers, auth screens, and shared UI coverage expansion toward the **60%** launch gate
 
 #### 10.2 Integration Tests
@@ -1014,8 +1015,8 @@ POST /api/admin/v1/auth/logout
 
 ### ✅ Kabul Kriterleri
 - [x] Backend tests passing
-- [x] Frontend tests passing — 17 May 2026 Vitest **151/151 PASS**
-- [ ] Frontend coverage gate — **25.42% / 60%**; interim user target **25%** achieved
+- [x] Frontend tests passing — 17 May 2026 Vitest **168/168 PASS**
+- [ ] Frontend coverage gate — **28.41% / 60%**; interim user target **25%** achieved
 - [x] Security scan clean for current local scope
 - [ ] Performance targets met
 - [ ] UAT sign-off

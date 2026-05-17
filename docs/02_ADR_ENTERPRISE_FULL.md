@@ -299,7 +299,7 @@ OS: Ubuntu 22.04 LTS
 
 ### 12.4 Frontend Coverage Expansion Strategy
 
-**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active launch NO-GO gate. Public-facing pages already have strong file-level coverage, and the 17 May 2026 follow-up lifted frontend overall coverage above the user-requested interim **25%** target, so further gains should continue through admin/dashboard, route-handler/auth, and shared UI surfaces.
+**Context:** Phase 10.1 backend-side coverage gates are now GO, while frontend overall coverage remains the active launch NO-GO gate. Public-facing pages already have strong file-level coverage, and the 17 May 2026 follow-ups lifted frontend overall coverage above the user-requested interim **25%** target and then to **28.41%**, so further gains should continue through remaining admin/dashboard, route-handler/auth, auth screen, and shared UI surfaces.
 
 **Decision:** Continue frontend coverage expansion with Vitest + Testing Library tests that target real contracts. Admin/dashboard pages should mock `@/hooks/admin` data hooks and external UI side effects, while API/auth helper tests should mock the shared network boundary and verify endpoint, payload, scope fallback, and parsing behavior.
 
@@ -310,9 +310,11 @@ OS: Ubuntu 22.04 LTS
 - Moves the remaining frontend coverage gate through broad, previously uncovered admin/auth/shared surfaces rather than over-farming already-covered public pages.
 
 **Current Evidence (17 May 2026):**
-- Frontend Vitest: **151/151 PASS**
-- Frontend overall coverage: **25.42%**
+- Frontend Vitest: **168/168 PASS**
+- Frontend overall coverage: **28.41%**
 - `frontend/app/(admin)/dashboard/(auth)/reservations/page.tsx`: **97.42% statements / 75.55% branches**
+- `frontend/app/(admin)/dashboard/(auth)/reservations/[id]/page.tsx`: **97.37% statements / 72.09% branches**
+- `frontend/hooks/admin`: **97.23% statements / 84.15% branches**
 - `frontend/lib/api/admin/mock.ts`: **100% statements / branches / functions / lines**
 - `frontend/lib/api/admin`: **72.84% statements / 57.59% branches**
 - `frontend/lib/auth`: **63.43% statements / 85% branches**
