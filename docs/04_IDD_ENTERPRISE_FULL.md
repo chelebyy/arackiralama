@@ -511,6 +511,8 @@ jobs:
 - Treat `backend/tests/k6/` smoke runs as validation of booking, payment, and mixed traffic behavior before any Dokploy rerun.
 - Keep Dokploy load reruns as a later deployment-verification step, not a prerequisite for local smoke work.
 - Document smoke-only assumptions in the k6 README when a scenario depends on a feature flag, reduced VUs, or skipped admin auth.
+- When invoking the suite from Docker against the host backend, set `HOST_HEADER=localhost:5000` so the backend host filter accepts the request.
+- If admin-dashboard smoke is required on a clean local database, seed the integration admin user before the run.
 
 ------------------------------------------------------------------------
 

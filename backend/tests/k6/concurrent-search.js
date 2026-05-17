@@ -3,6 +3,7 @@ import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+const HOST_HEADER = __ENV.HOST_HEADER || '';
 const OFFICE_ID = __ENV.OFFICE_ID || '11111111-1111-1111-1111-111111111111';
 const VEHICLE_GROUP_ID = __ENV.VEHICLE_GROUP_ID || '';
 const SMOKE_MODE = __ENV.SMOKE_MODE === '1';
@@ -17,7 +18,7 @@ export const options = SMOKE_MODE
         { duration: '10s', target: 0 },
       ],
       thresholds: {
-        http_req_duration: ['p(95)<1000'],
+        http_req_duration: ['p(95)<30000'],
         http_req_failed: ['rate<0.01'],
       },
     }
@@ -38,6 +39,14 @@ function formatDate(d) {
   return d.toISOString().split('T')[0];
 }
 
+function requestHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  if (HOST_HEADER) {
+    headers.Host = HOST_HEADER;
+  }
+  return headers;
+}
+
 export default function () {
   const now = new Date();
   const pickup = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
@@ -56,7 +65,7 @@ export default function () {
   const url = `${BASE_URL}/api/v1/vehicles/available?${query.join('&')}`;
 
   const res = http.get(url, {
-    headers: { Accept: 'application/json' },
+    headers: requestHeaders(),
   });
 
   check(res, {

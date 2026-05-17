@@ -3,6 +3,7 @@ import { check, group, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+const HOST_HEADER = __ENV.HOST_HEADER || '';
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'integration-admin@rentacar.test';
 const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'IntegrationTestPassword123!';
 const OFFICE_ID = __ENV.OFFICE_ID || '11111111-1111-1111-1111-111111111111';
@@ -29,6 +30,14 @@ export const options = {
   },
 };
 
+function requestHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  if (HOST_HEADER) {
+    headers.Host = HOST_HEADER;
+  }
+  return headers;
+}
+
 function formatDate(d) {
   return d.toISOString().split('T')[0];
 }
@@ -51,7 +60,7 @@ export function setup() {
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
   }), {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: requestHeaders({ 'Content-Type': 'application/json' }),
   });
 
   const token = loginRes.status === 200
@@ -77,7 +86,7 @@ export default function (data) {
     // 70% Search traffic
     group('Search', () => {
       const url = `${BASE_URL}/api/v1/vehicles/available?office_id=${OFFICE_ID}&pickup_datetime=${encodeURIComponent(pickupDateTimeUtc)}&return_datetime=${encodeURIComponent(returnDateTimeUtc)}&vehicle_group_id=${VEHICLE_GROUP_ID}`;
-      const res = http.get(url, { headers: { Accept: 'application/json' } });
+      const res = http.get(url, { headers: requestHeaders() });
       check(res, {
         'search status 200': (r) => r.status === 200,
       });
@@ -87,7 +96,7 @@ export default function (data) {
     group('Booking', () => {
       if (SMOKE_MODE && smokeBookingUsed) {
         const fallbackUrl = `${BASE_URL}/api/v1/vehicles/available?office_id=${OFFICE_ID}&pickup_datetime=${encodeURIComponent(pickupDateTimeUtc)}&return_datetime=${encodeURIComponent(returnDateTimeUtc)}&vehicle_group_id=${VEHICLE_GROUP_ID}`;
-        const fallbackRes = http.get(fallbackUrl, { headers: { Accept: 'application/json' } });
+        const fallbackRes = http.get(fallbackUrl, { headers: requestHeaders() });
         check(fallbackRes, {
           'booking fallback search 200': (r) => r.status === 200,
         });
@@ -95,7 +104,7 @@ export default function (data) {
       }
 
       const searchUrl = `${BASE_URL}/api/v1/vehicles/available?office_id=${OFFICE_ID}&pickup_datetime=${encodeURIComponent(pickupDateTimeUtc)}&return_datetime=${encodeURIComponent(returnDateTimeUtc)}&vehicle_group_id=${VEHICLE_GROUP_ID}`;
-      const searchRes = http.get(searchUrl, { headers: { Accept: 'application/json' } });
+      const searchRes = http.get(searchUrl, { headers: requestHeaders() });
 
       if (searchRes.status !== 200) {
         sleep(1);
@@ -127,7 +136,7 @@ export default function (data) {
       });
 
       const createRes = http.post(`${BASE_URL}/api/v1/reservations`, payload, {
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: requestHeaders({ 'Content-Type': 'application/json' }),
       });
       check(createRes, {
         'booking status 201/200': (r) => r.status === 201 || r.status === 200,
@@ -144,7 +153,7 @@ export default function (data) {
         sleep(1);
         return;
       }
-      const headers = { Authorization: `Bearer ${data.token}`, Accept: 'application/json' };
+      const headers = requestHeaders({ Authorization: `Bearer ${data.token}` });
       const res = http.get(`${BASE_URL}/api/admin/v1/reservations?page=1&pageSize=20`, { headers });
       check(res, {
         'admin list status 200': (r) => r.status === 200,

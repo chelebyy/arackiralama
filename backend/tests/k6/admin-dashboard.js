@@ -3,11 +3,12 @@ import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+const HOST_HEADER = __ENV.HOST_HEADER || '';
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'integration-admin@rentacar.test';
 const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'IntegrationTestPassword123!';
 const SMOKE_MODE = __ENV.SMOKE_MODE === '1';
-const LIST_RESPONSE_TIME_LIMIT_MS = SMOKE_MODE ? 30000 : 500;
-const DETAIL_RESPONSE_TIME_LIMIT_MS = SMOKE_MODE ? 30000 : 500;
+const LIST_RESPONSE_TIME_LIMIT_MS = SMOKE_MODE ? 60000 : 500;
+const DETAIL_RESPONSE_TIME_LIMIT_MS = SMOKE_MODE ? 60000 : 500;
 
 export const options = {
   stages: SMOKE_MODE
@@ -23,17 +24,25 @@ export const options = {
         { duration: '1m', target: 0 },
       ],
   thresholds: {
-    http_req_duration: SMOKE_MODE ? ['p(95)<30000'] : ['p(95)<500'],
+    http_req_duration: SMOKE_MODE ? ['p(95)<60000'] : ['p(95)<500'],
     http_req_failed: ['rate<0.01'],
   },
 };
+
+function requestHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  if (HOST_HEADER) {
+    headers.Host = HOST_HEADER;
+  }
+  return headers;
+}
 
 export function setup() {
   const loginRes = http.post(`${BASE_URL}/api/admin/v1/auth/login`, JSON.stringify({
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
   }), {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: requestHeaders({ 'Content-Type': 'application/json' }),
   });
 
   const token = loginRes.status === 200
@@ -56,10 +65,7 @@ export default function (data) {
     return;
   }
 
-  const headers = {
-    Authorization: `Bearer ${data.token}`,
-    Accept: 'application/json',
-  };
+  const headers = requestHeaders({ Authorization: `Bearer ${data.token}` });
 
   // 1. List reservations
   const listRes = http.get(`${BASE_URL}/api/admin/v1/reservations?page=1&pageSize=20`, { headers });

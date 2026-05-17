@@ -3,6 +3,7 @@ import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+const HOST_HEADER = __ENV.HOST_HEADER || '';
 const PICKUP_OFFICE_ID = __ENV.PICKUP_OFFICE_ID || '11111111-1111-1111-1111-111111111111';
 const RETURN_OFFICE_ID = __ENV.RETURN_OFFICE_ID || '11111111-1111-1111-1111-111111111112';
 const DEFAULT_VEHICLE_GROUP_ID = __ENV.VEHICLE_GROUP_ID || '22222222-2222-2222-2222-222222222221';
@@ -47,6 +48,14 @@ function randomUUID() {
   return `load-${vu}-${iter}-${ts}`;
 }
 
+function requestHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  if (HOST_HEADER) {
+    headers.Host = HOST_HEADER;
+  }
+  return headers;
+}
+
 export default function () {
   const now = new Date();
   const pickup = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
@@ -60,7 +69,7 @@ export default function () {
     `return_datetime=${encodeURIComponent(`${formatDate(returnDate)}T10:00:00Z`)}`,
   ];
   const searchUrl = `${BASE_URL}/api/v1/vehicles/available?${searchQuery.join('&')}`;
-  const searchRes = http.get(searchUrl, { headers: { Accept: 'application/json' } });
+  const searchRes = http.get(searchUrl, { headers: requestHeaders() });
 
   check(searchRes, {
     'search status is 200': (r) => r.status === 200,
@@ -105,7 +114,7 @@ export default function () {
   });
 
   const createRes = http.post(`${BASE_URL}/api/v1/reservations`, reservationPayload, {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: requestHeaders({ 'Content-Type': 'application/json' }),
   });
 
   check(createRes, {
@@ -130,11 +139,10 @@ export default function () {
   // 3. Place hold
   const holdPayload = JSON.stringify({ durationMinutes: 15 });
   const holdRes = http.post(`${BASE_URL}/api/v1/reservations/${reservationId}/hold`, holdPayload, {
-    headers: {
+    headers: requestHeaders({
       'Content-Type': 'application/json',
       'X-Session-Id': sessionId,
-      Accept: 'application/json',
-    },
+    }),
   });
 
   check(holdRes, {
@@ -142,10 +150,7 @@ export default function () {
   });
 
   const releaseRes = http.del(`${BASE_URL}/api/v1/reservations/${reservationId}/hold`, null, {
-    headers: {
-      'X-Session-Id': sessionId,
-      Accept: 'application/json',
-    },
+    headers: requestHeaders({ 'X-Session-Id': sessionId }),
   });
 
   check(releaseRes, {

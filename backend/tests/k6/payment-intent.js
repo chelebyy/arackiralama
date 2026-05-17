@@ -3,6 +3,7 @@ import { check, sleep } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
+const HOST_HEADER = __ENV.HOST_HEADER || '';
 const SMOKE_MODE = __ENV.SMOKE_MODE === '1';
 const OFFICE_ID = __ENV.OFFICE_ID || '11111111-1111-1111-1111-111111111111';
 const RETURN_OFFICE_ID = __ENV.RETURN_OFFICE_ID || OFFICE_ID;
@@ -63,12 +64,20 @@ function iterationSuffix() {
   return `${vu}-${iter}`;
 }
 
+function requestHeaders(extra = {}) {
+  const headers = { Accept: 'application/json', ...extra };
+  if (HOST_HEADER) {
+    headers.Host = HOST_HEADER;
+  }
+  return headers;
+}
+
 function createReservation() {
   const pickupDateTimeUtc = isoUtc(PICKUP_HOURS);
   const returnDateTimeUtc = isoUtc(PICKUP_HOURS + RENTAL_DAYS * 24);
   const searchRes = http.get(
     `${BASE_URL}/api/v1/vehicles/available?office_id=${OFFICE_ID}&pickup_datetime=${encodeURIComponent(pickupDateTimeUtc)}&return_datetime=${encodeURIComponent(returnDateTimeUtc)}&vehicle_group_id=${VEHICLE_GROUP_ID}`,
-    { headers: { Accept: 'application/json' } },
+    { headers: requestHeaders() },
   );
 
   check(searchRes, {
@@ -105,7 +114,7 @@ function createReservation() {
   });
 
   const createRes = http.post(`${BASE_URL}/api/v1/reservations`, payload, {
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: requestHeaders({ 'Content-Type': 'application/json' }),
   });
 
   check(createRes, {
@@ -126,11 +135,10 @@ function createHeldReservation() {
     `${BASE_URL}/api/v1/reservations/${reservationId}/hold`,
     JSON.stringify({ durationMinutes: 15 }),
     {
-      headers: {
+      headers: requestHeaders({
         'Content-Type': 'application/json',
         'X-Session-Id': `payment-smoke-${Date.now()}`,
-        Accept: 'application/json',
-      },
+      }),
     },
   );
 
@@ -171,10 +179,7 @@ export default function (data) {
   });
 
   const res = http.post(`${BASE_URL}/api/v1/payments/intents`, payload, {
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers: requestHeaders({ 'Content-Type': 'application/json' }),
   });
 
   check(res, {
