@@ -31,7 +31,7 @@ When running the scripts from Docker against the local backend, set `HOST_HEADER
 |--------|----------|---------|--------|
 | `availability-query.js` | 5m | 50 | p95 < 300ms |
 | `concurrent-search.js` | 5m | 100 | p95 < 500ms, cache hit > 80% |
-| `concurrent-booking.js` | 10m | 50 | 0 double-booking |
+| `concurrent-booking.js` | 10m | 100 | 0 double-booking |
 | `payment-intent.js` | 5m | 20 | Idempotency preserved |
 | `admin-dashboard.js` | 5m | 20 | p95 < 500ms |
 | `mixed-traffic.js` | 10m | 100 | 70% search, 20% booking, 10% admin |

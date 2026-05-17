@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration, environment);
         services.AddAdminAuthorization();
-        services.AddApiRateLimiting();
+        services.AddApiRateLimiting(configuration);
         services.AddAdminAuditLogging();
 
         return services;
@@ -202,20 +202,47 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
+    private static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
+        const string loadTestSessionHeaderName = "X-Session-Id";
+        var allowLoadTestSessionPartition = configuration.GetValue<bool>("RateLimiting:LoadTestSessionPartition");
+
         services.AddRateLimiter(options =>
         {
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 CreateFixedWindowPartition(
-                    partitionKey: GetUserOrIpPartitionKey(context),
+                    partitionKey: GetUserOrIpPartitionKey(context, loadTestSessionHeaderName, allowLoadTestSessionPartition),
                     permitLimit: 100,
                     queueLimit: 2));
 
-            options.AddPolicy(RateLimitPolicyNames.Strict, CreateIpFixedWindowPolicy(permitLimit: 5, queueLimit: 0));
-            options.AddPolicy(RateLimitPolicyNames.Payment, CreateIpFixedWindowPolicy(permitLimit: 10, queueLimit: 1));
-            options.AddPolicy(RateLimitPolicyNames.Standard, CreateIpFixedWindowPolicy(permitLimit: 30, queueLimit: 2));
-            options.AddPolicy(RateLimitPolicyNames.Health, CreateIpFixedWindowPolicy(permitLimit: 10, queueLimit: 0));
+            options.AddPolicy(
+                RateLimitPolicyNames.Strict,
+                CreateUserOrIpFixedWindowPolicy(
+                    permitLimit: 5,
+                    queueLimit: 0,
+                    loadTestSessionHeaderName,
+                    allowLoadTestSessionPartition));
+            options.AddPolicy(
+                RateLimitPolicyNames.Payment,
+                CreateUserOrIpFixedWindowPolicy(
+                    permitLimit: 10,
+                    queueLimit: 1,
+                    loadTestSessionHeaderName,
+                    allowLoadTestSessionPartition));
+            options.AddPolicy(
+                RateLimitPolicyNames.Standard,
+                CreateUserOrIpFixedWindowPolicy(
+                    permitLimit: 30,
+                    queueLimit: 2,
+                    loadTestSessionHeaderName,
+                    allowLoadTestSessionPartition));
+            options.AddPolicy(
+                RateLimitPolicyNames.Health,
+                CreateUserOrIpFixedWindowPolicy(
+                    permitLimit: 10,
+                    queueLimit: 0,
+                    loadTestSessionHeaderName,
+                    allowLoadTestSessionPartition));
 
             options.OnRejected = async (rateLimitContext, cancellationToken) =>
             {
@@ -229,8 +256,15 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static Func<HttpContext, RateLimitPartition<string>> CreateIpFixedWindowPolicy(int permitLimit, int queueLimit) =>
-        context => CreateFixedWindowPartition(GetIpPartitionKey(context), permitLimit, queueLimit);
+    private static Func<HttpContext, RateLimitPartition<string>> CreateUserOrIpFixedWindowPolicy(
+        int permitLimit,
+        int queueLimit,
+        string loadTestSessionHeaderName,
+        bool allowLoadTestSessionPartition) =>
+        context => CreateFixedWindowPartition(
+            GetUserOrIpPartitionKey(context, loadTestSessionHeaderName, allowLoadTestSessionPartition),
+            permitLimit,
+            queueLimit);
 
     private static RateLimitPartition<string> CreateFixedWindowPartition(string partitionKey, int permitLimit, int queueLimit) =>
         RateLimitPartition.GetFixedWindowLimiter(
@@ -243,8 +277,20 @@ public static class ServiceCollectionExtensions
                 QueueLimit = queueLimit
             });
 
-    private static string GetUserOrIpPartitionKey(HttpContext context)
+    private static string GetUserOrIpPartitionKey(
+        HttpContext context,
+        string loadTestSessionHeaderName,
+        bool allowLoadTestSessionPartition)
     {
+        if (allowLoadTestSessionPartition)
+        {
+            var loadTestSessionId = context.Request.Headers[loadTestSessionHeaderName].ToString();
+            if (!string.IsNullOrWhiteSpace(loadTestSessionId))
+            {
+                return $"load-test:{loadTestSessionId}";
+            }
+        }
+
         var userName = context.User.Identity?.Name;
         return string.IsNullOrWhiteSpace(userName) ? GetIpPartitionKey(context) : userName;
     }

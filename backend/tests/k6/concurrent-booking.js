@@ -24,9 +24,9 @@ export const options = SMOKE_MODE
     }
   : {
       stages: [
-        { duration: '2m', target: 10 },
-        { duration: '5m', target: 50 },
-        { duration: '2m', target: 50 },
+        { duration: '2m', target: 20 },
+        { duration: '5m', target: 100 },
+        { duration: '2m', target: 100 },
         { duration: '1m', target: 0 },
       ],
       thresholds: {
@@ -48,8 +48,8 @@ function randomUUID() {
   return `load-${vu}-${iter}-${ts}`;
 }
 
-function requestHeaders(extra = {}) {
-  const headers = { Accept: 'application/json', ...extra };
+function requestHeaders(sessionId, extra = {}) {
+  const headers = { Accept: 'application/json', 'X-Session-Id': sessionId, ...extra };
   if (HOST_HEADER) {
     headers.Host = HOST_HEADER;
   }
@@ -69,7 +69,7 @@ export default function () {
     `return_datetime=${encodeURIComponent(`${formatDate(returnDate)}T10:00:00Z`)}`,
   ];
   const searchUrl = `${BASE_URL}/api/v1/vehicles/available?${searchQuery.join('&')}`;
-  const searchRes = http.get(searchUrl, { headers: requestHeaders() });
+  const searchRes = http.get(searchUrl, { headers: requestHeaders(sessionId) });
 
   check(searchRes, {
     'search status is 200': (r) => r.status === 200,
@@ -114,7 +114,7 @@ export default function () {
   });
 
   const createRes = http.post(`${BASE_URL}/api/v1/reservations`, reservationPayload, {
-    headers: requestHeaders({ 'Content-Type': 'application/json' }),
+    headers: requestHeaders(sessionId, { 'Content-Type': 'application/json' }),
   });
 
   check(createRes, {
@@ -139,9 +139,8 @@ export default function () {
   // 3. Place hold
   const holdPayload = JSON.stringify({ durationMinutes: 15 });
   const holdRes = http.post(`${BASE_URL}/api/v1/reservations/${reservationId}/hold`, holdPayload, {
-    headers: requestHeaders({
+    headers: requestHeaders(sessionId, {
       'Content-Type': 'application/json',
-      'X-Session-Id': sessionId,
     }),
   });
 
@@ -150,11 +149,23 @@ export default function () {
   });
 
   const releaseRes = http.del(`${BASE_URL}/api/v1/reservations/${reservationId}/hold`, null, {
-    headers: requestHeaders({ 'X-Session-Id': sessionId }),
+    headers: requestHeaders(sessionId),
   });
 
   check(releaseRes, {
     'release status is 200 or 204': (r) => r.status === 200 || r.status === 204,
+  });
+
+  const cancelRes = http.post(
+    `${BASE_URL}/api/v1/reservations/${reservationId}/cancel`,
+    JSON.stringify('k6 concurrent booking cleanup'),
+    {
+      headers: requestHeaders(sessionId, { 'Content-Type': 'application/json' }),
+    }
+  );
+
+  check(cancelRes, {
+    'cancel status is 200': (r) => r.status === 200,
   });
 
   sleep(SMOKE_MODE ? 40 + Math.random() * 5 : Math.random() * 3 + 2);

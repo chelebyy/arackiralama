@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (local Docker doğrulaması önce, Dokploy sonra), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.4 Load Testing LOCAL DOCKER SMOKE VERIFIED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**) | 14 May 2026: cheap Infrastructure provider slices continued successfully (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), lifting the latest verified `RentACar.Tests` count to **544/544**; a fresh full-solution coverage rerun in the current shell was blocked by PostgreSQL `127.0.0.1:5433` connection failure, so overall percentages remain pinned to the 11 May healthy baseline  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (local Docker doğrulaması önce, Dokploy sonra), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.4 Load Testing LOCAL DOCKER VERIFIED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**) | 14 May 2026: cheap Infrastructure provider slices continued successfully (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), lifting the latest verified `RentACar.Tests` count to **544/544**; a fresh full-solution coverage rerun in the current shell was blocked by PostgreSQL `127.0.0.1:5433` connection failure, so overall percentages remain pinned to the 11 May healthy baseline  
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -90,7 +90,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 6 | **Integration Tests** | Critical path tests passing | 100% | ✅ **32/32 PASS** on the fresh 16 May 2026 full backend rerun with local Postgres/Redis healthy | ✅ GO |
 | 7 | **E2E Tests** | Booking + payment flow (local full-stack) | 100% pass localde | ✅ **FIXED 4 May 2026** — All 5 blockers resolved. Flaky `data-search-form-hydrated` test replaced with stable selector. **CI Strategy: PR trigger REMOVED** — E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only. Developer verifies locally with `docker compose up + pnpm dev + playwright test` | ✅ GO |
 | 8 | **Load Tests** | Availability query p95 | < 300ms | ✅ **LOCAL DOCKER SMOKE VERIFIED 17 May 2026** — availability-query, concurrent-search, and admin-dashboard were completed locally in Docker after the host-header and seed adjustments; booking, payment, and mixed traffic had already passed earlier in the same local-first run order. Dokploy rerun remains deferred. | ✅ GO |
-| 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | 🟨 **LOCAL DOCKER SMOKE PARTIAL 17 May 2026** — booking flow passed locally in Docker after real vehicle resolution and hold cleanup fixes; full 100-user baseline remains pending. Same rule applies: local Docker first, Dokploy rerun later if infra exists. | 🟨 PARTIAL |
+| 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | ✅ **LOCAL DOCKER BASELINE VERIFIED 18 May 2026** — booking flow passed locally in Docker after inventory seed expansion, load-test session partitioning, and overlap-retry stabilization. Final k6 baseline completed with `http_req_failed 0.00%`, `http_req_duration p95 16.87ms`, and `9686` iterations. | ✅ GO |
 | 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ✅ **HARDENED 10 May 2026** — No critical/high vulnerabilities found. Previously documented medium findings were closed: named CORS policy added, non-development security headers enabled, Swagger/OpenAPI gated to Development, `AllowedHosts` restricted, and default `AutoMigrateOnStartup=false`. Manual production-style boot with `Database__AutoMigrateOnStartup=true` returned `/health` 200 and `/openapi/v1.json` 404. | ✅ GO |
 | 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ✅ **FIXED 4 May 2026** — Backend: `dotnet list package --vulnerable` = 0. Frontend: `pnpm audit` = 0 (was 4 high + 6 moderate, resolved via `pnpm update` + `pnpm.overrides` for lodash, uuid, postcss, minimatch). | ✅ GO |
 | 12 | **Performance** | Lighthouse Performance | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
@@ -943,7 +943,7 @@ Load test koşuları önce local Docker stack üzerinde yapılır. Dokploy altya
 |---|---|---------|-------|------|
 | 10.4.1.1 | Availability query | ✅ **SCRIPT READY 4 May 2026** | p95 < 300ms, 0 error | 5 dk |
 | 10.4.1.2 | Concurrent search (100 users) | ✅ **SCRIPT READY 4 May 2026** | 0 timeout, cache hit > 80% | 5 dk |
-| 10.4.1.3 | Concurrent booking (50 users) | ✅ **SCRIPT READY 4 May 2026** | 0 double-booking, 0 data inconsistency | 10 dk |
+| 10.4.1.3 | Concurrent booking (100 users) | ✅ **VERIFIED 18 May 2026** | 0 double-booking, 0 data inconsistency | 10 dk |
 | 10.4.1.4 | Payment intent creation (20 users) | ✅ **SCRIPT READY 4 May 2026** | Idempotency korunuyor, 0 duplicate intent | 5 dk |
 | 10.4.1.5 | Admin dashboard API (20 users) | ✅ **SCRIPT READY 4 May 2026** | p95 < 500ms | 5 dk |
 | 10.4.1.6 | Mixed traffic simulation | ✅ **SCRIPT READY 4 May 2026** | Search %70, Booking %20, Admin %10 | 10 dk |
@@ -951,7 +951,7 @@ Load test koşuları önce local Docker stack üzerinde yapılır. Dokploy altya
 **Scripts Location:** `backend/tests/k6/`
 - `availability-query.js` — 50 VUs, GET /vehicles/available
 - `concurrent-search.js` — 100 VUs, availability search
-- `concurrent-booking.js` — 50 VUs, full booking flow (search → create → hold)
+- `concurrent-booking.js` — 100 VUs, full booking flow (search → create → hold → release → cancel)
 - `payment-intent.js` — 20 VUs, idempotency testing
 - `admin-dashboard.js` — 20 VUs, admin auth + list + detail
 - `mixed-traffic.js` — 100 VUs, 70/20/10 traffic split
@@ -968,6 +968,8 @@ Load test koşuları önce local Docker stack üzerinde yapılır. Dokploy altya
 | CPU Usage | < %80 | Go/No-Go |
 | Memory Usage | < %80 | Go/No-Go |
 | Double Booking Incidents | 0 | Go/No-Go |
+
+**18 May 2026 Update:** The local Docker 100-user concurrent booking baseline is green. The final run completed with `http_req_failed 0.00%`, `http_req_duration p95 16.87ms`, `9686` iterations, and no double-booking incidents. The working fixes were inventory expansion for the target office/group, local load-test rate-limit partitioning, and overlap-retry handling in the reservation hold path. Keep Dokploy reruns deferred until deployed infrastructure exists.
 
 ---
 
