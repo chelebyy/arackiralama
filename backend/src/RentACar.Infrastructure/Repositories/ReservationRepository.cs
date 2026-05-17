@@ -26,7 +26,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
 
     public override Task<Reservation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return IncludeReservationDetails(Entities.AsNoTracking())
+        return IncludeReservationDetails(Entities)
             .FirstOrDefaultAsync(entity => entity.Id == id, cancellationToken);
     }
 
