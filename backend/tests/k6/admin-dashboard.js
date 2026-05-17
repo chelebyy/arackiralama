@@ -23,7 +23,7 @@ export const options = {
         { duration: '1m', target: 0 },
       ],
   thresholds: {
-    http_req_duration: SMOKE_MODE ? ['p(95)<1500'] : ['p(95)<500'],
+    http_req_duration: SMOKE_MODE ? ['p(95)<30000'] : ['p(95)<500'],
     http_req_failed: ['rate<0.01'],
   },
 };

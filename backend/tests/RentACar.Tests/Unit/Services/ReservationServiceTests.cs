@@ -325,7 +325,7 @@ public sealed class ReservationServiceTests
             Id = vehicleId,
             GroupId = groupId,
             Status = VehicleStatus.Available,
-            OfficeId = Guid.NewGuid(),
+            OfficeId = request.PickupOfficeId,
             Plate = "34ABC123",
             Brand = "Renault",
             Model = "Clio"
@@ -408,6 +408,116 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task CreateDraftReservationAsync_WhenMatchingGroupExistsAtMultipleOffices_PicksPickupOfficeVehicle()
+    {
+        // Arrange
+        var groupId = Guid.NewGuid();
+        var pickupOfficeId = Guid.NewGuid();
+        var wrongOfficeVehicleId = Guid.NewGuid();
+        var pickupOfficeVehicleId = Guid.NewGuid();
+        var request = CreateValidReservationRequest() with
+        {
+            VehicleGroupId = groupId,
+            PickupOfficeId = pickupOfficeId
+        };
+
+        var wrongOfficeVehicle = new Vehicle
+        {
+            Id = wrongOfficeVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34WRONG1",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        var pickupOfficeVehicle = new Vehicle
+        {
+            Id = pickupOfficeVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = pickupOfficeId,
+            Plate = "34PICKUP1",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        _fleetServiceMock.Setup(x => x.SearchAvailableVehicleGroupsAsync(
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                request.VehicleGroupId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>
+            {
+                new(groupId, "Ekonomi", "Economy", 5, 500, "TRY", 2000, 21, 2, ["Klima"], null)
+            });
+
+        _pricingServiceMock.Setup(x => x.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                request.CampaignCode,
+                request.ExtraDriverCount,
+                request.ChildSeatCount,
+                request.DriverAge,
+                request.FullCoverageWaiver,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceBreakdownDto(
+                DailyRate: 500,
+                RentalDays: 3,
+                BaseTotal: 1500,
+                ExtrasTotal: 200,
+                CampaignDiscount: 0,
+                AirportFee: 0,
+                OneWayFee: 0,
+                ExtraDriverFee: 0,
+                ChildSeatFee: 100,
+                YoungDriverFee: 0,
+                FullCoverageWaiverFee: 100,
+                FinalTotal: 1700,
+                DepositAmount: 2000,
+                PreAuthorizationAmount: 2000,
+                Currency: "TRY",
+                AppliedCampaignCode: null));
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { wrongOfficeVehicle, pickupOfficeVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                wrongOfficeVehicleId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                pickupOfficeVehicleId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _customerRepositoryMock.Setup(x => x.GetQueryable())
+            .Returns(new List<Customer>().BuildMockDbSet().Object);
+
+        // Act
+        var result = await _sut.CreateDraftReservationAsync(request, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.VehicleId.Should().Be(pickupOfficeVehicleId);
+    }
+
+    [Fact]
     public async Task CreateDraftReservationAsync_WhenExistingCustomerEmailDiffersByCase_ReusesExistingCustomerByNormalizedEmail()
     {
         // Arrange
@@ -440,7 +550,7 @@ public sealed class ReservationServiceTests
             Id = vehicleId,
             GroupId = groupId,
             Status = VehicleStatus.Available,
-            OfficeId = Guid.NewGuid(),
+            OfficeId = request.PickupOfficeId,
             Plate = "34DEF456",
             Brand = "Renault",
             Model = "Clio"
@@ -592,6 +702,114 @@ public sealed class ReservationServiceTests
         _holdServiceMock.Verify(x => x.CreateHoldAsync(
                 reservationId,
                 vehicleId,
+                sessionId,
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateHoldAsync_WhenSameGroupExistsInMultipleOffices_PicksReservationOfficeVehicle()
+    {
+        // Arrange
+        var reservationId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var reservationVehicleId = Guid.NewGuid();
+        var wrongOfficeVehicleId = Guid.NewGuid();
+        var pickupOfficeVehicleId = Guid.NewGuid();
+        var sessionId = "session-456";
+        var pickupOfficeId = Guid.NewGuid();
+
+        var reservationVehicle = new Vehicle
+        {
+            Id = reservationVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = pickupOfficeId,
+            Plate = "34BASE01",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        var wrongOfficeVehicle = new Vehicle
+        {
+            Id = wrongOfficeVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34WRONG2",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        var pickupOfficeVehicle = new Vehicle
+        {
+            Id = pickupOfficeVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = pickupOfficeId,
+            Plate = "34PICKUP2",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "ABC-1234-HOLD",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = reservationVehicleId,
+            Vehicle = reservationVehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { wrongOfficeVehicle, pickupOfficeVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                wrongOfficeVehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                pickupOfficeVehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _holdServiceMock
+            .Setup(x => x.CreateHoldAsync(
+                reservationId,
+                pickupOfficeVehicleId,
+                sessionId,
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _sut.CreateHoldAsync(reservationId, sessionId, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        reservation.VehicleId.Should().Be(pickupOfficeVehicleId);
+        _holdServiceMock.Verify(x => x.CreateHoldAsync(
+                reservationId,
+                pickupOfficeVehicleId,
                 sessionId,
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()),

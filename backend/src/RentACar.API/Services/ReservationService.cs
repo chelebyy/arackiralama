@@ -267,6 +267,7 @@ public sealed class ReservationService : IReservationService
 
         var vehicle = await FindAvailableVehicleAsync(
             request.VehicleGroupId,
+            request.PickupOfficeId,
             request.PickupDateTimeUtc,
             request.ReturnDateTimeUtc,
             cancellationToken);
@@ -402,19 +403,30 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
-        var vehicleGroupId = reservation.Vehicle?.GroupId;
+        var selectedVehicle = reservation.Vehicle;
+        var vehicleGroupId = selectedVehicle?.GroupId;
         if (vehicleGroupId == null)
         {
-            var selectedVehicle = await _vehicleRepository
+            selectedVehicle = await _vehicleRepository
                 .GetByIdAsync(reservation.VehicleId, cancellationToken);
 
             vehicleGroupId = selectedVehicle?.GroupId;
         }
 
-        if (vehicleGroupId == null)
+        if (vehicleGroupId == null || selectedVehicle == null)
         {
             _logger.LogWarning(
                 "Reservation {ReservationId} could not resolve a vehicle group from vehicle {VehicleId}",
+                reservationId,
+                reservation.VehicleId);
+            return null;
+        }
+
+        var pickupOfficeId = selectedVehicle.OfficeId;
+        if (pickupOfficeId == Guid.Empty)
+        {
+            _logger.LogWarning(
+                "Reservation {ReservationId} could not resolve a pickup office from vehicle {VehicleId}",
                 reservationId,
                 reservation.VehicleId);
             return null;
@@ -477,9 +489,10 @@ public sealed class ReservationService : IReservationService
 
             await using var transaction = await TryBeginTransactionAsync(cancellationToken);
 
-            // Find an available vehicle in the selected group
+            // Find an available vehicle in the selected group and pickup office.
             var vehicle = await FindAvailableVehicleAsync(
                 vehicleGroupId.Value,
+                pickupOfficeId,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime,
                 cancellationToken);
@@ -1127,14 +1140,18 @@ public sealed class ReservationService : IReservationService
 
     private async Task<Vehicle?> FindAvailableVehicleAsync(
         Guid vehicleGroupId,
+        Guid pickupOfficeId,
         DateTime pickupDateTime,
         DateTime returnDateTime,
         CancellationToken cancellationToken)
     {
-        // Get vehicles in the same group
+        // Get vehicles in the same group and pickup office.
         var vehicleQuery = _vehicleRepository
             .GetQueryable()
-            .Where(v => v.GroupId == vehicleGroupId && v.Status == VehicleStatus.Available);
+            .Where(v =>
+                v.GroupId == vehicleGroupId &&
+                v.OfficeId == pickupOfficeId &&
+                v.Status == VehicleStatus.Available);
 
         var vehicles = vehicleQuery.Provider is IAsyncQueryProvider
             ? await vehicleQuery.ToListAsync(cancellationToken)

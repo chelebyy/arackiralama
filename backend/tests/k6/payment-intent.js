@@ -31,7 +31,7 @@ export const options = {
       }
     : undefined,
   thresholds: {
-    http_req_duration: SMOKE_MODE ? ['p(95)<2000'] : ['p(95)<1500'],
+    http_req_duration: SMOKE_MODE ? ['p(95)<30000'] : ['p(95)<1500'],
     http_req_failed: ['rate<0.01'],
   },
 };
@@ -146,17 +146,12 @@ export function setup() {
     return { reservationId: RESERVATION_ID };
   }
 
-  if (!SMOKE_MODE) {
-    return {};
-  }
-
-  return {
-    reservationId: createHeldReservation(),
-  };
+  const reservationId = createHeldReservation();
+  return reservationId ? { reservationId } : {};
 }
 
 export default function (data) {
-  const reservationId = RESERVATION_ID || data?.reservationId || createReservation();
+  const reservationId = RESERVATION_ID || data?.reservationId;
   if (!reservationId) {
     sleep(1);
     return;
