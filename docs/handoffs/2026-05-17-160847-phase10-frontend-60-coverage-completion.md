@@ -92,7 +92,7 @@ Phase 10.1 frontend coverage gate is now closed. The previous PR230 follow-up st
 3. Continue only non-coverage Phase 10 blockers next: Dokploy/deployment-dependent performance, UAT, monitoring, and production readiness items.
 
 ### Blockers/Open Questions
-- [ ] PR #230 has not been pushed with this final 63.17% completion slice in this session.
+- [x] PR #230 branch was pushed with commit `14e756a` and required checks passed.
 - [ ] Existing unrelated local workspace noise remains: deleted older handoff files and untracked `.sisyphus/`.
 - [ ] `corepack pnpm -C frontend lint` exits 0 but reports one pre-existing warning in `frontend/components/public/SearchForm.test.tsx`.
 
@@ -136,6 +136,9 @@ Phase 10.1 frontend coverage gate is now closed. The previous PR230 follow-up st
 - `corepack pnpm -C frontend exec tsc --noEmit`
 - `corepack pnpm -C frontend lint`
 - `corepack pnpm -C frontend test:coverage`
+- `git commit -m "test(phase10): close frontend coverage gate"`
+- `git push`
+- `gh pr checks 230 --watch --fail-fast`
 
 ### Active Processes
 - No dev server or long-running local process was left active.
@@ -149,6 +152,8 @@ Phase 10.1 frontend coverage gate is now closed. The previous PR230 follow-up st
 - Lint: **PASS with 1 warning** (`frontend/components/public/SearchForm.test.tsx` unused eslint-disable warning)
 - Full frontend coverage: **46 files / 190 tests PASS**
 - Overall frontend coverage: **63.17% statements / 72.61% branches / 77.59% functions / 63.17% lines**
+- Commit pushed: `14e756a test(phase10): close frontend coverage gate`
+- PR #230 checks: backend unit PASS, backend integration PASS, frontend lint/test/build PASS, Docker build PASS, CodeQL C# PASS, CodeQL JavaScript/TypeScript PASS; expected GHCR/Dependabot jobs skipped.
 
 ## Related Resources
 - `docs/handoffs/2026-05-17-152607-phase10-pr230-coverage-followup.md`

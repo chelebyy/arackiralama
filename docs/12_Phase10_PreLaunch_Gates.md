@@ -567,13 +567,13 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - RentACar.Infrastructure: **10.22%** line, 19.37% branch
 - RentACar.Worker: **21.67%** line, 30.85% branch
 
-**Karar:** Backend overall gate is now cleared by the fresh 16 May rerun (**91.09%** merged line coverage), and module-specific payment/reservation thresholds are also GO (**%91.71** / **%82.47**). `SmtpEmailProvider` is still not a cheap next slice because it constructs real `SmtpClient` instances without a delivery seam; the remaining open Phase 10.1 gate is frontend overall coverage.
+**Karar:** Backend overall gate is now cleared by the fresh 16 May rerun (**91.09%** merged line coverage), and module-specific payment/reservation thresholds are also GO (**%91.71** / **%82.47**). The 17 May frontend completion slice also closed the frontend overall gate at **%63.17** with **190/190 PASS**. Phase 10.1 coverage gates are now GO.
 
 ### 10.1.2 Frontend Test Review
 
 | # | Görev | Durum | Hedef | Notlar |
 |---|-------|-------|-------|--------|
-| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %28.41** (`168/168 PASS`, 17 May 2026) — ara hedef %25 aşıldı, Phase 10.1 %60 hedefi henüz tamamlanmadı |
+| 10.1.2.1 | Generate coverage report (`vitest --coverage`) | ✅ | %60+ overall | **Mevcut: %63.17** (`190/190 PASS`, 17 May 2026) — Phase 10.1 frontend %60 gate tamamlandı |
 | 10.1.2.2 | Utility function tests | ✅ | %80+ | `lib/api/client.ts` %72.31, `lib/api/pricing.ts` %100, `lib/api/vehicles.ts` %100 |
 | 10.1.2.3 | Component tests (critical) | ✅ | %50+ | SearchForm **%100 statements / 78.04% branches**, VehicleCard %100, PriceBreakdown %100 |
 | 10.1.2.4 | Hook tests (critical) | ✅ | %50+ | useBooking %94.63, usePricing %100, useReservations %94.44 |
@@ -602,10 +602,12 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - `frontend/lib/auth`: **%63.43** statements, **85%** branches
 - `frontend/app/(admin)/dashboard/(auth)/reservations/[id]/page.tsx`: **%97.37** statements, **72.09%** branches
 - `frontend/hooks/admin`: **%97.23** statements, **84.15%** branches
+- `frontend/components/ui`: **%83.52** statements
+- `frontend/hooks`: **%92.16** statements
 
-**Not:** Project-wide coverage artık **%28.41** seviyesine çıktı. `VehiclesPage` artık branch-heavy public sayfalar içindeki ana açık olmaktan büyük ölçüde çıktı; ilk admin dashboard rezervasyon slice'ı, reservation detail slice'ı, admin API/mock fixture, auth helper ve admin hook wrapper slice'ları ölçülebilir ilerleme sağladı. Buna rağmen admin/dashboard sayfaları, route handler'lar ve çok sayıdaki shadcn/ui dosyası hâlâ büyük bir uncovered yüzey oluşturuyor; bu yüzden overall frontend yüzdesi Phase 10.1 %60 hedefinin altında kalıyor.
+**Not:** Project-wide coverage artık **%63.17** seviyesine çıktı. `VehiclesPage` artık branch-heavy public sayfalar içindeki ana açık olmaktan büyük ölçüde çıktı; admin dashboard rezervasyon, reservation detail, admin API/mock fixture, auth helper, admin hook wrapper, broad admin/dashboard smoke, shared UI smoke ve UI hook slice'ları Phase 10.1 frontend gate'i kapattı.
 
-**Karar:** Kullanıcının ara frontend coverage hedefi olan **%25** aşıldı ve follow-up ile **%28.41** seviyesine taşındı; Phase 10.1 launch gate olan **%60** hedefine ise henüz ulaşılmadı. `BookingStep2Page`, `BookingStep4Page`, `TrackReservationPage`, `VehiclesPage`, admin `ReservationsPage`, admin reservation detail page, admin hook wrapper katmanı, admin API/mock fixture katmanı ve auth helper katmanı büyük ölçüde temizlendi; bundan sonraki görünür frontend artışları daha çok kalan admin/dashboard page'leri, auth route handler'ları, auth screens ve shared UI yüzeylerinden gelecek.
+**Karar:** Kullanıcının ara frontend coverage hedefi olan **%25** ve Phase 10.1 launch gate olan **%60** tamamlandı. `BookingStep2Page`, `BookingStep4Page`, `TrackReservationPage`, `VehiclesPage`, admin `ReservationsPage`, admin reservation detail page, admin hook wrapper katmanı, admin API/mock fixture katmanı, auth helper katmanı, shared UI yüzeyi ve UI hook'ları büyük ölçüde temizlendi; bundan sonraki görünür frontend test işleri kalite odaklı auth route/screen ve admin dialog davranış kapsamı olmalı.
 
 ### 10.1.3 Test Quality Criteria
 
