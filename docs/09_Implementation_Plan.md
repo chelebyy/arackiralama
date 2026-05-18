@@ -983,12 +983,12 @@ POST /api/admin/v1/auth/logout
 
 #### 10.4 Load Testing
 - [x] k6 scripts prepared
-- [x] Availability query smoke verification — local Docker passed; full 100-user baseline still pending
-- [x] Concurrent booking simulation — local Docker smoke passed; full 100-user baseline still pending
+- [x] Availability query smoke verification — local Docker passed; 100-user baseline preserved after rerun
+- [x] Concurrent booking simulation — local Docker smoke passed; 100-user baseline passed after local startup seed + retry fix
 - [x] Payment intent smoke — local Docker smoke passed after enabling `EnableOnlinePayment` in local DB
 - [x] Mixed traffic smoke — local Docker smoke passed with smoke-mode admin login bypassed
 - [x] Admin dashboard smoke — local Docker passed after seeding the integration admin user
-- [ ] Target: 100 concurrent users
+- [x] Target: 100 concurrent users
 
 #### 10.5 Security Audit
 - [x] OWASP Top 10 manual review / hardening follow-up

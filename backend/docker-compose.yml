@@ -45,6 +45,8 @@ services:
       Redis__ConnectionString: redis:6379
       Jwt__Secret: local-dev-only-jwt-secret-change-me-12345
       Database__AutoMigrateOnStartup: "true"
+      RateLimiting__LoadTestSessionPartition: "true"
+      LoadTesting__ConcurrentBookingInventorySeedEnabled: "true"
     ports:
       - "5000:8080"
 

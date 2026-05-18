@@ -1,11 +1,15 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MockQueryable.Moq;
 using Moq;
+using Npgsql;
 using StackExchange.Redis;
 using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.Serialization;
 using FleetContracts = RentACar.API.Contracts.Fleet;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Contracts.Pricing;
@@ -35,6 +39,7 @@ public sealed class ReservationServiceTests
     private readonly Mock<IPaymentService> _paymentServiceMock;
     private readonly Mock<INotificationQueueService> _notificationQueueServiceMock;
     private readonly IMemoryCache _memoryCache;
+    private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<ReservationService>> _loggerMock;
     private readonly ReservationService _sut;
 
@@ -54,6 +59,12 @@ public sealed class ReservationServiceTests
         _paymentServiceMock = new Mock<IPaymentService>();
         _notificationQueueServiceMock = new Mock<INotificationQueueService>();
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:LoadTestSessionPartition"] = "false"
+            })
+            .Build();
         _loggerMock = new Mock<ILogger<ReservationService>>();
 
         _applicationDbContextMock
@@ -138,6 +149,7 @@ public sealed class ReservationServiceTests
             _notificationQueueServiceMock.Object,
             _memoryCache,
             _redisMock.Object,
+            _configuration,
             _loggerMock.Object);
     }
 
@@ -1056,6 +1068,101 @@ public sealed class ReservationServiceTests
             It.IsAny<string>(),
             It.IsAny<TimeSpan>(),
             It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateHoldAsync_WhenFirstVehicleHitsOverlapConstraint_RetriesWithNextVehicle()
+    {
+        var reservationId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var firstVehicleId = Guid.NewGuid();
+        var secondVehicleId = Guid.NewGuid();
+
+        var firstVehicle = new Vehicle
+        {
+            Id = firstVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = Guid.NewGuid(),
+            Plate = "34RTRY01",
+            Brand = "Renault",
+            Model = "Clio"
+        };
+
+        var secondVehicle = new Vehicle
+        {
+            Id = secondVehicleId,
+            GroupId = groupId,
+            Status = VehicleStatus.Available,
+            OfficeId = firstVehicle.OfficeId,
+            Plate = "34RTRY02",
+            Brand = "Fiat",
+            Model = "Egea"
+        };
+
+        var reservation = new Reservation
+        {
+            Id = reservationId,
+            PublicCode = "RSV-RETRY",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = firstVehicleId,
+            Vehicle = firstVehicle,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            TotalAmount = 1500m
+        };
+
+        _reservationRepositoryMock
+            .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { firstVehicle, secondVehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                firstVehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                secondVehicleId,
+                reservation.PickupDateTime,
+                reservation.ReturnDateTime,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _applicationDbContextMock
+            .SetupSequence(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(CreateOverlapDbUpdateException())
+            .ReturnsAsync(1);
+
+        _holdServiceMock
+            .Setup(x => x.CreateHoldAsync(
+                reservationId,
+                secondVehicleId,
+                "session-1",
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _sut.CreateHoldAsync(reservationId, "session-1", CancellationToken.None);
+
+        result.Should().NotBeNull();
+        reservation.VehicleId.Should().Be(secondVehicleId);
+        _holdServiceMock.Verify(x => x.CreateHoldAsync(
+            reservationId,
+            secondVehicleId,
+            "session-1",
+            It.IsAny<TimeSpan>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -2280,8 +2387,20 @@ public sealed class ReservationServiceTests
             LastName = "Yilmaz",
             Email = "ahmet@example.com",
             Phone = "+90 555 123 4567"
-        }
+            }
     };
+
+    private static DbUpdateException CreateOverlapDbUpdateException()
+    {
+#pragma warning disable SYSLIB0050
+        var postgresException = (PostgresException)FormatterServices.GetUninitializedObject(typeof(PostgresException));
+#pragma warning restore SYSLIB0050
+        typeof(PostgresException)
+            .GetField("<SqlState>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(postgresException, "23P01");
+
+        return new DbUpdateException("overlap", postgresException);
+    }
 
     #region GetCustomerReservationsPaginatedAsync Tests
 
