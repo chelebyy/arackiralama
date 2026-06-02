@@ -11,6 +11,8 @@ Phase 10.4 is now fully closed in local Docker. The 100-user `concurrent-booking
 
 The docs layer was updated to match the verified state. The launch gates, execution tracker, implementation plan, and architecture notes now reflect that local Docker load validation is not partial anymore. The next user-visible step is to commit, push, open or update the PR, and keep tracking checks/review comments until the branch is merged.
 
+After the initial PR review, one concrete follow-up was identified and fixed: `RentACar.Infrastructure` now references `Microsoft.Extensions.Configuration.Binder` so the new load-test seed extension can call `IConfiguration.GetValue<bool>()` without a clean-build dependency gap.
+
 ## Important Context
 - The last blocker was not inventory shortage anymore; it was an occasional `reservations_no_overlap` race during hold creation.
 - The accepted fix is local-load-test-safe rather than a production relaxation: keep the exclusion constraint intact, but retry with the next vehicle candidate when a rare overlap violation is thrown during the hold save path.
@@ -63,6 +65,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 - [x] Added overlap-violation retry handling in `CreateHoldAsync`.
 - [x] Added a unit test that verifies the first vehicle can fail with overlap while the next vehicle succeeds.
 - [x] Re-ran and verified the 100-user k6 baseline successfully.
+- [x] Addressed the PR review comment by adding the missing configuration binder package to `RentACar.Infrastructure`.
 - [x] Updated `docs/09_Implementation_Plan.md`.
 - [x] Updated `docs/10_Execution_Tracking.md`.
 - [x] Updated `docs/12_Phase10_PreLaunch_Gates.md`.
@@ -71,6 +74,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 
 ### Verification
 - `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore --filter "FullyQualifiedName~ReservationServiceTests"`: `67/67 PASS`
+- `dotnet build backend/src/RentACar.Infrastructure/RentACar.Infrastructure.csproj --no-restore`: `0 warning / 0 error`
 - `docker compose up -d --build api`
 - `docker run --rm -w /scripts -e BASE_URL=http://host.docker.internal:5000 -e HOST_HEADER=localhost:5000 -e SMOKE_MODE=0 -v "C:/All_Project/Araç Kiralama/backend/tests/k6:/scripts" grafana/k6:latest run /scripts/concurrent-booking.js`
 - Final k6 summary:
@@ -94,6 +98,7 @@ The docs layer was updated to match the verified state. The launch gates, execut
 | `backend/src/RentACar.API/Configuration/ServiceCollectionExtensions.cs` | Added local load-test session partitioning for rate limiting | Prevent local benchmark throttling noise |
 | `backend/src/RentACar.API/appsettings.json` | Added the default-off load-test partition flag | Keep production behavior unchanged |
 | `backend/docker-compose.yml` | Enabled the load-test partition flag in local compose | Scope the bypass to local Docker only |
+| `backend/src/RentACar.Infrastructure/RentACar.Infrastructure.csproj` | Added `Microsoft.Extensions.Configuration.Binder` | Support `IConfiguration.GetValue<bool>()` in the new local seed helper |
 | `docs/09_Implementation_Plan.md` | Marked concurrent booking baseline complete | Remove stale pending status |
 | `docs/10_Execution_Tracking.md` | Added a delivery entry for the load-baseline closure | Keep the milestone log in sync |
 | `docs/12_Phase10_PreLaunch_Gates.md` | Converted concurrent booking from partial to GO and updated the load-test section | Keep the launch gate source of truth current |
