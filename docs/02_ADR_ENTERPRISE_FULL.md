@@ -343,3 +343,19 @@ OS: Ubuntu 22.04 LTS
 - The launch-gate docs must explicitly distinguish local smoke partials from full load-baseline completion.
 - Docker-local k6 runs that target the host backend may need an explicit `Host` header that matches `AllowedHosts`, and admin-dashboard smoke validation may require a seeded local admin account.
 - As of 18 May 2026, the local Docker 100-user concurrent-booking baseline is also verified after local startup inventory seed expansion and overlap-retry stabilization in the reservation hold path.
+
+### 12.6 Admin Reports Backend Scope
+
+**Context:** Phase 10 Wave 4 required closure for admin reports and dashboard-only gaps. Settings/system persistence and maintenance completion remain launch-non-critical stubs, but the reports backend has a bounded read-only scope that can ship independently.
+
+**Decision:** Implement admin reports as `AdminReportsController` + `IReportsService`/`ReportsService` under `/api/admin/v1/reports/*`, protected by the existing `AdminOnly` policy and standard rate-limit policy. Keep the launch scope to revenue, occupancy, and popular-vehicles reports using existing reservations, payments, and fleet tables.
+
+**Rationale:**
+- Keeps operational reports inside the existing monolith and admin API boundary.
+- Avoids new persistence or projection infrastructure before launch.
+- Preserves a clear deferred boundary for settings persistence and maintenance completion, which require separate configuration/migration decisions.
+
+**Consequences:**
+- The reports API contract is now tracked in `docs/07_API_Contract_ENTERPRISE_FULL.md`.
+- Richer analytics, export workflows, and accounting-grade ledgers remain post-launch scope.
+- Frontend report screens should consume these endpoints through the existing admin API client/hook patterns when that integration is scheduled.

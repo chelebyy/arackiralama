@@ -497,7 +497,7 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 ---
 
-### 10.0.8 Wave 4 Completion Evidence (3 June 2026)
+### 10.0.10 Wave 4 Completion Evidence (3 June 2026)
 
 **Dalga Kapanış Tarihi:** 3 Haziran 2026
 **Kapsam:** Admin Reports + Dashboard-only gaps (Reports backend shipped; settings/system + maintenance complete action formally DEFERRED as launch-non-critical stubs)
@@ -513,10 +513,12 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 | Tip | Dosya | Değişiklik |
 |-----|-------|-----------|
-| Added | `backend/src/RentACar.API/Controllers/ReportsController.cs` | Admin reports endpoint'leri (revenue, reservations, fleet utilization) |
+| Added | `backend/src/RentACar.API/Controllers/AdminReportsController.cs` | Admin reports endpoint'leri (revenue, occupancy, popular vehicles) |
+| Added | `backend/src/RentACar.API/Services/IReportsService.cs` | Reports service contract |
 | Added | `backend/src/RentACar.API/Services/ReportsService.cs` | Report aggregation logic |
-| Added | `backend/tests/RentACar.Tests/Unit/Reports/ReportsServiceTests.cs` | ReportsService unit test coverage |
-| Added | `backend/tests/RentACar.Tests/Unit/Reports/ReportsControllerTests.cs` | ReportsController unit test coverage |
+| Added | `backend/src/RentACar.API/Contracts/Reports/ReportDtos.cs` | Reports response DTOs |
+| Added | `backend/tests/RentACar.Tests/Unit/Services/ReportsServiceTests.cs` | ReportsService unit test coverage |
+| Added | `backend/tests/RentACar.Tests/Unit/Controllers/AdminReportsControllerTests.cs` | AdminReportsController unit test coverage |
 
 #### Wave 4 Durumu: 🟡 **PARTIALLY COMPLETED**
 

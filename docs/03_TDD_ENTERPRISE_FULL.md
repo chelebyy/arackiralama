@@ -641,7 +641,36 @@ public interface IPricingService
 }
 ```
 
-## 8.6 ICacheService Interface
+## 8.6 IReportsService Interface
+
+Read-only admin reporting service for operational dashboard/report screens.
+
+```csharp
+public interface IReportsService
+{
+    Task<RevenueReportResponse> GetRevenueReportAsync(
+        string period,
+        CancellationToken cancellationToken = default);
+
+    Task<OccupancyReportResponse> GetOccupancyReportAsync(
+        string period,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PopularVehicleReportItemResponse>> GetPopularVehiclesAsync(
+        string period,
+        CancellationToken cancellationToken = default);
+}
+```
+
+### Implementation Notes
+
+- Admin reports are exposed under `/api/admin/v1/reports/*` and require the existing `AdminOnly` authorization policy.
+- `ReportsService` uses `IApplicationDbContext` with no-tracking reads and in-memory aggregation for the launch scope.
+- Supported period inputs are `daily`, `weekly`, and `monthly`; invalid period input returns an empty report payload instead of throwing.
+- Revenue aggregation counts succeeded payments connected to revenue-eligible reservations (`Paid`, `Active`, `Completed`).
+- Occupancy and popular-vehicle reports are launch-scope operational views, not accounting ledgers.
+
+## 8.7 ICacheService Interface
 
 Unified caching abstraction with Redis and in-memory fallback.
 
