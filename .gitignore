@@ -87,6 +87,10 @@ Thumbs.db
 .localappdata/
 .appdata/
 .nuget/
+.sisyphus/
+
+# Local k6 generated result artifacts
+backend/tests/k6/results/
 
 # Logs
 logs/

@@ -154,6 +154,17 @@ The authoritative current state is:
 - `backend/tests/k6/results/` contains generated artifacts and should stay out of the commit unless explicitly needed.
 - The load baseline uses a Docker-to-host route; the host header must remain aligned with backend host filtering.
 
+## Follow-up — PR #259 MERGED 2026-06-02
+
+- **PR #259** (`fix(phase10): close local docker 100-user load baseline`) was opened from `feat/phase10-public-page-coverage` against `main` and **MERGED 2026-06-02T19:25:06Z**.
+- Final merge SHA: `544613ccec4d87dc918e3d8abaf16718eb2b5343` (`merge: resolve origin/main conflicts for PR #259`).
+- Branch sync state at the time of this follow-up: `0 ahead / 0 behind` against `origin/feat/phase10-public-page-coverage`.
+- Working-tree state preserved per handoff instructions:
+  - `.sisyphus/` and `backend/tests/k6/results/` remain untracked (intentionally not staged).
+  - The 5 historical handoff files deleted earlier in the working tree were not restored or staged.
+- PR body archival copy is now tracked at `docs/handoffs/2026-05-18-PR-235-load-baseline-closure-body.md`.
+- **Phase 10.4 local Docker load baseline is formally CLOSED on `main`.** Remaining Phase 10 launch constraints (deployment/infrastructure, performance, monitoring, UAT) are tracked separately in the pre-launch gate matrix.
+
 ## Environment State
 
 ### Tools/Services Used
