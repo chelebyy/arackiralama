@@ -507,7 +507,7 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 | Komut | Sonuç | Notlar |
 |-------|-------|--------|
 | `dotnet build backend/RentACar.sln --no-restore` | ✅ **PASS** | 0 error, 0 warning |
-| `dotnet test backend/RentACar.sln --no-build` | ✅ **PASS** | Tüm testler geçti (ReportsService + ReportsController testleri dahil) |
+| `dotnet test backend/RentACar.sln --no-build` | ✅ **PASS** | 619/619 unit + 32/32 integration PASS (ReportsService + AdminReportsController testleri dahil) |
 
 #### Değiştirilen Dosyalar
 
@@ -524,6 +524,7 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 
 - Reports backend (controller + service + tests) shipped ve verify edildi
 - Backend build ve test komutları yeşil
+- PR #262 Codex review yorumları işlendi: occupancy oranları frontend contract ile uyumlu şekilde 0-100 yüzde ölçeğine çekildi, occupancy query period overlap filtresi eklendi, popular-vehicle revenue ve revenue report hesaplamaları counted reservation scope ile hizalandı
 - Kalan iki stub aşağıda gerekçesiyle defer edildi
 
 #### Formal Deferral Notu

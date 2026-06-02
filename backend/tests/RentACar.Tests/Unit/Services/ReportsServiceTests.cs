@@ -66,6 +66,40 @@ public sealed class ReportsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRevenueReportAsync_UsesEligibleReservationScopeForRevenue()
+    {
+        var today = DateTime.UtcNow.Date;
+        var scopedReservationId = Guid.NewGuid();
+        var cancelledReservationId = Guid.NewGuid();
+
+        SeedReservationWith(today.AddHours(9), ReservationStatus.Completed, scopedReservationId);
+        SeedReservationWith(today.AddHours(11), ReservationStatus.Cancelled, cancelledReservationId);
+        SeedPaymentIntentFor(scopedReservationId, today.AddDays(-5), PaymentStatus.Succeeded, 400m);
+        SeedPaymentIntentFor(cancelledReservationId, today.AddHours(12), PaymentStatus.Succeeded, 900m);
+
+        var result = await _sut.GetRevenueReportAsync("daily", CancellationToken.None);
+
+        result.TotalRevenue.Should().Be(400m);
+        result.TotalReservations.Should().Be(1);
+        result.AverageOrderValue.Should().Be(400m);
+        result.DailyBreakdown[0].Revenue.Should().Be(400m);
+        result.DailyBreakdown[0].Reservations.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetRevenueReportAsync_WhenNoEligibleReservations_IgnoresSucceededPayments()
+    {
+        var today = DateTime.UtcNow.Date;
+        SeedPaymentIntent(today.AddHours(10), PaymentStatus.Succeeded, 500m);
+
+        var result = await _sut.GetRevenueReportAsync("daily", CancellationToken.None);
+
+        result.TotalRevenue.Should().Be(0m);
+        result.TotalReservations.Should().Be(0);
+        result.DailyBreakdown[0].Revenue.Should().Be(0m);
+    }
+
+    [Fact]
     public async Task GetRevenueReportAsync_WithWeeklyPeriod_ReturnsSevenDays()
     {
         var result = await _sut.GetRevenueReportAsync("weekly", CancellationToken.None);
@@ -112,7 +146,29 @@ public sealed class ReportsServiceTests : IDisposable
         var bucket = result.DailyBreakdown[0];
         bucket.TotalVehicles.Should().Be(4);
         bucket.OccupiedVehicles.Should().Be(2);
-        bucket.OccupancyRate.Should().Be(0.5m);
+        bucket.OccupancyRate.Should().Be(50m);
+        result.OccupancyRate.Should().Be(50m);
+    }
+
+    [Fact]
+    public async Task GetOccupancyReportAsync_FiltersReservationsOutsideRequestedPeriod()
+    {
+        var today = DateTime.UtcNow.Date;
+        var groupId = Guid.NewGuid();
+
+        SeedVehicle("Renault", "Clio", groupId);
+        SeedVehicle("Ford", "Focus", groupId);
+
+        SeedReservation(today.AddHours(8), today.AddDays(1).AddHours(8), ReservationStatus.Active);
+        SeedReservation(today.AddDays(-20), today.AddDays(-19), ReservationStatus.Completed);
+
+        var result = await _sut.GetOccupancyReportAsync("daily", CancellationToken.None);
+
+        result.TotalVehicles.Should().Be(2);
+        result.OccupiedVehicles.Should().Be(1);
+        result.OccupancyRate.Should().Be(50m);
+        result.DailyBreakdown[0].OccupiedVehicles.Should().Be(1);
+        result.DailyBreakdown[0].OccupancyRate.Should().Be(50m);
     }
 
     [Fact]
@@ -210,6 +266,44 @@ public sealed class ReportsServiceTests : IDisposable
         result[0].VehicleName.Should().Be("BMW 320i");
         result[0].RentalCount.Should().Be(1);
         result[0].Revenue.Should().Be(1000m);
+    }
+
+    [Fact]
+    public async Task GetPopularVehiclesAsync_UsesReservationScopeForRevenueRegardlessOfPaymentDate()
+    {
+        var today = DateTime.UtcNow.Date;
+        var vehicleId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        SeedVehicle("Toyota", "Corolla", groupId, vehicleId);
+
+        var scopedReservationId = Guid.NewGuid();
+        _dbContext.Reservations.Add(new Reservation
+        {
+            Id = scopedReservationId,
+            PublicCode = "R-SCOPED",
+            CustomerId = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            PickupDateTime = today.AddHours(8),
+            ReturnDateTime = today.AddDays(1).AddHours(8),
+            Status = ReservationStatus.Completed,
+            TotalAmount = 750m
+        });
+        _dbContext.PaymentIntents.Add(new PaymentIntent
+        {
+            ReservationId = scopedReservationId,
+            Amount = 750m,
+            Status = PaymentStatus.Succeeded,
+            Provider = "Mock",
+            IdempotencyKey = Guid.NewGuid().ToString(),
+            CreatedAt = today.AddDays(-10)
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.GetPopularVehiclesAsync("daily", CancellationToken.None);
+
+        result.Should().HaveCount(1);
+        result[0].RentalCount.Should().Be(1);
+        result[0].Revenue.Should().Be(750m);
     }
 
     [Fact]

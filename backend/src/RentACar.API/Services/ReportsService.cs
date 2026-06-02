@@ -29,20 +29,22 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
 
         var (startUtc, endUtc, days) = range.Value;
 
-        var paymentIntents = await dbContext.PaymentIntents
-            .AsNoTracking()
-            .Where(p => p.Status == PaymentStatus.Succeeded
-                        && p.CreatedAt >= startUtc
-                        && p.CreatedAt < endUtc)
-            .Select(p => new { p.Amount, p.CreatedAt, p.ReservationId })
-            .ToListAsync(cancellationToken);
-
         var reservations = await dbContext.Reservations
             .AsNoTracking()
             .Where(r => RevenueEligibleStatuses.Contains(r.Status)
                         && r.PickupDateTime >= startUtc
                         && r.PickupDateTime < endUtc)
             .Select(r => new { r.Id, r.PickupDateTime })
+            .ToListAsync(cancellationToken);
+
+        var reservationIds = reservations.Select(r => r.Id).ToList();
+        var reservationPickupLookup = reservations.ToDictionary(r => r.Id, r => r.PickupDateTime);
+
+        var paymentIntents = await dbContext.PaymentIntents
+            .AsNoTracking()
+            .Where(p => p.Status == PaymentStatus.Succeeded
+                        && reservationIds.Contains(p.ReservationId))
+            .Select(p => new { p.Amount, p.ReservationId })
             .ToListAsync(cancellationToken);
 
         var totalRevenue = paymentIntents.Sum(p => p.Amount);
@@ -58,7 +60,8 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
                 var dayEnd = dayStart.AddDays(1);
 
                 var dayRevenue = paymentIntents
-                    .Where(p => p.CreatedAt >= dayStart && p.CreatedAt < dayEnd)
+                    .Where(p => reservationPickupLookup[p.ReservationId] >= dayStart
+                                && reservationPickupLookup[p.ReservationId] < dayEnd)
                     .Sum(p => p.Amount);
 
                 var dayReservations = reservations
@@ -94,7 +97,9 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
 
         var reservations = await dbContext.Reservations
             .AsNoTracking()
-            .Where(r => RevenueEligibleStatuses.Contains(r.Status))
+            .Where(r => RevenueEligibleStatuses.Contains(r.Status)
+                        && r.PickupDateTime < endUtc
+                        && r.ReturnDateTime > startUtc)
             .Select(r => new { r.PickupDateTime, r.ReturnDateTime })
             .ToListAsync(cancellationToken);
 
@@ -108,7 +113,7 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
                     r.PickupDateTime < dayEnd && r.ReturnDateTime > dayStart);
 
                 var rate = totalVehicles > 0
-                    ? Math.Round((decimal)occupied / totalVehicles, 4)
+                    ? Math.Round((decimal)occupied / totalVehicles * 100m, 2)
                     : 0m;
 
                 return new OccupancyReportBreakdownItemResponse(day, occupied, totalVehicles, rate);
@@ -139,20 +144,22 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
 
         var (startUtc, endUtc, _) = range.Value;
 
-        var reservationsQuery = dbContext.Reservations
+        var scopedReservations = await dbContext.Reservations
             .AsNoTracking()
             .Where(r => RevenueEligibleStatuses.Contains(r.Status)
                         && r.PickupDateTime >= startUtc
-                        && r.PickupDateTime < endUtc);
+                        && r.PickupDateTime < endUtc)
+            .Select(r => new { r.Id, r.VehicleId })
+            .ToListAsync(cancellationToken);
 
-        var grouped = await reservationsQuery
+        var grouped = scopedReservations
             .GroupBy(r => r.VehicleId)
             .Select(g => new
             {
                 VehicleId = g.Key,
                 RentalCount = g.Count()
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         if (grouped.Count == 0)
         {
@@ -167,18 +174,19 @@ public sealed class ReportsService(IApplicationDbContext dbContext) : IReportsSe
             .Select(v => new { v.Id, v.Brand, v.Model })
             .ToListAsync(cancellationToken);
 
-        var revenueByReservation = await dbContext.PaymentIntents
+        var reservationVehicleLookup = scopedReservations.ToDictionary(r => r.Id, r => r.VehicleId);
+        var reservationIds = reservationVehicleLookup.Keys.ToList();
+
+        var paymentAmounts = await dbContext.PaymentIntents
             .AsNoTracking()
             .Where(p => p.Status == PaymentStatus.Succeeded
-                        && p.CreatedAt >= startUtc
-                        && p.CreatedAt < endUtc
-                        && p.Reservation != null
-                        && vehicleIds.Contains(p.Reservation.VehicleId))
-            .GroupBy(p => p.Reservation!.VehicleId)
-            .Select(g => new { VehicleId = g.Key, Revenue = g.Sum(x => x.Amount) })
+                        && reservationIds.Contains(p.ReservationId))
+            .Select(p => new { p.ReservationId, p.Amount })
             .ToListAsync(cancellationToken);
 
-        var revenueLookup = revenueByReservation.ToDictionary(x => x.VehicleId, x => x.Revenue);
+        var revenueLookup = paymentAmounts
+            .GroupBy(p => reservationVehicleLookup[p.ReservationId])
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
         var result = grouped
             .OrderByDescending(g => g.RentalCount)

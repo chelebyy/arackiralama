@@ -666,7 +666,7 @@ public interface IReportsService
 
 - Admin reports are exposed under `/api/admin/v1/reports/*` and require the existing `AdminOnly` authorization policy.
 - `ReportsService` uses `IApplicationDbContext` with no-tracking reads and in-memory aggregation for the launch scope.
-- Supported period inputs are `daily`, `weekly`, and `monthly`; invalid period input returns an empty report payload instead of throwing.
+- Supported period inputs are `daily`, `weekly`, `monthly`, `quarterly`, and `yearly`; invalid period input returns an empty report payload instead of throwing.
 - Revenue aggregation counts succeeded payments connected to revenue-eligible reservations (`Paid`, `Active`, `Completed`).
 - Occupancy and popular-vehicle reports are launch-scope operational views, not accounting ledgers.
 

@@ -566,7 +566,7 @@ Admin revenue report for a requested period. Requires admin authorization and th
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly` |
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
 
 ### Response 200 OK
 
@@ -597,7 +597,7 @@ Admin fleet occupancy report for a requested period. Requires admin authorizatio
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly` |
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
 
 ### Response 200 OK
 
@@ -629,7 +629,7 @@ Admin top vehicle report for a requested period. Requires admin authorization an
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly` |
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
 
 ### Response 200 OK
 

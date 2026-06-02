@@ -69,10 +69,10 @@ public sealed class AdminReportsControllerTests
                 "weekly",
                 20,
                 12,
-                0.6m,
+                60m,
                 new List<OccupancyReportBreakdownItemResponse>
                 {
-                    new(new DateOnly(2030, 6, 1), 12, 20, 0.6m)
+                    new(new DateOnly(2030, 6, 1), 12, 20, 60m)
                 }));
 
         var controller = CreateController(serviceMock.Object);
@@ -83,7 +83,7 @@ public sealed class AdminReportsControllerTests
         var response = okResult.Value.Should().BeOfType<ApiResponse<OccupancyReportResponse>>().Subject;
         response.Success.Should().BeTrue();
         response.Data!.TotalVehicles.Should().Be(20);
-        response.Data.OccupancyRate.Should().Be(0.6m);
+        response.Data.OccupancyRate.Should().Be(60m);
     }
 
     [Fact]

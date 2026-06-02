@@ -54,6 +54,28 @@
   - `gh pr checks 262`
   - Inspect any new review comments/check failures and address them before merge.
 
+## Codex Review Follow-up Addendum
+
+After the initial PR #262 follow-through, Codex posted three actionable P2 inline review comments against `ReportsService`:
+
+| Comment | Resolution |
+|---------|------------|
+| Occupancy rates were returned as fractions while the frontend reports UI expects 0-100 percentages. | `ReportsService.GetOccupancyReportAsync` now returns `OccupancyRate` values as percentages rounded to 2 decimals. Controller mock expectations and service tests were updated to expect `50m` / `60m` style values. |
+| Occupancy query materialized all historical revenue-eligible reservations before per-day filtering. | Occupancy reservations query now applies the resolved report-window overlap predicate: `PickupDateTime < endUtc && ReturnDateTime > startUtc`. |
+| Popular-vehicle rental counts used pickup-date scope while revenue used payment-created-date scope. | Popular-vehicle revenue now sums succeeded payment intents for the scoped reservation IDs, regardless of payment creation date, matching counted rentals. |
+
+Additional audit fix made while addressing the review:
+
+- Revenue report calculations now also use the eligible reservation scope. This prevents succeeded payments for cancelled/out-of-scope reservations from inflating revenue and keeps `TotalRevenue`, `TotalReservations`, average order value, and daily breakdown on the same basis.
+
+Updated verification after these fixes:
+
+| Command | Result |
+|---------|--------|
+| `dotnet build backend/RentACar.sln --no-restore` | PASS, 0 warning / 0 error |
+| `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-build --filter "FullyQualifiedName~ReportsServiceTests|FullyQualifiedName~AdminReportsControllerTests"` | PASS, 25/25 |
+| `dotnet test backend/RentACar.sln --no-build` | PASS, 619/619 unit + 32/32 integration |
+
 ## Changed Files in This Follow-through Session
 
 | File | Change |
