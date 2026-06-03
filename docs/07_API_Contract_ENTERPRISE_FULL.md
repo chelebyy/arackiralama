@@ -558,6 +558,94 @@ Admin dashboard statistics.
 }
 ```
 
+## GET /api/admin/v1/reports/revenue
+
+Admin revenue report for a requested period. Requires admin authorization and the standard admin rate-limit policy.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
+
+### Response 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "period": "weekly",
+    "total_revenue": 75000.00,
+    "total_reservations": 12,
+    "average_order_value": 6250.00,
+    "daily_breakdown": [
+      {
+        "date": "2026-06-03",
+        "revenue": 15000.00,
+        "reservations": 3
+      }
+    ]
+  }
+}
+```
+
+## GET /api/admin/v1/reports/occupancy
+
+Admin fleet occupancy report for a requested period. Requires admin authorization and the standard admin rate-limit policy.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
+
+### Response 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "period": "weekly",
+    "total_vehicles": 120,
+    "occupied_vehicles": 48,
+    "occupancy_rate": 40.00,
+    "daily_breakdown": [
+      {
+        "date": "2026-06-03",
+        "occupied_vehicles": 42,
+        "total_vehicles": 120,
+        "occupancy_rate": 35.00
+      }
+    ]
+  }
+}
+```
+
+## GET /api/admin/v1/reports/popular-vehicles
+
+Admin top vehicle report for a requested period. Requires admin authorization and the standard admin rate-limit policy.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `period` | string | Yes | Supported values: `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
+
+### Response 200 OK
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "vehicle_name": "Renault Clio",
+      "rental_count": 8,
+      "revenue": 24000.00
+    }
+  ]
+}
+```
+
 ------------------------------------------------------------------------
 
 # 7. Error Codes Reference

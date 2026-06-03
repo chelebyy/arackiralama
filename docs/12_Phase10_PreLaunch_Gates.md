@@ -3,7 +3,7 @@
 **Proje:** Araç Kiralama Platformu (Alanya Rent A Car)  
 **Versiyon:** 1.0.0  
 **Oluşturulma:** 25 Nisan 2026  
-**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 DEFERRED, Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (local Docker doğrulaması önce, Dokploy sonra), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.4 Load Testing LOCAL DOCKER SMOKE VERIFIED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**) | 14 May 2026: cheap Infrastructure provider slices continued successfully (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), lifting the latest verified `RentACar.Tests` count to **544/544**; a fresh full-solution coverage rerun in the current shell was blocked by PostgreSQL `127.0.0.1:5433` connection failure, so overall percentages remain pinned to the 11 May healthy baseline  
+**Durum:** 🟡 In Progress — Wave 1–3 COMPLETED ✅, Wave 4 PARTIALLY COMPLETED — Reports backend shipped; settings/system persistence + maintenance complete action formally DEFERRED (launch-non-critical stubs), Wave 5 Migration Safety COMPLETED ✅, Wave 6+ Infrastructure DEFERRED (local Docker doğrulaması önce, Dokploy sonra), **Phase 10.3 E2E Scaffold COMPLETED** ✅, **Phase 10.4 Load Testing LOCAL DOCKER SMOKE VERIFIED** ✅, **Phase 10.5 Security Hardening Follow-up COMPLETED** ✅ | 10 May 2026: backend CORS, security headers, Swagger dev-gate, restricted AllowedHosts, and default `AutoMigrateOnStartup=false` verified; duplicate `background_jobs` migration crash and `NU1510` warning cleared | 11 May 2026: local backend coverage rebaseline rerun with Postgres/Redis healthy; latest overall backend line coverage confirmed at **%29.86**, with Infrastructure still the dominant gap (**%9.38**) | 14 May 2026: cheap Infrastructure provider slices continued successfully (`MockPaymentProvider`, `ConfiguredSmsProvider`, `NetgsmSmsProvider`), lifting the latest verified `RentACar.Tests` count to **544/544**; a fresh full-solution coverage rerun in the current shell was blocked by PostgreSQL `127.0.0.1:5433` connection failure, so overall percentages remain pinned to the 11 May healthy baseline | 03.06.2026: Wave 4 (Admin Reports + Dashboard-only gaps) kapatıldı; ReportsController + ReportsService + tests eklendi; settings/system + maintenance stub'ları launch-non-critical kapsamında defer edildi
 **İlişkili Dokümanlar:**
 - `docs/10_Execution_Tracking.md` — Master execution tracker
 - `docs/11_Codex_Sentinel_Phase1_7_Security_Report_and_Phase8_10_Gates.md` — Security gates
@@ -177,7 +177,7 @@ Review ve refactor işlemleri aşağıdaki sırayla yapılır. **Bir dalga kapan
 | Wave 1 | **Auth + Reservation + Payment + public booking akışı** | Güven, para ve rezervasyon bütünlüğü doğrudan launch blocker | İlgili coverage hedefleri + kritik testler + review tamam |
 | Wave 2 | **Pricing + Fleet + Offices + public inventory** | Fiyat doğruluğu ve araç bulunabilirliği booking'i doğrudan etkiler | Fiyat/availability senaryoları ve service review tamam |
 | Wave 3 | **Notifications + Worker + admin operasyon ekranları** | Launch sonrası operasyonel sürdürülebilirlik | Job/notification yan etkileri doğrulandı |
-| Wave 4 | **Admin reports ve dashboard-only gap'ler** | Launch kritik değil, ayrı scope olarak ele alınmalı | Backend uyuşmazlıkları netleştirildi / defer kararı verildi |
+| Wave 4 | **Admin reports ve dashboard-only gap'ler** | Launch kritik değil, ayrı scope olarak ele alınmalı | Backend uyuşmazlıkları netleştirildi (ReportsController) + settings/system + maintenance stub defer kararı verildi |
 | Wave 5 | **Infrastructure + migrations + rollback + deploy** | Son Go/No-Go katmanı | Health, backup, restore, rollback kanıtı hazır |
 
 ### 10.0.1.4 Review / Refactor İş Akışı
@@ -494,6 +494,49 @@ Bu kanıtlar olmadan ilgili dalga "tamamlandı" sayılmaz.
 - **Admin screens:** Kritik yok, çoğunlukla mock data ve type safety issues
 - **Update (2026-05-02):** Admin MEDIUM bulguları (`W3-A01`, `W3-A02` ve ilgili dialog type-safety cleanup) frontend'de kapatıldı; kalan Wave 3 medium maddeleri Worker/Notifications tarafında
 - **Karar:** CRITICAL + HIGH fix'ler Wave 3 kapsamına alınmalı; MEDIUM/LOW post-launch technical debt olarak kaydedilebilir
+
+---
+
+### 10.0.10 Wave 4 Completion Evidence (3 June 2026)
+
+**Dalga Kapanış Tarihi:** 3 Haziran 2026
+**Kapsam:** Admin Reports + Dashboard-only gaps (Reports backend shipped; settings/system + maintenance complete action formally DEFERRED as launch-non-critical stubs)
+
+#### Verify Sonuçları
+
+| Komut | Sonuç | Notlar |
+|-------|-------|--------|
+| `dotnet build backend/RentACar.sln --no-restore` | ✅ **PASS** | 0 error, 0 warning |
+| `dotnet test backend/RentACar.sln --no-build` | ✅ **PASS** | 619/619 unit + 32/32 integration PASS (ReportsService + AdminReportsController testleri dahil) |
+
+#### Değiştirilen Dosyalar
+
+| Tip | Dosya | Değişiklik |
+|-----|-------|-----------|
+| Added | `backend/src/RentACar.API/Controllers/AdminReportsController.cs` | Admin reports endpoint'leri (revenue, occupancy, popular vehicles) |
+| Added | `backend/src/RentACar.API/Services/IReportsService.cs` | Reports service contract |
+| Added | `backend/src/RentACar.API/Services/ReportsService.cs` | Report aggregation logic |
+| Added | `backend/src/RentACar.API/Contracts/Reports/ReportDtos.cs` | Reports response DTOs |
+| Added | `backend/tests/RentACar.Tests/Unit/Services/ReportsServiceTests.cs` | ReportsService unit test coverage |
+| Added | `backend/tests/RentACar.Tests/Unit/Controllers/AdminReportsControllerTests.cs` | AdminReportsController unit test coverage |
+
+#### Wave 4 Durumu: 🟡 **PARTIALLY COMPLETED**
+
+- Reports backend (controller + service + tests) shipped ve verify edildi
+- Backend build ve test komutları yeşil
+- PR #262 Codex review yorumları işlendi: occupancy oranları frontend contract ile uyumlu şekilde 0-100 yüzde ölçeğine çekildi, occupancy query period overlap filtresi eklendi, popular-vehicle revenue ve revenue report hesaplamaları counted reservation scope ile hizalandı
+- Kalan iki stub aşağıda gerekçesiyle defer edildi
+
+#### Formal Deferral Notu
+
+Aşağıdaki iki stub **launch-non-critical** kapsamında formal olarak defer edilmiştir:
+
+| Stub | Neden Defer Edildi |
+|------|---------------------|
+| **Settings/System persistence** | Company info persistence bir config migration concern'idir; production environment'ta environment variables / config dosyaları üzerinden yönetilmesi tercih edilir, bu yüzden launch kapsamı dışında tutulmuştur. |
+| **Maintenance complete action** | Maintenance complete action bir fleet workflow'udur; tam implementasyon için `Maintenance` entity migration'ı gerektirir, bu kapsam launch dışıdır. |
+
+**Gerekçe:** Her iki madde de launch-blocking değildir; admin operasyonlarının günlük akışını etkilemez, public booking veya payment akışına dokunmaz. Post-launch technical debt olarak kayıt altına alınmıştır.
 
 ---
 
