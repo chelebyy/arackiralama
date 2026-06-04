@@ -16,7 +16,7 @@ describe("apiClient", () => {
   it("adds auth headers and returns parsed JSON data", async () => {
     localStorage.setItem("auth_token", "secret-token");
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
+      new Response(JSON.stringify({ success: true, message: "OK", data: { ok: true } }), {
         status: 200,
         headers: { "content-type": "application/json" },
       })
@@ -27,7 +27,7 @@ describe("apiClient", () => {
 
     expect(result).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:5000/api/vehicles",
+      "http://localhost:5000/api/v1/vehicles",
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Bearer secret-token",
@@ -36,6 +36,20 @@ describe("apiClient", () => {
         }),
       })
     );
+  });
+
+  it("returns unwrapped JSON when the response is not an API success envelope", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ raw: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+    );
+
+    await expect(apiClient<{ raw: boolean }>("/raw")).resolves.toEqual({ raw: true });
   });
 
   it("retries transient network failures before succeeding", async () => {

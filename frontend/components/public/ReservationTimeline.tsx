@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import {
   Clock,
   CheckCircle,
@@ -17,8 +18,6 @@ interface ReservationTimelineProps {
 
 interface TimelineStep {
   key: string;
-  label: string;
-  description: string;
   icon: React.ComponentType<{ className?: string }>;
   date?: string;
 }
@@ -27,29 +26,21 @@ const getTimelineSteps = (status: string): TimelineStep[] => {
   const baseSteps: TimelineStep[] = [
     {
       key: "pending",
-      label: "Reservation Created",
-      description: "Your reservation has been received and is being processed",
       icon: Clock,
       date: "Mar 20, 2025 at 10:30"
     },
     {
       key: "confirmed",
-      label: "Reservation Confirmed",
-      description: "Your booking is confirmed and vehicle is reserved",
       icon: CheckCircle,
       date: "Mar 20, 2025 at 11:15"
     },
     {
       key: "active",
-      label: "Vehicle Picked Up",
-      description: "You have collected your vehicle",
       icon: Car,
       date: undefined
     },
     {
       key: "completed",
-      label: "Rental Completed",
-      description: "Vehicle returned and rental finalized",
       icon: CheckCircle,
       date: undefined
     }
@@ -59,15 +50,11 @@ const getTimelineSteps = (status: string): TimelineStep[] => {
     return [
       {
         key: "pending",
-        label: "Reservation Created",
-        description: "Your reservation was received",
         icon: Clock,
         date: "Mar 20, 2025 at 10:30"
       },
       {
         key: "cancelled",
-        label: "Reservation Cancelled",
-        description: "This reservation has been cancelled",
         icon: XCircle,
         date: "Mar 21, 2025 at 14:00"
       }
@@ -78,6 +65,7 @@ const getTimelineSteps = (status: string): TimelineStep[] => {
 };
 
 export default function ReservationTimeline({ status }: ReservationTimelineProps) {
+  const t = useTranslations("trackReservation.timeline");
   const steps = getTimelineSteps(status);
   const currentStepIndex = steps.findIndex(step => step.key === status);
   const effectiveIndex = currentStepIndex === -1 ? 0 : currentStepIndex;
@@ -87,7 +75,7 @@ export default function ReservationTimeline({ status }: ReservationTimelineProps
       <div className="p-6 border-b border-[#E2E8F0]">
         <h2 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
           <RotateCcw className="h-5 w-5 text-[#0369A1]" />
-          Reservation Progress
+          {t("title")}
         </h2>
       </div>
 
@@ -148,7 +136,7 @@ export default function ReservationTimeline({ status }: ReservationTimelineProps
                           !isCurrent && !isCancelled && "text-[#0F172A]"
                         )}
                       >
-                        {step.label}
+                        {t(`steps.${step.key}.label`)}
                       </h3>
                       {step.date && (
                         <span className="text-sm text-[#64748B] flex items-center gap-1">
@@ -157,16 +145,13 @@ export default function ReservationTimeline({ status }: ReservationTimelineProps
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-[#64748B] mt-1">{step.description}</p>
+                    <p className="text-sm text-[#64748B] mt-1">{t(`steps.${step.key}.description`)}</p>
 
                     {isCurrent && !isCancelled && (
                       <div className="mt-3 p-3 rounded-lg bg-[#F0F9FF] border border-[#BAE6FD]">
                         <p className="text-sm text-[#0369A1] flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                          {status === "pending" && "Your reservation is being processed. You will receive a confirmation email shortly."}
-                          {status === "confirmed" && "Your reservation is confirmed. We will contact you before pickup."}
-                          {status === "active" && "Your rental is currently active. Please return the vehicle by the agreed time."}
-                          {status === "completed" && "Thank you for choosing us! We hope you enjoyed your rental experience."}
+                          {t(`current.${status}`)}
                         </p>
                       </div>
                     )}
@@ -175,7 +160,7 @@ export default function ReservationTimeline({ status }: ReservationTimelineProps
                       <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200">
                         <p className="text-sm text-red-700 flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                          This reservation has been cancelled. Contact support for more information.
+                          {t("cancelledMessage")}
                         </p>
                       </div>
                     )}

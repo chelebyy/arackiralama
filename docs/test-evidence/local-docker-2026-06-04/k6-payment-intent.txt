@@ -1,0 +1,46 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: payment-intent.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 1m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 1m0s, gracefulStop: 30s)
+
+
+running (0m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  0m01.0s/1m0s  0/1 shared iters
+[32m     ✓ status is 200 or 201[0m
+[32m     ✓ response time within limit[0m
+
+     █ setup
+
+[32m       ✓ availability lookup succeeded[0m
+[32m       ✓ reservation creation succeeded[0m
+[32m       ✓ setup hold succeeded[0m
+
+     checks[2m.........................:[0m [36m100.00%[0m [36;2m✓ 5[0m        [36;2m✗ 0[0m  
+     data_received[2m..................:[0m [36m4.3 kB[0m  [36;2m2.2 kB/s[0m
+     data_sent[2m......................:[0m [36m1.8 kB[0m  [36;2m927 B/s[0m
+     http_req_blocked[2m...............:[0m avg=[36m852.57µs[0m min=[36m2.65µs[0m   med=[36m646.66µs[0m max=[36m2.11ms[0m   p(90)=[36m1.86ms[0m   p(95)=[36m1.99ms[0m  
+     http_req_connecting[2m............:[0m avg=[36m550.46µs[0m min=[36m0s[0m       med=[36m492.15µs[0m max=[36m1.21ms[0m   p(90)=[36m1.14ms[0m   p(95)=[36m1.18ms[0m  
+   [32m✓[0m http_req_duration[2m..............:[0m avg=[36m28.14ms[0m  min=[36m5.02ms[0m   med=[36m16.2ms[0m   max=[36m75.16ms[0m  p(90)=[36m57.65ms[0m  p(95)=[36m66.4ms[0m  
+       { expected_response:true }[2m...:[0m avg=[36m28.14ms[0m  min=[36m5.02ms[0m   med=[36m16.2ms[0m   max=[36m75.16ms[0m  p(90)=[36m57.65ms[0m  p(95)=[36m66.4ms[0m  
+   [32m✓[0m http_req_failed[2m................:[0m [36m0.00%[0m   [36;2m✓ 0[0m        [36;2m✗ 4[0m  
+     http_req_receiving[2m.............:[0m avg=[36m114.31µs[0m min=[36m100.32µs[0m med=[36m103.39µs[0m max=[36m150.15µs[0m p(90)=[36m136.13µs[0m p(95)=[36m143.14µs[0m
+     http_req_sending[2m...............:[0m avg=[36m76.27µs[0m  min=[36m18.68µs[0m  med=[36m54.13µs[0m  max=[36m178.13µs[0m p(90)=[36m141.66µs[0m p(95)=[36m159.89µs[0m
+     http_req_tls_handshaking[2m.......:[0m avg=[36m0s[0m       min=[36m0s[0m       med=[36m0s[0m       max=[36m0s[0m       p(90)=[36m0s[0m       p(95)=[36m0s[0m      
+     http_req_waiting[2m...............:[0m avg=[36m27.95ms[0m  min=[36m4.87ms[0m   med=[36m15.97ms[0m  max=[36m75ms[0m     p(90)=[36m57.5ms[0m   p(95)=[36m66.25ms[0m 
+     http_reqs[2m......................:[0m [36m4[0m       [36;2m2.084623/s[0m
+     iteration_duration[2m.............:[0m avg=[36m1.87s[0m    min=[36m1.87s[0m    med=[36m1.87s[0m    max=[36m1.87s[0m    p(90)=[36m1.87s[0m    p(95)=[36m1.87s[0m   
+     iterations[2m.....................:[0m [36m1[0m       [36;2m0.521156/s[0m
+     vus[2m............................:[0m [36m1[0m       [36;2mmin=1[0m      [36;2mmax=1[0m
+     vus_max[2m........................:[0m [36m1[0m       [36;2mmin=1[0m      [36;2mmax=1[0m
+running (0m01.9s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  0m01.9s/1m0s  1/1 shared iters

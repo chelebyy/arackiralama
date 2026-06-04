@@ -6,9 +6,14 @@ vi.mock("../client", () => ({
   patch: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
+  adminDel: vi.fn(),
+  adminGet: vi.fn(),
+  adminPatch: vi.fn(),
+  adminPost: vi.fn(),
+  adminPut: vi.fn(),
 }));
 
-import { del, get, patch, post, put } from "../client";
+import { adminDel, adminGet, adminPatch, adminPost, adminPut } from "../client";
 import {
   mockAdminUsers,
   mockAuditLogs,
@@ -71,11 +76,11 @@ import {
   updateVehicleStatus,
 } from "./vehicles";
 
-const mockedDel = vi.mocked(del);
-const mockedGet = vi.mocked(get);
-const mockedPatch = vi.mocked(patch);
-const mockedPost = vi.mocked(post);
-const mockedPut = vi.mocked(put);
+const mockedDel = vi.mocked(adminDel);
+const mockedGet = vi.mocked(adminGet);
+const mockedPatch = vi.mocked(adminPatch);
+const mockedPost = vi.mocked(adminPost);
+const mockedPut = vi.mocked(adminPut);
 
 describe("admin API fixtures", () => {
   it("keeps mock fixtures coherent enough for admin screens", () => {
@@ -118,9 +123,9 @@ describe("admin vehicles API", () => {
 
     expect(mockedGet).toHaveBeenNthCalledWith(
       1,
-      "/admin/v1/vehicles?page=2&search=clio&active=true"
+      "/v1/vehicles?page=2&search=clio&active=true"
     );
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/admin/v1/vehicles/vehicle-1");
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/vehicles/vehicle-1");
   });
 
   it("sends vehicle write operations to the expected endpoints", async () => {
@@ -131,18 +136,18 @@ describe("admin vehicles API", () => {
     await scheduleMaintenance("vehicle-1", { reason: "oil" } as never);
     await deleteVehicle("vehicle-1");
 
-    expect(mockedPost).toHaveBeenCalledWith("/admin/v1/vehicles", { plate: "07ABC123" });
-    expect(mockedPut).toHaveBeenCalledWith("/admin/v1/vehicles/vehicle-1", { color: "Black" });
-    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/admin/v1/vehicles/vehicle-1/status", {
+    expect(mockedPost).toHaveBeenCalledWith("/v1/vehicles", { plate: "07ABC123" });
+    expect(mockedPut).toHaveBeenCalledWith("/v1/vehicles/vehicle-1", { color: "Black" });
+    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/vehicles/vehicle-1/status", {
       status: "Maintenance",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/admin/v1/vehicles/vehicle-1/transfer", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/vehicles/vehicle-1/transfer", {
       officeId: "office-2",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/admin/v1/vehicles/vehicle-1/maintenance", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/vehicles/vehicle-1/maintenance", {
       reason: "oil",
     });
-    expect(mockedDel).toHaveBeenCalledWith("/admin/v1/vehicles/vehicle-1");
+    expect(mockedDel).toHaveBeenCalledWith("/v1/vehicles/vehicle-1");
   });
 
   it("covers vehicle groups and offices clients", async () => {
@@ -153,14 +158,14 @@ describe("admin vehicles API", () => {
     await createOffice({ name: "Center" } as never);
     await updateOffice("office-1", { city: "Alanya" } as never);
 
-    expect(mockedGet).toHaveBeenNthCalledWith(1, "/admin/v1/vehicle-groups");
-    expect(mockedPost).toHaveBeenNthCalledWith(1, "/admin/v1/vehicle-groups", { name: "SUV" });
-    expect(mockedPut).toHaveBeenNthCalledWith(1, "/admin/v1/vehicle-groups/group-1", {
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups");
+    expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups", { name: "SUV" });
+    expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups/group-1", {
       minAge: 25,
     });
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/admin/v1/offices");
-    expect(mockedPost).toHaveBeenNthCalledWith(2, "/admin/v1/offices", { name: "Center" });
-    expect(mockedPut).toHaveBeenNthCalledWith(2, "/admin/v1/offices/office-1", { city: "Alanya" });
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/offices");
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/offices", { name: "Center" });
+    expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/offices/office-1", { city: "Alanya" });
   });
 });
 
@@ -184,31 +189,31 @@ describe("admin reservations API", () => {
 
     expect(mockedGet).toHaveBeenNthCalledWith(
       1,
-      "/admin/v1/reservations?page=1&status=Confirmed"
+      "/v1/reservations?page=1&status=Confirmed"
     );
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/admin/v1/reservations/reservation-1");
-    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/admin/v1/reservations/reservation-1/cancel", {
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-1");
+    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/reservations/reservation-1/cancel", {
       reason: "Customer request",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/admin/v1/reservations/reservation-2/cancel", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-2/cancel", {
       reason: "Duplicate",
     });
     expect(mockedPatch).toHaveBeenNthCalledWith(
       3,
-      "/admin/v1/reservations/reservation-1/assign-vehicle",
+      "/v1/reservations/reservation-1/assign-vehicle",
       { vehicleId: "vehicle-1" }
     );
     expect(mockedPatch).toHaveBeenNthCalledWith(
       4,
-      "/admin/v1/reservations/reservation-1/check-in",
+      "/v1/reservations/reservation-1/check-in",
       { mileage: 1200 }
     );
     expect(mockedPatch).toHaveBeenNthCalledWith(
       5,
-      "/admin/v1/reservations/reservation-1/check-out",
+      "/v1/reservations/reservation-1/check-out",
       { mileage: 1400 }
     );
-    expect(mockedPost).toHaveBeenCalledWith("/admin/v1/reservations/reservation-1/refund", {
+    expect(mockedPost).toHaveBeenCalledWith("/v1/reservations/reservation-1/refund", {
       amount: 100,
       reason: "Refund",
     });
@@ -237,21 +242,21 @@ describe("admin pricing, users, settings, and reports APIs", () => {
 
     expect(mockedGet).toHaveBeenNthCalledWith(
       1,
-      "/admin/v1/pricing-rules?vehicleGroupId=group-1&active=true"
+      "/v1/pricing-rules?vehicleGroupId=group-1&active=true"
     );
-    expect(mockedPost).toHaveBeenNthCalledWith(1, "/admin/v1/pricing-rules", {
+    expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/pricing-rules", {
       vehicleGroupId: "group-1",
     });
-    expect(mockedPut).toHaveBeenNthCalledWith(1, "/admin/v1/pricing-rules/rule-1", {
+    expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/pricing-rules/rule-1", {
       dailyPrice: 80,
     });
-    expect(mockedDel).toHaveBeenNthCalledWith(1, "/admin/v1/pricing-rules/rule-1");
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/admin/v1/campaigns");
-    expect(mockedPost).toHaveBeenNthCalledWith(2, "/admin/v1/campaigns", { code: "SUMMER" });
-    expect(mockedPut).toHaveBeenNthCalledWith(2, "/admin/v1/campaigns/campaign-1", {
+    expect(mockedDel).toHaveBeenNthCalledWith(1, "/v1/pricing-rules/rule-1");
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/campaigns");
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/campaigns", { code: "SUMMER" });
+    expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1", {
       isActive: false,
     });
-    expect(mockedDel).toHaveBeenNthCalledWith(2, "/admin/v1/campaigns/campaign-1");
+    expect(mockedDel).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1");
   });
 
   it("covers users endpoints and primitive/object payload branches", async () => {
@@ -264,22 +269,22 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await updateAdminUserStatus("admin-1", true);
     await updateAdminUserStatus("admin-2", { isActive: false });
 
-    expect(mockedGet).toHaveBeenNthCalledWith(1, "/admin/v1/users/customers?search=leyla");
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/admin/v1/users/customers/customer-1");
-    expect(mockedGet).toHaveBeenNthCalledWith(3, "/admin/v1/users/admins?role=Admin&page=2");
-    expect(mockedPost).toHaveBeenCalledWith("/admin/v1/users/admins", {
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/users/customers?search=leyla");
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/users/customers/customer-1");
+    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/users/admins?role=Admin&page=2");
+    expect(mockedPost).toHaveBeenCalledWith("/v1/users/admins", {
       email: "admin@example.test",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/admin/v1/users/admins/admin-1/role", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/users/admins/admin-1/role", {
       role: "SuperAdmin",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/admin/v1/users/admins/admin-2/role", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/users/admins/admin-2/role", {
       role: "Admin",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/admin/v1/users/admins/admin-1/status", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/users/admins/admin-1/status", {
       isActive: true,
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(4, "/admin/v1/users/admins/admin-2/status", {
+    expect(mockedPatch).toHaveBeenNthCalledWith(4, "/v1/users/admins/admin-2/status", {
       isActive: false,
     });
   });
@@ -299,17 +304,17 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await expect(getOccupancyReport("week")).resolves.toBe(mockOccupancyReports[0]);
     await expect(getPopularVehicles("year")).resolves.toBe(mockPopularVehicles);
 
-    expect(mockedGet).toHaveBeenNthCalledWith(1, "/admin/v1/feature-flags");
-    expect(mockedPatch).toHaveBeenCalledWith("/admin/v1/feature-flags/flag-1", { enabled: false });
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/feature-flags");
+    expect(mockedPatch).toHaveBeenCalledWith("/v1/feature-flags/flag-1", { enabled: false });
     expect(mockedGet).toHaveBeenNthCalledWith(
       2,
-      "/admin/v1/audit-logs?entityType=Reservation&page=1"
+      "/v1/audit-logs?entityType=Reservation&page=1"
     );
-    expect(mockedGet).toHaveBeenNthCalledWith(3, "/admin/v1/reports/revenue?period=month");
-    expect(mockedGet).toHaveBeenNthCalledWith(4, "/admin/v1/reports/occupancy?period=week");
+    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/reports/revenue?period=month");
+    expect(mockedGet).toHaveBeenNthCalledWith(4, "/v1/reports/occupancy?period=week");
     expect(mockedGet).toHaveBeenNthCalledWith(
       5,
-      "/admin/v1/reports/popular-vehicles?period=year"
+      "/v1/reports/popular-vehicles?period=year"
     );
   });
 });

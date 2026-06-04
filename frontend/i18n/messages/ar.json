@@ -142,9 +142,19 @@
   "trackReservation": {
     "title": "تتبع الحجز",
     "subtitle": "أدخل رقم الحجز للتحقق من حالتك",
+    "pageTitle": "تتبع حجزك",
+    "pageSubtitle": "أدخل رمز الحجز لعرض حالة الحجز وتفاصيله",
     "reservationNumber": "رقم الحجز",
+    "reservationCode": "رمز الحجز",
+    "codePlaceholder": "أدخل رمز الحجز (مثال: ALN-2025-8842)",
     "email": "عنوان البريد الإلكتروني",
-    "trackButton": "تتبع",
+    "trackButton": "تتبع الحجز",
+    "searching": "جارٍ البحث...",
+    "copyCode": "نسخ رمز الحجز",
+    "errors": {
+      "emptyCode": "يرجى إدخال رمز الحجز.",
+      "notFound": "لم يتم العثور على حجز بهذا الرمز. يرجى التحقق والمحاولة مرة أخرى."
+    },
     "status": {
       "confirmed": "مؤكد",
       "pending": "معلق",
@@ -152,12 +162,73 @@
       "completed": "مكتمل",
       "cancelled": "ملغى"
     },
+    "sections": {
+      "vehicle": "معلومات السيارة",
+      "customer": "معلومات العميل",
+      "payment": "ملخص الدفع"
+    },
     "details": {
       "vehicle": "السيارة",
       "pickup": "الاستلام",
       "return": "الإرجاع",
       "location": "الموقع",
       "total": "الإجمالي"
+    },
+    "rentalPeriod": "مدة الإيجار",
+    "daysCount": "{count, plural, one {# يوم} two {# يومان} few {# أيام} many {# يوماً} other {# يوم}}",
+    "customer": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف"
+    },
+    "payment": {
+      "rentalTotal": "إجمالي الإيجار",
+      "securityDeposit": "مبلغ التأمين",
+      "status": "حالة الدفع"
+    },
+    "paymentStatus": {
+      "pending": "معلق",
+      "paid": "مدفوع",
+      "refunded": "مسترد"
+    },
+    "support": {
+      "title": "هل تحتاج إلى مساعدة؟",
+      "description": "فريق الدعم لدينا متاح على مدار الساعة لمساعدتك في أي سؤال عن حجزك",
+      "call": "اتصل بنا",
+      "email": "راسلنا"
+    },
+    "timeline": {
+      "title": "تقدم الحجز",
+      "steps": {
+        "pending": {
+          "label": "تم إنشاء الحجز",
+          "description": "تم استلام حجزك وهو قيد المعالجة"
+        },
+        "confirmed": {
+          "label": "تم تأكيد الحجز",
+          "description": "تم تأكيد حجزك وتم حجز السيارة"
+        },
+        "active": {
+          "label": "تم استلام السيارة",
+          "description": "لقد استلمت السيارة"
+        },
+        "completed": {
+          "label": "اكتمل الإيجار",
+          "description": "تم إرجاع السيارة وإنهاء الإيجار"
+        },
+        "cancelled": {
+          "label": "تم إلغاء الحجز",
+          "description": "تم إلغاء هذا الحجز"
+        }
+      },
+      "current": {
+        "pending": "حجزك قيد المعالجة. ستتلقى رسالة تأكيد عبر البريد الإلكتروني قريباً.",
+        "confirmed": "تم تأكيد حجزك. سنتواصل معك قبل موعد الاستلام.",
+        "active": "إيجارك نشط حالياً. يرجى إعادة السيارة في الوقت المتفق عليه.",
+        "completed": "شكراً لاختيارك لنا. نأمل أن تكون تجربة الإيجار قد أعجبتك.",
+        "cancelled": "تم إلغاء هذا الحجز."
+      },
+      "cancelledMessage": "تم إلغاء هذا الحجز. تواصل مع الدعم لمزيد من المعلومات."
     }
   },
   "home": {

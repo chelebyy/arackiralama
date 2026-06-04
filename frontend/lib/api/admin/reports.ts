@@ -1,4 +1,4 @@
-import { get } from '../client';
+import { adminGet } from '../client';
 import { mockOccupancyReports, mockPopularVehicles, mockRevenueReports } from './mock';
 import type {
   AdminResponse,
@@ -16,13 +16,13 @@ function unwrapResponse<T>(response: AdminResponse<T>): T {
   return response as T;
 }
 
-const REPORTS_ENDPOINT = '/admin/v1/reports';
+const REPORTS_ENDPOINT = '/v1/reports';
 
 export async function getRevenueReport(period: string) {
   if (USE_MOCK) {
     return mockRevenueReports[0];
   }
-  const response = await get<AdminResponse<RevenueReport>>(`${REPORTS_ENDPOINT}/revenue?period=${period}`);
+  const response = await adminGet<AdminResponse<RevenueReport>>(`${REPORTS_ENDPOINT}/revenue?period=${period}`);
   return unwrapResponse(response);
 }
 
@@ -30,7 +30,7 @@ export async function getOccupancyReport(period: string) {
   if (USE_MOCK) {
     return mockOccupancyReports[0];
   }
-  const response = await get<AdminResponse<OccupancyReport>>(`${REPORTS_ENDPOINT}/occupancy?period=${period}`);
+  const response = await adminGet<AdminResponse<OccupancyReport>>(`${REPORTS_ENDPOINT}/occupancy?period=${period}`);
   return unwrapResponse(response);
 }
 
@@ -38,6 +38,6 @@ export async function getPopularVehicles(period: string) {
   if (USE_MOCK) {
     return mockPopularVehicles;
   }
-  const response = await get<AdminResponse<PopularVehicleReportItem[]>>(`${REPORTS_ENDPOINT}/popular-vehicles?period=${period}`);
+  const response = await adminGet<AdminResponse<PopularVehicleReportItem[]>>(`${REPORTS_ENDPOINT}/popular-vehicles?period=${period}`);
   return unwrapResponse(response);
 }

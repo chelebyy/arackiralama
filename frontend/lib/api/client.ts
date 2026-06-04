@@ -146,7 +146,7 @@ export async function apiClient<T>(
     headers,
   };
 
-  const response = await retryFetch(url, requestConfig);
+  const response = await retryFetch(url, { ...requestConfig, credentials: 'include' });
 
   if (!response.ok) {
     let errorData: ApiErrorResponse;
@@ -168,7 +168,18 @@ export async function apiClient<T>(
     return undefined as T;
   }
 
-  return response.json();
+  const payload = await response.json();
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'success' in payload &&
+    'data' in payload
+  ) {
+    return payload.data as T;
+  }
+
+  return payload;
 }
 
 export function get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
@@ -213,4 +224,120 @@ export function patch<T>(
 
 export function del<T>(endpoint: string, config?: RequestConfig): Promise<T> {
   return apiClient<T>(endpoint, { ...config, method: 'DELETE' });
+}
+
+// ----------------------------------------------------------------------------
+// Admin-scoped client
+//
+// Admin controllers are mounted at `/api/admin/v1/...` (different prefix from
+// the public `/api/v1/...` routes). To keep `apiClient` simple and shared, the
+// admin surface uses its own base URL and helper functions. Auth token
+// retrieval, retries, and envelope unwrapping stay consistent with the public
+// client.
+// ----------------------------------------------------------------------------
+function getAdminAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('admin_auth_token') ?? localStorage.getItem('auth_token');
+}
+
+export async function adminApiClient<T>(
+  endpoint: string,
+  config: RequestConfig = {}
+): Promise<T> {
+  const url = `${API_CONFIG.adminBaseUrl}${endpoint}`;
+  const token = getAdminAuthToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...((config.headers as Record<string, string>) || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const requestConfig: RequestConfig = {
+    ...config,
+    headers,
+  };
+
+  const response = await retryFetch(url, { ...requestConfig, credentials: 'include' });
+
+  if (!response.ok) {
+    let errorData: ApiErrorResponse;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = {
+        statusCode: response.status,
+        message: response.statusText || 'An error occurred',
+        code: 'UNKNOWN_ERROR',
+        timestamp: new Date().toISOString(),
+        path: endpoint,
+      };
+    }
+    throw new ApiError(errorData);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const payload = await response.json();
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'success' in payload &&
+    'data' in payload
+  ) {
+    return payload.data as T;
+  }
+
+  return payload;
+}
+
+export function adminGet<T>(endpoint: string, config?: RequestConfig): Promise<T> {
+  return adminApiClient<T>(endpoint, { ...config, method: 'GET' });
+}
+
+export function adminPost<T>(
+  endpoint: string,
+  data?: unknown,
+  config?: RequestConfig
+): Promise<T> {
+  return adminApiClient<T>(endpoint, {
+    ...config,
+    method: 'POST',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+export function adminPut<T>(
+  endpoint: string,
+  data?: unknown,
+  config?: RequestConfig
+): Promise<T> {
+  return adminApiClient<T>(endpoint, {
+    ...config,
+    method: 'PUT',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+export function adminPatch<T>(
+  endpoint: string,
+  data?: unknown,
+  config?: RequestConfig
+): Promise<T> {
+  return adminApiClient<T>(endpoint, {
+    ...config,
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+export function adminDel<T>(endpoint: string, config?: RequestConfig): Promise<T> {
+  return adminApiClient<T>(endpoint, { ...config, method: 'DELETE' });
 }

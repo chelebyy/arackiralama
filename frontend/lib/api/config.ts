@@ -1,5 +1,12 @@
 export const API_CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+  /**
+   * Admin controllers live under `/api/admin/v1/...` (not `/api/v1/admin/v1/...`).
+   * The admin API client routes through a same-origin Next.js proxy
+   * (`/api/admin/[...]`) so the httpOnly `rac_access` cookie is sent without
+   * SameSite or cross-origin issues. Public/customer traffic keeps using `baseUrl`.
+   */
+  adminBaseUrl: process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3001/api/admin',
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,

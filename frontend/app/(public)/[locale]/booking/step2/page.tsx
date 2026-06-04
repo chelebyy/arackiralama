@@ -18,7 +18,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
 import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
-import type { AvailableVehicleGroup } from "@/lib/api/types";
+import { useBookingActions } from "@/hooks/useBooking";
+import { FuelType, TransmissionType, type AvailableVehicleGroup } from "@/lib/api/types";
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
@@ -80,6 +81,7 @@ export default function BookingStep2Page() {
   const router = useRouter();
   const locale = params.locale as string;
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const { setDates, selectVehicle } = useBookingActions();
 
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || "ala";
@@ -88,11 +90,22 @@ export default function BookingStep2Page() {
   const returnDate = searchParams.get("returnDate") || "";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const { offices } = useOffices();
+  const { offices, isLoading: officesLoading } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
+  const returnOfficeGuid = resolveOfficeGuid(offices, returnOffice);
+  const pickupOfficeObj = offices.find((office) => office.id === pickupOfficeGuid);
+  const returnOfficeObj = offices.find((office) => office.id === returnOfficeGuid);
+  const canSearchVehicles =
+    pickupDate &&
+    returnDate &&
+    pickupOfficeGuid &&
+    !officesLoading &&
+    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice) &&
+    returnOfficeGuid &&
+    (isGuid(returnOfficeGuid) || returnOfficeGuid !== returnOffice);
 
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && returnDate && pickupOfficeGuid
+    canSearchVehicles
       ? {
           office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,
@@ -105,6 +118,48 @@ export default function BookingStep2Page() {
 
   const handleContinue = () => {
     if (!selectedVehicle) return;
+    const selectedGroup = availableGroups.find((group) => group.groupId === selectedVehicle);
+
+    if (pickupOfficeObj && returnOfficeObj) {
+      setDates({
+        pickupOfficeId: pickupOfficeGuid,
+        pickupOfficeName: pickupOfficeObj.name,
+        pickupDate,
+        pickupTime,
+        returnOfficeId: returnOfficeGuid,
+        returnOfficeName: returnOfficeObj.name,
+        returnDate,
+        returnTime,
+      });
+    }
+
+    if (selectedGroup) {
+      selectVehicle({
+        id: selectedGroup.groupId,
+        name: selectedGroup.groupName,
+        description: "",
+        imageUrl: selectedGroup.imageUrl ?? "",
+        images: selectedGroup.imageUrl ? [selectedGroup.imageUrl] : [],
+        groupId: selectedGroup.groupId,
+        groupName: selectedGroup.groupName,
+        transmission: TransmissionType.AUTOMATIC,
+        fuelType: FuelType.PETROL,
+        seatCount: 5,
+        luggageCapacity: 2,
+        hasAirConditioning: selectedGroup.features.includes("AirConditioning"),
+        minDriverAge: selectedGroup.minAge,
+        minLicenseYears: selectedGroup.minLicenseYears,
+        dailyPrice: selectedGroup.dailyPrice,
+        weeklyPrice: selectedGroup.dailyPrice * 7,
+        monthlyPrice: selectedGroup.dailyPrice * 30,
+        features: [],
+        insuranceIncluded: true,
+        mileageLimit: null,
+        extraMileagePrice: null,
+        availableExtras: [],
+      }, pickupOfficeObj as never, returnOfficeObj as never);
+    }
+
     const queryParams = new URLSearchParams(searchParams.toString());
     queryParams.set("vehicle", selectedVehicle);
     router.push(`/${locale}/booking/step3?${queryParams.toString()}`);

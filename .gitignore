@@ -107,6 +107,9 @@ postgrebilgiler.txt
 CLAUDE.md
 codex-temp/
 .maestro/
+.playwright-mcp/
+frontend/test-results/
+admin-default-dashboard.png
 
 # ── GSD baseline (auto-generated) ──
 .gsd/activity/
