@@ -126,11 +126,19 @@ export default function VehicleDetailPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const { offices: apiOffices } = useOffices();
+  const { offices: apiOffices, isLoading: officesLoading } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(apiOffices, pickupOffice);
+  const canSearchVehicles =
+    pickupDate &&
+    pickupTime &&
+    returnDate &&
+    returnTime &&
+    pickupOfficeGuid &&
+    !officesLoading &&
+    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice);
 
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && pickupTime && returnDate && returnTime && pickupOfficeGuid
+    canSearchVehicles
       ? {
           office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,

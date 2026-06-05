@@ -1,0 +1,162 @@
+# Raw Docker Health Evidence - 2026-06-04 20:19:10 +03:00
+
+## git rev-parse HEAD
+82510bd9a4c9baf071ea3584057d6dff85e329ec
+
+## git status --short
+ M backend/docker-compose.yml
+ M frontend/Dockerfile
+ M frontend/app/(public)/[locale]/booking/step2/page.tsx
+ M frontend/app/(public)/[locale]/booking/step3/page.tsx
+ M frontend/app/(public)/[locale]/track-reservation/TrackReservationPage.test.tsx
+ M frontend/app/(public)/[locale]/track-reservation/page.tsx
+ M frontend/app/(public)/[locale]/vehicles/[id]/page.tsx
+ M frontend/app/(public)/[locale]/vehicles/page.tsx
+ M frontend/components/public/ReservationTimeline.tsx
+ M frontend/i18n/messages/ar.json
+ M frontend/i18n/messages/de.json
+ M frontend/i18n/messages/en.json
+ M frontend/i18n/messages/ru.json
+ M frontend/i18n/messages/tr.json
+ M frontend/lib/api/admin/admin-api.test.ts
+ M frontend/lib/api/admin/pricing.ts
+ M frontend/lib/api/admin/reports.ts
+ M frontend/lib/api/admin/reservations.ts
+ M frontend/lib/api/admin/settings.ts
+ M frontend/lib/api/admin/users.ts
+ M frontend/lib/api/admin/vehicles.ts
+ M frontend/lib/api/client.test.ts
+ M frontend/lib/api/client.ts
+ M frontend/lib/api/config.ts
+ M frontend/pnpm-lock.yaml
+?? .playwright-mcp/page-2026-06-03T21-03-59-864Z.yml
+?? .playwright-mcp/page-2026-06-03T21-05-11-307Z.yml
+?? .playwright-mcp/page-2026-06-03T21-05-41-730Z.yml
+?? .playwright-mcp/page-2026-06-03T21-14-10-990Z.yml
+?? .playwright-mcp/page-2026-06-03T21-16-59-098Z.yml
+?? .playwright-mcp/page-2026-06-03T21-20-48-566Z.yml
+?? .playwright-mcp/page-2026-06-03T21-23-51-684Z.yml
+?? .playwright-mcp/page-2026-06-03T21-24-45-084Z.yml
+?? .playwright-mcp/page-2026-06-03T21-25-14-665Z.yml
+?? .playwright-mcp/page-2026-06-03T21-25-48-706Z.yml
+?? .playwright-mcp/page-2026-06-03T21-26-27-719Z.yml
+?? .playwright-mcp/page-2026-06-03T21-27-10-946Z.yml
+?? admin-default-dashboard.png
+?? docs/13_Local_Docker_Browser_Test_Checklist.md
+?? docs/test-evidence/local-docker-2026-06-04/
+?? frontend/app/api/admin/
+?? frontend/e2e/pages/CustomerLoginPage.ts
+?? frontend/e2e/pages/ForgotPasswordPage.ts
+?? frontend/e2e/pages/ResetPasswordPage.ts
+?? frontend/e2e/tests/guest-auth-pages.spec.ts
+?? frontend/pnpm-workspace.yaml
+?? frontend/test-results/
+
+## docker compose ps
+NAME                IMAGE            COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+rentacar-api        backend-api      "dotnet RentACar.API…"   api        38 seconds ago   Up 26 seconds             0.0.0.0:5000->8080/tcp, [::]:5000->8080/tcp
+rentacar-postgres   postgres:18      "docker-entrypoint.s…"   postgres   38 seconds ago   Up 37 seconds (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+rentacar-redis      redis:7.4        "docker-entrypoint.s…"   redis      38 seconds ago   Up 37 seconds (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+rentacar-web        backend-web      "docker-entrypoint.s…"   web        38 seconds ago   Up 26 seconds             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+rentacar-worker     backend-worker   "dotnet RentACar.Wor…"   worker     38 seconds ago   Up 26 seconds             
+
+## docker inspect health/restart
+/rentacar-api RestartCount=0 Status=running Health=n/a
+/rentacar-worker RestartCount=0 Status=running Health=n/a
+/rentacar-web RestartCount=0 Status=running Health=n/a
+/rentacar-postgres RestartCount=0 Status=running Health=healthy
+/rentacar-redis RestartCount=0 Status=running Health=healthy
+
+## curl API health
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Date: Thu, 04 Jun 2026 17:19:10 GMT
+Server: Kestrel
+Cache-Control: no-store, no-cache
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Pragma: no-cache
+Transfer-Encoding: chunked
+X-Correlation-Id: a86a6575bb5d4aa387c80c9971466c97
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'
+Permissions-Policy: camera=(), geolocation=(), microphone=()
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+
+Healthy
+
+## curl frontend /tr
+HTTP/1.1 200 OK
+link: <http://localhost:3001/tr>; rel="alternate"; hreflang="tr", <http://localhost:3001/en>; rel="alternate"; hreflang="en", <http://localhost:3001/ru>; rel="alternate"; hreflang="ru", <http://localhost:3001/ar>; rel="alternate"; hreflang="ar", <http://localhost:3001/de>; rel="alternate"; hreflang="de", <http://localhost:3001/>; rel="alternate"; hreflang="x-default"
+link: </_next/static/media/064198ea55a83123-s.p.0ptnzc7imxmh3.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/387c923d20582ec7-s.p.0fa6ko17-z2-g.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/47df9ba1c7236d3b-s.p.0cqfp9mgbqxvb.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/536b4d72a397ec90-s.p.0pofdyh4vept~.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/5f58f544217b9ef1-s.p.0kz5q.n-m_t~l.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/8e6fa89aa22d24ec-s.p.0uvzar8hswo3p.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/a218039a3287bcfd-s.p.17-1enzs_j91b.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/b0fb7b4004470e87-s.p.0uuhu-c1~t9z2.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/ca31d6821328a4e9-s.p.0w8w9q576xw20.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/caa3a2e1cccd8315-s.p.09~u27dqhyhd6.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/ce62453a442c7f35-s.p.0333ktddfbsxy.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/e2334d715941921e-s.p.12skym0rqknxy.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/e8f2fbee2754df70-s.p.0fzkl03jw-sdz.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/f05228a5f9ec0eae-s.p.11ia3gqxmq0s4.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/fba5a26ea33df6a3-s.p.0eehd8tgys7nv.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2"
+set-cookie: NEXT_LOCALE=tr; Path=/; SameSite=lax
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+X-Powered-By: Next.js
+Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate
+Content-Type: text/html; charset=utf-8
+Date: Thu, 04 Jun 2026 17:19:11 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+## curl frontend root redirect
+HTTP/1.1 307 Temporary Redirect
+location: /tr
+set-cookie: NEXT_LOCALE=tr; Path=/; SameSite=lax
+Date: Thu, 04 Jun 2026 17:19:11 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+## recent log material-error scan
+NO_MATCHES
+
+## frontend test refresh
+corepack pnpm -C frontend test => 46 passed files, 191 passed tests (2026-06-04 20:24 +03:00)
+
+## docker compose down cleanup
+
+## docker compose ps after cleanup
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+
+## cleanup verification summary
+docker compose -f backend\docker-compose.yml down completed; follow-up ps returned only the header row.
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+
+## final git status --short after evidence cleanup
+ M .gitignore
+ M backend/docker-compose.yml
+ M frontend/Dockerfile
+ M frontend/app/(public)/[locale]/booking/step2/page.tsx
+ M frontend/app/(public)/[locale]/booking/step3/page.tsx
+ M frontend/app/(public)/[locale]/track-reservation/TrackReservationPage.test.tsx
+ M frontend/app/(public)/[locale]/track-reservation/page.tsx
+ M frontend/app/(public)/[locale]/vehicles/[id]/page.tsx
+ M frontend/app/(public)/[locale]/vehicles/page.tsx
+ M frontend/components/public/ReservationTimeline.test.tsx
+ M frontend/components/public/ReservationTimeline.tsx
+ M frontend/i18n/messages/ar.json
+ M frontend/i18n/messages/de.json
+ M frontend/i18n/messages/en.json
+ M frontend/i18n/messages/ru.json
+ M frontend/i18n/messages/tr.json
+ M frontend/lib/api/admin/admin-api.test.ts
+ M frontend/lib/api/admin/pricing.ts
+ M frontend/lib/api/admin/reports.ts
+ M frontend/lib/api/admin/reservations.ts
+ M frontend/lib/api/admin/settings.ts
+ M frontend/lib/api/admin/users.ts
+ M frontend/lib/api/admin/vehicles.ts
+ M frontend/lib/api/client.test.ts
+ M frontend/lib/api/client.ts
+ M frontend/lib/api/config.ts
+ M frontend/pnpm-lock.yaml
+?? docs/13_Local_Docker_Browser_Test_Checklist.md
+?? docs/test-evidence/local-docker-2026-06-04/
+?? frontend/app/api/admin/
+?? frontend/e2e/pages/CustomerLoginPage.ts
+?? frontend/e2e/pages/ForgotPasswordPage.ts
+?? frontend/e2e/pages/ResetPasswordPage.ts
+?? frontend/e2e/tests/guest-auth-pages.spec.ts
+?? frontend/pnpm-workspace.yaml

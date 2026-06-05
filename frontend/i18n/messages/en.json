@@ -142,9 +142,19 @@
   "trackReservation": {
     "title": "Track Reservation",
     "subtitle": "Enter your reservation number to check your status",
+    "pageTitle": "Track Your Reservation",
+    "pageSubtitle": "Enter your reservation code to view the status and details of your booking",
     "reservationNumber": "Reservation Number",
+    "reservationCode": "Reservation Code",
+    "codePlaceholder": "Enter reservation code (e.g., ALN-2025-8842)",
     "email": "Email Address",
-    "trackButton": "Track",
+    "trackButton": "Track Reservation",
+    "searching": "Searching...",
+    "copyCode": "Copy reservation code",
+    "errors": {
+      "emptyCode": "Please enter your reservation code.",
+      "notFound": "No reservation found with this code. Please check and try again."
+    },
     "status": {
       "confirmed": "Confirmed",
       "pending": "Pending",
@@ -152,12 +162,73 @@
       "completed": "Completed",
       "cancelled": "Cancelled"
     },
+    "sections": {
+      "vehicle": "Vehicle Information",
+      "customer": "Customer Information",
+      "payment": "Payment Summary"
+    },
     "details": {
       "vehicle": "Vehicle",
       "pickup": "Pickup",
       "return": "Return",
       "location": "Location",
       "total": "Total"
+    },
+    "rentalPeriod": "Rental Period",
+    "daysCount": "{count, plural, one {# Day} other {# Days}}",
+    "customer": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone"
+    },
+    "payment": {
+      "rentalTotal": "Rental Total",
+      "securityDeposit": "Security Deposit",
+      "status": "Payment Status"
+    },
+    "paymentStatus": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "support": {
+      "title": "Need Help?",
+      "description": "Our support team is available 24/7 to assist you with any questions about your reservation",
+      "call": "Call Us",
+      "email": "Email Us"
+    },
+    "timeline": {
+      "title": "Reservation Progress",
+      "steps": {
+        "pending": {
+          "label": "Reservation Created",
+          "description": "Your reservation has been received and is being processed"
+        },
+        "confirmed": {
+          "label": "Reservation Confirmed",
+          "description": "Your booking is confirmed and vehicle is reserved"
+        },
+        "active": {
+          "label": "Vehicle Picked Up",
+          "description": "You have collected your vehicle"
+        },
+        "completed": {
+          "label": "Rental Completed",
+          "description": "Vehicle returned and rental finalized"
+        },
+        "cancelled": {
+          "label": "Reservation Cancelled",
+          "description": "This reservation has been cancelled"
+        }
+      },
+      "current": {
+        "pending": "Your reservation is being processed. You will receive a confirmation email shortly.",
+        "confirmed": "Your reservation is confirmed. We will contact you before pickup.",
+        "active": "Your rental is currently active. Please return the vehicle by the agreed time.",
+        "completed": "Thank you for choosing us! We hope you enjoyed your rental experience.",
+        "cancelled": "This reservation has been cancelled."
+      },
+      "cancelledMessage": "This reservation has been cancelled. Contact support for more information."
     }
   },
   "home": {

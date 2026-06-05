@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useBookingActions } from "@/hooks/useBooking";
 
 const step3Schema = z.object({
   firstName: z.string().min(2, "First name is required"),
@@ -84,6 +85,7 @@ export default function BookingStep3Page() {
   const router = useRouter();
   const locale = params.locale as string;
   const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
+  const { updateCustomerDetails } = useBookingActions();
 
   const {
     register,
@@ -106,6 +108,26 @@ export default function BookingStep3Page() {
   };
 
   const onSubmit = (data: Step3FormData) => {
+    updateCustomerDetails(
+      {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        dateOfBirth: data.birthDate,
+      },
+      {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: data.birthDate,
+        licenseNumber: data.driverLicense,
+        licenseCountry: data.driverLicenseCountry,
+        licenseIssueDate: "2020-01-01",
+        licenseExpiryDate: "2030-01-01",
+        isPrimaryDriver: true,
+      }
+    );
+
     const queryParams = new URLSearchParams(searchParams.toString());
     queryParams.set("extras", Array.from(selectedExtras).join(","));
     router.push(`/${locale}/booking/step4?${queryParams.toString()}`);

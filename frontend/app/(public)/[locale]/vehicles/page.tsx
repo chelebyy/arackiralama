@@ -97,9 +97,17 @@ export default function VehiclesPage() {
   const { offices, isLoading: officesLoading } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
   const pickupOfficeObj = offices.find((o) => o.id === pickupOfficeGuid);
+  const canSearchVehicles =
+    pickupDate &&
+    pickupTime &&
+    returnDate &&
+    returnTime &&
+    pickupOfficeGuid &&
+    !officesLoading &&
+    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice);
 
   const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    pickupDate && pickupTime && returnDate && returnTime && pickupOfficeGuid
+    canSearchVehicles
       ? {
           office_id: pickupOfficeGuid,
           pickup_datetime: `${pickupDate}T${pickupTime}`,

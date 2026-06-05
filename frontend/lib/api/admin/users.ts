@@ -1,4 +1,4 @@
-import { get, patch, post } from '../client';
+import { adminGet, adminPatch, adminPost } from '../client';
 import { mockAdminUsers, mockCustomers } from './mock';
 import type {
   AdminCustomer,
@@ -15,7 +15,7 @@ import type {
 
 const USE_MOCK = false;
 
-const USERS_ENDPOINT = '/admin/v1/users';
+const USERS_ENDPOINT = '/v1/users';
 
 function buildQueryString(params?: object): string {
   if (!params) return '';
@@ -67,7 +67,7 @@ export async function getCustomers(params?: CustomerListParams | Record<string, 
   if (USE_MOCK) {
     return createMockPaginated(mockCustomers);
   }
-  const response = await get<AdminPaginatedResponse<AdminCustomer>>(`${USERS_ENDPOINT}/customers${buildQueryString(params)}`);
+  const response = await adminGet<AdminPaginatedResponse<AdminCustomer>>(`${USERS_ENDPOINT}/customers${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
 
@@ -75,7 +75,7 @@ export async function getCustomerById(id: string) {
   if (USE_MOCK) {
     return mockCustomers.find((customer) => customer.id === id) || mockCustomers[0];
   }
-  const response = await get<AdminResponse<AdminCustomer>>(`${USERS_ENDPOINT}/customers/${id}`);
+  const response = await adminGet<AdminResponse<AdminCustomer>>(`${USERS_ENDPOINT}/customers/${id}`);
   return unwrapResponse(response);
 }
 
@@ -83,7 +83,7 @@ export async function getAdminUsers(params?: AdminUserListParams | Record<string
   if (USE_MOCK) {
     return createMockPaginated(mockAdminUsers);
   }
-  const response = await get<AdminPaginatedResponse<AdminUser>>(`${USERS_ENDPOINT}/admins${buildQueryString(params)}`);
+  const response = await adminGet<AdminPaginatedResponse<AdminUser>>(`${USERS_ENDPOINT}/admins${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
 
@@ -91,7 +91,7 @@ export async function createAdminUser(data: CreateAdminUserData) {
   if (USE_MOCK) {
     return mockAdminUsers[0];
   }
-  const response = await post<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins`, data);
+  const response = await adminPost<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins`, data);
   return unwrapResponse(response);
 }
 
@@ -103,7 +103,7 @@ export async function updateAdminUserRole(
     return mockAdminUsers[0];
   }
   const payload = typeof role === 'string' ? { role } : role;
-  const response = await patch<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins/${id}/role`, payload);
+  const response = await adminPatch<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins/${id}/role`, payload);
   return unwrapResponse(response);
 }
 
@@ -115,6 +115,6 @@ export async function updateAdminUserStatus(
     return mockAdminUsers[0];
   }
   const payload = typeof isActive === 'boolean' ? { isActive } : isActive;
-  const response = await patch<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins/${id}/status`, payload);
+  const response = await adminPatch<AdminResponse<AdminUser>>(`${USERS_ENDPOINT}/admins/${id}/status`, payload);
   return unwrapResponse(response);
 }

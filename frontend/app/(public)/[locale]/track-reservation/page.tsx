@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   Search,
@@ -12,7 +12,6 @@ import {
   CreditCard,
   CheckCircle,
   AlertCircle,
-  ChevronRight,
   Phone,
   Mail,
   MessageCircle,
@@ -70,7 +69,8 @@ const mockReservation: ReservationDetails = {
 };
 
 export default function TrackReservationPage() {
-  const t = useTranslations();
+  const t = useTranslations("trackReservation");
+  const locale = useLocale();
   const [reservationCode, setReservationCode] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [reservation, setReservation] = useState<ReservationDetails | null>(null);
@@ -81,6 +81,12 @@ export default function TrackReservationPage() {
     e.preventDefault();
     setError(null);
     setReservation(null);
+
+    if (!reservationCode.trim()) {
+      setError(t("errors.emptyCode"));
+      return;
+    }
+
     setIsSearching(true);
 
     try {
@@ -106,28 +112,37 @@ export default function TrackReservationPage() {
         SUCCEEDED: "paid",
         REFUNDED: "refunded",
         PARTIALLY_REFUNDED: "refunded",
+        PARTIALLYREFUNDED: "refunded",
         FAILED: "pending",
         CANCELLED: "pending",
       };
 
+      const resultAny = result as any;
+      const normalizedStatus = String(result.status ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+      const normalizedPaymentStatus = String(resultAny.paymentStatus ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+      const pickupDateTime = resultAny.pickupDateTime ? new Date(resultAny.pickupDateTime) : null;
+      const returnDateTime = resultAny.returnDateTime ? new Date(resultAny.returnDateTime) : null;
+      const customerFirstName = result.customer?.firstName ?? resultAny.customerName?.split(" ").slice(0, -1).join(" ") ?? "";
+      const customerLastName = result.customer?.lastName ?? resultAny.customerName?.split(" ").slice(-1).join(" ") ?? "";
+
       const mapped: ReservationDetails = {
         id: result.id,
         code: result.publicCode,
-        status: statusMap[result.status] ?? "pending",
-        vehicleName: result.vehicleName,
-        vehicleCategory: "",
-        customerName: `${result.customer.firstName} ${result.customer.lastName}`,
-        customerEmail: result.customer.email,
-        customerPhone: result.customer.phone,
+        status: statusMap[normalizedStatus] ?? "pending",
+        vehicleName: result.vehicleName ?? [resultAny.vehicleBrand, resultAny.vehicleModel].filter(Boolean).join(" "),
+        vehicleCategory: resultAny.vehicleGroupName ?? "",
+        customerName: `${customerFirstName} ${customerLastName}`.trim() || resultAny.customerName,
+        customerEmail: result.customer?.email ?? resultAny.customerEmail,
+        customerPhone: result.customer?.phone ?? resultAny.customerPhone,
         pickupLocation: result.pickupOfficeName,
         dropoffLocation: result.returnOfficeName,
-        pickupDate: result.pickupDate,
-        dropoffDate: result.returnDate,
-        pickupTime: result.pickupTime,
-        dropoffTime: result.returnTime,
-        totalAmount: (result as any).priceBreakdown?.totalAmount ?? (result as any).totalAmount ?? 0,
-        depositAmount: (result as any).priceBreakdown?.depositAmount ?? (result as any).depositAmount ?? 0,
-        paymentStatus: paymentStatusMap[(result as any).paymentStatus] ?? "pending",
+        pickupDate: result.pickupDate ?? pickupDateTime?.toISOString().slice(0, 10) ?? "",
+        dropoffDate: result.returnDate ?? returnDateTime?.toISOString().slice(0, 10) ?? "",
+        pickupTime: result.pickupTime ?? pickupDateTime?.toISOString().slice(11, 16) ?? "",
+        dropoffTime: result.returnTime ?? returnDateTime?.toISOString().slice(11, 16) ?? "",
+        totalAmount: resultAny.priceBreakdown?.totalAmount ?? resultAny.totalAmount ?? 0,
+        depositAmount: resultAny.priceBreakdown?.depositAmount ?? resultAny.depositAmount ?? 0,
+        paymentStatus: paymentStatusMap[normalizedPaymentStatus] ?? "pending",
         createdAt: result.createdAt,
         updatedAt: result.updatedAt,
         confirmedAt: result.status === "CONFIRMED" || result.status === "ACTIVE" ? result.updatedAt : undefined,
@@ -135,7 +150,7 @@ export default function TrackReservationPage() {
 
       setReservation(mapped);
     } catch (err) {
-      setError("No reservation found with this code. Please check and try again.");
+      setError(t("errors.notFound"));
       setReservation(null);
     } finally {
       setIsSearching(false);
@@ -162,7 +177,7 @@ export default function TrackReservationPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-GB", {
+    return new Date(dateString).toLocaleDateString(locale, {
       weekday: "short",
       day: "numeric",
       month: "long",
@@ -176,10 +191,10 @@ export default function TrackReservationPage() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
-              Track Your Reservation
+              {t("pageTitle")}
             </h1>
             <p className="text-lg text-[#64748B]">
-              Enter your reservation code to view the status and details of your booking
+              {t("pageSubtitle")}
             </p>
           </div>
 
@@ -189,9 +204,12 @@ export default function TrackReservationPage() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#64748B]" />
                 <input
                   type="text"
+                  required
+                  aria-invalid={!!error && !reservation}
+                  aria-describedby={error && !reservation ? "reservation-code-error" : undefined}
                   value={reservationCode}
                   onChange={(e) => setReservationCode(e.target.value.toUpperCase())}
-                  placeholder="Enter reservation code (e.g., ALN-2025-8842)"
+                  placeholder={t("codePlaceholder")}
                   className={cn(
                     "w-full pl-12 pr-4 py-4 rounded-xl",
                     "bg-white border border-[#E2E8F0]",
@@ -204,7 +222,7 @@ export default function TrackReservationPage() {
               </div>
               <button
                 type="submit"
-                disabled={isSearching || !reservationCode.trim()}
+                disabled={isSearching}
                 className={cn(
                   "px-8 py-4 rounded-xl text-base font-semibold",
                   "bg-[#0369A1] text-white",
@@ -218,19 +236,23 @@ export default function TrackReservationPage() {
                 {isSearching ? (
                   <>
                     <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Searching...
+                    {t("searching")}
                   </>
                 ) : (
                   <>
                     <Search className="h-5 w-5" />
-                    Track Reservation
+                    {t("trackButton")}
                   </>
                 )}
               </button>
             </div>
 
             {error && (
-              <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3">
+              <div
+                id="reservation-code-error"
+                role="alert"
+                className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3"
+              >
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700">{error}</p>
               </div>
@@ -243,7 +265,7 @@ export default function TrackReservationPage() {
                 <div className="p-6 border-b border-[#E2E8F0] bg-gradient-to-r from-[#F0F9FF] to-white">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                      <p className="text-sm text-[#64748B] mb-1">Reservation Code</p>
+                      <p className="text-sm text-[#64748B] mb-1">{t("reservationCode")}</p>
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-[#0F172A] tracking-wider">
                           {reservation.code}
@@ -255,7 +277,7 @@ export default function TrackReservationPage() {
                             "p-2 rounded-lg transition-colors",
                             "hover:bg-[#E2E8F0] focus:outline-none focus:ring-2 focus:ring-[#0369A1]"
                           )}
-                          aria-label="Copy reservation code"
+                          aria-label={t("copyCode")}
                         >
                           {copied ? (
                             <CheckCircle className="h-4 w-4 text-emerald-500" />
@@ -272,7 +294,7 @@ export default function TrackReservationPage() {
                       )}
                     >
                       <Shield className="h-4 w-4" />
-                      {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                      {t(`status.${reservation.status}`)}
                     </div>
                   </div>
                 </div>
@@ -280,18 +302,20 @@ export default function TrackReservationPage() {
                 <div className="p-6">
                   <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
                     <Car className="h-5 w-5 text-[#0369A1]" />
-                    Vehicle Information
+                    {t("sections.vehicle")}
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="p-4 rounded-xl bg-[#F8FAFC]">
-                      <p className="text-sm text-[#64748B] mb-1">Vehicle</p>
+                      <p className="text-sm text-[#64748B] mb-1">{t("details.vehicle")}</p>
                       <p className="text-base font-semibold text-[#0F172A]">{reservation.vehicleName}</p>
                       <p className="text-sm text-[#0369A1]">{reservation.vehicleCategory}</p>
                     </div>
                     <div className="p-4 rounded-xl bg-[#F8FAFC]">
-                      <p className="text-sm text-[#64748B] mb-1">Rental Period</p>
+                      <p className="text-sm text-[#64748B] mb-1">{t("rentalPeriod")}</p>
                       <p className="text-base font-semibold text-[#0F172A]">
-                        {Math.ceil((new Date(reservation.dropoffDate).getTime() - new Date(reservation.pickupDate).getTime()) / (1000 * 60 * 60 * 24))} Days
+                        {t("daysCount", {
+                          count: Math.ceil((new Date(reservation.dropoffDate).getTime() - new Date(reservation.pickupDate).getTime()) / (1000 * 60 * 60 * 24))
+                        })}
                       </p>
                       <p className="text-sm text-[#64748B]">{formatDate(reservation.pickupDate)} - {formatDate(reservation.dropoffDate)}</p>
                     </div>
@@ -301,7 +325,7 @@ export default function TrackReservationPage() {
                     <div className="space-y-4">
                       <h3 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-[#0369A1]" />
-                        Pickup
+                        {t("details.pickup")}
                       </h3>
                       <div className="p-4 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD]">
                         <p className="font-semibold text-[#0F172A] mb-1">{reservation.pickupLocation}</p>
@@ -321,7 +345,7 @@ export default function TrackReservationPage() {
                     <div className="space-y-4">
                       <h3 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-[#0369A1]" />
-                        Drop-off
+                        {t("details.return")}
                       </h3>
                       <div className="p-4 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD]">
                         <p className="font-semibold text-[#0F172A] mb-1">{reservation.dropoffLocation}</p>
@@ -341,20 +365,20 @@ export default function TrackReservationPage() {
 
                   <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
                     <User className="h-5 w-5 text-[#0369A1]" />
-                    Customer Information
+                    {t("sections.customer")}
                   </h2>
                   <div className="p-4 rounded-xl bg-[#F8FAFC] mb-6">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-[#64748B] mb-1">Name</p>
+                        <p className="text-sm text-[#64748B] mb-1">{t("customer.name")}</p>
                         <p className="font-medium text-[#0F172A]">{reservation.customerName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-[#64748B] mb-1">Email</p>
+                        <p className="text-sm text-[#64748B] mb-1">{t("customer.email")}</p>
                         <p className="font-medium text-[#0F172A]">{reservation.customerEmail}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-[#64748B] mb-1">Phone</p>
+                        <p className="text-sm text-[#64748B] mb-1">{t("customer.phone")}</p>
                         <p className="font-medium text-[#0F172A]">{reservation.customerPhone}</p>
                       </div>
                     </div>
@@ -362,28 +386,28 @@ export default function TrackReservationPage() {
 
                   <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-[#0369A1]" />
-                    Payment Summary
+                    {t("sections.payment")}
                   </h2>
                   <div className="p-4 rounded-xl bg-[#F8FAFC]">
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748B]">Rental Total</span>
+                        <span className="text-[#64748B]">{t("payment.rentalTotal")}</span>
                         <span className="font-medium text-[#0F172A]">₺{reservation.totalAmount}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[#64748B]">Security Deposit</span>
+                        <span className="text-[#64748B]">{t("payment.securityDeposit")}</span>
                         <span className="font-medium text-[#0F172A]">₺{reservation.depositAmount}</span>
                       </div>
                     </div>
                     <div className="pt-4 border-t border-[#E2E8F0] flex justify-between items-center">
-                      <span className="font-semibold text-[#0F172A]">Payment Status</span>
+                      <span className="font-semibold text-[#0F172A]">{t("payment.status")}</span>
                       <span className={cn(
                         "px-3 py-1 rounded-lg text-sm font-medium",
                         reservation.paymentStatus === "paid" && "bg-emerald-100 text-emerald-700",
                         reservation.paymentStatus === "pending" && "bg-amber-100 text-amber-700",
                         reservation.paymentStatus === "refunded" && "bg-slate-100 text-slate-700"
                       )}>
-                        {reservation.paymentStatus.charAt(0).toUpperCase() + reservation.paymentStatus.slice(1)}
+                        {t(`paymentStatus.${reservation.paymentStatus}`)}
                       </span>
                     </div>
                   </div>
@@ -400,9 +424,9 @@ export default function TrackReservationPage() {
                 <MessageCircle className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold mb-1">Need Help?</h3>
+                <h3 className="text-lg font-bold mb-1">{t("support.title")}</h3>
                 <p className="text-white/80 text-sm">
-                  Our support team is available 24/7 to assist you with any questions about your reservation
+                  {t("support.description")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -415,7 +439,7 @@ export default function TrackReservationPage() {
                   )}
                 >
                   <Phone className="h-4 w-4" />
-                  Call Us
+                  {t("support.call")}
                 </a>
                 <a
                   href="mailto:support@alanyacarrental.com"
@@ -426,7 +450,7 @@ export default function TrackReservationPage() {
                   )}
                 >
                   <Mail className="h-4 w-4" />
-                  Email Us
+                  {t("support.email")}
                 </a>
               </div>
             </div>

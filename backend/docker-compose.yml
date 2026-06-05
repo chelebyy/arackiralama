@@ -42,6 +42,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
+      Cors__AllowedOrigins__0: http://localhost:3001
+      Cors__AllowedOrigins__1: http://127.0.0.1:3001
+      Cors__AllowedOrigins__2: http://host.docker.internal:3001
       Redis__ConnectionString: redis:6379
       Jwt__Secret: local-dev-only-jwt-secret-change-me-12345
       Database__AutoMigrateOnStartup: "true"
@@ -68,6 +71,10 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
+        NEXT_PUBLIC_APP_URL: http://localhost:3001
     container_name: rentacar-web
     depends_on:
       api:

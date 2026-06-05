@@ -142,9 +142,19 @@
   "trackReservation": {
     "title": "Reservierung verfolgen",
     "subtitle": "Geben Sie Ihre Reservierungsnummer ein, um Ihren Status zu prüfen",
+    "pageTitle": "Ihre Reservierung verfolgen",
+    "pageSubtitle": "Geben Sie Ihren Reservierungscode ein, um Status und Details Ihrer Buchung anzuzeigen",
     "reservationNumber": "Reservierungsnummer",
+    "reservationCode": "Reservierungscode",
+    "codePlaceholder": "Reservierungscode eingeben (z. B. ALN-2025-8842)",
     "email": "E-Mail-Adresse",
-    "trackButton": "Verfolgen",
+    "trackButton": "Reservierung verfolgen",
+    "searching": "Suche läuft...",
+    "copyCode": "Reservierungscode kopieren",
+    "errors": {
+      "emptyCode": "Bitte geben Sie Ihren Reservierungscode ein.",
+      "notFound": "Für diesen Code wurde keine Reservierung gefunden. Bitte prüfen Sie ihn und versuchen Sie es erneut."
+    },
     "status": {
       "confirmed": "Bestätigt",
       "pending": "Ausstehend",
@@ -152,12 +162,73 @@
       "completed": "Abgeschlossen",
       "cancelled": "Storniert"
     },
+    "sections": {
+      "vehicle": "Fahrzeuginformationen",
+      "customer": "Kundeninformationen",
+      "payment": "Zahlungsübersicht"
+    },
     "details": {
       "vehicle": "Fahrzeug",
       "pickup": "Abholung",
       "return": "Rückgabe",
       "location": "Ort",
       "total": "Gesamt"
+    },
+    "rentalPeriod": "Mietdauer",
+    "daysCount": "{count, plural, one {# Tag} other {# Tage}}",
+    "customer": {
+      "name": "Name",
+      "email": "E-Mail",
+      "phone": "Telefon"
+    },
+    "payment": {
+      "rentalTotal": "Mietsumme",
+      "securityDeposit": "Kaution",
+      "status": "Zahlungsstatus"
+    },
+    "paymentStatus": {
+      "pending": "Ausstehend",
+      "paid": "Bezahlt",
+      "refunded": "Erstattet"
+    },
+    "support": {
+      "title": "Brauchen Sie Hilfe?",
+      "description": "Unser Support-Team ist rund um die Uhr verfügbar und hilft Ihnen bei allen Fragen zu Ihrer Reservierung",
+      "call": "Anrufen",
+      "email": "E-Mail senden"
+    },
+    "timeline": {
+      "title": "Reservierungsfortschritt",
+      "steps": {
+        "pending": {
+          "label": "Reservierung erstellt",
+          "description": "Ihre Reservierung wurde empfangen und wird bearbeitet"
+        },
+        "confirmed": {
+          "label": "Reservierung bestätigt",
+          "description": "Ihre Buchung ist bestätigt und das Fahrzeug ist reserviert"
+        },
+        "active": {
+          "label": "Fahrzeug abgeholt",
+          "description": "Sie haben Ihr Fahrzeug übernommen"
+        },
+        "completed": {
+          "label": "Miete abgeschlossen",
+          "description": "Das Fahrzeug wurde zurückgegeben und die Miete abgeschlossen"
+        },
+        "cancelled": {
+          "label": "Reservierung storniert",
+          "description": "Diese Reservierung wurde storniert"
+        }
+      },
+      "current": {
+        "pending": "Ihre Reservierung wird bearbeitet. Sie erhalten in Kürze eine Bestätigungs-E-Mail.",
+        "confirmed": "Ihre Reservierung ist bestätigt. Wir kontaktieren Sie vor der Abholung.",
+        "active": "Ihre Miete ist derzeit aktiv. Bitte geben Sie das Fahrzeug zur vereinbarten Zeit zurück.",
+        "completed": "Vielen Dank, dass Sie uns gewählt haben. Wir hoffen, Sie hatten eine gute Miet-Erfahrung.",
+        "cancelled": "Diese Reservierung wurde storniert."
+      },
+      "cancelledMessage": "Diese Reservierung wurde storniert. Kontaktieren Sie den Support für weitere Informationen."
     }
   },
   "home": {

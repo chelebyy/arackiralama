@@ -142,9 +142,19 @@
   "trackReservation": {
     "title": "Rezervasyon Takip",
     "subtitle": "Rezervasyon numaranızı girerek durumunuzu kontrol edin",
+    "pageTitle": "Rezervasyonunuzu Takip Edin",
+    "pageSubtitle": "Rezervasyonunuzun durumunu ve detaylarını görmek için rezervasyon kodunuzu girin",
     "reservationNumber": "Rezervasyon Numarası",
+    "reservationCode": "Rezervasyon Kodu",
+    "codePlaceholder": "Rezervasyon kodunu girin (örn. ALN-2025-8842)",
     "email": "E-posta Adresi",
-    "trackButton": "Sorgula",
+    "trackButton": "Rezervasyonu Sorgula",
+    "searching": "Sorgulanıyor...",
+    "copyCode": "Rezervasyon kodunu kopyala",
+    "errors": {
+      "emptyCode": "Lütfen rezervasyon kodunuzu girin.",
+      "notFound": "Bu kodla eşleşen rezervasyon bulunamadı. Lütfen kontrol edip tekrar deneyin."
+    },
     "status": {
       "confirmed": "Onaylandı",
       "pending": "Beklemede",
@@ -152,12 +162,73 @@
       "completed": "Tamamlandı",
       "cancelled": "İptal Edildi"
     },
+    "sections": {
+      "vehicle": "Araç Bilgileri",
+      "customer": "Müşteri Bilgileri",
+      "payment": "Ödeme Özeti"
+    },
     "details": {
       "vehicle": "Araç",
       "pickup": "Alış",
       "return": "Dönüş",
       "location": "Konum",
       "total": "Toplam"
+    },
+    "rentalPeriod": "Kiralama Süresi",
+    "daysCount": "{count} Gün",
+    "customer": {
+      "name": "Ad Soyad",
+      "email": "E-posta",
+      "phone": "Telefon"
+    },
+    "payment": {
+      "rentalTotal": "Kiralama Toplamı",
+      "securityDeposit": "Güvence Bedeli",
+      "status": "Ödeme Durumu"
+    },
+    "paymentStatus": {
+      "pending": "Beklemede",
+      "paid": "Ödendi",
+      "refunded": "İade Edildi"
+    },
+    "support": {
+      "title": "Yardıma mı ihtiyacınız var?",
+      "description": "Destek ekibimiz rezervasyonunuzla ilgili tüm sorularınız için 7/24 yanınızda",
+      "call": "Bizi Arayın",
+      "email": "E-posta Gönderin"
+    },
+    "timeline": {
+      "title": "Rezervasyon Süreci",
+      "steps": {
+        "pending": {
+          "label": "Rezervasyon Oluşturuldu",
+          "description": "Rezervasyonunuz alındı ve işleme alınıyor"
+        },
+        "confirmed": {
+          "label": "Rezervasyon Onaylandı",
+          "description": "Rezervasyonunuz onaylandı ve araç ayrıldı"
+        },
+        "active": {
+          "label": "Araç Teslim Alındı",
+          "description": "Aracınızı teslim aldınız"
+        },
+        "completed": {
+          "label": "Kiralama Tamamlandı",
+          "description": "Araç iade edildi ve kiralama tamamlandı"
+        },
+        "cancelled": {
+          "label": "Rezervasyon İptal Edildi",
+          "description": "Bu rezervasyon iptal edildi"
+        }
+      },
+      "current": {
+        "pending": "Rezervasyonunuz işleme alınıyor. Kısa süre içinde onay e-postası alacaksınız.",
+        "confirmed": "Rezervasyonunuz onaylandı. Teslimattan önce sizinle iletişime geçeceğiz.",
+        "active": "Kiralamanız şu anda aktif. Lütfen aracı kararlaştırılan saatte iade edin.",
+        "completed": "Bizi tercih ettiğiniz için teşekkür ederiz. Kiralama deneyiminizden memnun kaldığınızı umuyoruz.",
+        "cancelled": "Bu rezervasyon iptal edildi."
+      },
+      "cancelledMessage": "Bu rezervasyon iptal edildi. Daha fazla bilgi için destek ekibiyle iletişime geçin."
     }
   },
   "home": {

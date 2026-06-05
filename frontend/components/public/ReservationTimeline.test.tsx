@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 
+import messages from "../../i18n/messages/en.json";
 import ReservationTimeline from "./ReservationTimeline";
+
+function renderTimeline(status: Parameters<typeof ReservationTimeline>[0]["status"]) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <ReservationTimeline status={status} />
+    </NextIntlClientProvider>
+  );
+}
 
 describe("ReservationTimeline", () => {
   it("renders active progress with the current status message", () => {
-    render(<ReservationTimeline status="confirmed" />);
+    renderTimeline("confirmed");
 
     expect(screen.getByRole("heading", { name: "Reservation Progress" })).toBeInTheDocument();
     expect(screen.getByText("Reservation Confirmed")).toBeInTheDocument();
@@ -14,7 +24,7 @@ describe("ReservationTimeline", () => {
   });
 
   it("renders the cancelled branch with cancellation messaging", () => {
-    render(<ReservationTimeline status="cancelled" />);
+    renderTimeline("cancelled");
 
     expect(screen.getByText("Reservation Cancelled")).toBeInTheDocument();
     expect(screen.getByText("This reservation has been cancelled")).toBeInTheDocument();

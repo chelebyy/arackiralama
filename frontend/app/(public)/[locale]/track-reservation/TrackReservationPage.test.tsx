@@ -6,8 +6,22 @@ import TrackReservationPage from "./page";
 
 const mockedGetReservationByPublicCode = vi.fn();
 
+const messages: Record<string, string> = {
+  "codePlaceholder": "Enter reservation code (e.g., ALN-2025-8842)",
+  "copyCode": "Copy reservation code",
+  "errors.notFound": "No reservation found with this code. Please check and try again.",
+  "paymentStatus.paid": "Paid",
+  "paymentStatus.pending": "Pending",
+  "paymentStatus.refunded": "Refunded",
+  "status.active": "Active",
+  "status.cancelled": "Cancelled",
+  "status.pending": "Pending",
+  "trackButton": "Track Reservation",
+};
+
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useLocale: () => "en",
+  useTranslations: () => (key: string) => messages[key] ?? key,
 }));
 
 vi.mock("@/lib/api/reservations", () => ({
@@ -118,7 +132,11 @@ describe("TrackReservationPage", () => {
     render(<TrackReservationPage />);
 
     const submitButton = screen.getByRole("button", { name: /track reservation/i });
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).toBeEnabled();
+
+    await user.click(submitButton);
+    expect(screen.getByPlaceholderText(/enter reservation code/i)).toBeInvalid();
+    expect(mockedGetReservationByPublicCode).not.toHaveBeenCalled();
 
     await user.type(screen.getByPlaceholderText(/enter reservation code/i), "aln-2026-2002");
     expect(submitButton).toBeEnabled();

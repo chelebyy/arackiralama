@@ -1,4 +1,4 @@
-import { del, get, post, put } from '../client';
+import { adminDel, adminGet, adminPost, adminPut } from '../client';
 import { mockCampaigns, mockPricingRules } from './mock';
 import type {
   AdminPaginatedResponse,
@@ -15,8 +15,8 @@ import type {
 
 const USE_MOCK = false;
 
-const PRICING_RULES_ENDPOINT = '/admin/v1/pricing-rules';
-const CAMPAIGNS_ENDPOINT = '/admin/v1/campaigns';
+const PRICING_RULES_ENDPOINT = '/v1/pricing-rules';
+const CAMPAIGNS_ENDPOINT = '/v1/campaigns';
 
 function buildQueryString(params?: object): string {
   if (!params) return '';
@@ -68,7 +68,7 @@ export async function getPricingRules(params?: PricingRuleListParams | Record<st
   if (USE_MOCK) {
     return createMockPaginated(mockPricingRules);
   }
-  const response = await get<AdminPaginatedResponse<PricingRule>>(`${PRICING_RULES_ENDPOINT}${buildQueryString(params)}`);
+  const response = await adminGet<AdminPaginatedResponse<PricingRule>>(`${PRICING_RULES_ENDPOINT}${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
 
@@ -76,7 +76,7 @@ export async function createPricingRule(data: CreatePricingRuleData) {
   if (USE_MOCK) {
     return mockPricingRules[0];
   }
-  const response = await post<AdminResponse<PricingRule>>(PRICING_RULES_ENDPOINT, data);
+  const response = await adminPost<AdminResponse<PricingRule>>(PRICING_RULES_ENDPOINT, data);
   return unwrapResponse(response);
 }
 
@@ -84,7 +84,7 @@ export async function updatePricingRule(id: string, data: UpdatePricingRuleData)
   if (USE_MOCK) {
     return mockPricingRules[0];
   }
-  const response = await put<AdminResponse<PricingRule>>(`${PRICING_RULES_ENDPOINT}/${id}`, data);
+  const response = await adminPut<AdminResponse<PricingRule>>(`${PRICING_RULES_ENDPOINT}/${id}`, data);
   return unwrapResponse(response);
 }
 
@@ -92,14 +92,14 @@ export async function deletePricingRule(id: string): Promise<void> {
   if (USE_MOCK) {
     return Promise.resolve();
   }
-  await del<void>(`${PRICING_RULES_ENDPOINT}/${id}`);
+  await adminDel<void>(`${PRICING_RULES_ENDPOINT}/${id}`);
 }
 
 export async function getCampaigns() {
   if (USE_MOCK) {
     return createMockPaginated(mockCampaigns);
   }
-  const response = await get<AdminPaginatedResponse<Campaign>>(CAMPAIGNS_ENDPOINT);
+  const response = await adminGet<AdminPaginatedResponse<Campaign>>(CAMPAIGNS_ENDPOINT);
   return unwrapPaginated(response);
 }
 
@@ -107,7 +107,7 @@ export async function createCampaign(data: CreateCampaignData) {
   if (USE_MOCK) {
     return mockCampaigns[0];
   }
-  const response = await post<AdminResponse<Campaign>>(CAMPAIGNS_ENDPOINT, data);
+  const response = await adminPost<AdminResponse<Campaign>>(CAMPAIGNS_ENDPOINT, data);
   return unwrapResponse(response);
 }
 
@@ -115,7 +115,7 @@ export async function updateCampaign(id: string, data: UpdateCampaignData) {
   if (USE_MOCK) {
     return mockCampaigns[0];
   }
-  const response = await put<AdminResponse<Campaign>>(`${CAMPAIGNS_ENDPOINT}/${id}`, data);
+  const response = await adminPut<AdminResponse<Campaign>>(`${CAMPAIGNS_ENDPOINT}/${id}`, data);
   return unwrapResponse(response);
 }
 
@@ -123,5 +123,5 @@ export async function deleteCampaign(id: string): Promise<void> {
   if (USE_MOCK) {
     return Promise.resolve();
   }
-  await del<void>(`${CAMPAIGNS_ENDPOINT}/${id}`);
+  await adminDel<void>(`${CAMPAIGNS_ENDPOINT}/${id}`);
 }
