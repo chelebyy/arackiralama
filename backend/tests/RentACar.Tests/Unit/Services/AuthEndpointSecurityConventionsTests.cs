@@ -168,14 +168,17 @@ public class AuthEndpointSecurityConventionsTests
     }
 
     [Fact]
-    public void AdminAuthController_ProtectedEndpoints_RequireAdminPolicyAndStandardRateLimit()
+    public void AdminAuthController_MeEndpoint_RequiresAdminPolicyAndDisablesRateLimit()
     {
-        AssertEndpointSecurity(
+        AssertEndpointSecurityWithoutRateLimit(
             typeof(AdminAuthController),
             nameof(AdminAuthController.Me),
-            AuthPolicyNames.AdminOnly,
-            RateLimitPolicyNames.Standard);
+            AuthPolicyNames.AdminOnly);
+    }
 
+    [Fact]
+    public void AdminAuthController_ProtectedStateChangingEndpoints_RequireAdminPolicyAndStandardRateLimit()
+    {
         AssertEndpointSecurity(
             typeof(AdminAuthController),
             nameof(AdminAuthController.Logout),
@@ -184,14 +187,17 @@ public class AuthEndpointSecurityConventionsTests
     }
 
     [Fact]
-    public void CustomerAuthController_ProtectedEndpoints_RequireCustomerPolicyAndStandardRateLimit()
+    public void CustomerAuthController_MeEndpoint_RequiresCustomerPolicyAndDisablesRateLimit()
     {
-        AssertEndpointSecurity(
+        AssertEndpointSecurityWithoutRateLimit(
             typeof(CustomerAuthController),
             nameof(CustomerAuthController.Me),
-            AuthPolicyNames.CustomerOnly,
-            RateLimitPolicyNames.Standard);
+            AuthPolicyNames.CustomerOnly);
+    }
 
+    [Fact]
+    public void CustomerAuthController_ProtectedStateChangingEndpoints_RequireCustomerPolicyAndStandardRateLimit()
+    {
         AssertEndpointSecurity(
             typeof(CustomerAuthController),
             nameof(CustomerAuthController.UpdateProfile),
@@ -224,6 +230,17 @@ public class AuthEndpointSecurityConventionsTests
         authorize!.Policy.Should().Be(expectedPolicy);
         rateLimit.Should().NotBeNull();
         rateLimit!.PolicyName.Should().Be(expectedRateLimitPolicy);
+    }
+
+    private static void AssertEndpointSecurityWithoutRateLimit(Type controllerType, string actionName, string expectedPolicy)
+    {
+        var action = controllerType.GetMethod(actionName)!;
+        var authorize = action.GetCustomAttribute<AuthorizeAttribute>();
+
+        authorize.Should().NotBeNull();
+        authorize!.Policy.Should().Be(expectedPolicy);
+        action.GetCustomAttribute<EnableRateLimitingAttribute>().Should().BeNull();
+        action.GetCustomAttribute<DisableRateLimitingAttribute>().Should().NotBeNull();
     }
 
     private static void AssertAnonymousEndpointRateLimit(Type controllerType, string actionName, string expectedRateLimitPolicy)

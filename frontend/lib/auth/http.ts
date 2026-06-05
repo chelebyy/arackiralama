@@ -7,8 +7,23 @@ import {
   REFRESH_COOKIE_CANDIDATES
 } from "@/lib/auth/constants";
 
+function isLocalhost(hostname: string) {
+  return hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname === "::1";
+}
+
 function isSecureRequest(request: NextRequest) {
-  return request.nextUrl.protocol === "https:" || process.env.NODE_ENV === "production";
+  if (request.nextUrl.protocol === "https:") {
+    return true;
+  }
+
+  if (isLocalhost(request.nextUrl.hostname)) {
+    return false;
+  }
+
+  return process.env.NODE_ENV === "production";
 }
 
 export function buildBackendUrl(path: string) {

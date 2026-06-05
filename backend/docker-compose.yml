@@ -40,6 +40,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
       Cors__AllowedOrigins__0: http://localhost:3001
