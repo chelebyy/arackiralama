@@ -28,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type {
   AdminVehicle,
@@ -40,12 +39,13 @@ import { createVehicle, updateVehicle } from "@/lib/api/admin/vehicles";
 
 const vehicleSchema = z.object({
   plate: z.string().min(1, "Plaka gereklidir"),
-  name: z.string().min(1, "Araç adı gereklidir"),
+  brand: z.string().min(1, "Marka gereklidir"),
+  model: z.string().min(1, "Model gereklidir"),
+  year: z.coerce.number().min(1990, "Yıl 1990 veya daha yeni olmalıdır"),
+  color: z.string().min(1, "Renk gereklidir"),
   groupId: z.string().min(1, "Araç grubu seçilmelidir"),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
   status: z.enum(["Available", "Maintenance", "Retired"]),
-  mileage: z.coerce.number().min(0, "Kilometre 0 veya daha büyük olmalıdır"),
-  adminNotes: z.string().optional(),
 });
 
 type VehicleFormInput = z.input<typeof vehicleSchema>;
@@ -74,12 +74,13 @@ export default function VehicleDialog({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       plate: "",
-      name: "",
+      brand: "",
+      model: "",
+      year: new Date().getFullYear(),
+      color: "",
       groupId: "",
       officeId: "",
       status: "Available",
-      mileage: 0,
-      adminNotes: "",
     },
   });
 
@@ -87,34 +88,37 @@ export default function VehicleDialog({
     if (vehicle) {
       form.reset({
         plate: vehicle.plate,
-        name: vehicle.name,
+        brand: vehicle.brand ?? "",
+        model: vehicle.model ?? "",
+        year: vehicle.year ?? new Date().getFullYear(),
+        color: vehicle.color ?? "",
         groupId: vehicle.groupId || "",
         officeId: vehicle.officeId || "",
         status: vehicle.status,
-        mileage: vehicle.mileage || 0,
-        adminNotes: vehicle.adminNotes || "",
       });
     } else {
       form.reset({
         plate: "",
-        name: "",
+        brand: "",
+        model: "",
+        year: new Date().getFullYear(),
+        color: "",
         groupId: "",
         officeId: "",
         status: "Available",
-        mileage: 0,
-        adminNotes: "",
       });
     }
   }, [vehicle, form, open]);
 
   const buildVehiclePayload = (data: VehicleFormData): CreateVehicleData => ({
     plate: data.plate,
-    name: data.name,
+    brand: data.brand,
+    model: data.model,
+    year: data.year,
+    color: data.color,
     groupId: data.groupId,
     officeId: data.officeId,
     status: data.status,
-    mileage: data.mileage,
-    adminNotes: data.adminNotes?.trim() || undefined,
   });
 
   const onSubmit = async (data: VehicleFormData) => {
@@ -157,19 +161,72 @@ export default function VehicleDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Araç Adı</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Fiat Egea" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="brand"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marka</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Fiat" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Model</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Egea" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yıl</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Renk</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Beyaz" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -187,7 +244,7 @@ export default function VehicleDialog({
                       <SelectContent>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
-                            {group.name}
+                            {group.nameTr ?? group.nameEn ?? group.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -247,45 +304,7 @@ export default function VehicleDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="mileage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kilometre</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        name={field.name}
-                        value={typeof field.value === "number" ? field.value : ""}
-                        onBlur={field.onBlur}
-                        onChange={(event) => field.onChange(event.target.value)}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
-
-            <FormField
-              control={form.control}
-              name="adminNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Admin Notları</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Araç hakkında notlar..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <DialogFooter>
               <Button

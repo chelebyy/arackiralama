@@ -45,8 +45,13 @@ function unwrapResponse<T>(response: AdminResponse<T>): T {
 }
 
 function unwrapPaginated<T>(response: AdminPaginatedResponse<T>) {
+  if (Array.isArray(response)) {
+    return createMockPaginated(response);
+  }
+
   if (response && typeof response === 'object' && 'data' in response) {
-    return (response as { data: PaginatedResponse<T> }).data;
+    const data = (response as { data: PaginatedResponse<T> | T[] }).data;
+    return Array.isArray(data) ? createMockPaginated(data) : data;
   }
   return response as PaginatedResponse<T>;
 }

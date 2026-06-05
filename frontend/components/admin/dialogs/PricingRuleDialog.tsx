@@ -42,6 +42,8 @@ const pricingRuleSchema = z.object({
   endDate: z.string().min(1, "Bitiş tarihi gereklidir"),
   dailyPrice: z.coerce.number().min(0, "Günlük fiyat 0 veya daha büyük olmalıdır"),
   multiplier: z.coerce.number().min(0, "Çarpan 0 veya daha büyük olmalıdır"),
+  weekdayMultiplier: z.coerce.number().min(0, "Hafta içi çarpanı 0 veya daha büyük olmalıdır"),
+  weekendMultiplier: z.coerce.number().min(0, "Hafta sonu çarpanı 0 veya daha büyük olmalıdır"),
   priority: z.coerce.number().min(0, "Öncelik 0 veya daha büyük olmalıdır"),
   calculationType: z.enum(["multiplier", "fixed"]),
 });
@@ -74,6 +76,8 @@ export default function PricingRuleDialog({
       endDate: "",
       dailyPrice: 0,
       multiplier: 1,
+      weekdayMultiplier: 1,
+      weekendMultiplier: 1,
       priority: 0,
       calculationType: "multiplier",
     },
@@ -87,6 +91,8 @@ export default function PricingRuleDialog({
         endDate: rule.endDate,
         dailyPrice: rule.dailyPrice,
         multiplier: rule.multiplier,
+        weekdayMultiplier: rule.weekdayMultiplier ?? 1,
+        weekendMultiplier: rule.weekendMultiplier ?? 1,
         priority: rule.priority,
         calculationType: rule.calculationType,
       });
@@ -97,6 +103,8 @@ export default function PricingRuleDialog({
         endDate: "",
         dailyPrice: 0,
         multiplier: 1,
+        weekdayMultiplier: 1,
+        weekendMultiplier: 1,
         priority: 0,
         calculationType: "multiplier",
       });
@@ -109,6 +117,8 @@ export default function PricingRuleDialog({
     endDate: data.endDate,
     dailyPrice: data.dailyPrice,
     multiplier: data.multiplier,
+    weekdayMultiplier: data.weekdayMultiplier,
+    weekendMultiplier: data.weekendMultiplier,
     priority: data.priority,
     calculationType: data.calculationType,
   });
@@ -154,7 +164,7 @@ export default function PricingRuleDialog({
                     <SelectContent>
                       {vehicleGroups.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
-                          {group.name}
+                          {group.nameTr ?? group.nameEn ?? group.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -222,6 +232,52 @@ export default function PricingRuleDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Çarpan</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="weekdayMultiplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hafta İçi Çarpanı</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="weekendMultiplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hafta Sonu Çarpanı</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

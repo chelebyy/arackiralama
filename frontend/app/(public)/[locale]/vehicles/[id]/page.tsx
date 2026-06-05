@@ -64,23 +64,6 @@ function mapAvailableToDetail(group: AvailableVehicleGroup): VehicleDetail {
   };
 }
 
-const fallbackVehicle: VehicleDetail = {
-  id: "",
-  name: "Vehicle",
-  group: "",
-  images: [],
-  passengers: 5,
-  luggage: 2,
-  transmission: "Automatic",
-  fuelType: "Gasoline",
-  dailyRate: 0,
-  features: [],
-  specifications: { engine: "2.0L", power: "150 HP", doors: 4, minAge: 21, license: "B" },
-  description: "",
-  rating: 4.5,
-  reviews: 0,
-};
-
 const offices = [
   { id: "ala", name: "Alanya City Center" },
   { id: "gzp", name: "Gazipasa Airport" },
@@ -148,9 +131,9 @@ export default function VehicleDetailPage() {
   );
 
   const matchedGroup = availableGroups.find((g) => g.groupId === params.id);
-  const vehicle: VehicleDetail = matchedGroup
+  const vehicle: VehicleDetail | null = matchedGroup
     ? mapAvailableToDetail(matchedGroup)
-    : fallbackVehicle;
+    : null;
 
   const getDays = (start: string, end: string) => {
     const s = new Date(start);
@@ -160,7 +143,7 @@ export default function VehicleDetailPage() {
   };
 
   const days = getDays(pickupDate, returnDate);
-  const totalPrice = vehicle.dailyRate * days;
+  const totalPrice = (vehicle?.dailyRate ?? 0) * days;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -187,7 +170,28 @@ export default function VehicleDetailPage() {
           </div>
         )}
 
-        {!isLoading && !isError && (
+        {!isLoading && !isError && !vehicle && (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+            <Car className="h-12 w-12 text-slate-300 mx-auto" />
+            <h1
+              className="mt-4 text-2xl font-semibold text-slate-900"
+              style={{ fontFamily: "Lexend, sans-serif" }}
+            >
+              Vehicle group not found
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Please return to the vehicle list and choose an available vehicle group.
+            </p>
+            <Link
+              href={`/${locale}/vehicles?pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+              className="mt-6 inline-flex items-center justify-center rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-800"
+            >
+              Back to vehicles
+            </Link>
+          </div>
+        )}
+
+        {!isLoading && !isError && vehicle && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -1,14 +1,40 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Trash2, ShieldCheck, Users } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { useAdminVehicleGroups } from "@/hooks/admin";
+import type { AdminVehicleGroup } from "@/lib/api/admin/types";
+import dynamic from "next/dynamic";
+
+const VehicleGroupDialog = dynamic(() => import("@/components/admin/dialogs/VehicleGroupDialog"), {
+  ssr: false,
+});
 
 export default function VehicleGroupsPage() {
-  const { groups, isLoading, isError } = useAdminVehicleGroups();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<AdminVehicleGroup | undefined>();
+
+  const { groups, isLoading, isError, mutate } = useAdminVehicleGroups();
+
+  const handleCreate = () => {
+    setEditingGroup(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (group: AdminVehicleGroup) => {
+    setEditingGroup(group);
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setDialogOpen(false);
+    setEditingGroup(undefined);
+    mutate();
+  };
 
   return (
     <div className="space-y-4">
@@ -16,6 +42,9 @@ export default function VehicleGroupsPage() {
         <p className="text-sm text-muted-foreground">
           Araç gruplarını ve özelliklerini yönetin.
         </p>
+        <Button size="sm" onClick={handleCreate}>
+          <Plus className="h-4 w-4 mr-1" /> Yeni Grup
+        </Button>
       </div>
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -31,17 +60,14 @@ export default function VehicleGroupsPage() {
             <Card key={g.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{g.name}</CardTitle>
+                  <CardTitle className="text-base">{g.nameTr ?? g.nameEn ?? g.name}</CardTitle>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" onClick={() => handleEdit(g)}>
                       <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive">
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{g.description}</p>
+                <p className="text-sm text-muted-foreground">{g.nameEn}</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
@@ -71,6 +97,12 @@ export default function VehicleGroupsPage() {
           )}
         </div>
       )}
+      <VehicleGroupDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        group={editingGroup}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }

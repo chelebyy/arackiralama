@@ -80,9 +80,13 @@ export default function PricingRulesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rules.map((r) => (
+                {rules.map((r) => {
+                  const group = groups.find((item) => item.id === r.vehicleGroupId);
+                  const groupName = group?.nameTr ?? group?.nameEn ?? group?.name ?? r.vehicleGroupId;
+
+                  return (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.vehicleGroupId}</TableCell>
+                    <TableCell className="font-medium">{groupName}</TableCell>
                     <TableCell>{r.startDate}</TableCell>
                     <TableCell>{r.endDate}</TableCell>
                     <TableCell className="text-right">
@@ -103,7 +107,8 @@ export default function PricingRulesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {rules.length === 0 && (
                   <TableRow>
                     <TableCell

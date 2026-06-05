@@ -1,4 +1,5 @@
 export { default as VehicleDialog } from "./VehicleDialog";
+export { default as VehicleGroupDialog } from "./VehicleGroupDialog";
 export { default as CampaignDialog } from "./CampaignDialog";
 export { default as OfficeDialog } from "./OfficeDialog";
 export { default as PricingRuleDialog } from "./PricingRuleDialog";

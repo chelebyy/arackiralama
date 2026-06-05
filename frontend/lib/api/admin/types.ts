@@ -16,26 +16,46 @@ export type PricingCalculationType = 'multiplier' | 'fixed';
 export type ReportChangeType = 'increase' | 'decrease' | 'neutral';
 export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
-export interface AdminVehicle extends Vehicle {
+export interface AdminVehicle extends Partial<Vehicle> {
+  id: string;
   plate: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+  color?: string;
+  name?: string;
+  photoUrl?: string | null;
   officeId: string;
+  groupId: string;
   office?: Pick<AdminOffice, 'id' | 'name'>;
   group?: Pick<AdminVehicleGroup, 'id' | 'name'>;
   status: AdminVehicleStatus;
-  officeName: string;
+  officeName?: string;
+  groupName?: string;
   adminNotes?: string | null;
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  mileage: number;
+  lastMaintenanceDate?: string;
+  nextMaintenanceDate?: string;
+  mileage?: number;
 }
 
-export interface AdminVehicleGroup extends VehicleGroup {
+export interface AdminVehicleGroup {
+  id: string;
+  name?: string;
+  nameTr?: string;
+  nameEn?: string;
+  nameRu?: string;
+  nameAr?: string;
+  nameDe?: string;
+  description?: string;
+  imageUrl?: string;
+  vehicles?: AdminVehicle[];
+  priceRange?: VehicleGroup['priceRange'];
   depositAmount: number;
   minAge: number;
   minLicenseYears: number;
   features: string[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdminOffice extends Office {
@@ -200,12 +220,13 @@ export interface AuditLogListParams extends AdminListParams {
 
 export interface CreateVehicleData {
   plate: string;
-  name: string;
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
   groupId: string;
   officeId: string;
   status: AdminVehicleStatus;
-  mileage: number;
-  adminNotes?: string;
 }
 
 export type UpdateVehicleData = CreateVehicleData;
@@ -220,8 +241,19 @@ export interface VehicleMaintenanceData {
   adminNotes?: string;
 }
 
-export type CreateVehicleGroupData = Omit<AdminVehicleGroup, 'id'>;
-export type UpdateVehicleGroupData = Partial<CreateVehicleGroupData>;
+export interface CreateVehicleGroupData {
+  nameTr: string;
+  nameEn: string;
+  nameRu: string;
+  nameAr: string;
+  nameDe: string;
+  depositAmount: number;
+  minAge: number;
+  minLicenseYears: number;
+  features?: string[];
+}
+
+export type UpdateVehicleGroupData = CreateVehicleGroupData;
 
 export interface CreateOfficeData {
   name: string;
@@ -280,7 +312,17 @@ export interface AdminPaymentOperation {
   reason?: string;
 }
 
-export type CreatePricingRuleData = Omit<PricingRule, 'id'>;
+export interface CreatePricingRuleData {
+  vehicleGroupId: string;
+  startDate: string;
+  endDate: string;
+  dailyPrice: number;
+  multiplier: number;
+  weekdayMultiplier: number;
+  weekendMultiplier: number;
+  priority: number;
+  calculationType: PricingCalculationType;
+}
 export type UpdatePricingRuleData = CreatePricingRuleData;
 
 export interface CreateCampaignData {
