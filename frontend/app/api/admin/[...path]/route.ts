@@ -9,7 +9,11 @@ function buildTargetUrl(req: NextRequest, pathSegments: string[]) {
     ? DEFAULT_BACKEND_BASE_URL.slice(0, -1)
     : DEFAULT_BACKEND_BASE_URL;
   const search = req.nextUrl.search;
-  return `${base}/api/admin/v1/${pathSegments.join("/")}${search}`;
+  const normalizedSegments = pathSegments[0] === "v1"
+    ? pathSegments.slice(1)
+    : pathSegments;
+
+  return `${base}/api/admin/v1/${normalizedSegments.join("/")}${search}`;
 }
 
 function copyResponseHeaders(src: Response): Headers {
