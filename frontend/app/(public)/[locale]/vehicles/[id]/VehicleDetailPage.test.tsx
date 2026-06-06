@@ -90,8 +90,22 @@ describe("VehicleDetailPage", () => {
     expect(screen.getByText("₺10000")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute(
       "href",
-      "/en/booking/step2?vehicle=group-1&pickup=ala&return=gzp&pickupDate=2026-06-10&returnDate=2026-06-14",
+      "/en/booking/step2?pickup=ala&return=gzp&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
     );
+  });
+
+  it("uses the Turkish group name when the route locale is Turkish", () => {
+    useParamsMock.mockReturnValue({ locale: "tr", id: "vehicle-1" });
+    useVehicleMock.mockReturnValue({
+      vehicle: createVehicle({ groupName: "SUV Türkçe", groupNameEn: "SUV English" }),
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehicleDetailPage />);
+
+    expect(screen.getByText("SUV Türkçe")).toBeInTheDocument();
+    expect(screen.queryByText("SUV English")).not.toBeInTheDocument();
   });
 
   it("shows an error message when vehicle details fail to load", () => {

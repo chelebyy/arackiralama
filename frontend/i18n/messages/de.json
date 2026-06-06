@@ -82,7 +82,25 @@
     "viewDetails": "Details ansehen",
     "unavailable": "Für diese Daten nicht verfügbar",
     "freeCancellation": "Kostenlose Stornierung",
-    "freeKm": "{km} km pro Tag inklusive"
+    "freeKm": "{km} km pro Tag inklusive",
+    "priceOnRequest": "Preis anfragen",
+    "detail": {
+      "backToSearch": "Zurück zur Suche",
+      "loading": "Fahrzeugdetails werden geladen...",
+      "failed": "Fahrzeugdetails konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "notFoundTitle": "Fahrzeug nicht gefunden",
+      "notFoundBody": "Bitte kehren Sie zur Fahrzeugliste zurück und wählen Sie ein verfügbares Fahrzeug.",
+      "backToVehicles": "Zurück zu den Fahrzeugen",
+      "features": "Ausstattung",
+      "specifications": "Technische Daten",
+      "color": "Farbe",
+      "plate": "Kennzeichen",
+      "minAge": "Mindestalter",
+      "fullProtection": "Vollschutz",
+      "zeroExcess": "Keine Selbstbeteiligung",
+      "theftProtection": "Diebstahlschutz",
+      "assistance": "24/7 Hilfe"
+    }
   },
   "booking": {
     "title": "Reservierung",

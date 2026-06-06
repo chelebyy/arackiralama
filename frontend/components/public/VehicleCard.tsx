@@ -134,7 +134,7 @@ export default function VehicleCard({
 
           {isAvailable ? (
             <Link
-              href={{ pathname: "/vehicles/[id]", params: { id } }}
+              href="/booking"
               className={cn(
                 "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
                 "transition-all duration-200",

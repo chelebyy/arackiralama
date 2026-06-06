@@ -101,6 +101,22 @@ describe("BookingStep2Page", () => {
     );
   });
 
+  it("preselects the vehicle group supplied in the query string", async () => {
+    const user = userEvent.setup();
+    searchParams.set("vehicle", "compact");
+
+    render(<BookingStep2Page />);
+
+    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
+    expect(continueButton).toBeEnabled();
+
+    await user.click(continueButton);
+
+    expect(pushMock).toHaveBeenCalledWith(
+      "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
+    );
+  });
+
   it("shows a loading state while available vehicles are being fetched", () => {
     availableVehiclesState.isLoading = true;
 

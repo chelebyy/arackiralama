@@ -4,11 +4,13 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import VehiclesPage from "./page";
 
 const useSearchParamsMock = vi.fn();
+const useParamsMock = vi.fn();
 const useOfficesMock = vi.fn();
 const usePublicVehiclesMock = vi.fn();
 const translationHasMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
+  useParams: () => useParamsMock(),
   useSearchParams: () => useSearchParamsMock(),
 }));
 
@@ -21,7 +23,13 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/i18n/routing", () => ({
-  Link: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+  Link: ({ href, children, ...props }: any) => {
+    const resolvedHref =
+      typeof href === "string"
+        ? href
+        : `${href.pathname}?${new URLSearchParams(href.query).toString()}`;
+    return <a href={resolvedHref} {...props}>{children}</a>;
+  },
 }));
 
 vi.mock("@/hooks/useVehicles", () => ({
@@ -56,6 +64,7 @@ describe("VehiclesPage", () => {
   beforeEach(() => {
     translationHasMock.mockReset();
     translationHasMock.mockReturnValue(false);
+    useParamsMock.mockReturnValue({ locale: "tr" });
     useSearchParamsMock.mockReturnValue(
       new URLSearchParams({
         pickup: "ala",
@@ -103,7 +112,10 @@ describe("VehiclesPage", () => {
     expect(screen.getByText("Alanya City Center")).toBeInTheDocument();
     expect(screen.getByText("Nissan Qashqai")).toBeInTheDocument();
     expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "bookNow" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "bookNow" })).toHaveAttribute(
+      "href",
+      "/tr/booking/step2?pickup=ala&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
+    );
     expect(screen.getByText("unavailable")).toBeInTheDocument();
   });
 
@@ -131,8 +143,8 @@ describe("VehiclesPage", () => {
     translationHasMock.mockImplementation((key: string) => key === "categories.suv");
     usePublicVehiclesMock.mockReturnValue({
       vehicles: [
-        createVehicle({ id: "vehicle-1", brand: "Nissan", model: "Qashqai", groupNameEn: "SUV" }),
-        createVehicle({ id: "vehicle-2", brand: "Fiat", model: "Egea", groupNameEn: "Economy" }),
+        createVehicle({ id: "vehicle-1", brand: "Nissan", model: "Qashqai", groupName: "SUV", groupNameEn: "SUV" }),
+        createVehicle({ id: "vehicle-2", brand: "Fiat", model: "Egea", groupName: "Ekonomi", groupNameEn: "Economy" }),
       ],
       isLoading: false,
       isError: false,
@@ -144,6 +156,20 @@ describe("VehiclesPage", () => {
 
     expect(screen.getByText("Nissan Qashqai")).toBeInTheDocument();
     expect(screen.queryByText("Fiat Egea")).not.toBeInTheDocument();
+  });
+
+  it("uses English group labels outside Turkish locale", () => {
+    useParamsMock.mockReturnValue({ locale: "en" });
+    usePublicVehiclesMock.mockReturnValue({
+      vehicles: [createVehicle()],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehiclesPage />);
+
+    expect(screen.getAllByText("Economy").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Ekonomi")).not.toBeInTheDocument();
   });
 
   it("switches to list view and renders pagination controls for long result sets", () => {

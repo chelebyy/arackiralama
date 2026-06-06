@@ -38,7 +38,7 @@ describe("VehicleCard", () => {
     expect(screen.getByText("Economy")).toBeInTheDocument();
     expect(screen.getByText("Free cancellation")).toBeInTheDocument();
     expect(screen.getByText("5 Seats")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute("href", "/vehicles/vehicle-1");
+    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute("href", "/booking");
   });
 
   it("shows per-day and total pricing when the rental spans multiple days", () => {

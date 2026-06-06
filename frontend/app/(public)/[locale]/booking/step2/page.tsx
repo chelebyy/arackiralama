@@ -71,7 +71,8 @@ export default function BookingStep2Page() {
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations("booking");
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const requestedVehicle = searchParams.get("vehicle");
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(requestedVehicle);
   const { setDates, selectVehicle } = useBookingActions();
 
   function translateVehicleFeature(feature: string): string {
@@ -85,11 +86,18 @@ export default function BookingStep2Page() {
     }
   }
 
+  function resolveAvailableGroupName(group: AvailableVehicleGroup): string {
+    if (locale === "tr") return group.groupName || group.groupNameEn || group.groupId;
+    return group.groupNameEn || group.groupName || group.groupId;
+  }
+
   function mapAvailableGroup(group: AvailableVehicleGroup): VehicleGroup {
+    const groupName = resolveAvailableGroupName(group);
+
     return {
       id: group.groupId,
-      name: group.groupName,
-      category: group.groupName,
+      name: groupName,
+      category: groupName,
       dailyRate: group.dailyPrice,
       passengers: 5,
       luggage: 2,
@@ -134,9 +142,10 @@ export default function BookingStep2Page() {
   );
 
   const vehicleGroups = availableGroups.map(mapAvailableGroup);
+  const selectedVehicleIsAvailable = vehicleGroups.some((vehicle) => vehicle.id === selectedVehicle);
 
   const handleContinue = () => {
-    if (!selectedVehicle) return;
+    if (!selectedVehicle || !selectedVehicleIsAvailable) return;
     const selectedGroup = availableGroups.find((group) => group.groupId === selectedVehicle);
 
     if (pickupOfficeObj && returnOfficeObj) {
@@ -323,10 +332,10 @@ export default function BookingStep2Page() {
         <button
           type="button"
           onClick={handleContinue}
-          disabled={!selectedVehicle}
+          disabled={!selectedVehicleIsAvailable}
           className={cn(
             "inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-lg transition-colors",
-            selectedVehicle
+            selectedVehicleIsAvailable
               ? "bg-sky-700 text-white hover:bg-sky-800"
               : "bg-slate-200 text-slate-400 cursor-not-allowed"
           )}

@@ -82,7 +82,25 @@
     "viewDetails": "View Details",
     "unavailable": "Not available for these dates",
     "freeCancellation": "Free cancellation",
-    "freeKm": "{km} km per day included"
+    "freeKm": "{km} km per day included",
+    "priceOnRequest": "Request price",
+    "detail": {
+      "backToSearch": "Back to search",
+      "loading": "Loading vehicle details...",
+      "failed": "Failed to load vehicle details. Please try again.",
+      "notFoundTitle": "Vehicle not found",
+      "notFoundBody": "Please return to the vehicle list and choose an available vehicle.",
+      "backToVehicles": "Back to vehicles",
+      "features": "Features",
+      "specifications": "Technical Specifications",
+      "color": "Color",
+      "plate": "Plate",
+      "minAge": "Min. Age",
+      "fullProtection": "Full Protection",
+      "zeroExcess": "Zero excess",
+      "theftProtection": "Theft protection",
+      "assistance": "24/7 assistance"
+    }
   },
   "booking": {
     "title": "Reservation",
