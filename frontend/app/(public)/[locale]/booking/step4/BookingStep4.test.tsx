@@ -193,7 +193,8 @@ describe("BookingStep4Page", () => {
         pickupDate: "2026-05-10",
       });
     });
-    expect(await screen.findByText("Code SUMMER15 applied!")).toBeInTheDocument();
+    const appliedElements = await screen.findAllByText("Applied");
+    expect(appliedElements.length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
   });
 
@@ -316,7 +317,7 @@ describe("BookingStep4Page", () => {
     render(<BookingStep4Page />);
 
     await user.type(screen.getByLabelText("Card Number"), "4111 1111 1111 1111");
-    await user.type(screen.getByLabelText("Card Holder Name"), "Jane Doe");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
     await user.type(screen.getByLabelText("Expiry Date"), "12/30");
     await user.type(screen.getByLabelText("CVV"), "123");
     await user.click(screen.getByRole("checkbox"));

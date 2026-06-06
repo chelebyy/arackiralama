@@ -9,6 +9,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
 }));
 
+
+
 describe("BookingStepper", () => {
   it("marks the active step based on the current pathname", () => {
     usePathnameMock.mockReturnValue("/en/booking/step3");
