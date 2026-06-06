@@ -3,22 +3,24 @@
 import { cn } from "@/lib/utils";
 import { Calendar, Car, CreditCard, User } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface BookingStepperProps {
   locale: string;
 }
 
-const steps = [
-  { id: 1, label: "Dates", icon: Calendar },
-  { id: 2, label: "Vehicle", icon: Car },
-  { id: 3, label: "Details", icon: User },
-  { id: 4, label: "Payment", icon: CreditCard },
-] as const;
-
 export function BookingStepper({ locale }: BookingStepperProps) {
+  const t = useTranslations("booking");
   const pathname = usePathname();
   const stepMatch = pathname.match(/\/step(\d)/);
   const currentStep = stepMatch ? (parseInt(stepMatch[1]) as 1 | 2 | 3 | 4) : 1;
+
+  const steps = [
+    { id: 1, label: t("stepper.dates"), icon: Calendar },
+    { id: 2, label: t("stepper.vehicle"), icon: Car },
+    { id: 3, label: t("stepper.details"), icon: User },
+    { id: 4, label: t("stepper.payment"), icon: CreditCard },
+  ] as const;
   return (
     <div className="w-full bg-white border-b border-slate-200">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { complete3dsReturn } from "@/lib/api/payments";
 
 export default function ThreeDsReturnPage() {
@@ -9,6 +10,7 @@ export default function ThreeDsReturnPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const locale = params.locale as string;
+  const t = useTranslations("booking");
   const [status, setStatus] = useState<"processing" | "error">("processing");
 
   useEffect(() => {
@@ -51,16 +53,16 @@ export default function ThreeDsReturnPage() {
         {status === "processing" ? (
           <>
             <div className="w-12 h-12 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-600">Processing payment...</p>
+            <p className="text-slate-600">{t("processingPayment")}</p>
           </>
         ) : (
           <>
-            <p className="text-red-600">Failed to process payment. Please try again.</p>
+            <p className="text-red-600">{t("failedToProcessPayment")}</p>
             <button
               onClick={() => router.push(`/${locale}/booking/step4`)}
               className="mt-4 px-4 py-2 bg-sky-700 text-white rounded-lg"
             >
-              Return to Payment
+              {t("returnToPayment")}
             </button>
           </>
         )}
