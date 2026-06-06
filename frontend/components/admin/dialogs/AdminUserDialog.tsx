@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,30 +29,48 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createAdminUser } from "@/lib/api/admin/users";
+import { createAdminUser, updateAdminUser } from "@/lib/api/admin/users";
+import type { AdminUser } from "@/lib/api/admin/types";
 
-const adminUserSchema = z.object({
+const adminUserBaseSchema = {
   fullName: z.string().min(1, "Ad soyad gereklidir"),
   email: z.string().email("Geçerli bir email adresi giriniz"),
   role: z.enum(["Admin", "SuperAdmin"]),
+};
+
+const createAdminUserSchema = z.object({
+  ...adminUserBaseSchema,
   password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
 });
 
-type AdminUserFormData = z.infer<typeof adminUserSchema>;
+const updateAdminUserSchema = z.object({
+  ...adminUserBaseSchema,
+  password: z.string().optional(),
+});
+
+type AdminUserFormData = z.infer<typeof updateAdminUserSchema>;
 
 interface AdminUserDialogProps {
+  adminUser?: AdminUser | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
 export default function AdminUserDialog({
+  adminUser,
   open,
   onOpenChange,
   onSuccess,
 }: AdminUserDialogProps) {
+  const isEditing = Boolean(adminUser);
+  const schema = useMemo(
+    () => (isEditing ? updateAdminUserSchema : createAdminUserSchema),
+    [isEditing]
+  );
+
   const form = useForm<AdminUserFormData>({
-    resolver: zodResolver(adminUserSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       fullName: "",
       email: "",
@@ -60,14 +79,42 @@ export default function AdminUserDialog({
     },
   });
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    form.reset({
+      fullName: adminUser?.fullName ?? "",
+      email: adminUser?.email ?? "",
+      role: adminUser?.role ?? "Admin",
+      password: "",
+    });
+  }, [adminUser, form, open]);
+
   const onSubmit = async (data: AdminUserFormData) => {
     try {
-      await createAdminUser(data);
-      toast.success("Admin kullanıcı başarıyla oluşturuldu");
+      if (adminUser) {
+        await updateAdminUser(adminUser.id, {
+          email: data.email,
+          fullName: data.fullName,
+          role: data.role,
+        });
+        toast.success("Admin kullanıcı başarıyla güncellendi");
+      } else {
+        await createAdminUser({
+          email: data.email,
+          fullName: data.fullName,
+          role: data.role,
+          password: data.password ?? "",
+        });
+        toast.success("Admin kullanıcı başarıyla oluşturuldu");
+      }
+
       form.reset();
       onSuccess();
     } catch (error) {
-      toast.error("Admin kullanıcı oluşturulamadı");
+      toast.error(isEditing ? "Admin kullanıcı güncellenemedi" : "Admin kullanıcı oluşturulamadı");
       console.error(error);
     }
   };
@@ -76,7 +123,9 @@ export default function AdminUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Yeni Admin Kullanıcı Ekle</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Admin Kullanıcıyı Düzenle" : "Yeni Admin Kullanıcı Ekle"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -130,19 +179,21 @@ export default function AdminUserDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Şifre</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isEditing && (
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Şifre</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="******" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button
@@ -153,7 +204,13 @@ export default function AdminUserDialog({
                 İptal
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Oluşturuluyor..." : "Oluştur"}
+                {form.formState.isSubmitting
+                  ? isEditing
+                    ? "Güncelleniyor..."
+                    : "Oluşturuluyor..."
+                  : isEditing
+                    ? "Güncelle"
+                    : "Oluştur"}
               </Button>
             </DialogFooter>
           </form>

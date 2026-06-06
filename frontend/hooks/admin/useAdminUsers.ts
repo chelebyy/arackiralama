@@ -6,6 +6,8 @@ import {
   getCustomerById,
   getAdminUsers,
   createAdminUser,
+  deleteAdminUser,
+  updateAdminUser,
   updateAdminUserRole,
   updateAdminUserStatus,
 } from '@/lib/api/admin/users';
@@ -56,7 +58,7 @@ export function useAdminUsers() {
   const { data, error, isLoading, mutate } = useSWR<
     PaginatedResponse<AdminUser>,
     Error
-  >(USER_KEYS.admins(), getAdminUsers, {
+  >(USER_KEYS.admins(), () => getAdminUsers(), {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
   });
@@ -73,6 +75,13 @@ export async function mutateCreateAdminUser(data: Parameters<typeof createAdminU
   return createAdminUser(data);
 }
 
+export async function mutateUpdateAdminUser(
+  id: string,
+  data: Parameters<typeof updateAdminUser>[1]
+) {
+  return updateAdminUser(id, data);
+}
+
 export async function mutateUpdateAdminUserRole(
   id: string,
   role: Parameters<typeof updateAdminUserRole>[1]
@@ -82,4 +91,8 @@ export async function mutateUpdateAdminUserRole(
 
 export async function mutateUpdateAdminUserStatus(id: string, isActive: boolean) {
   return updateAdminUserStatus(id, isActive);
+}
+
+export async function mutateDeleteAdminUser(id: string) {
+  return deleteAdminUser(id);
 }

@@ -60,9 +60,11 @@ import {
 } from "./settings";
 import {
   createAdminUser,
+  deleteAdminUser,
   getAdminUsers,
   getCustomerById,
   getCustomers,
+  updateAdminUser,
   updateAdminUserRole,
   updateAdminUserStatus,
 } from "./users";
@@ -279,30 +281,46 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await getCustomers({ search: "leyla", empty: "" });
     await getCustomerById("customer-1");
     await getAdminUsers({ role: "Admin", page: 2 });
-    await createAdminUser({ email: "admin@example.test" } as never);
+    await createAdminUser({
+      email: "admin@example.test",
+      password: "P@ssw0rd!",
+      fullName: "Test Admin",
+      role: "Admin",
+    });
+    await updateAdminUser("admin-1", {
+      email: "admin-updated@example.test",
+      fullName: "Updated Admin",
+      role: "SuperAdmin",
+    });
     await updateAdminUserRole("admin-1", "SuperAdmin");
     await updateAdminUserRole("admin-2", { role: "Admin" });
     await updateAdminUserStatus("admin-1", true);
     await updateAdminUserStatus("admin-2", { isActive: false });
+    await deleteAdminUser("admin-2");
 
     expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/users/customers?search=leyla");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/users/customers/customer-1");
-    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/users/admins?role=Admin&page=2");
-    expect(mockedPost).toHaveBeenCalledWith("/v1/users/admins", {
+    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/users?role=Admin&page=2");
+    expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/users", {
       email: "admin@example.test",
-    });
-    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/users/admins/admin-1/role", {
-      role: "SuperAdmin",
-    });
-    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/users/admins/admin-2/role", {
+      password: "P@ssw0rd!",
+      fullName: "Test Admin",
       role: "Admin",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/users/admins/admin-1/status", {
-      isActive: true,
+    expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/users/admin-1", {
+      email: "admin-updated@example.test",
+      fullName: "Updated Admin",
+      role: "SuperAdmin",
     });
-    expect(mockedPatch).toHaveBeenNthCalledWith(4, "/v1/users/admins/admin-2/status", {
-      isActive: false,
+    expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/users/admin-1/role", {
+      role: "SuperAdmin",
     });
+    expect(mockedPut).toHaveBeenNthCalledWith(3, "/v1/users/admin-2/role", {
+      role: "Admin",
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/users/admin-1/activate");
+    expect(mockedPost).toHaveBeenNthCalledWith(3, "/v1/users/admin-2/deactivate");
+    expect(mockedDel).toHaveBeenCalledWith("/v1/users/admin-2");
   });
 
   it("covers settings and report endpoints", async () => {
