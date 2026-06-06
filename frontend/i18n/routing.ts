@@ -57,6 +57,20 @@ export const routing = defineRouting({
       ar: "/al-hajz",
       de: "/buchung"
     },
+    "/terms": {
+      tr: "/terms",
+      en: "/terms",
+      ru: "/terms",
+      ar: "/terms",
+      de: "/terms"
+    },
+    "/privacy": {
+      tr: "/privacy",
+      en: "/privacy",
+      ru: "/privacy",
+      ar: "/privacy",
+      de: "/privacy"
+    },
     "/vehicles/[id]": {
       tr: "/araclar/[id]",
       en: "/vehicles/[id]",

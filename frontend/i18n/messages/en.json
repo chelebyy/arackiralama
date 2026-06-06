@@ -744,5 +744,212 @@
         "description": "Sign in with your customer account."
       }
     }
+  },
+  "legal": {
+    "sectionLabel": "Section {number}",
+    "terms": {
+      "title": "Terms and Conditions",
+      "subtitle": "Please read these terms carefully before renting a vehicle",
+      "noticeTitle": "Important Notice",
+      "noticeBody": "By making a reservation or renting a vehicle from Alanya Car Rental, you acknowledge that you have read, understood, and agree to be bound by these terms and conditions. These terms may be updated from time to time, and the current version will always be available on our website.",
+      "contactTitle": "Questions About Our Terms?",
+      "contactBody": "If you have any questions about our terms and conditions, please contact our customer service team. We are here to clarify any concerns before you make a reservation.",
+      "legalEmail": "Contact Legal Team",
+      "servicePhone": "Call Customer Service",
+      "lastUpdated": "Last updated: March 2025",
+      "sections": [
+        {
+          "id": "agreement",
+          "title": "Rental Agreement",
+          "content": [
+            "By renting a vehicle from Alanya Car Rental, you agree to these terms and conditions.",
+            "The rental agreement is a legally binding contract between the renter and Alanya Car Rental.",
+            "All rentals are subject to vehicle availability and confirmation.",
+            "We reserve the right to refuse service to anyone for any reason.",
+            "The renter is responsible for reading and understanding all terms before signing the agreement."
+          ]
+        },
+        {
+          "id": "age",
+          "title": "Age and License Requirements",
+          "content": [
+            "Minimum age for renters is 25 years old.",
+            "Drivers must have held a valid driver license for at least 2 years.",
+            "All drivers must present a valid driver license at the time of pickup.",
+            "International visitors must have an International Driving Permit if their license is not in the Latin alphabet.",
+            "Additional drivers must meet the same age and license requirements and be registered on the rental agreement."
+          ]
+        },
+        {
+          "id": "insurance",
+          "title": "Insurance and Coverage",
+          "content": [
+            "All rentals include basic third-party liability insurance as required by Turkish law.",
+            "Collision Damage Waiver is included with all rentals, reducing the renter liability for damage.",
+            "Theft protection is included, covering the vehicle in case of theft.",
+            "A security deposit of 300-500 USD is required depending on vehicle category.",
+            "The security deposit is refunded within 7-14 days after vehicle return, pending damage inspection."
+          ]
+        },
+        {
+          "id": "payment",
+          "title": "Payment Terms",
+          "content": [
+            "Full payment is required at the time of booking confirmation.",
+            "We accept major credit cards and cash payments.",
+            "A valid credit card in the renter name is required for the security deposit.",
+            "Additional charges may apply for fuel, tolls, parking fines, traffic violations, or vehicle damage.",
+            "Late return fees are charged at 50% of the daily rate per hour after the agreed return time."
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Fuel Policy",
+          "content": [
+            "Vehicles are provided with a full tank of fuel.",
+            "Renters must return the vehicle with a full tank of fuel.",
+            "If the vehicle is returned with less fuel, a refueling charge will apply at current market rates plus a service fee.",
+            "We offer a pre-purchase fuel option for convenience at competitive rates."
+          ]
+        },
+        {
+          "id": "cancellation",
+          "title": "Cancellation and Modification Policy",
+          "content": [
+            "Cancellations made 48 hours or more before pickup: full refund minus processing fee.",
+            "Cancellations made 24-48 hours before pickup: 50% refund.",
+            "Cancellations made less than 24 hours before pickup: no refund.",
+            "No-shows are charged the full rental amount.",
+            "Modifications to reservations are subject to availability and may incur additional charges."
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "Vehicle Usage",
+          "content": [
+            "Vehicles may only be driven in Turkey unless prior written authorization is obtained.",
+            "Off-road driving is prohibited unless the vehicle is specifically authorized for such use.",
+            "Smoking is strictly prohibited in all rental vehicles. A cleaning fee will be charged for violations.",
+            "Pets are allowed only in pet-friendly vehicles with prior arrangement.",
+            "The renter is responsible for all traffic violations, parking fines, and tolls incurred during the rental period."
+          ]
+        },
+        {
+          "id": "liability",
+          "title": "Renter Liability",
+          "content": [
+            "The renter is liable for any damage caused by negligence or violation of rental terms.",
+            "Damage caused by unauthorized drivers is not covered by insurance.",
+            "The renter must report any accidents or damage immediately to our emergency line.",
+            "Failure to report damage may result in loss of insurance coverage and full liability.",
+            "Personal belongings left in the vehicle are not covered by our insurance."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "subtitle": "How we protect and handle your personal data",
+      "noticeTitle": "KVKK Compliance",
+      "noticeBody": "Alanya Car Rental is fully compliant with the Turkish Personal Data Protection Law (KVKK) No. 6698 and the EU General Data Protection Regulation (GDPR). We are committed to protecting your privacy and ensuring the security of your personal data.",
+      "intro": "This Privacy Policy explains how Alanya Car Rental collects, uses, stores, and protects your personal information when you use our services. By using our website and services, you consent to the practices described in this policy.",
+      "contactTitle": "Contact Our Data Protection Officer",
+      "contactBody": "If you have questions about this Privacy Policy, want to exercise your rights, or have concerns about how we handle your data, please contact our Data Protection Officer:",
+      "emailLabel": "Email",
+      "addressLabel": "Postal Address",
+      "breachTitle": "Data Breach Notification",
+      "breachBody": "In the unlikely event of a data breach that may affect your personal information, we will notify you and the relevant authorities within 72 hours as required by law. We maintain incident response procedures to minimize potential impact.",
+      "lastUpdated": "Last updated: March 2025",
+      "sections": [
+        {
+          "id": "collection",
+          "title": "Data We Collect",
+          "content": [
+            "Personal identification information: name, date of birth, nationality",
+            "Contact information: email address, phone number, residential address",
+            "Driver license details and driving history",
+            "Payment information: credit card details, billing address",
+            "Reservation details: pickup and return locations, dates, vehicle preferences",
+            "Website usage data: IP address, browser type, pages visited",
+            "Communication records: emails, chat logs, phone call records"
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "How We Use Your Data",
+          "content": [
+            "Processing and confirming your vehicle reservations",
+            "Verifying your identity and driver license validity",
+            "Processing payments and managing security deposits",
+            "Communicating with you about your reservation",
+            "Providing customer support and handling inquiries",
+            "Improving our services and website experience",
+            "Complying with legal obligations and law enforcement requests",
+            "Sending promotional offers only with your consent"
+          ]
+        },
+        {
+          "id": "storage",
+          "title": "Data Storage and Security",
+          "content": [
+            "Your data is stored on secure servers located within the European Union",
+            "We use industry-standard encryption for data transmission",
+            "Access to personal data is restricted to authorized personnel only",
+            "We implement regular security audits and vulnerability assessments",
+            "Payment information is processed through PCI-DSS compliant payment gateways",
+            "We never store your full credit card details on our servers",
+            "Physical records are stored in secure, access-controlled facilities"
+          ]
+        },
+        {
+          "id": "retention",
+          "title": "Data Retention",
+          "content": [
+            "Reservation data is retained for 7 years for legal and tax purposes",
+            "Marketing preferences and consent records are retained until you withdraw consent",
+            "Website analytics data is anonymized after 26 months",
+            "Security logs are retained for 1 year",
+            "You may request deletion of your data subject to legal obligations"
+          ]
+        },
+        {
+          "id": "cookies",
+          "title": "Cookie Policy",
+          "content": [
+            "Essential cookies are required for website functionality and cannot be disabled",
+            "Analytics cookies help us understand how visitors interact with our website",
+            "Marketing cookies are used to deliver relevant advertisements only with consent",
+            "You can manage cookie preferences through your browser settings",
+            "Our cookie consent banner allows you to customize your preferences",
+            "Third-party cookies may be set by our payment and analytics partners"
+          ]
+        },
+        {
+          "id": "rights",
+          "title": "Your Rights Under KVKK",
+          "content": [
+            "Right to access: request a copy of your personal data we hold",
+            "Right to rectification: request correction of inaccurate data",
+            "Right to erasure: request deletion of your data subject to legal obligations",
+            "Right to restrict processing: limit how we use your data",
+            "Right to data portability: receive your data in a machine-readable format",
+            "Right to object: object to certain types of data processing",
+            "Right to withdraw consent at any time"
+          ]
+        },
+        {
+          "id": "sharing",
+          "title": "Data Sharing and Third Parties",
+          "content": [
+            "We only share your data with necessary third-party service providers",
+            "Payment processing is handled by certified payment providers",
+            "Insurance partners receive only necessary information for coverage",
+            "We may share data with law enforcement when legally required",
+            "We do not sell or rent your personal data to third parties",
+            "All third-party partners are contractually bound to data protection standards"
+          ]
+        }
+      ]
+    }
   }
 }

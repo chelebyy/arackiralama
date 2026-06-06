@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useMessages, useTranslations } from "next-intl";
 import {
   FileText,
   Shield,
@@ -6,113 +6,34 @@ import {
   Fuel,
   AlertCircle,
   CheckCircle,
-  ChevronRight,
   Car,
   User,
   Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const sections = [
-  {
-    id: "agreement",
-    icon: FileText,
-    title: "Rental Agreement",
-    content: [
-      "By renting a vehicle from Alanya Car Rental, you agree to these terms and conditions.",
-      "The rental agreement is a legally binding contract between the renter and Alanya Car Rental.",
-      "All rentals are subject to vehicle availability and confirmation.",
-      "We reserve the right to refuse service to anyone for any reason.",
-      "The renter is responsible for reading and understanding all terms before signing the agreement."
-    ]
-  },
-  {
-    id: "age",
-    icon: User,
-    title: "Age and License Requirements",
-    content: [
-      "Minimum age for renters is 25 years old.",
-      "Drivers must have held a valid driver's license for at least 2 years.",
-      "All drivers must present a valid driver's license at the time of pickup.",
-      "International visitors must have an International Driving Permit (IDP) if their license is not in Latin alphabet.",
-      "Additional drivers must meet the same age and license requirements and be registered on the rental agreement."
-    ]
-  },
-  {
-    id: "insurance",
-    icon: Shield,
-    title: "Insurance and Coverage",
-    content: [
-      "All rentals include basic third-party liability insurance as required by Turkish law.",
-      "Collision Damage Waiver (CDW) is included with all rentals, reducing the renter's liability for damage.",
-      "Theft protection is included, covering the vehicle in case of theft.",
-      "A security deposit of 300-500 USD is required depending on vehicle category.",
-      "The security deposit is refunded within 7-14 days after vehicle return, pending damage inspection."
-    ]
-  },
-  {
-    id: "payment",
-    icon: CreditCard,
-    title: "Payment Terms",
-    content: [
-      "Full payment is required at the time of booking confirmation.",
-      "We accept major credit cards (Visa, MasterCard, American Express) and cash payments.",
-      "A valid credit card in the renter's name is required for the security deposit.",
-      "Additional charges may apply for fuel, tolls, parking fines, traffic violations, or vehicle damage.",
-      "Late return fees are charged at 50% of the daily rate per hour after the agreed return time."
-    ]
-  },
-  {
-    id: "fuel",
-    icon: Fuel,
-    title: "Fuel Policy",
-    content: [
-      "Vehicles are provided with a full tank of fuel.",
-      "Renters must return the vehicle with a full tank of fuel.",
-      "If the vehicle is returned with less fuel, a refueling charge will apply at current market rates plus a service fee.",
-      "We offer a pre-purchase fuel option for convenience at competitive rates."
-    ]
-  },
-  {
-    id: "cancellation",
-    icon: Clock,
-    title: "Cancellation and Modification Policy",
-    content: [
-      "Cancellations made 48 hours or more before pickup: Full refund minus processing fee.",
-      "Cancellations made 24-48 hours before pickup: 50% refund.",
-      "Cancellations made less than 24 hours before pickup: No refund.",
-      "No-shows are charged the full rental amount.",
-      "Modifications to reservations are subject to availability and may incur additional charges."
-    ]
-  },
-  {
-    id: "usage",
-    icon: Car,
-    title: "Vehicle Usage",
-    content: [
-      "Vehicles may only be driven in Turkey unless prior written authorization is obtained.",
-      "Off-road driving is prohibited unless the vehicle is specifically authorized for such use.",
-      "Smoking is strictly prohibited in all rental vehicles. A cleaning fee will be charged for violations.",
-      "Pets are allowed only in pet-friendly vehicles with prior arrangement.",
-      "The renter is responsible for all traffic violations, parking fines, and tolls incurred during the rental period."
-    ]
-  },
-  {
-    id: "liability",
-    icon: AlertCircle,
-    title: "Renter Liability",
-    content: [
-      "The renter is liable for any damage caused by negligence or violation of rental terms.",
-      "Damage caused by unauthorized drivers is not covered by insurance.",
-      "The renter must report any accidents or damage immediately to our emergency line.",
-      "Failure to report damage may result in loss of insurance coverage and full liability.",
-      "Personal belongings left in the vehicle are not covered by our insurance."
-    ]
-  }
-];
+const sectionIcons = {
+  agreement: FileText,
+  age: User,
+  insurance: Shield,
+  payment: CreditCard,
+  fuel: Fuel,
+  cancellation: Clock,
+  usage: Car,
+  liability: AlertCircle
+} as const;
+
+type TermsSection = {
+  id: keyof typeof sectionIcons;
+  title: string;
+  content: string[];
+};
 
 export default function TermsPage() {
-  const t = useTranslations();
+  const t = useTranslations("legal");
+  const terms = useTranslations("legal.terms");
+  const messages = useMessages() as { legal: { terms: { sections: TermsSection[] } } };
+  const sections = messages.legal.terms.sections;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -120,10 +41,10 @@ export default function TermsPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-3xl lg:text-5xl font-bold text-white mb-6">
-              Terms and Conditions
+              {terms("title")}
             </h1>
             <p className="text-lg lg:text-xl text-white/70">
-              Please read these terms carefully before renting a vehicle
+              {terms("subtitle")}
             </p>
           </div>
         </div>
@@ -134,12 +55,9 @@ export default function TermsPage() {
           <div className="flex items-start gap-4">
             <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h2 className="font-semibold text-amber-800 mb-2">Important Notice</h2>
+              <h2 className="font-semibold text-amber-800 mb-2">{terms("noticeTitle")}</h2>
               <p className="text-amber-700 text-sm leading-relaxed">
-                By making a reservation or renting a vehicle from Alanya Car Rental, 
-                you acknowledge that you have read, understood, and agree to be bound by these 
-                terms and conditions. These terms may be updated from time to time, and the 
-                current version will always be available on our website.
+                {terms("noticeBody")}
               </p>
             </div>
           </div>
@@ -147,7 +65,7 @@ export default function TermsPage() {
 
         <div className="space-y-8">
           {sections.map((section, index) => {
-            const Icon = section.icon;
+            const Icon = sectionIcons[section.id];
             return (
               <section
                 key={section.id}
@@ -163,7 +81,7 @@ export default function TermsPage() {
                   </div>
                   <div>
                     <span className="text-sm font-medium text-[#0369A1]">
-                      Section {String(index + 1).padStart(2, "0")}
+                      {t("sectionLabel", { number: String(index + 1).padStart(2, "0") })}
                     </span>
                     <h2 className="text-xl font-bold text-[#0F172A]">
                       {section.title}
@@ -188,12 +106,8 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-12 p-6 rounded-2xl bg-[#0F172A] text-white">
-          <h2 className="text-xl font-bold mb-4">Questions About Our Terms?</h2>
-          <p className="text-white/70 mb-6">
-            If you have any questions about our terms and conditions, please do not hesitate 
-            to contact our customer service team. We are here to help clarify any concerns 
-            before you make a reservation.
-          </p>
+          <h2 className="text-xl font-bold mb-4">{terms("contactTitle")}</h2>
+          <p className="text-white/70 mb-6">{terms("contactBody")}</p>
           <div className="flex flex-wrap gap-4">
             <a
               href="mailto:legal@alanyacarrental.com"
@@ -203,7 +117,7 @@ export default function TermsPage() {
                 "hover:bg-[#F8FAFC] transition-all duration-200"
               )}
             >
-              Contact Legal Team
+              {terms("legalEmail")}
             </a>
             <a
               href="tel:+905555550100"
@@ -213,15 +127,13 @@ export default function TermsPage() {
                 "hover:bg-white/20 transition-all duration-200"
               )}
             >
-              Call Customer Service
+              {terms("servicePhone")}
             </a>
           </div>
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-sm text-[#64748B]">
-            Last updated: March 2025
-          </p>
+          <p className="text-sm text-[#64748B]">{terms("lastUpdated")}</p>
         </div>
       </div>
     </div>
