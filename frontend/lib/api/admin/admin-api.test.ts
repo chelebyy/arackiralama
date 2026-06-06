@@ -51,7 +51,13 @@ import {
   updatePricingRule,
 } from "./pricing";
 import { getOccupancyReport, getPopularVehicles, getRevenueReport } from "./reports";
-import { getAuditLogs, getFeatureFlags, updateFeatureFlag } from "./settings";
+import {
+  getAuditLogs,
+  getFeatureFlags,
+  getPublicSiteSettings,
+  updateFeatureFlag,
+  updatePublicSiteSettings,
+} from "./settings";
 import {
   createAdminUser,
   getAdminUsers,
@@ -300,16 +306,40 @@ describe("admin pricing, users, settings, and reports APIs", () => {
   });
 
   it("covers settings and report endpoints", async () => {
+    const publicSiteSettings = {
+      companyName: "Alanya",
+      companyAddress: "Alanya",
+      companyPhone: "+90",
+      companyEmail: "contact@example.test",
+      workingHours: "09:00 - 18:00",
+      headerLinks: [],
+      heroLinks: [],
+      quickLinks: [],
+      socialLinks: [],
+      footerBottomLinks: [],
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "Map",
+      contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
+      contactPageMapIsVisible: true,
+      pages: [],
+      updatedAt: "2026-06-06T00:00:00Z",
+    };
     mockedGet
       .mockResolvedValueOnce({ data: mockFeatureFlags } as never)
       .mockResolvedValueOnce({ data: { items: mockAuditLogs, page: 1, pageSize: 5 } } as never)
+      .mockResolvedValueOnce({ data: publicSiteSettings } as never)
       .mockResolvedValueOnce({ data: mockRevenueReports[0] } as never)
       .mockResolvedValueOnce({ data: mockOccupancyReports[0] } as never)
       .mockResolvedValueOnce({ data: mockPopularVehicles } as never);
+    mockedPut.mockResolvedValueOnce({ data: publicSiteSettings } as never);
 
     await expect(getFeatureFlags()).resolves.toBe(mockFeatureFlags);
     await updateFeatureFlag("flag-1", false);
     await getAuditLogs({ entityType: "Reservation", page: 1 });
+    await expect(getPublicSiteSettings()).resolves.toBe(publicSiteSettings);
+    await updatePublicSiteSettings(publicSiteSettings);
     await expect(getRevenueReport("month")).resolves.toBe(mockRevenueReports[0]);
     await expect(getOccupancyReport("week")).resolves.toBe(mockOccupancyReports[0]);
     await expect(getPopularVehicles("year")).resolves.toBe(mockPopularVehicles);
@@ -320,10 +350,12 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       2,
       "/v1/audit-logs?entityType=Reservation&page=1"
     );
-    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/reports/revenue?period=month");
-    expect(mockedGet).toHaveBeenNthCalledWith(4, "/v1/reports/occupancy?period=week");
+    expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/public-site-settings");
+    expect(mockedPut).toHaveBeenCalledWith("/v1/public-site-settings", publicSiteSettings);
+    expect(mockedGet).toHaveBeenNthCalledWith(4, "/v1/reports/revenue?period=month");
+    expect(mockedGet).toHaveBeenNthCalledWith(5, "/v1/reports/occupancy?period=week");
     expect(mockedGet).toHaveBeenNthCalledWith(
-      5,
+      6,
       "/v1/reports/popular-vehicles?period=year"
     );
   });

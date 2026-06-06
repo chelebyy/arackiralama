@@ -5,10 +5,19 @@ import Header from "./Header";
 
 const usePathnameMock = vi.fn();
 const useLocaleMock = vi.fn();
+const useSWRMock = vi.fn();
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
   useLocale: () => useLocaleMock(),
+}));
+
+vi.mock("swr", () => ({
+  default: (...args: unknown[]) => useSWRMock(...args),
+}));
+
+vi.mock("@/lib/api/publicSiteSettings", () => ({
+  getPublicSiteSettings: vi.fn(),
 }));
 
 vi.mock("@/i18n/routing", () => ({
@@ -32,6 +41,8 @@ describe("Header", () => {
   beforeEach(() => {
     usePathnameMock.mockReturnValue("/");
     useLocaleMock.mockReturnValue("en");
+    useSWRMock.mockReset();
+    useSWRMock.mockReturnValue({ data: undefined });
   });
 
   it("renders desktop navigation, login, tracking cta, and language switcher", () => {
@@ -54,5 +65,27 @@ describe("Header", () => {
     expect(screen.getAllByRole("link", { name: "trackReservation" }).length).toBeGreaterThan(1);
     expect(screen.getAllByRole("link", { name: "login" }).length).toBeGreaterThan(1);
     expect(screen.getByRole("button", { name: "Toggle menu" })).toBeInTheDocument();
+  });
+
+  it("uses managed header links and hides disabled public actions", () => {
+    useSWRMock.mockReturnValue({
+      data: {
+        headerLinks: [
+          { id: "home", label: "Start", href: "/", isVisible: true, sortOrder: 0 },
+          { id: "vehicles", label: "Fleet", href: "/vehicles", isVisible: true, sortOrder: 1 },
+          { id: "about", label: "Hidden About", href: "/about", isVisible: false, sortOrder: 2 },
+          { id: "login", label: "Staff", href: "/dashboard/login/v2", isVisible: true, sortOrder: 3 },
+          { id: "trackReservation", label: "Hidden Track", href: "/track-reservation", isVisible: false, sortOrder: 4 },
+        ],
+      },
+    });
+
+    render(<Header />);
+
+    expect(screen.getByRole("link", { name: "Start" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Fleet" })).toHaveAttribute("href", "/vehicles");
+    expect(screen.getByRole("link", { name: "Staff" })).toHaveAttribute("href", "/dashboard/login/v2");
+    expect(screen.queryByText("Hidden About")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hidden Track")).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { adminGet, adminPatch } from '../client';
+import { adminGet, adminPatch, adminPut } from '../client';
 import { mockAuditLogs, mockFeatureFlags } from './mock';
 import type {
   AdminPaginatedResponse,
@@ -6,6 +6,8 @@ import type {
   AuditLog,
   AuditLogListParams,
   FeatureFlag,
+  PublicSiteSettings,
+  UpdatePublicSiteSettingsData,
   PaginatedResponse,
 } from './types';
 
@@ -13,6 +15,7 @@ const USE_MOCK = false;
 
 const FEATURE_FLAGS_ENDPOINT = '/v1/feature-flags';
 const AUDIT_LOGS_ENDPOINT = '/v1/audit-logs';
+const PUBLIC_SITE_SETTINGS_ENDPOINT = '/v1/public-site-settings';
 
 function buildQueryString(params?: object): string {
   if (!params) return '';
@@ -82,4 +85,14 @@ export async function getAuditLogs(params?: AuditLogListParams | Record<string, 
   }
   const response = await adminGet<AdminPaginatedResponse<AuditLog>>(`${AUDIT_LOGS_ENDPOINT}${buildQueryString(params)}`);
   return unwrapPaginated(response);
+}
+
+export async function getPublicSiteSettings() {
+  const response = await adminGet<AdminResponse<PublicSiteSettings>>(PUBLIC_SITE_SETTINGS_ENDPOINT);
+  return unwrapResponse(response);
+}
+
+export async function updatePublicSiteSettings(data: UpdatePublicSiteSettingsData) {
+  const response = await adminPut<AdminResponse<PublicSiteSettings>>(PUBLIC_SITE_SETTINGS_ENDPOINT, data);
+  return unwrapResponse(response);
 }

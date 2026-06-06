@@ -1,10 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import Hero from "./Hero";
 
+const useSWRMock = vi.fn();
+
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+}));
+
+vi.mock("swr", () => ({
+  default: (...args: unknown[]) => useSWRMock(...args),
+}));
+
+vi.mock("@/lib/api/publicSiteSettings", () => ({
+  getPublicSiteSettings: vi.fn(),
 }));
 
 vi.mock("@/i18n/routing", () => ({
@@ -16,6 +26,11 @@ vi.mock("./SearchForm", () => ({
 }));
 
 describe("Hero", () => {
+  beforeEach(() => {
+    useSWRMock.mockReset();
+    useSWRMock.mockReturnValue({ data: undefined });
+  });
+
   it("renders trust messaging, ctas, and the hero search form", () => {
     render(<Hero />);
 
@@ -34,5 +49,21 @@ describe("Hero", () => {
     expect(screen.getByText("features.support")).toBeInTheDocument();
     expect(screen.getByText("features.price")).toBeInTheDocument();
     expect(screen.getByText("features.delivery")).toBeInTheDocument();
+  });
+
+  it("uses managed hero CTA settings and hides disabled CTAs", () => {
+    useSWRMock.mockReturnValue({
+      data: {
+        heroLinks: [
+          { id: "ctaPrimary", label: "Managed Fleet", href: "/managed-fleet", isVisible: true, sortOrder: 0 },
+          { id: "ctaSecondary", label: "Hidden Booking", href: "/booking", isVisible: false, sortOrder: 1 },
+        ],
+      },
+    });
+
+    render(<Hero />);
+
+    expect(screen.getByRole("link", { name: "Managed Fleet" })).toHaveAttribute("href", "/managed-fleet");
+    expect(screen.queryByText("Hidden Booking")).not.toBeInTheDocument();
   });
 });

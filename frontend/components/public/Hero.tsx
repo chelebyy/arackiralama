@@ -1,4 +1,7 @@
+"use client";
+
 import { useTranslations } from "next-intl";
+import useSWR from "swr";
 import { Link } from "@/i18n/routing";
 import {
   Car,
@@ -10,9 +13,26 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchForm from "./SearchForm";
+import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
+import type { PublicSiteLink } from "@/lib/api/admin/types";
+import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
+
+const defaultHeroLinks = [
+  { id: "ctaPrimary", label: "", href: "/vehicles", isVisible: true, sortOrder: 0 },
+  { id: "ctaSecondary", label: "", href: "/booking", isVisible: true, sortOrder: 1 },
+] satisfies PublicSiteLink[];
 
 export default function Hero() {
   const t = useTranslations("hero");
+  const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
+  const heroLinks = (settings?.heroLinks ?? defaultHeroLinks)
+    .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const primaryLink = heroLinks.find((link) => link.id === "ctaPrimary");
+  const secondaryLink = heroLinks.find((link) => link.id === "ctaSecondary");
 
   const trustBadges = [
     { icon: Shield, key: "insurance" },
@@ -65,34 +85,38 @@ export default function Hero() {
 
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/vehicles"
-                  className={cn(
-                    "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
-                    "text-base font-bold text-[#0F172A] bg-white",
-                    "hover:bg-[#F8FAFC] active:bg-[#E2E8F0]",
-                    "transition-all duration-200 cursor-pointer",
-                    "focus:outline-none focus:ring-4 focus:ring-white/30",
-                    "shadow-lg hover:shadow-xl"
-                  )}
-                >
-                  {t("ctaPrimary")}
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
+                {primaryLink && (
+                  <Link
+                    href={primaryLink.href as never}
+                    className={cn(
+                      "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                      "text-base font-bold text-[#0F172A] bg-white",
+                      "hover:bg-[#F8FAFC] active:bg-[#E2E8F0]",
+                      "transition-all duration-200 cursor-pointer",
+                      "focus:outline-none focus:ring-4 focus:ring-white/30",
+                      "shadow-lg hover:shadow-xl"
+                    )}
+                  >
+                    {primaryLink.label || t("ctaPrimary")}
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                )}
 
-                <Link
-                  href="/booking"
-                  className={cn(
-                    "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
-                    "text-base font-bold text-white",
-                    "border-2 border-white/30 bg-white/5 backdrop-blur-sm",
-                    "hover:bg-white/10 hover:border-white/50",
-                    "transition-all duration-200 cursor-pointer",
-                    "focus:outline-none focus:ring-4 focus:ring-white/20"
-                  )}
-                >
-                  {t("ctaSecondary")}
-                </Link>
+                {secondaryLink && (
+                  <Link
+                    href={secondaryLink.href as never}
+                    className={cn(
+                      "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                      "text-base font-bold text-white",
+                      "border-2 border-white/30 bg-white/5 backdrop-blur-sm",
+                      "hover:bg-white/10 hover:border-white/50",
+                      "transition-all duration-200 cursor-pointer",
+                      "focus:outline-none focus:ring-4 focus:ring-white/20"
+                    )}
+                  >
+                    {secondaryLink.label || t("ctaSecondary")}
+                  </Link>
+                )}
               </div>
 
               {/* Trust Badges */}

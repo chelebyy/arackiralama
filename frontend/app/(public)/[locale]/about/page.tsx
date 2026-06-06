@@ -13,6 +13,7 @@ import {
   Plane
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ManagedPageContent from "@/components/public/ManagedPageContent";
 
 export default function AboutPage() {
   const t = useTranslations("aboutUs");
@@ -70,6 +71,7 @@ export default function AboutPage() {
   ];
 
   return (
+    <ManagedPageContent slug="about">
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="bg-[#0F172A] py-[var(--space-fluid-3xl)]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -288,5 +290,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </ManagedPageContent>
   );
 }

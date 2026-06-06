@@ -50,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentService>(serviceProvider => serviceProvider.GetRequiredService<PaymentService>());
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
+        services.AddScoped<IPublicSiteSettingsService, PublicSiteSettingsService>();
         services.AddScoped<IReportsService, ReportsService>();
         services.AddPaymentIntegration(configuration);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();

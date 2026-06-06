@@ -127,6 +127,96 @@ export interface FeatureFlag {
   description: string;
 }
 
+export interface PublicSiteLink {
+  id: string;
+  label: string;
+  href: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicSocialLink {
+  id: string;
+  platform: string;
+  url: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicContactChannel {
+  id: string;
+  type: 'phone' | 'whatsapp' | 'email' | 'emergency' | string;
+  label: string;
+  value: string;
+  href: string;
+  description: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicContactOffice {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  hours: string;
+  type: 'main' | 'airport' | 'branch' | string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicContactWorkingHour {
+  id: string;
+  day: string;
+  hours: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicPageBlock {
+  id: string;
+  heading: string;
+  body: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface PublicManagedPage {
+  id: string;
+  slug: string;
+  locale: string;
+  title: string;
+  subtitle: string;
+  seoTitle: string;
+  seoDescription: string;
+  isPublished: boolean;
+  sortOrder: number;
+  blocks: PublicPageBlock[];
+}
+
+export interface PublicSiteSettings {
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyEmail: string;
+  workingHours: string;
+  headerLinks: PublicSiteLink[];
+  heroLinks: PublicSiteLink[];
+  quickLinks: PublicSiteLink[];
+  socialLinks: PublicSocialLink[];
+  footerBottomLinks: PublicSiteLink[];
+  contactPageChannels: PublicContactChannel[];
+  contactPageOffices: PublicContactOffice[];
+  contactPageWorkingHours: PublicContactWorkingHour[];
+  contactPageMapTitle: string;
+  contactPageMapEmbedUrl: string;
+  contactPageMapIsVisible: boolean;
+  pages: PublicManagedPage[];
+  updatedAt: string;
+}
+
+export type UpdatePublicSiteSettingsData = Omit<PublicSiteSettings, 'updatedAt'>;
+
 export interface AuditLog {
   id: string;
   action: string;

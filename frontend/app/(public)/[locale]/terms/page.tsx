@@ -11,6 +11,7 @@ import {
   Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ManagedPageContent from "@/components/public/ManagedPageContent";
 
 const sectionIcons = {
   agreement: FileText,
@@ -36,6 +37,7 @@ export default function TermsPage() {
   const sections = messages.legal.terms.sections;
 
   return (
+    <ManagedPageContent slug="terms">
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="bg-[#0F172A] py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -137,5 +139,6 @@ export default function TermsPage() {
         </div>
       </div>
     </div>
+    </ManagedPageContent>
   );
 }
