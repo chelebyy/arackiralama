@@ -31,6 +31,7 @@ import {
   ArrowRight,
   Wrench,
   Tag,
+  Globe2,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
@@ -160,7 +161,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Button asChild className="h-auto py-4 justify-start gap-3">
           <Link href="/dashboard/reservations">
             <CalendarCheck className="h-5 w-5" />
@@ -179,6 +180,13 @@ export default function DashboardPage() {
           <Link href="/dashboard/pricing/campaigns">
             <Tag className="h-5 w-5" />
             <span>Kampanya Oluştur</span>
+            <ArrowRight className="ml-auto h-4 w-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="h-auto py-4 justify-start gap-3">
+          <Link href="/dashboard/settings/system">
+            <Globe2 className="h-5 w-5" />
+            <span>Public Site & İletişim</span>
             <ArrowRight className="ml-auto h-4 w-4" />
           </Link>
         </Button>

@@ -12,6 +12,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ManagedPageContent from "@/components/public/ManagedPageContent";
 
 const sectionIcons = {
   collection: Eye,
@@ -36,6 +37,7 @@ export default function PrivacyPage() {
   const sections = messages.legal.privacy.sections;
 
   return (
+    <ManagedPageContent slug="privacy">
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="bg-[#0F172A] py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -155,5 +157,6 @@ export default function PrivacyPage() {
         </div>
       </div>
     </div>
+    </ManagedPageContent>
   );
 }

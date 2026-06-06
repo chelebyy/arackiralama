@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import useSWR from "swr";
 import { Link, usePathname, type Locale } from "@/i18n/routing";
 import { useLocale, useTranslations } from "next-intl";
 import NextLink from "next/link";
@@ -17,6 +18,27 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
+import type { PublicSiteLink } from "@/lib/api/admin/types";
+import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
+
+const defaultHeaderLinks = [
+  { id: "home", label: "", href: "/", isVisible: true, sortOrder: 0 },
+  { id: "vehicles", label: "", href: "/vehicles", isVisible: true, sortOrder: 1 },
+  { id: "about", label: "", href: "/about", isVisible: true, sortOrder: 2 },
+  { id: "contact", label: "", href: "/contact", isVisible: true, sortOrder: 3 },
+  { id: "login", label: "", href: "/dashboard/login/v2", isVisible: true, sortOrder: 4 },
+  { id: "trackReservation", label: "", href: "/track-reservation", isVisible: true, sortOrder: 5 },
+] satisfies PublicSiteLink[];
+
+function getHeaderIcon(id: string) {
+  if (id === "vehicles") return Car;
+  if (id === "about") return Info;
+  if (id === "contact") return Phone;
+  if (id === "login") return User;
+  if (id === "trackReservation") return Search;
+  return Home;
+}
 
 export default function Header() {
   const t = useTranslations("navigation");
@@ -24,15 +46,20 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const locale = useLocale();
+  const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
 
   const isRTL = localeLabels[locale as Locale]?.dir === "rtl";
 
-  const navLinks = [
-    { href: "/" as const, label: t("home"), icon: Home },
-    { href: "/vehicles" as const, label: t("vehicles"), icon: Car },
-    { href: "/about" as const, label: t("about"), icon: Info },
-    { href: "/contact" as const, label: t("contact"), icon: Phone },
-  ];
+  const headerLinks = (settings?.headerLinks ?? defaultHeaderLinks)
+    .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const navLinks = headerLinks.filter((link) => link.id !== "login" && link.id !== "trackReservation");
+  const loginLink = headerLinks.find((link) => link.id === "login");
+  const trackingLink = headerLinks.find((link) => link.id === "trackReservation");
+  const getLabel = (link: PublicSiteLink) => link.label || t(link.id);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
@@ -63,7 +90,7 @@ export default function Header() {
               return (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={link.href as never}
                   className={cn(
                     "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1",
@@ -72,7 +99,7 @@ export default function Header() {
                       : "text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
                   )}
                 >
-                  {link.label}
+                  {getLabel(link)}
                 </Link>
               );
             })}
@@ -83,34 +110,38 @@ export default function Header() {
             <LanguageSwitcher />
 
             {/* Login Button - Desktop */}
-            <NextLink
-              href="/dashboard/login/v2"
-              className={cn(
-                "hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg",
-                "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
-                "transition-colors duration-200 cursor-pointer",
-                "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
-              )}
-            >
-              <User className="h-4 w-4" />
-              <span>{t("login")}</span>
-            </NextLink>
+            {loginLink && (
+              <NextLink
+                href={loginLink.href}
+                className={cn(
+                  "hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg",
+                  "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
+                  "transition-colors duration-200 cursor-pointer",
+                  "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
+                )}
+              >
+                <User className="h-4 w-4" />
+                <span>{getLabel(loginLink)}</span>
+              </NextLink>
+            )}
 
             {/* CTA Button - Desktop */}
-            <Link
-              href="/track-reservation"
-              className={cn(
-                "hidden md:flex items-center gap-2 px-5 py-2.5 rounded-lg",
-                "text-sm font-semibold text-white bg-[#0369A1]",
-                "hover:bg-[#0284C7] active:bg-[#075985]",
-                "transition-all duration-200 cursor-pointer",
-                "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-2",
-                "shadow-sm hover:shadow"
-              )}
-            >
-              <Search className="h-4 w-4" />
-              {t("trackReservation")}
-            </Link>
+            {trackingLink && (
+              <Link
+                href={trackingLink.href as never}
+                className={cn(
+                  "hidden md:flex items-center gap-2 px-5 py-2.5 rounded-lg",
+                  "text-sm font-semibold text-white bg-[#0369A1]",
+                  "hover:bg-[#0284C7] active:bg-[#075985]",
+                  "transition-all duration-200 cursor-pointer",
+                  "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-2",
+                  "shadow-sm hover:shadow"
+                )}
+              >
+                <Search className="h-4 w-4" />
+                {getLabel(trackingLink)}
+              </Link>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -146,11 +177,11 @@ export default function Header() {
           <nav className="mx-auto max-w-7xl px-4 py-4 space-y-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
-              const Icon = link.icon;
+              const Icon = getHeaderIcon(link.id);
               return (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={link.href as never}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium",
@@ -162,36 +193,40 @@ export default function Header() {
                   )}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
-                  {link.label}
+                  {getLabel(link)}
                 </Link>
               );
             })}
             <div className="pt-4 border-t border-[#E2E8F0] space-y-2">
-              <NextLink
-                href="/dashboard/login/v2"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg",
-                  "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
-                  "transition-colors duration-200 cursor-pointer"
-                )}
-              >
-                <User className="h-5 w-5 flex-shrink-0" />
-                {t("login")}
-              </NextLink>
-              <Link
-                href="/track-reservation"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center justify-center gap-2 px-4 py-3 rounded-lg",
-                  "text-sm font-semibold text-white bg-[#0369A1]",
-                  "hover:bg-[#0284C7] active:bg-[#075985]",
-                  "transition-colors duration-200 cursor-pointer"
-                )}
-              >
-                <Search className="h-5 w-5" />
-                {t("trackReservation")}
-              </Link>
+              {loginLink && (
+                <NextLink
+                  href={loginLink.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg",
+                    "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
+                    "transition-colors duration-200 cursor-pointer"
+                  )}
+                >
+                  <User className="h-5 w-5 flex-shrink-0" />
+                  {getLabel(loginLink)}
+                </NextLink>
+              )}
+              {trackingLink && (
+                <Link
+                  href={trackingLink.href as never}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 px-4 py-3 rounded-lg",
+                    "text-sm font-semibold text-white bg-[#0369A1]",
+                    "hover:bg-[#0284C7] active:bg-[#075985]",
+                    "transition-colors duration-200 cursor-pointer"
+                  )}
+                >
+                  <Search className="h-5 w-5" />
+                  {getLabel(trackingLink)}
+                </Link>
+              )}
             </div>
           </nav>
         </div>

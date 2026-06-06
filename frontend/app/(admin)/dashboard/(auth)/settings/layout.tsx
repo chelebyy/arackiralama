@@ -18,6 +18,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <TabsTrigger value="feature-flags" asChild>
             <Link href="/dashboard/settings/feature-flags">Özellik Bayrakları</Link>
           </TabsTrigger>
+          <TabsTrigger value="system" asChild>
+            <Link href="/dashboard/settings/system">Public Site & İletişim</Link>
+          </TabsTrigger>
           <TabsTrigger value="audit-logs" asChild>
             <Link href="/dashboard/settings/audit-logs">Denetim Kayıtları</Link>
           </TabsTrigger>

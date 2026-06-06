@@ -23,6 +23,7 @@ public class RentACarDbContext(DbContextOptions<RentACarDbContext> options)
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
+    public DbSet<PublicSiteSettings> PublicSiteSettings => Set<PublicSiteSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

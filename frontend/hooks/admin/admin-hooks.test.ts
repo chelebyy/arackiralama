@@ -28,8 +28,10 @@ import {
 } from "./useAdminPricing";
 import {
   mutateUpdateFeatureFlag,
+  mutateUpdatePublicSiteSettings,
   useAuditLogs,
   useFeatureFlags,
+  usePublicSiteSettings,
 } from "./useAdminSettings";
 import {
   mutateCreateAdminUser,
@@ -88,6 +90,8 @@ const settingsApi = vi.hoisted(() => ({
   getFeatureFlags: vi.fn(),
   updateFeatureFlag: vi.fn(),
   getAuditLogs: vi.fn(),
+  getPublicSiteSettings: vi.fn(),
+  updatePublicSiteSettings: vi.fn(),
 }));
 
 const usersApi = vi.hoisted(() => ({
@@ -314,9 +318,24 @@ describe("admin hooks", () => {
     expect(pricingApi.deleteCampaign).toHaveBeenCalledWith("campaign-1");
   });
 
-  it("maps settings hooks and feature flag updates", async () => {
+  it("maps settings hooks and update mutations", async () => {
     const mutate = vi.fn();
     const error = new Error("audit error");
+    const publicSiteSettings = {
+      companyName: "Alanya",
+      headerLinks: [],
+      heroLinks: [],
+      quickLinks: [],
+      socialLinks: [],
+      footerBottomLinks: [],
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "Map",
+      contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
+      contactPageMapIsVisible: true,
+      pages: [],
+    };
     useSWRMock
       .mockReturnValueOnce({
         data: [{ id: "flag-1" }],
@@ -329,8 +348,15 @@ describe("admin hooks", () => {
         error,
         isLoading: false,
         mutate,
+      })
+      .mockReturnValueOnce({
+        data: publicSiteSettings,
+        error: undefined,
+        isLoading: false,
+        mutate,
       });
     settingsApi.updateFeatureFlag.mockResolvedValue({ id: "flag-1", enabled: true });
+    settingsApi.updatePublicSiteSettings.mockResolvedValue(publicSiteSettings);
 
     expect(useFeatureFlags()).toEqual({
       flags: [{ id: "flag-1" }],
@@ -345,12 +371,19 @@ describe("admin hooks", () => {
       isError: error,
       mutate,
     });
+    expect(usePublicSiteSettings()).toEqual({
+      settings: publicSiteSettings,
+      isLoading: false,
+      isError: undefined,
+      mutate,
+    });
     await useSWRMock.mock.calls[1][1]();
     expect(settingsApi.getAuditLogs).toHaveBeenCalledWith({ page: 2 });
     await expect(mutateUpdateFeatureFlag("flag-1", true)).resolves.toEqual({
       id: "flag-1",
       enabled: true,
     });
+    await expect(mutateUpdatePublicSiteSettings(publicSiteSettings as any)).resolves.toBe(publicSiteSettings);
   });
 
   it("maps user hooks and delegates admin user mutations", async () => {

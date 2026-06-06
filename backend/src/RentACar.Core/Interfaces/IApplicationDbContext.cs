@@ -21,5 +21,6 @@ public interface IApplicationDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<FeatureFlag> FeatureFlags { get; }
+    DbSet<PublicSiteSettings> PublicSiteSettings { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

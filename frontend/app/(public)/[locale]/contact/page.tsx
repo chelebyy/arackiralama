@@ -1,3 +1,6 @@
+"use client";
+
+import useSWR from "swr";
 import { useTranslations } from "next-intl";
 import {
   MapPin,
@@ -9,55 +12,148 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ContactForm from "@/components/public/ContactForm";
+import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
+import type { PublicContactChannel, PublicContactOffice, PublicContactWorkingHour } from "@/lib/api/admin/types";
 
-const contactInfo = {
-  reservations: "+90 242 555 10 00",
-  whatsapp: "+90 555 123 45 67",
-  email: "info@alanyacarrental.com",
-  support: "support@alanyacarrental.com",
-  emergency: "+90 555 999 00 00"
-};
+function getChannelIcon(type: string) {
+  if (type === "whatsapp") return MessageCircle;
+  if (type === "email") return Mail;
+  if (type === "emergency") return AlertTriangle;
+  return Phone;
+}
+
+function getChannelTone(type: string) {
+  return type === "emergency"
+    ? {
+        wrapper: "bg-amber-50 border-amber-200",
+        icon: "bg-amber-100",
+        iconColor: "text-amber-600",
+        title: "text-amber-800",
+        link: "text-amber-700 font-bold",
+        desc: "text-amber-600",
+      }
+    : {
+        wrapper: "bg-white border-[#E2E8F0]",
+        icon: "bg-[#F0F9FF]",
+        iconColor: "text-[#0369A1]",
+        title: "text-[#0F172A]",
+        link: "text-[#0369A1]",
+        desc: "text-[#64748B]",
+      };
+}
+
+function sortedVisible<T extends { isVisible: boolean; sortOrder: number }>(items: T[]) {
+  return items.filter((item) => item.isVisible).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+const defaultMapEmbedUrl =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d128084.037171682!2d31.95928245!3d36.54115!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14dca27b8223b0b7%3A0x403b37d0ec0cb80!2sAlanya%2C%20Antalya%2C%20Turkey!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus";
 
 export default function ContactPage() {
   const t = useTranslations("contactUs");
+  const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
+    revalidateOnFocus: false,
+  });
 
-  const offices = [
+  const defaultChannels: PublicContactChannel[] = [
     {
+      id: "reservations",
+      type: "phone",
+      label: t("reservations"),
+      value: "+90 242 555 10 00",
+      href: "tel:+902425551000",
+      description: t("reservationsDesc"),
+      isVisible: true,
+      sortOrder: 0,
+    },
+    {
+      id: "whatsapp",
+      type: "whatsapp",
+      label: t("whatsapp"),
+      value: "+90 555 123 45 67",
+      href: "https://wa.me/905551234567",
+      description: t("whatsappDesc"),
+      isVisible: true,
+      sortOrder: 1,
+    },
+    {
+      id: "email",
+      type: "email",
+      label: t("email"),
+      value: "info@alanyacarrental.com",
+      href: "mailto:info@alanyacarrental.com",
+      description: t("emailDesc"),
+      isVisible: true,
+      sortOrder: 2,
+    },
+    {
+      id: "emergency",
+      type: "emergency",
+      label: t("emergency"),
+      value: "+90 555 999 00 00",
+      href: "tel:+905559990000",
+      description: t("emergencyDesc"),
+      isVisible: true,
+      sortOrder: 3,
+    },
+  ];
+
+  const defaultOffices: PublicContactOffice[] = [
+    {
+      id: "main",
       name: t("offices.main.name"),
       address: t("offices.main.address"),
       phone: "+90 242 555 10 00",
       hours: "08:00 - 20:00",
-      type: "main"
+      type: "main",
+      isVisible: true,
+      sortOrder: 0,
     },
     {
+      id: "gzp",
       name: t("offices.gzp.name"),
       address: t("offices.gzp.address"),
       phone: "+90 242 555 10 01",
       hours: "24/7",
-      type: "airport"
+      type: "airport",
+      isVisible: true,
+      sortOrder: 1,
     },
     {
+      id: "ayt",
       name: t("offices.ayt.name"),
       address: t("offices.ayt.address"),
       phone: "+90 242 555 10 02",
       hours: "24/7",
-      type: "airport"
+      type: "airport",
+      isVisible: true,
+      sortOrder: 2,
     },
     {
+      id: "mahmutlar",
       name: t("offices.mahmutlar.name"),
       address: t("offices.mahmutlar.address"),
       phone: "+90 242 555 10 03",
       hours: "09:00 - 19:00",
-      type: "branch"
-    }
+      type: "branch",
+      isVisible: true,
+      sortOrder: 3,
+    },
   ];
 
-  const workingHours = [
-    { day: t("days.mondayFriday"), hours: "08:00 - 20:00" },
-    { day: t("days.saturday"), hours: "09:00 - 18:00" },
-    { day: t("days.sunday"), hours: "10:00 - 16:00" },
-    { day: t("days.holidays"), hours: "10:00 - 16:00" }
+  const defaultWorkingHours: PublicContactWorkingHour[] = [
+    { id: "mondayFriday", day: t("days.mondayFriday"), hours: "08:00 - 20:00", isVisible: true, sortOrder: 0 },
+    { id: "saturday", day: t("days.saturday"), hours: "09:00 - 18:00", isVisible: true, sortOrder: 1 },
+    { id: "sunday", day: t("days.sunday"), hours: "10:00 - 16:00", isVisible: true, sortOrder: 2 },
+    { id: "holidays", day: t("days.holidays"), hours: "10:00 - 16:00", isVisible: true, sortOrder: 3 },
   ];
+
+  const channels = sortedVisible(settings?.contactPageChannels ?? defaultChannels);
+  const offices = sortedVisible(settings?.contactPageOffices ?? defaultOffices);
+  const workingHours = sortedVisible(settings?.contactPageWorkingHours ?? defaultWorkingHours);
+  const mapTitle = settings?.contactPageMapTitle ?? "Office Locations Map";
+  const mapEmbedUrl = settings?.contactPageMapEmbedUrl ?? defaultMapEmbedUrl;
+  const isMapVisible = settings?.contactPageMapIsVisible ?? true;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -92,73 +188,33 @@ export default function ContactPage() {
                 {t("contactInfo")}
               </h2>
               <div className="space-y-[var(--space-fluid-md)]">
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-[#E2E8F0]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F9FF]">
-                    <Phone className="h-6 w-6 text-[#0369A1]" />
-                  </div>
-                  <div>
-                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("reservations")}</h3>
-                    <a
-                      href={`tel:${contactInfo.reservations.replaceAll(/\s/g, "")}`}
-                      className="text-[#0369A1] hover:underline"
-                    >
-                      {contactInfo.reservations}
-                    </a>
-                    <p className="text-sm text-[#64748B] mt-1">{t("reservationsDesc")}</p>
-                  </div>
-                </div>
+                {channels.map((channel) => {
+                  const Icon = getChannelIcon(channel.type);
+                  const tone = getChannelTone(channel.type);
+                  const isExternal = channel.href.startsWith("http");
 
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-[#E2E8F0]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F9FF]">
-                    <MessageCircle className="h-6 w-6 text-[#0369A1]" />
-                  </div>
-                  <div>
-                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("whatsapp")}</h3>
-                    <a
-                      href={`https://wa.me/${contactInfo.whatsapp.replaceAll(/\s/g, "").replaceAll("+", "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#0369A1] hover:underline"
-                    >
-                      {contactInfo.whatsapp}
-                    </a>
-                    <p className="text-sm text-[#64748B] mt-1">{t("whatsappDesc")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-[#E2E8F0]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F9FF]">
-                    <Mail className="h-6 w-6 text-[#0369A1]" />
-                  </div>
-                  <div>
-                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-[#0F172A] mb-1">{t("email")}</h3>
-                    <a
-                      href={`mailto:${contactInfo.email}`}
-                      className="text-[#0369A1] hover:underline break-all"
-                    >
-                      {contactInfo.email}
-                    </a>
-                    <p className="text-sm text-[#64748B] mt-1">{t("emailDesc")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                    <AlertTriangle className="h-6 w-6 text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-[length:var(--text-fluid-lg)] font-semibold text-amber-800 mb-1">{t("emergency")}</h3>
-                    <a
-                      href={`tel:${contactInfo.emergency.replaceAll(/\s/g, "")}`}
-                      className="text-amber-700 font-bold hover:underline"
-                    >
-                      {contactInfo.emergency}
-                    </a>
-                    <p className="text-sm text-amber-600 mt-1">
-                      {t("emergencyDesc")}
-                    </p>
-                  </div>
-                </div>
+                  return (
+                    <div key={channel.id} className={cn("flex items-start gap-4 p-4 rounded-xl border", tone.wrapper)}>
+                      <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl", tone.icon)}>
+                        <Icon className={cn("h-6 w-6", tone.iconColor)} />
+                      </div>
+                      <div>
+                        <h3 className={cn("text-[length:var(--text-fluid-lg)] font-semibold mb-1", tone.title)}>{channel.label}</h3>
+                        <a
+                          href={channel.href}
+                          target={isExternal ? "_blank" : undefined}
+                          rel={isExternal ? "noopener noreferrer" : undefined}
+                          className={cn("hover:underline break-all", tone.link)}
+                        >
+                          {channel.value}
+                        </a>
+                        {channel.description && (
+                          <p className={cn("text-sm mt-1", tone.desc)}>{channel.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -236,15 +292,17 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <div className="mt-16">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d128084.037171682!2d31.95928245!3d36.54115!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14dca27b8223b0b7%3A0x403b37d0ec0cb80!2sAlanya%2C%20Antalya%2C%20Turkey!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus"
-            title="Office Locations Map"
-            loading="lazy"
-            className="w-full h-96 rounded-2xl border-0"
-            allowFullScreen
-          />
-        </div>
+        {isMapVisible && (
+          <div className="mt-16">
+            <iframe
+              src={mapEmbedUrl}
+              title={mapTitle}
+              loading="lazy"
+              className="w-full h-96 rounded-2xl border-0"
+              allowFullScreen
+            />
+          </div>
+        )}
       </div>
     </div>
   );

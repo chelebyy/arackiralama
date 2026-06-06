@@ -225,8 +225,18 @@ public static class TestDataSeeder
 
     private static async Task EnsureAdminUserAsync(RentACarDbContext dbContext, CancellationToken cancellationToken = default)
     {
-        if (await dbContext.AdminUsers.AnyAsync(admin => admin.NormalizedEmail == AdminUser.NormalizeEmail(SeedAdminEmail), cancellationToken))
+        var existingAdmin = await dbContext.AdminUsers
+            .FirstOrDefaultAsync(admin => admin.NormalizedEmail == AdminUser.NormalizeEmail(SeedAdminEmail), cancellationToken);
+
+        if (existingAdmin is not null)
         {
+            if (existingAdmin.Role != AuthRoleNames.SuperAdmin)
+            {
+                existingAdmin.Role = AuthRoleNames.SuperAdmin;
+                existingAdmin.UpdatedAt = DateTime.UtcNow;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             return;
         }
 
@@ -238,7 +248,7 @@ public static class TestDataSeeder
             Email = SeedAdminEmail,
             PasswordHash = passwordHasher.HashPassword(SeedAdminPassword),
             FullName = "Integration Test Admin",
-            Role = AuthRoleNames.Admin,
+            Role = AuthRoleNames.SuperAdmin,
             IsActive = true,
             TokenVersion = 0
         });

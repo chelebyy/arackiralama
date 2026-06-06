@@ -152,6 +152,7 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("link", { name: /yeni rezervasyon/i })).toHaveAttribute("href", "/dashboard/reservations");
     expect(screen.getByRole("link", { name: /araç ekle/i })).toHaveAttribute("href", "/dashboard/fleet/vehicles");
     expect(screen.getByRole("link", { name: /kampanya oluştur/i })).toHaveAttribute("href", "/dashboard/pricing/campaigns");
+    expect(screen.getByRole("link", { name: /public site/i })).toHaveAttribute("href", "/dashboard/settings/system");
     expect(screen.getByText("RSV-1001")).toBeInTheDocument();
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Renault Clio")).toBeInTheDocument();
