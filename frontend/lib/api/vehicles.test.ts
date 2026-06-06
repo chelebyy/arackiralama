@@ -5,7 +5,13 @@ vi.mock("./client", () => ({
 }));
 
 import { get } from "./client";
-import { getAvailableVehicles, getOffices, getVehicleById, getVehicleGroups } from "./vehicles";
+import {
+  getAvailableVehicles,
+  getOffices,
+  getPublicVehicles,
+  getVehicleById,
+  getVehicleGroups,
+} from "./vehicles";
 
 const mockedGet = vi.mocked(get);
 
@@ -27,13 +33,15 @@ describe("vehicles API", () => {
     );
   });
 
-  it("requests vehicle groups, details, and offices from the expected endpoints", async () => {
+  it("requests physical vehicles, vehicle groups, details, and offices from the expected endpoints", async () => {
+    await getPublicVehicles();
     await getVehicleGroups();
     await getVehicleById("vehicle-1");
     await getOffices();
 
-    expect(mockedGet).toHaveBeenNthCalledWith(1, "/vehicles/groups");
-    expect(mockedGet).toHaveBeenNthCalledWith(2, "/vehicles/vehicle-1");
-    expect(mockedGet).toHaveBeenNthCalledWith(3, "/offices");
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/vehicles");
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/vehicles/groups");
+    expect(mockedGet).toHaveBeenNthCalledWith(3, "/vehicles/vehicle-1");
+    expect(mockedGet).toHaveBeenNthCalledWith(4, "/offices");
   });
 });

@@ -1,4 +1,4 @@
-import { adminDel, adminGet, adminPatch, adminPost, adminPut } from '../client';
+import { adminDel, adminGet, adminPatch, adminPost, adminPostFormData, adminPut } from '../client';
 import { mockOffices, mockVehicleGroups, mockVehicles } from './mock';
 import type {
   AdminOffice,
@@ -25,6 +25,33 @@ const ADMIN_BASE = '/v1';
 const VEHICLES_ENDPOINT = `${ADMIN_BASE}/vehicles`;
 const VEHICLE_GROUPS_ENDPOINT = `${ADMIN_BASE}/vehicle-groups`;
 const OFFICES_ENDPOINT = `${ADMIN_BASE}/offices`;
+
+function toBackendVehicleStatus(status: AdminVehicleStatus | number) {
+  if (typeof status === 'number') return status;
+  switch (status) {
+    case 'Available':
+      return 0;
+    case 'Reserved':
+      return 1;
+    case 'Rented':
+      return 2;
+    case 'Maintenance':
+      return 3;
+    case 'OutOfService':
+    case 'Retired':
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+function withBackendVehicleStatus<T extends { status?: AdminVehicleStatus | number }>(data: T) {
+  if (data.status === undefined) return data;
+  return {
+    ...data,
+    status: toBackendVehicleStatus(data.status),
+  };
+}
 
 function buildQueryString(params?: object): string {
   if (!params) return '';
@@ -97,7 +124,7 @@ export async function createVehicle(data: CreateVehicleData) {
   if (USE_MOCK) {
     return mockVehicles[0];
   }
-  const response = await adminPost<AdminResponse<AdminVehicle>>(VEHICLES_ENDPOINT, data);
+  const response = await adminPost<AdminResponse<AdminVehicle>>(VEHICLES_ENDPOINT, withBackendVehicleStatus(data));
   return unwrapResponse(response);
 }
 
@@ -105,7 +132,14 @@ export async function updateVehicle(id: string, data: UpdateVehicleData) {
   if (USE_MOCK) {
     return mockVehicles[0];
   }
-  const response = await adminPut<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}`, data);
+  const response = await adminPut<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}`, withBackendVehicleStatus(data));
+  return unwrapResponse(response);
+}
+
+export async function uploadVehiclePhoto(id: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await adminPostFormData<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/photo`, formData);
   return unwrapResponse(response);
 }
 
@@ -120,7 +154,9 @@ export async function updateVehicleStatus(id: string, status: AdminVehicleStatus
   if (USE_MOCK) {
     return mockVehicles[0];
   }
-  const response = await adminPatch<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/status`, { status });
+  const response = await adminPatch<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/status`, {
+    status: toBackendVehicleStatus(status),
+  });
   return unwrapResponse(response);
 }
 

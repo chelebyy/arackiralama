@@ -14,7 +14,8 @@ export const API_CONFIG = {
 
 export const API_ENDPOINTS = {
   vehicles: {
-    list: '/vehicles/available',
+    list: '/vehicles',
+    available: '/vehicles/available',
     groups: '/vehicles/groups',
     detail: (id: string) => `/vehicles/${id}`,
   },

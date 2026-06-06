@@ -3,18 +3,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
 
-import { useAvailableVehicles, useVehicle, useVehicleGroups } from "./useVehicles";
-import { getAvailableVehicles, getVehicleById, getVehicleGroups } from "@/lib/api/vehicles";
-import type { AvailableVehicleGroup, AvailableVehiclesParams, Vehicle } from "@/lib/api/types";
+import { useAvailableVehicles, usePublicVehicles, useVehicle, useVehicleGroups } from "./useVehicles";
+import {
+  getAvailableVehicles,
+  getPublicVehicles,
+  getVehicleById,
+  getVehicleGroups,
+} from "@/lib/api/vehicles";
+import type { AvailableVehicleGroup, AvailableVehiclesParams, PublicVehicle } from "@/lib/api/types";
 
 vi.mock("@/lib/api/vehicles", () => ({
   getAvailableVehicles: vi.fn(),
+  getPublicVehicles: vi.fn(),
   getVehicleById: vi.fn(),
   getVehicleGroups: vi.fn(),
   getOffices: vi.fn(),
 }));
 
 const mockedGetAvailableVehicles = vi.mocked(getAvailableVehicles);
+const mockedGetPublicVehicles = vi.mocked(getPublicVehicles);
 const mockedGetVehicleById = vi.mocked(getVehicleById);
 const mockedGetVehicleGroups = vi.mocked(getVehicleGroups);
 
@@ -43,29 +50,24 @@ const availableGroups: AvailableVehicleGroup[] = [
   },
 ];
 
-const sampleVehicle: Vehicle = {
+const sampleVehicle: PublicVehicle = {
   id: "vehicle-1",
-  name: "Renault Clio",
-  description: "Economy hatchback",
-  imageUrl: "/images/clio.jpg",
-  images: [],
+  plate: "07 ABC 001",
+  brand: "Renault",
+  model: "Clio",
+  year: 2024,
+  color: "White",
   groupId: "group-1",
   groupName: "Economy",
-  transmission: "AUTOMATIC" as Vehicle["transmission"],
-  fuelType: "PETROL" as Vehicle["fuelType"],
-  seatCount: 5,
-  luggageCapacity: 2,
-  hasAirConditioning: true,
-  minDriverAge: 21,
-  minLicenseYears: 2,
+  groupNameEn: "Economy",
+  officeId: "office-1",
+  status: "Available",
+  photoUrl: "/uploads/vehicles/clio.jpg",
   dailyPrice: 45,
-  weeklyPrice: 280,
-  monthlyPrice: 900,
-  features: [],
-  insuranceIncluded: true,
-  mileageLimit: null,
-  extraMileagePrice: null,
-  availableExtras: [],
+  depositAmount: 500,
+  minAge: 21,
+  minLicenseYears: 2,
+  features: ["A/C"],
 };
 
 describe("useVehicles", () => {
@@ -97,8 +99,20 @@ describe("useVehicles", () => {
     const { result } = renderHook(() => useVehicle("vehicle-1"), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.vehicle?.name).toBe("Renault Clio");
+      expect(result.current.vehicle?.brand).toBe("Renault");
     });
+  });
+
+  it("fetches physical public vehicles for the fleet screen", async () => {
+    mockedGetPublicVehicles.mockResolvedValue([sampleVehicle]);
+
+    const { result } = renderHook(() => usePublicVehicles(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.vehicles).toHaveLength(1);
+    });
+
+    expect(result.current.vehicles[0].plate).toBe("07 ABC 001");
   });
 
   it("surfaces fetch errors from vehicle group lookups", async () => {

@@ -20,22 +20,33 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
-import type { AvailableVehicleGroup } from "@/lib/api/types";
+import { useOffices, usePublicVehicles } from "@/hooks/useVehicles";
+import { API_CONFIG } from "@/lib/api/config";
+import type { PublicVehicle } from "@/lib/api/types";
 
-function mapAvailableToVehicle(group: AvailableVehicleGroup): Vehicle {
+function resolveMediaUrl(url: string | null): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  const apiOrigin = new URL(API_CONFIG.baseUrl).origin;
+  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
+function mapPublicToVehicle(vehicle: PublicVehicle): Vehicle {
+  const groupName = vehicle.groupNameEn || vehicle.groupName || "fleet";
+
   return {
-    id: group.groupId,
-    name: group.groupNameEn || group.groupName,
-    group: group.groupNameEn?.toLowerCase() || group.groupName.toLowerCase(),
-    image: group.imageUrl || "",
+    id: vehicle.id,
+    name: `${vehicle.brand} ${vehicle.model}`,
+    group: groupName,
+    image: resolveMediaUrl(vehicle.photoUrl),
     passengers: 5,
     luggage: 2,
     transmission: "automatic",
     fuelType: "gasoline",
-    dailyRate: group.dailyPrice,
-    features: group.features,
-    available: group.availableCount > 0,
+    dailyRate: vehicle.dailyPrice,
+    features: vehicle.features,
+    available: vehicle.status === "Available",
+    meta: `${vehicle.year} · ${vehicle.color} · ${vehicle.plate}`,
   };
 }
 
@@ -51,9 +62,8 @@ interface Vehicle {
   dailyRate: number;
   features: string[];
   available: boolean;
+  meta: string;
 }
-
-const vehicleGroups = ["all", "economy", "compact", "suv", "luxury", "minivan"];
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
@@ -81,7 +91,6 @@ export default function VehiclesPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("vehicles");
   const tCommon = useTranslations("common");
-  const tSearch = useTranslations("searchForm");
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedGroup, setSelectedGroup] = useState("all");
@@ -94,29 +103,19 @@ export default function VehiclesPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const { offices, isLoading: officesLoading } = useOffices();
+  const { offices } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
   const pickupOfficeObj = offices.find((o) => o.id === pickupOfficeGuid);
-  const canSearchVehicles =
-    pickupDate &&
-    pickupTime &&
-    returnDate &&
-    returnTime &&
-    pickupOfficeGuid &&
-    !officesLoading &&
-    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice);
 
-  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    canSearchVehicles
-      ? {
-          office_id: pickupOfficeGuid,
-          pickup_datetime: `${pickupDate}T${pickupTime}`,
-          return_datetime: `${returnDate}T${returnTime}`,
-        }
-      : null
-  );
+  const { vehicles: publicVehicles, isLoading, isError } = usePublicVehicles();
 
-  const vehicles = availableGroups.map(mapAvailableToVehicle);
+  const vehicles = publicVehicles.map(mapPublicToVehicle);
+  const vehicleGroups = [
+    "all",
+    ...Array.from(new Set(vehicles.map((vehicle) => vehicle.group))).sort((a, b) =>
+      a.localeCompare(b)
+    ),
+  ];
 
   const filteredVehicles =
     selectedGroup === "all"
@@ -200,7 +199,9 @@ export default function VehiclesPage() {
                           : "text-slate-600 hover:bg-slate-50"
                       )}
                     >
-                      {t.has(`categories.${group}`) ? t(`categories.${group}`) : group}
+                      {group === "all" && t.has("categories.all")
+                        ? t("categories.all")
+                        : group}
                     </button>
                   ))}
                 </div>
@@ -247,14 +248,14 @@ export default function VehiclesPage() {
             {isLoading && (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0369A1] mx-auto" />
-                <p className="mt-4 text-slate-600">Loading available vehicles...</p>
+                <p className="mt-4 text-slate-600">Araçlar yükleniyor...</p>
               </div>
             )}
 
             {isError && (
               <div className="text-center py-12">
                 <Car className="h-12 w-12 text-red-400 mx-auto" />
-                <p className="mt-4 text-slate-600">Failed to load vehicles. Please try again.</p>
+                <p className="mt-4 text-slate-600">Araçlar yüklenemedi. Lütfen tekrar deneyin.</p>
               </div>
             )}
 
@@ -303,7 +304,7 @@ export default function VehiclesPage() {
                     {/* Top Badges */}
                     <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
                       <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
-                        {t.has(`categories.${vehicle.group}`) ? t(`categories.${vehicle.group}`) : vehicle.group}
+                        {vehicle.group}
                       </span>
                       <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
                         <Check className="h-3 w-3 shrink-0" />
@@ -316,6 +317,9 @@ export default function VehiclesPage() {
                     <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] truncate">
                       {vehicle.name}
                     </h3>
+                    <p className="text-[length:var(--text-fluid-sm)] text-[#64748B] truncate">
+                      {vehicle.meta}
+                    </p>
 
                     <div className="flex flex-wrap gap-[var(--space-fluid-xs)]">
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
@@ -340,11 +344,13 @@ export default function VehiclesPage() {
                       <div className="space-y-0.5 whitespace-nowrap min-w-0">
                         <div className="flex items-baseline gap-1 truncate">
                           <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
-                            ₺ {vehicle.dailyRate}
+                            {vehicle.dailyRate > 0 ? `₺ ${vehicle.dailyRate}` : "Fiyat al"}
                           </span>
-                          <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
-                            /{t("pricePerDay")}
-                          </span>
+                          {vehicle.dailyRate > 0 && (
+                            <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
+                              /{t("pricePerDay")}
+                            </span>
+                          )}
                         </div>
                       </div>
 

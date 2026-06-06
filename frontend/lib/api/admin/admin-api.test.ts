@@ -10,10 +10,11 @@ vi.mock("../client", () => ({
   adminGet: vi.fn(),
   adminPatch: vi.fn(),
   adminPost: vi.fn(),
+  adminPostFormData: vi.fn(),
   adminPut: vi.fn(),
 }));
 
-import { adminDel, adminGet, adminPatch, adminPost, adminPut } from "../client";
+import { adminDel, adminGet, adminPatch, adminPost, adminPostFormData, adminPut } from "../client";
 import {
   mockAdminUsers,
   mockAuditLogs,
@@ -74,12 +75,14 @@ import {
   updateVehicle,
   updateVehicleGroup,
   updateVehicleStatus,
+  uploadVehiclePhoto,
 } from "./vehicles";
 
 const mockedDel = vi.mocked(adminDel);
 const mockedGet = vi.mocked(adminGet);
 const mockedPatch = vi.mocked(adminPatch);
 const mockedPost = vi.mocked(adminPost);
+const mockedPostFormData = vi.mocked(adminPostFormData);
 const mockedPut = vi.mocked(adminPut);
 
 describe("admin API fixtures", () => {
@@ -110,6 +113,7 @@ describe("admin vehicles API", () => {
     vi.clearAllMocks();
     mockedGet.mockResolvedValue({ data: { items: [], page: 2, pageSize: 10, totalCount: 0 } } as never);
     mockedPost.mockResolvedValue({ data: mockVehicles[0] } as never);
+    mockedPostFormData.mockResolvedValue({ data: mockVehicles[0] } as never);
     mockedPut.mockResolvedValue({ data: mockVehicles[1] } as never);
     mockedPatch.mockResolvedValue({ data: mockVehicles[2] } as never);
     mockedDel.mockResolvedValue(undefined as never);
@@ -134,12 +138,14 @@ describe("admin vehicles API", () => {
     await updateVehicleStatus("vehicle-1", "Maintenance" as never);
     await transferVehicle("vehicle-1", "office-2");
     await scheduleMaintenance("vehicle-1", { reason: "oil" } as never);
+    const formFile = new File(["image"], "vehicle.jpg", { type: "image/jpeg" });
+    await uploadVehiclePhoto("vehicle-1", formFile);
     await deleteVehicle("vehicle-1");
 
     expect(mockedPost).toHaveBeenCalledWith("/v1/vehicles", { plate: "07ABC123" });
     expect(mockedPut).toHaveBeenCalledWith("/v1/vehicles/vehicle-1", { color: "Black" });
     expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/vehicles/vehicle-1/status", {
-      status: "Maintenance",
+      status: 3,
     });
     expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/vehicles/vehicle-1/transfer", {
       officeId: "office-2",
@@ -147,6 +153,10 @@ describe("admin vehicles API", () => {
     expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/vehicles/vehicle-1/maintenance", {
       reason: "oil",
     });
+    expect(mockedPostFormData).toHaveBeenCalledWith(
+      "/v1/vehicles/vehicle-1/photo",
+      expect.any(FormData)
+    );
     expect(mockedDel).toHaveBeenCalledWith("/v1/vehicles/vehicle-1");
   });
 

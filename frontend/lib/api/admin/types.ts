@@ -10,7 +10,7 @@ import type {
   VehicleGroup,
 } from '../types';
 
-export type AdminVehicleStatus = 'Available' | 'Maintenance' | 'Retired';
+export type AdminVehicleStatus = 'Available' | 'Reserved' | 'Rented' | 'Maintenance' | 'OutOfService' | 'Retired';
 export type AdminUserRole = 'Admin' | 'SuperAdmin';
 export type PricingCalculationType = 'multiplier' | 'fixed';
 export type ReportChangeType = 'increase' | 'decrease' | 'neutral';
@@ -29,7 +29,7 @@ export interface AdminVehicle extends Partial<Vehicle> {
   groupId: string;
   office?: Pick<AdminOffice, 'id' | 'name'>;
   group?: Pick<AdminVehicleGroup, 'id' | 'name'>;
-  status: AdminVehicleStatus;
+  status: AdminVehicleStatus | number;
   officeName?: string;
   groupName?: string;
   adminNotes?: string | null;

@@ -30,13 +30,22 @@ const VehicleDialog = dynamic(() => import("@/components/admin/dialogs/VehicleDi
   ssr: false,
 });
 
+const normalizeStatus = (status: AdminVehicle["status"]) => {
+  if (status === 0 || status === "Available") return "Available";
+  if (status === 1 || status === "Reserved") return "Reserved";
+  if (status === 2 || status === "Rented") return "Rented";
+  if (status === 3 || status === "Maintenance") return "Maintenance";
+  if (status === 4 || status === "OutOfService" || status === "Retired") return "OutOfService";
+  return String(status);
+};
+
 const statusBadgeVariant = (status: string) => {
   switch (status) {
     case "Available":
       return "default";
     case "Maintenance":
       return "secondary";
-    case "Retired":
+    case "OutOfService":
       return "outline";
     default:
       return "outline";
@@ -49,8 +58,12 @@ const statusLabel = (status: string) => {
       return "Müsait";
     case "Maintenance":
       return "Bakımda";
-    case "Retired":
-      return "Emekli";
+    case "Reserved":
+      return "Rezerve";
+    case "Rented":
+      return "Kirada";
+    case "OutOfService":
+      return "Servis Dışı";
     default:
       return status;
   }
@@ -90,7 +103,8 @@ export default function VehiclesPage() {
       !q ||
       v.plate?.toLowerCase().includes(q) ||
       vehicleName.toLowerCase().includes(q);
-    const matchStatus = statusFilter === "ALL" || v.status === statusFilter;
+    const normalizedStatus = normalizeStatus(v.status);
+    const matchStatus = statusFilter === "ALL" || normalizedStatus === statusFilter;
     const matchOffice = officeFilter === "ALL" || v.officeId === officeFilter;
     return matchSearch && matchStatus && matchOffice;
   });
@@ -122,7 +136,7 @@ export default function VehiclesPage() {
                 <SelectItem value="ALL">Tümü</SelectItem>
                 <SelectItem value="Available">Müsait</SelectItem>
                 <SelectItem value="Maintenance">Bakımda</SelectItem>
-                <SelectItem value="Retired">Emekli</SelectItem>
+                <SelectItem value="OutOfService">Servis Dışı</SelectItem>
               </SelectContent>
             </Select>
             <Select value={officeFilter} onValueChange={setOfficeFilter}>
@@ -190,8 +204,8 @@ export default function VehiclesPage() {
                     <TableCell>{groupName}</TableCell>
                     <TableCell>{officeName}</TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(v.status)}>
-                        {statusLabel(v.status)}
+                      <Badge variant={statusBadgeVariant(normalizeStatus(v.status))}>
+                        {statusLabel(normalizeStatus(v.status))}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{v.photoUrl ? "Var" : "Yok"}</TableCell>

@@ -35,7 +35,7 @@ import type {
   AdminOffice,
   CreateVehicleData,
 } from "@/lib/api/admin/types";
-import { createVehicle, updateVehicle } from "@/lib/api/admin/vehicles";
+import { createVehicle, updateVehicle, uploadVehiclePhoto } from "@/lib/api/admin/vehicles";
 
 const vehicleSchema = z.object({
   plate: z.string().min(1, "Plaka gereklidir"),
@@ -45,7 +45,8 @@ const vehicleSchema = z.object({
   color: z.string().min(1, "Renk gereklidir"),
   groupId: z.string().min(1, "Araç grubu seçilmelidir"),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
-  status: z.enum(["Available", "Maintenance", "Retired"]),
+  status: z.enum(["Available", "Maintenance", "OutOfService"]),
+  photo: z.instanceof(File).optional(),
 });
 
 type VehicleFormInput = z.input<typeof vehicleSchema>;
@@ -69,6 +70,12 @@ export default function VehicleDialog({
   groups,
 }: VehicleDialogProps) {
   const isEditing = !!vehicle;
+  const normalizeStatus = (status: AdminVehicle["status"] | undefined): VehicleFormData["status"] => {
+    if (status === 0 || status === "Available") return "Available";
+    if (status === 3 || status === "Maintenance") return "Maintenance";
+    if (status === 4 || status === "OutOfService" || status === "Retired") return "OutOfService";
+    return "Available";
+  };
 
   const form = useForm<VehicleFormInput, unknown, VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
@@ -81,6 +88,7 @@ export default function VehicleDialog({
       groupId: "",
       officeId: "",
       status: "Available",
+      photo: undefined,
     },
   });
 
@@ -94,7 +102,8 @@ export default function VehicleDialog({
         color: vehicle.color ?? "",
         groupId: vehicle.groupId || "",
         officeId: vehicle.officeId || "",
-        status: vehicle.status,
+        status: normalizeStatus(vehicle.status),
+        photo: undefined,
       });
     } else {
       form.reset({
@@ -106,6 +115,7 @@ export default function VehicleDialog({
         groupId: "",
         officeId: "",
         status: "Available",
+        photo: undefined,
       });
     }
   }, [vehicle, form, open]);
@@ -124,14 +134,21 @@ export default function VehicleDialog({
   const onSubmit = async (data: VehicleFormData) => {
     try {
       const payload = buildVehiclePayload(data);
+      let savedVehicle: AdminVehicle;
 
       if (isEditing && vehicle) {
-        await updateVehicle(vehicle.id, payload);
+        savedVehicle = await updateVehicle(vehicle.id, payload);
         toast.success("Araç başarıyla güncellendi");
       } else {
-        await createVehicle(payload);
+        savedVehicle = await createVehicle(payload);
         toast.success("Araç başarıyla oluşturuldu");
       }
+
+      if (data.photo) {
+        await uploadVehiclePhoto(savedVehicle.id, data.photo);
+        toast.success("Araç görseli başarıyla yüklendi");
+      }
+
       onSuccess();
     } catch (error) {
       toast.error(isEditing ? "Araç güncellenemedi" : "Araç oluşturulamadı");
@@ -296,7 +313,7 @@ export default function VehicleDialog({
                       <SelectContent>
                         <SelectItem value="Available">Müsait</SelectItem>
                         <SelectItem value="Maintenance">Bakımda</SelectItem>
-                        <SelectItem value="Retired">Emekli</SelectItem>
+                        <SelectItem value="OutOfService">Servis Dışı</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -305,6 +322,30 @@ export default function VehicleDialog({
               />
 
             </div>
+
+            <FormField
+              control={form.control}
+              name="photo"
+              render={({ field: { value: _value, onChange, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Araç Görseli</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => onChange(event.target.files?.[0])}
+                    />
+                  </FormControl>
+                  {vehicle?.photoUrl && (
+                    <p className="text-xs text-muted-foreground">
+                      Mevcut görsel: {vehicle.photoUrl}
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button
