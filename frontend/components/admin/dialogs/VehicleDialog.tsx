@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { UploadIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -330,12 +331,28 @@ export default function VehicleDialog({
                 <FormItem>
                   <FormLabel>Araç Görseli</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(event) => onChange(event.target.files?.[0])}
-                    />
+                    <div>
+                      <Input
+                        {...field}
+                        id="vehicle-photo"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(event) => onChange(event.target.files?.[0])}
+                      />
+                      <label
+                        htmlFor="vehicle-photo"
+                        className="border-input bg-background hover:bg-accent hover:text-accent-foreground flex h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-sm transition-colors"
+                      >
+                        <UploadIcon className="size-5 text-muted-foreground" aria-hidden="true" />
+                        <span className="font-medium">
+                          {_value instanceof File ? _value.name : "Dosya görseli seç"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          JPG, PNG veya WEBP
+                        </span>
+                      </label>
+                    </div>
                   </FormControl>
                   {vehicle?.photoUrl && (
                     <p className="text-xs text-muted-foreground">
