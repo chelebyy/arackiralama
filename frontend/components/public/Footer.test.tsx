@@ -23,6 +23,8 @@ describe("Footer", () => {
     expect(screen.getByText("about.description")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "quickLinks.links.vehicles" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "quickLinks.links.booking" })).toHaveAttribute("href", "/booking");
+    expect(screen.getByRole("link", { name: "quickLinks.links.terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("link", { name: "quickLinks.links.privacy" })).toHaveAttribute("href", "/privacy");
     expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "https://instagram.com");
     expect(screen.getByRole("link", { name: "Facebook" })).toHaveAttribute("href", "https://facebook.com");
     expect(screen.getByRole("link", { name: "Twitter" })).toHaveAttribute("href", "https://twitter.com");

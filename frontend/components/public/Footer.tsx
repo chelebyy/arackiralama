@@ -26,6 +26,8 @@ export default function Footer() {
     { key: "contact", href: "/contact" as const },
     { key: "track", href: "/track-reservation" as const },
     { key: "booking", href: "/booking" as const },
+    { key: "terms", href: "/terms" as const },
+    { key: "privacy", href: "/privacy" as const },
   ];
 
   return (

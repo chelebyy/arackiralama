@@ -651,5 +651,212 @@
       "terms": "Nutzungsbedingungen",
       "privacy": "Datenschutzrichtlinie"
     }
+  },
+  "legal": {
+    "sectionLabel": "Abschnitt {number}",
+    "terms": {
+      "title": "Mietbedingungen",
+      "subtitle": "Bitte lesen Sie diese Bedingungen vor der Fahrzeugmiete sorgfältig durch",
+      "noticeTitle": "Wichtiger Hinweis",
+      "noticeBody": "Mit einer Reservierung oder Fahrzeugmiete bei Alanya Car Rental bestätigen Sie, dass Sie diese Bedingungen gelesen, verstanden und akzeptiert haben. Die Bedingungen können gelegentlich aktualisiert werden; die aktuelle Fassung ist stets auf unserer Website verfügbar.",
+      "contactTitle": "Fragen zu unseren Bedingungen?",
+      "contactBody": "Wenn Sie Fragen zu unseren Mietbedingungen haben, kontaktieren Sie bitte unser Kundenserviceteam. Wir helfen Ihnen, offene Punkte vor der Reservierung zu klären.",
+      "legalEmail": "Rechtsteam kontaktieren",
+      "servicePhone": "Kundenservice anrufen",
+      "lastUpdated": "Zuletzt aktualisiert: März 2025",
+      "sections": [
+        {
+          "id": "agreement",
+          "title": "Mietvertrag",
+          "content": [
+            "Mit der Fahrzeugmiete bei Alanya Car Rental akzeptieren Sie diese Bedingungen.",
+            "Der Mietvertrag ist ein rechtsverbindlicher Vertrag zwischen dem Mieter und Alanya Car Rental.",
+            "Alle Mieten unterliegen Fahrzeugverfügbarkeit und Bestätigung.",
+            "Wir behalten uns vor, die Leistung aus beliebigem Grund abzulehnen.",
+            "Der Mieter ist dafür verantwortlich, alle Bedingungen vor der Unterzeichnung zu lesen und zu verstehen."
+          ]
+        },
+        {
+          "id": "age",
+          "title": "Alter und Führerscheinanforderungen",
+          "content": [
+            "Das Mindestalter für Mieter beträgt 25 Jahre.",
+            "Fahrer müssen seit mindestens 2 Jahren einen gültigen Führerschein besitzen.",
+            "Alle Fahrer müssen bei Abholung einen gültigen Führerschein vorlegen.",
+            "Internationale Gäste benötigen einen internationalen Führerschein, wenn ihr Führerschein nicht in lateinischer Schrift ausgestellt ist.",
+            "Zusatzfahrer müssen dieselben Anforderungen erfüllen und im Mietvertrag eingetragen sein."
+          ]
+        },
+        {
+          "id": "insurance",
+          "title": "Versicherung und Deckung",
+          "content": [
+            "Alle Mieten enthalten die gesetzlich vorgeschriebene Haftpflichtversicherung.",
+            "Eine Kollisionsschadenreduzierung ist enthalten und reduziert die Haftung des Mieters.",
+            "Diebstahlschutz ist im Mietpreis enthalten.",
+            "Je nach Fahrzeugkategorie ist eine Kaution von 300-500 USD erforderlich.",
+            "Die Kaution wird nach Rückgabe und Schadensprüfung innerhalb von 7-14 Tagen erstattet."
+          ]
+        },
+        {
+          "id": "payment",
+          "title": "Zahlungsbedingungen",
+          "content": [
+            "Die vollständige Zahlung ist bei Buchungsbestätigung erforderlich.",
+            "Wir akzeptieren gängige Kreditkarten und Barzahlung.",
+            "Für die Kaution ist eine gültige Kreditkarte auf den Namen des Mieters erforderlich.",
+            "Zusatzkosten können für Kraftstoff, Maut, Parkstrafen, Verkehrsverstöße oder Schäden entstehen.",
+            "Verspätete Rückgaben werden je Stunde mit 50% des Tagespreises berechnet."
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Kraftstoffregelung",
+          "content": [
+            "Fahrzeuge werden mit vollem Tank übergeben.",
+            "Mieter müssen das Fahrzeug mit vollem Tank zurückgeben.",
+            "Bei Rückgabe mit weniger Kraftstoff wird eine Betankungsgebühr zum Marktpreis zuzüglich Servicegebühr berechnet.",
+            "Eine vorausbezahlte Kraftstoffoption ist zu wettbewerbsfähigen Preisen verfügbar."
+          ]
+        },
+        {
+          "id": "cancellation",
+          "title": "Stornierung und Änderung",
+          "content": [
+            "Stornierung mindestens 48 Stunden vor Abholung: volle Erstattung abzüglich Bearbeitungsgebühr.",
+            "Stornierung 24-48 Stunden vor Abholung: 50% Erstattung.",
+            "Stornierung weniger als 24 Stunden vor Abholung: keine Erstattung.",
+            "Bei Nichterscheinen wird der volle Mietbetrag berechnet.",
+            "Änderungen hängen von Verfügbarkeit ab und können Zusatzkosten verursachen."
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "Fahrzeugnutzung",
+          "content": [
+            "Fahrzeuge dürfen nur in der Türkei gefahren werden, sofern keine schriftliche Genehmigung vorliegt.",
+            "Geländefahrten sind untersagt, sofern das Fahrzeug nicht ausdrücklich dafür freigegeben ist.",
+            "Rauchen ist in allen Mietfahrzeugen strikt verboten; Verstöße führen zu Reinigungskosten.",
+            "Haustiere sind nur nach vorheriger Absprache in haustierfreundlichen Fahrzeugen erlaubt.",
+            "Der Mieter haftet für Verkehrsverstöße, Parkstrafen und Maut während der Mietdauer."
+          ]
+        },
+        {
+          "id": "liability",
+          "title": "Haftung des Mieters",
+          "content": [
+            "Der Mieter haftet für Schäden durch Fahrlässigkeit oder Verstoß gegen die Bedingungen.",
+            "Schäden durch nicht autorisierte Fahrer sind nicht versichert.",
+            "Unfälle oder Schäden müssen sofort unserer Notfallnummer gemeldet werden.",
+            "Nicht gemeldete Schäden können zum Verlust des Versicherungsschutzes und voller Haftung führen.",
+            "Im Fahrzeug zurückgelassene persönliche Gegenstände sind nicht durch unsere Versicherung gedeckt."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Datenschutzrichtlinie",
+      "subtitle": "Wie wir Ihre personenbezogenen Daten schützen und verarbeiten",
+      "noticeTitle": "KVKK-Konformität",
+      "noticeBody": "Alanya Car Rental beachtet das türkische Datenschutzgesetz KVKK Nr. 6698 und die EU-Datenschutzgrundverordnung (DSGVO). Wir schützen Ihre Privatsphäre und sichern Ihre personenbezogenen Daten.",
+      "intro": "Diese Datenschutzrichtlinie erklärt, wie Alanya Car Rental personenbezogene Daten erhebt, nutzt, speichert und schützt, wenn Sie unsere Dienste verwenden. Durch die Nutzung unserer Website und Dienste stimmen Sie den beschriebenen Verfahren zu.",
+      "contactTitle": "Datenschutzbeauftragten kontaktieren",
+      "contactBody": "Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, Ihre Rechte ausüben möchten oder Bedenken zur Datenverarbeitung haben, kontaktieren Sie bitte unseren Datenschutzbeauftragten:",
+      "emailLabel": "E-Mail",
+      "addressLabel": "Postanschrift",
+      "breachTitle": "Benachrichtigung bei Datenschutzverletzung",
+      "breachBody": "Falls eine Datenschutzverletzung Ihre personenbezogenen Daten betreffen könnte, informieren wir Sie und die zuständigen Behörden innerhalb von 72 Stunden, soweit gesetzlich erforderlich. Wir unterhalten Reaktionsverfahren, um mögliche Auswirkungen zu minimieren.",
+      "lastUpdated": "Zuletzt aktualisiert: März 2025",
+      "sections": [
+        {
+          "id": "collection",
+          "title": "Von uns erhobene Daten",
+          "content": [
+            "Identifikationsdaten: Name, Geburtsdatum, Staatsangehörigkeit",
+            "Kontaktdaten: E-Mail, Telefonnummer, Wohnadresse",
+            "Führerscheindaten und Fahrhistorie",
+            "Zahlungsdaten: Kartendaten und Rechnungsadresse",
+            "Reservierungsdaten: Orte, Daten und Fahrzeugwünsche",
+            "Website-Nutzungsdaten: IP-Adresse, Browsertyp, besuchte Seiten",
+            "Kommunikationsaufzeichnungen: E-Mails, Chats und Anrufe"
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "Wie wir Ihre Daten nutzen",
+          "content": [
+            "Bearbeitung und Bestätigung Ihrer Fahrzeugreservierungen",
+            "Prüfung Ihrer Identität und Führerscheingültigkeit",
+            "Zahlungsabwicklung und Verwaltung von Kautionen",
+            "Kommunikation zu Ihrer Reservierung",
+            "Kundensupport und Bearbeitung von Anfragen",
+            "Verbesserung unserer Dienste und Website",
+            "Erfüllung gesetzlicher Pflichten und rechtmäßiger Anfragen",
+            "Versand von Angeboten nur mit Ihrer Zustimmung"
+          ]
+        },
+        {
+          "id": "storage",
+          "title": "Datenspeicherung und Sicherheit",
+          "content": [
+            "Ihre Daten werden auf sicheren Servern in der Europäischen Union gespeichert",
+            "Für Datenübertragungen verwenden wir branchenübliche Verschlüsselung",
+            "Zugriff auf personenbezogene Daten ist nur autorisiertem Personal erlaubt",
+            "Wir führen regelmäßige Sicherheitsprüfungen und Schwachstellenbewertungen durch",
+            "Zahlungsdaten werden über PCI-DSS-konforme Anbieter verarbeitet",
+            "Wir speichern niemals vollständige Kreditkartendaten auf unseren Servern",
+            "Physische Unterlagen werden in gesicherten Bereichen mit Zugangskontrolle aufbewahrt"
+          ]
+        },
+        {
+          "id": "retention",
+          "title": "Aufbewahrungsfristen",
+          "content": [
+            "Reservierungsdaten werden aus rechtlichen und steuerlichen Gründen 7 Jahre aufbewahrt",
+            "Marketingpräferenzen und Einwilligungen bleiben bis zum Widerruf gespeichert",
+            "Website-Analysedaten werden nach 26 Monaten anonymisiert",
+            "Sicherheitsprotokolle werden 1 Jahr gespeichert",
+            "Sie können die Löschung Ihrer Daten vorbehaltlich gesetzlicher Pflichten verlangen"
+          ]
+        },
+        {
+          "id": "cookies",
+          "title": "Cookie-Richtlinie",
+          "content": [
+            "Essenzielle Cookies sind für die Funktion der Website erforderlich",
+            "Analyse-Cookies helfen uns, die Nutzung der Website zu verstehen",
+            "Marketing-Cookies werden nur mit Einwilligung für relevante Werbung genutzt",
+            "Sie können Cookies in Ihren Browsereinstellungen verwalten",
+            "Unser Cookie-Banner ermöglicht die Anpassung Ihrer Präferenzen",
+            "Zahlungs- und Analysepartner können Drittanbieter-Cookies setzen"
+          ]
+        },
+        {
+          "id": "rights",
+          "title": "Ihre Rechte nach KVKK",
+          "content": [
+            "Auskunftsrecht: Kopie Ihrer personenbezogenen Daten anfordern",
+            "Berichtigungsrecht: Korrektur unrichtiger Daten verlangen",
+            "Löschrecht: Löschung vorbehaltlich gesetzlicher Pflichten verlangen",
+            "Recht auf Einschränkung der Verarbeitung",
+            "Recht auf Datenübertragbarkeit in maschinenlesbarem Format",
+            "Widerspruchsrecht gegen bestimmte Verarbeitungen",
+            "Recht, Einwilligungen jederzeit zu widerrufen"
+          ]
+        },
+        {
+          "id": "sharing",
+          "title": "Datenweitergabe und Dritte",
+          "content": [
+            "Wir teilen Daten nur mit notwendigen Dienstleistern",
+            "Zahlungen werden von zertifizierten Zahlungsanbietern verarbeitet",
+            "Versicherungspartner erhalten nur notwendige Informationen",
+            "Bei gesetzlicher Pflicht können Daten an Behörden weitergegeben werden",
+            "Wir verkaufen oder vermieten personenbezogene Daten nicht an Dritte",
+            "Alle Drittpartner sind vertraglich an Datenschutzstandards gebunden"
+          ]
+        }
+      ]
+    }
   }
 }

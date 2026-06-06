@@ -744,5 +744,212 @@
         "description": "Müşteri hesabınızla giriş yapın."
       }
     }
+  },
+  "legal": {
+    "sectionLabel": "Bölüm {number}",
+    "terms": {
+      "title": "Kiralama Koşulları",
+      "subtitle": "Araç kiralamadan önce lütfen bu koşulları dikkatlice okuyun",
+      "noticeTitle": "Önemli Bilgilendirme",
+      "noticeBody": "Alanya Car Rental üzerinden rezervasyon yaparak veya araç kiralayarak bu kiralama koşullarını okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan edersiniz. Bu koşullar zaman zaman güncellenebilir ve güncel sürüm her zaman web sitemizde yayınlanır.",
+      "contactTitle": "Koşullar Hakkında Sorularınız mı Var?",
+      "contactBody": "Kiralama koşullarımız hakkında sorularınız varsa müşteri hizmetleri ekibimizle iletişime geçin. Rezervasyon yapmadan önce tüm konuları netleştirmenize yardımcı oluruz.",
+      "legalEmail": "Hukuk Ekibiyle İletişim",
+      "servicePhone": "Müşteri Hizmetlerini Ara",
+      "lastUpdated": "Son güncelleme: Mart 2025",
+      "sections": [
+        {
+          "id": "agreement",
+          "title": "Kiralama Sözleşmesi",
+          "content": [
+            "Alanya Car Rental üzerinden araç kiralayarak bu koşulları kabul edersiniz.",
+            "Kiralama sözleşmesi, kiracı ile Alanya Car Rental arasında hukuken bağlayıcı bir sözleşmedir.",
+            "Tüm kiralamalar araç müsaitliği ve onaya tabidir.",
+            "Herhangi bir nedenle hizmet vermeyi reddetme hakkımız saklıdır.",
+            "Kiracı, sözleşmeyi imzalamadan önce tüm koşulları okumak ve anlamakla sorumludur."
+          ]
+        },
+        {
+          "id": "age",
+          "title": "Yaş ve Ehliyet Şartları",
+          "content": [
+            "Kiracılar için minimum yaş 25 tir.",
+            "Sürücülerin en az 2 yıldır geçerli ehliyete sahip olması gerekir.",
+            "Tüm sürücüler teslim alma sırasında geçerli ehliyet ibraz etmelidir.",
+            "Ehliyeti Latin alfabesinde olmayan uluslararası ziyaretçilerin Uluslararası Sürücü Belgesi sunması gerekir.",
+            "Ek sürücüler aynı yaş ve ehliyet şartlarını karşılamalı ve sözleşmeye kaydedilmelidir."
+          ]
+        },
+        {
+          "id": "insurance",
+          "title": "Sigorta ve Kapsam",
+          "content": [
+            "Tüm kiralamalara Türk kanunlarının gerektirdiği temel üçüncü şahıs mali sorumluluk sigortası dahildir.",
+            "Hasar sorumluluğunu azaltan çarpışma hasar muafiyeti tüm kiralamalara dahildir.",
+            "Araç hırsızlığına karşı hırsızlık koruması dahildir.",
+            "Araç kategorisine göre 300-500 USD güvence depozitosu alınır.",
+            "Güvence depozitosu araç iadesi ve hasar kontrolü sonrası 7-14 gün içinde iade edilir."
+          ]
+        },
+        {
+          "id": "payment",
+          "title": "Ödeme Koşulları",
+          "content": [
+            "Rezervasyon onayı sırasında tam ödeme gerekir.",
+            "Başlıca kredi kartları ve nakit ödeme kabul edilir.",
+            "Güvence depozitosu için kiracı adına geçerli bir kredi kartı gerekir.",
+            "Yakıt, otoyol geçişleri, park cezaları, trafik ihlalleri veya araç hasarı için ek ücretler uygulanabilir.",
+            "Geç iade ücretleri, kararlaştırılan iade saatinden sonra saat başına günlük ücretin %50 si olarak hesaplanır."
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Yakıt Politikası",
+          "content": [
+            "Araçlar dolu yakıt deposuyla teslim edilir.",
+            "Kiracılar aracı dolu yakıt deposuyla iade etmelidir.",
+            "Araç eksik yakıtla iade edilirse güncel piyasa fiyatı ve hizmet bedeliyle yakıt tamamlama ücreti uygulanır.",
+            "Kolaylık için rekabetçi fiyatlı ön ödemeli yakıt seçeneği sunarız."
+          ]
+        },
+        {
+          "id": "cancellation",
+          "title": "İptal ve Değişiklik Politikası",
+          "content": [
+            "Teslim almadan 48 saat veya daha önce yapılan iptallerde işlem bedeli hariç tam iade yapılır.",
+            "Teslim almadan 24-48 saat önce yapılan iptallerde %50 iade yapılır.",
+            "Teslim almaya 24 saatten az kala yapılan iptallerde iade yapılmaz.",
+            "Gelmememe durumunda kiralama tutarının tamamı tahsil edilir.",
+            "Rezervasyon değişiklikleri müsaitliğe bağlıdır ve ek ücret doğurabilir."
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "Araç Kullanımı",
+          "content": [
+            "Yazılı ön izin alınmadıkça araçlar yalnızca Türkiye içinde kullanılabilir.",
+            "Araç özel olarak yetkilendirilmedikçe arazi sürüşü yasaktır.",
+            "Tüm kiralık araçlarda sigara içmek kesinlikle yasaktır; ihlal halinde temizlik ücreti alınır.",
+            "Evcil hayvanlara yalnızca önceden düzenleme yapılmış evcil hayvan dostu araçlarda izin verilir.",
+            "Kiralama süresince oluşan tüm trafik ihlalleri, park cezaları ve geçiş ücretlerinden kiracı sorumludur."
+          ]
+        },
+        {
+          "id": "liability",
+          "title": "Kiracı Sorumluluğu",
+          "content": [
+            "Kiracı, ihmal veya kiralama koşullarının ihlali nedeniyle oluşan hasarlardan sorumludur.",
+            "Yetkisiz sürücülerin neden olduğu hasarlar sigorta kapsamında değildir.",
+            "Kiracı kaza veya hasarı derhal acil destek hattımıza bildirmelidir.",
+            "Hasarın bildirilmemesi sigorta kapsamının kaybına ve tam sorumluluğa neden olabilir.",
+            "Araçta bırakılan kişisel eşyalar sigortamız kapsamında değildir."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Gizlilik Politikası",
+      "subtitle": "Kişisel verilerinizi nasıl koruduğumuz ve işlediğimiz",
+      "noticeTitle": "KVKK Uyumluluğu",
+      "noticeBody": "Alanya Car Rental, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) ve Avrupa Birliği Genel Veri Koruma Tüzüğü (GDPR) gerekliliklerine uyumlu hareket eder. Gizliliğinizi korumaya ve kişisel verilerinizin güvenliğini sağlamaya önem veririz.",
+      "intro": "Bu Gizlilik Politikası, hizmetlerimizi kullandığınızda Alanya Car Rental tarafından kişisel bilgilerinizin nasıl toplandığını, kullanıldığını, saklandığını ve korunduğunu açıklar. Web sitemizi ve hizmetlerimizi kullanarak bu politikada açıklanan uygulamaları kabul etmiş olursunuz.",
+      "contactTitle": "Veri Koruma Sorumlumuzla İletişim",
+      "contactBody": "Bu Gizlilik Politikası hakkında sorularınız varsa, haklarınızı kullanmak istiyorsanız veya verilerinizi nasıl işlediğimiz konusunda endişeleriniz varsa Veri Koruma Sorumlumuzla iletişime geçin:",
+      "emailLabel": "E-posta",
+      "addressLabel": "Posta Adresi",
+      "breachTitle": "Veri İhlali Bildirimi",
+      "breachBody": "Kişisel bilgilerinizi etkileyebilecek bir veri ihlali yaşanması halinde, kanunen gerektiği şekilde sizi ve ilgili makamları 72 saat içinde bilgilendiririz. Olası etkiyi azaltmak için olay müdahale prosedürleri uygularız.",
+      "lastUpdated": "Son güncelleme: Mart 2025",
+      "sections": [
+        {
+          "id": "collection",
+          "title": "Topladığımız Veriler",
+          "content": [
+            "Kimlik bilgileri: ad, doğum tarihi, uyruk",
+            "İletişim bilgileri: e-posta adresi, telefon numarası, ikamet adresi",
+            "Ehliyet bilgileri ve sürüş geçmişi",
+            "Ödeme bilgileri: kredi kartı bilgileri, fatura adresi",
+            "Rezervasyon bilgileri: teslim alma ve iade konumları, tarihler, araç tercihleri",
+            "Web sitesi kullanım verileri: IP adresi, tarayıcı türü, ziyaret edilen sayfalar",
+            "İletişim kayıtları: e-postalar, sohbet kayıtları, telefon görüşmesi kayıtları"
+          ]
+        },
+        {
+          "id": "usage",
+          "title": "Verilerinizi Nasıl Kullanırız",
+          "content": [
+            "Araç rezervasyonlarınızı işlemek ve onaylamak",
+            "Kimliğinizi ve ehliyet geçerliliğinizi doğrulamak",
+            "Ödemeleri işlemek ve güvence depozitolarını yönetmek",
+            "Rezervasyonunuz hakkında sizinle iletişim kurmak",
+            "Müşteri desteği sağlamak ve talepleri yanıtlamak",
+            "Hizmetlerimizi ve web sitesi deneyimini geliştirmek",
+            "Yasal yükümlülüklere ve yetkili makam taleplerine uymak",
+            "Yalnızca onayınızla kampanya teklifleri göndermek"
+          ]
+        },
+        {
+          "id": "storage",
+          "title": "Veri Saklama ve Güvenlik",
+          "content": [
+            "Verileriniz Avrupa Birliği içindeki güvenli sunucularda saklanır",
+            "Veri aktarımı için sektör standardı şifreleme kullanırız",
+            "Kişisel verilere erişim yalnızca yetkili personelle sınırlıdır",
+            "Düzenli güvenlik denetimleri ve zafiyet değerlendirmeleri uygularız",
+            "Ödeme bilgileri PCI-DSS uyumlu ödeme sağlayıcıları üzerinden işlenir",
+            "Tam kredi kartı bilgilerinizi sunucularımızda saklamayız",
+            "Fiziksel kayıtlar güvenli ve erişim kontrollü alanlarda saklanır"
+          ]
+        },
+        {
+          "id": "retention",
+          "title": "Veri Saklama Süreleri",
+          "content": [
+            "Rezervasyon verileri yasal ve vergisel amaçlarla 7 yıl saklanır",
+            "Pazarlama tercihleri ve onay kayıtları onayınızı geri çekene kadar saklanır",
+            "Web sitesi analiz verileri 26 ay sonra anonimleştirilir",
+            "Güvenlik logları 1 yıl saklanır",
+            "Yasal yükümlülüklere tabi olmak kaydıyla verilerinizin silinmesini talep edebilirsiniz"
+          ]
+        },
+        {
+          "id": "cookies",
+          "title": "Çerez Politikası",
+          "content": [
+            "Zorunlu çerezler web sitesi işlevselliği için gereklidir ve devre dışı bırakılamaz",
+            "Analitik çerezler ziyaretçilerin web sitemizle nasıl etkileşim kurduğunu anlamamıza yardımcı olur",
+            "Pazarlama çerezleri yalnızca onayla ilgili reklamlar sunmak için kullanılır",
+            "Çerez tercihlerinizi tarayıcı ayarlarınızdan yönetebilirsiniz",
+            "Çerez onay bandımız tercihlerinizi özelleştirmenize imkan tanır",
+            "Ödeme ve analiz iş ortaklarımız üçüncü taraf çerezler kullanabilir"
+          ]
+        },
+        {
+          "id": "rights",
+          "title": "KVKK Kapsamındaki Haklarınız",
+          "content": [
+            "Erişim hakkı: hakkınızda tuttuğumuz kişisel verilerin bir kopyasını talep etmek",
+            "Düzeltme hakkı: hatalı verilerin düzeltilmesini talep etmek",
+            "Silme hakkı: yasal yükümlülüklere tabi olarak verilerinizin silinmesini talep etmek",
+            "İşlemeyi kısıtlama hakkı: verilerinizi nasıl kullandığımızı sınırlamak",
+            "Veri taşınabilirliği hakkı: verilerinizi makine tarafından okunabilir formatta almak",
+            "İtiraz hakkı: belirli veri işleme türlerine itiraz etmek",
+            "Onayı her zaman geri çekme hakkı"
+          ]
+        },
+        {
+          "id": "sharing",
+          "title": "Veri Paylaşımı ve Üçüncü Taraflar",
+          "content": [
+            "Verilerinizi yalnızca gerekli üçüncü taraf hizmet sağlayıcılarıyla paylaşırız",
+            "Ödeme işlemleri sertifikalı ödeme sağlayıcıları tarafından yürütülür",
+            "Sigorta iş ortakları yalnızca kapsam için gerekli bilgileri alır",
+            "Yasal olarak gerektiğinde verileri yetkili makamlarla paylaşabiliriz",
+            "Kişisel verilerinizi üçüncü taraflara satmayız veya kiralamayız",
+            "Tüm üçüncü taraf iş ortakları veri koruma standartlarına sözleşmeyle bağlıdır"
+          ]
+        }
+      ]
+    }
   }
 }
