@@ -6,18 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Calendar, MapPin, Clock, ChevronRight, ArrowRight } from "lucide-react";
-import { useState } from "react";
-
-const step1Schema = z.object({
-  pickupOffice: z.string().min(1, "Pickup office is required"),
-  returnOffice: z.string().min(1, "Return office is required"),
-  pickupDate: z.string().min(1, "Pickup date is required"),
-  pickupTime: z.string().min(1, "Pickup time is required"),
-  returnDate: z.string().min(1, "Return date is required"),
-  returnTime: z.string().min(1, "Return time is required"),
-});
-
-type Step1FormData = z.infer<typeof step1Schema>;
+import { useState, type MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 
 const offices = [
   { id: "ala", name: "Alanya City Center", address: "Ataturk Blvd. No:123, Alanya" },
@@ -37,12 +27,27 @@ const timeSlots = [
   "20:00", "20:30", "21:00", "21:30", "22:00",
 ];
 
+function openDatePicker(event: MouseEvent<HTMLInputElement>) {
+  event.currentTarget.showPicker?.();
+}
+
 export default function BookingStep1Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
+  const t = useTranslations("booking");
   const [sameOffice, setSameOffice] = useState(true);
+
+  const step1Schema = z.object({
+    pickupOffice: z.string().min(1, t("validation.requiredPickupOffice")),
+    returnOffice: z.string().min(1, t("validation.requiredReturnOffice")),
+    pickupDate: z.string().min(1, t("validation.requiredPickupDate")),
+    pickupTime: z.string().min(1, t("validation.requiredPickupTime")),
+    returnDate: z.string().min(1, t("validation.requiredReturnDate")),
+    returnTime: z.string().min(1, t("validation.requiredReturnTime")),
+  });
+  type Step1FormData = z.infer<typeof step1Schema>;
 
   const {
     register,
@@ -54,9 +59,9 @@ export default function BookingStep1Page() {
     defaultValues: {
       pickupOffice: searchParams.get("pickup") || "ala",
       returnOffice: searchParams.get("return") || "ala",
-      pickupDate: searchParams.get("pickupDate") || "",
+      pickupDate: searchParams.get("pickupDate") || new Date().toISOString().split("T")[0],
       pickupTime: "10:00",
-      returnDate: searchParams.get("returnDate") || "",
+      returnDate: searchParams.get("returnDate") || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       returnTime: "10:00",
     },
   });
@@ -80,9 +85,9 @@ export default function BookingStep1Page() {
           className="text-3xl font-bold text-slate-900 mb-2"
           style={{ fontFamily: "Lexend, sans-serif" }}
         >
-          Select Dates & Location
+          {t("step1.title")}
         </h1>
-        <p className="text-slate-600">Choose where and when you want to pick up and return your vehicle.</p>
+        <p className="text-slate-600">{t("step1.subtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -92,14 +97,14 @@ export default function BookingStep1Page() {
               <MapPin className="h-5 w-5 text-sky-600" />
             </div>
             <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-              Pickup Location
+              {t("pickupLocation")}
             </h2>
           </div>
 
           <div className="space-y-4">
             <div>
               <label htmlFor="pickupOffice" className="block text-sm font-medium text-slate-700 mb-2">
-                Office Location
+                {t("officeLocation")}
               </label>
               <select
                 id="pickupOffice"
@@ -120,14 +125,15 @@ export default function BookingStep1Page() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="pickupDate" className="block text-sm font-medium text-slate-700 mb-2">
-                  Pickup Date
+                  {t("pickupDate")}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
                   <input
                     type="date"
                     id="pickupDate"
                     {...register("pickupDate")}
+                    onClick={openDatePicker}
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                   />
                 </div>
@@ -138,7 +144,7 @@ export default function BookingStep1Page() {
 
               <div>
                 <label htmlFor="pickupTime" className="block text-sm font-medium text-slate-700 mb-2">
-                  Pickup Time
+                  {t("pickupTime")}
                 </label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -164,7 +170,7 @@ export default function BookingStep1Page() {
                 <MapPin className="h-5 w-5 text-sky-600" />
               </div>
               <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                Return Location
+                {t("returnLocation")}
               </h2>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -174,7 +180,7 @@ export default function BookingStep1Page() {
                 onChange={(e) => setSameOffice(e.target.checked)}
                 className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
               />
-              <span className="text-sm text-slate-600">Same as pickup</span>
+              <span className="text-sm text-slate-600">{t("sameAsPickup")}</span>
             </label>
           </div>
 
@@ -182,7 +188,7 @@ export default function BookingStep1Page() {
             {!sameOffice && (
               <div>
                 <label htmlFor="returnOffice" className="block text-sm font-medium text-slate-700 mb-2">
-                  Return Office
+                  {t("officeLocation")}
                 </label>
                 <select
                   id="returnOffice"
@@ -204,14 +210,15 @@ export default function BookingStep1Page() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="returnDate" className="block text-sm font-medium text-slate-700 mb-2">
-                  Return Date
+                  {t("returnDate")}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
                   <input
                     type="date"
                     id="returnDate"
                     {...register("returnDate")}
+                    onClick={openDatePicker}
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                   />
                 </div>
@@ -222,7 +229,7 @@ export default function BookingStep1Page() {
 
               <div>
                 <label htmlFor="returnTime" className="block text-sm font-medium text-slate-700 mb-2">
-                  Return Time
+                  {t("returnTime")}
                 </label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -246,7 +253,7 @@ export default function BookingStep1Page() {
             type="submit"
             className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
           >
-            Continue to Vehicle Selection
+            {t("continueToVehicle")}
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>

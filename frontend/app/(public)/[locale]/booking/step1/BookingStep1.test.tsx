@@ -28,6 +28,8 @@ describe("BookingStep1Page", () => {
 
     render(<BookingStep1Page />);
 
+    await user.clear(screen.getByLabelText("Pickup Date"));
+    await user.clear(screen.getByLabelText("Return Date"));
     await user.click(screen.getByRole("button", { name: /continue to vehicle selection/i }));
 
     expect(await screen.findByText("Pickup date is required")).toBeInTheDocument();
@@ -60,8 +62,9 @@ describe("BookingStep1Page", () => {
     render(<BookingStep1Page />);
 
     await user.click(screen.getByRole("checkbox", { name: /same as pickup/i }));
-    await user.selectOptions(screen.getByLabelText("Office Location"), "ala");
-    await user.selectOptions(screen.getByLabelText("Return Office"), "ayt");
+    const officeLocations = screen.getAllByLabelText("Office Location");
+    await user.selectOptions(officeLocations[0], "ala");
+    await user.selectOptions(officeLocations[1], "ayt");
     await user.click(screen.getByRole("button", { name: /continue to vehicle selection/i }));
 
     await waitFor(() => {
