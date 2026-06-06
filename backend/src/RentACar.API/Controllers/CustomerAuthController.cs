@@ -279,7 +279,7 @@ public sealed class CustomerAuthController(
 
     [HttpGet("me")]
     [Authorize(Policy = AuthPolicyNames.CustomerOnly)]
-    [EnableRateLimiting(RateLimitPolicyNames.Standard)]
+    [DisableRateLimiting]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
         if (!TryReadPrincipalId(out var principalId))

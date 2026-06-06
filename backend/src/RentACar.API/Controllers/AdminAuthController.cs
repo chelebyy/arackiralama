@@ -177,7 +177,7 @@ public sealed class AdminAuthController(
 
     [HttpGet("me")]
     [Authorize(Policy = AuthPolicyNames.AdminOnly)]
-    [EnableRateLimiting(RateLimitPolicyNames.Standard)]
+    [DisableRateLimiting]
     public IActionResult Me()
     {
         return OkResponse(new

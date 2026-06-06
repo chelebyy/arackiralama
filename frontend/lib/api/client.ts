@@ -341,3 +341,61 @@ export function adminPatch<T>(
 export function adminDel<T>(endpoint: string, config?: RequestConfig): Promise<T> {
   return adminApiClient<T>(endpoint, { ...config, method: 'DELETE' });
 }
+
+export async function adminPostFormData<T>(
+  endpoint: string,
+  data: FormData,
+  config: RequestConfig = {}
+): Promise<T> {
+  const url = `${API_CONFIG.adminBaseUrl}${endpoint}`;
+  const token = getAdminAuthToken();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...((config.headers as Record<string, string>) || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await retryFetch(url, {
+    ...config,
+    method: 'POST',
+    headers,
+    body: data,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorData: ApiErrorResponse;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = {
+        statusCode: response.status,
+        message: response.statusText || 'An error occurred',
+        code: 'UNKNOWN_ERROR',
+        timestamp: new Date().toISOString(),
+        path: endpoint,
+      };
+    }
+    throw new ApiError(errorData);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const payload = await response.json();
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'success' in payload &&
+    'data' in payload
+  ) {
+    return payload.data as T;
+  }
+
+  return payload;
+}

@@ -24,6 +24,64 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
     }
 
     [Fact]
+    public async Task GetAll_WhenVehiclesExist_ReturnsPhysicalVehicles()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (group, office) = await SeedGroupAndOfficeAsync(dbContext, "Merkez Ofis");
+        var vehicle = CreateVehicle("07PHY001", group.Id, office.Id, VehicleStatus.Available);
+        vehicle.Brand = "Fiat";
+        vehicle.Model = "Egea";
+        vehicle.PhotoUrl = "/uploads/vehicles/07phy001.webp";
+        dbContext.Vehicles.Add(vehicle);
+        dbContext.PricingRules.Add(new PricingRule
+        {
+            VehicleGroupId = group.Id,
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)),
+            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+            DailyPrice = 1500,
+            Multiplier = 1,
+            WeekdayMultiplier = 1,
+            WeekendMultiplier = 1,
+            CalculationType = "fixed",
+            Priority = 10
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = new VehiclesController(CreateFleetService(dbContext), dbContext);
+        var result = await controller.GetAll(CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse<List<PublicVehicleDto>>>().Subject;
+        response.Success.Should().BeTrue();
+        response.Data.Should().ContainSingle();
+        response.Data![0].Id.Should().Be(vehicle.Id);
+        response.Data[0].GroupId.Should().Be(group.Id);
+        response.Data[0].Brand.Should().Be("Fiat");
+        response.Data[0].PhotoUrl.Should().Be("/uploads/vehicles/07phy001.webp");
+        response.Data[0].DailyPrice.Should().Be(1500);
+    }
+
+    [Fact]
+    public async Task GetById_WhenVehicleExists_ReturnsPhysicalVehicle()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (group, office) = await SeedGroupAndOfficeAsync(dbContext, "Merkez Ofis");
+        var vehicle = CreateVehicle("07DET001", group.Id, office.Id, VehicleStatus.Available);
+        dbContext.Vehicles.Add(vehicle);
+        await dbContext.SaveChangesAsync();
+
+        var controller = new VehiclesController(CreateFleetService(dbContext), dbContext);
+        var result = await controller.GetById(vehicle.Id, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse<PublicVehicleDto>>().Subject;
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data!.Id.Should().Be(vehicle.Id);
+        response.Data.GroupName.Should().Be(group.NameTr);
+    }
+
+    [Fact]
     public async Task GetAvailable_WhenVehiclesBlockedByReservationOrMaintenance_ExcludesThem()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -46,7 +104,7 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new VehiclesController(CreateFleetService(dbContext));
+        var controller = new VehiclesController(CreateFleetService(dbContext), dbContext);
         var result = await controller.GetAvailable(
             office.Id,
             DateTime.UtcNow.AddDays(1).AddHours(1),
@@ -82,7 +140,7 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         dbContext.Vehicles.Add(vehicle);
         await dbContext.SaveChangesAsync();
 
-        var vehiclesController = new VehiclesController(CreateFleetService(dbContext));
+        var vehiclesController = new VehiclesController(CreateFleetService(dbContext), dbContext);
         var adminController = new AdminVehiclesController(CreateFleetService(dbContext), Mock.Of<IAuditLogService>());
         var pickup = DateTime.UtcNow.AddDays(1);
         var dropoff = DateTime.UtcNow.AddDays(2);

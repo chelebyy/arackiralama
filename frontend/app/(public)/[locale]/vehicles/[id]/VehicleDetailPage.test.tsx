@@ -5,8 +5,7 @@ import VehicleDetailPage from "./page";
 
 const useParamsMock = vi.fn();
 const useSearchParamsMock = vi.fn();
-const useOfficesMock = vi.fn();
-const useAvailableVehiclesMock = vi.fn();
+const useVehicleMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useParams: () => useParamsMock(),
@@ -18,9 +17,31 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/hooks/useVehicles", () => ({
-  useOffices: () => useOfficesMock(),
-  useAvailableVehicles: (...args: unknown[]) => useAvailableVehiclesMock(...args),
+  useVehicle: (...args: unknown[]) => useVehicleMock(...args),
 }));
+
+function createVehicle(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "vehicle-1",
+    plate: "07 ABC 001",
+    brand: "Nissan",
+    model: "Qashqai",
+    year: 2024,
+    color: "White",
+    groupId: "group-1",
+    groupName: "SUV",
+    groupNameEn: "SUV Elite",
+    officeId: "office-1",
+    status: "Available",
+    photoUrl: null,
+    dailyPrice: 2500,
+    depositAmount: 5000,
+    minAge: 24,
+    minLicenseYears: 2,
+    features: ["Bluetooth", "CarPlay"],
+    ...overrides,
+  };
+}
 
 describe("VehicleDetailPage", () => {
   beforeEach(() => {
@@ -35,19 +56,16 @@ describe("VehicleDetailPage", () => {
         returnTime: "09:00",
       }),
     );
-    useOfficesMock.mockReturnValue({
-      offices: [{ id: "office-1", name: "Alanya City Center" }],
-    });
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [],
+    useVehicleMock.mockReturnValue({
+      vehicle: null,
       isLoading: false,
       isError: false,
     });
   });
 
   it("shows a loading state while vehicle detail data is being fetched", () => {
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [],
+    useVehicleMock.mockReturnValue({
+      vehicle: null,
       isLoading: true,
       isError: false,
     });
@@ -58,26 +76,15 @@ describe("VehicleDetailPage", () => {
   });
 
   it("renders the matched vehicle details and booking call to action", () => {
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "SUV",
-          groupNameEn: "SUV Elite",
-          imageUrl: "",
-          dailyPrice: 2500,
-          features: ["Bluetooth", "CarPlay"],
-          availableCount: 2,
-          minAge: 24,
-        },
-      ],
+    useVehicleMock.mockReturnValue({
+      vehicle: createVehicle(),
       isLoading: false,
       isError: false,
     });
 
     render(<VehicleDetailPage />);
 
-    expect(screen.getByRole("heading", { name: "SUV Elite" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nissan Qashqai" })).toBeInTheDocument();
     expect(screen.getByText("Bluetooth")).toBeInTheDocument();
     expect(screen.getByText("CarPlay")).toBeInTheDocument();
     expect(screen.getByText("₺10000")).toBeInTheDocument();
@@ -88,8 +95,8 @@ describe("VehicleDetailPage", () => {
   });
 
   it("shows an error message when vehicle details fail to load", () => {
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [],
+    useVehicleMock.mockReturnValue({
+      vehicle: null,
       isLoading: false,
       isError: true,
     });
@@ -100,19 +107,8 @@ describe("VehicleDetailPage", () => {
   });
 
   it("cycles vehicle gallery indicators when navigation buttons are clicked", () => {
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "SUV",
-          groupNameEn: "SUV Elite",
-          imageUrl: "",
-          dailyPrice: 2500,
-          features: ["Bluetooth"],
-          availableCount: 2,
-          minAge: 24,
-        },
-      ],
+    useVehicleMock.mockReturnValue({
+      vehicle: createVehicle({ features: ["Bluetooth"] }),
       isLoading: false,
       isError: false,
     });

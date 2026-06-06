@@ -66,7 +66,7 @@ export default function MaintenancePage() {
                     <TableCell>{v.lastMaintenanceDate || "—"}</TableCell>
                     <TableCell>{v.nextMaintenanceDate}</TableCell>
                     <TableCell>
-                      {isOverdue(v.nextMaintenanceDate) ? (
+                      {isOverdue(v.nextMaintenanceDate ?? "") ? (
                         <Badge variant="destructive">Gecikmiş</Badge>
                       ) : (
                         <Badge variant="default">Planlandı</Badge>

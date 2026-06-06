@@ -99,7 +99,7 @@ async function forward(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = await req.text();
+    init.body = await req.arrayBuffer();
   }
 
   const upstream = await fetch(targetUrl, init);

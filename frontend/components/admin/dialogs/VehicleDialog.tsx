@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { UploadIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type {
   AdminVehicle,
@@ -36,16 +36,18 @@ import type {
   AdminOffice,
   CreateVehicleData,
 } from "@/lib/api/admin/types";
-import { createVehicle, updateVehicle } from "@/lib/api/admin/vehicles";
+import { createVehicle, updateVehicle, uploadVehiclePhoto } from "@/lib/api/admin/vehicles";
 
 const vehicleSchema = z.object({
   plate: z.string().min(1, "Plaka gereklidir"),
-  name: z.string().min(1, "Araç adı gereklidir"),
+  brand: z.string().min(1, "Marka gereklidir"),
+  model: z.string().min(1, "Model gereklidir"),
+  year: z.coerce.number().min(1990, "Yıl 1990 veya daha yeni olmalıdır"),
+  color: z.string().min(1, "Renk gereklidir"),
   groupId: z.string().min(1, "Araç grubu seçilmelidir"),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
-  status: z.enum(["Available", "Maintenance", "Retired"]),
-  mileage: z.coerce.number().min(0, "Kilometre 0 veya daha büyük olmalıdır"),
-  adminNotes: z.string().optional(),
+  status: z.enum(["Available", "Maintenance", "OutOfService"]),
+  photo: z.instanceof(File).optional(),
 });
 
 type VehicleFormInput = z.input<typeof vehicleSchema>;
@@ -69,17 +71,25 @@ export default function VehicleDialog({
   groups,
 }: VehicleDialogProps) {
   const isEditing = !!vehicle;
+  const normalizeStatus = (status: AdminVehicle["status"] | undefined): VehicleFormData["status"] => {
+    if (status === 0 || status === "Available") return "Available";
+    if (status === 3 || status === "Maintenance") return "Maintenance";
+    if (status === 4 || status === "OutOfService" || status === "Retired") return "OutOfService";
+    return "Available";
+  };
 
   const form = useForm<VehicleFormInput, unknown, VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       plate: "",
-      name: "",
+      brand: "",
+      model: "",
+      year: new Date().getFullYear(),
+      color: "",
       groupId: "",
       officeId: "",
       status: "Available",
-      mileage: 0,
-      adminNotes: "",
+      photo: undefined,
     },
   });
 
@@ -87,47 +97,59 @@ export default function VehicleDialog({
     if (vehicle) {
       form.reset({
         plate: vehicle.plate,
-        name: vehicle.name,
+        brand: vehicle.brand ?? "",
+        model: vehicle.model ?? "",
+        year: vehicle.year ?? new Date().getFullYear(),
+        color: vehicle.color ?? "",
         groupId: vehicle.groupId || "",
         officeId: vehicle.officeId || "",
-        status: vehicle.status,
-        mileage: vehicle.mileage || 0,
-        adminNotes: vehicle.adminNotes || "",
+        status: normalizeStatus(vehicle.status),
+        photo: undefined,
       });
     } else {
       form.reset({
         plate: "",
-        name: "",
+        brand: "",
+        model: "",
+        year: new Date().getFullYear(),
+        color: "",
         groupId: "",
         officeId: "",
         status: "Available",
-        mileage: 0,
-        adminNotes: "",
+        photo: undefined,
       });
     }
   }, [vehicle, form, open]);
 
   const buildVehiclePayload = (data: VehicleFormData): CreateVehicleData => ({
     plate: data.plate,
-    name: data.name,
+    brand: data.brand,
+    model: data.model,
+    year: data.year,
+    color: data.color,
     groupId: data.groupId,
     officeId: data.officeId,
     status: data.status,
-    mileage: data.mileage,
-    adminNotes: data.adminNotes?.trim() || undefined,
   });
 
   const onSubmit = async (data: VehicleFormData) => {
     try {
       const payload = buildVehiclePayload(data);
+      let savedVehicle: AdminVehicle;
 
       if (isEditing && vehicle) {
-        await updateVehicle(vehicle.id, payload);
+        savedVehicle = await updateVehicle(vehicle.id, payload);
         toast.success("Araç başarıyla güncellendi");
       } else {
-        await createVehicle(payload);
+        savedVehicle = await createVehicle(payload);
         toast.success("Araç başarıyla oluşturuldu");
       }
+
+      if (data.photo) {
+        await uploadVehiclePhoto(savedVehicle.id, data.photo);
+        toast.success("Araç görseli başarıyla yüklendi");
+      }
+
       onSuccess();
     } catch (error) {
       toast.error(isEditing ? "Araç güncellenemedi" : "Araç oluşturulamadı");
@@ -157,19 +179,72 @@ export default function VehicleDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Araç Adı</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Fiat Egea" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="brand"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marka</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Fiat" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Model</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Egea" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yıl</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        name={field.name}
+                        value={typeof field.value === "number" ? field.value : ""}
+                        onBlur={field.onBlur}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Renk</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Beyaz" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -187,7 +262,7 @@ export default function VehicleDialog({
                       <SelectContent>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
-                            {group.name}
+                            {group.nameTr ?? group.nameEn ?? group.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -239,7 +314,7 @@ export default function VehicleDialog({
                       <SelectContent>
                         <SelectItem value="Available">Müsait</SelectItem>
                         <SelectItem value="Maintenance">Bakımda</SelectItem>
-                        <SelectItem value="Retired">Emekli</SelectItem>
+                        <SelectItem value="OutOfService">Servis Dışı</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -247,41 +322,43 @@ export default function VehicleDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="mileage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kilometre</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        name={field.name}
-                        value={typeof field.value === "number" ? field.value : ""}
-                        onBlur={field.onBlur}
-                        onChange={(event) => field.onChange(event.target.value)}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField
               control={form.control}
-              name="adminNotes"
-              render={({ field }) => (
+              name="photo"
+              render={({ field: { value: _value, onChange, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Admin Notları</FormLabel>
+                  <FormLabel>Araç Görseli</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Araç hakkında notlar..."
-                      className="resize-none"
-                      {...field}
-                    />
+                    <div>
+                      <Input
+                        {...field}
+                        id="vehicle-photo"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(event) => onChange(event.target.files?.[0])}
+                      />
+                      <label
+                        htmlFor="vehicle-photo"
+                        className="border-input bg-background hover:bg-accent hover:text-accent-foreground flex h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-sm transition-colors"
+                      >
+                        <UploadIcon className="size-5 text-muted-foreground" aria-hidden="true" />
+                        <span className="font-medium">
+                          {_value instanceof File ? _value.name : "Dosya görseli seç"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          JPG, PNG veya WEBP
+                        </span>
+                      </label>
+                    </div>
                   </FormControl>
+                  {vehicle?.photoUrl && (
+                    <p className="text-xs text-muted-foreground">
+                      Mevcut görsel: {vehicle.photoUrl}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Eye, Pencil, Wrench, Plus } from "lucide-react";
+import { Search, Pencil, Plus } from "lucide-react";
 import { useAdminVehicles, useAdminOffices, useAdminVehicleGroups } from "@/hooks/admin";
 import type { AdminVehicle } from "@/lib/api/admin/types";
 import dynamic from "next/dynamic";
@@ -30,13 +30,22 @@ const VehicleDialog = dynamic(() => import("@/components/admin/dialogs/VehicleDi
   ssr: false,
 });
 
+const normalizeStatus = (status: AdminVehicle["status"]) => {
+  if (status === 0 || status === "Available") return "Available";
+  if (status === 1 || status === "Reserved") return "Reserved";
+  if (status === 2 || status === "Rented") return "Rented";
+  if (status === 3 || status === "Maintenance") return "Maintenance";
+  if (status === 4 || status === "OutOfService" || status === "Retired") return "OutOfService";
+  return String(status);
+};
+
 const statusBadgeVariant = (status: string) => {
   switch (status) {
     case "Available":
       return "default";
     case "Maintenance":
       return "secondary";
-    case "Retired":
+    case "OutOfService":
       return "outline";
     default:
       return "outline";
@@ -49,8 +58,12 @@ const statusLabel = (status: string) => {
       return "Müsait";
     case "Maintenance":
       return "Bakımda";
-    case "Retired":
-      return "Emekli";
+    case "Reserved":
+      return "Rezerve";
+    case "Rented":
+      return "Kirada";
+    case "OutOfService":
+      return "Servis Dışı";
     default:
       return status;
   }
@@ -85,11 +98,13 @@ export default function VehiclesPage() {
 
   const filtered = vehicles.filter((v) => {
     const q = search.toLowerCase();
+    const vehicleName = `${v.brand ?? ""} ${v.model ?? ""} ${v.name ?? ""}`.trim();
     const matchSearch =
       !q ||
       v.plate?.toLowerCase().includes(q) ||
-      v.name?.toLowerCase().includes(q);
-    const matchStatus = statusFilter === "ALL" || v.status === statusFilter;
+      vehicleName.toLowerCase().includes(q);
+    const normalizedStatus = normalizeStatus(v.status);
+    const matchStatus = statusFilter === "ALL" || normalizedStatus === statusFilter;
     const matchOffice = officeFilter === "ALL" || v.officeId === officeFilter;
     return matchSearch && matchStatus && matchOffice;
   });
@@ -121,7 +136,7 @@ export default function VehiclesPage() {
                 <SelectItem value="ALL">Tümü</SelectItem>
                 <SelectItem value="Available">Müsait</SelectItem>
                 <SelectItem value="Maintenance">Bakımda</SelectItem>
-                <SelectItem value="Retired">Emekli</SelectItem>
+                <SelectItem value="OutOfService">Servis Dışı</SelectItem>
               </SelectContent>
             </Select>
             <Select value={officeFilter} onValueChange={setOfficeFilter}>
@@ -158,25 +173,42 @@ export default function VehiclesPage() {
                   <TableHead>Grup</TableHead>
                   <TableHead>Ofis</TableHead>
                   <TableHead>Durum</TableHead>
-                  <TableHead className="text-right">Kilometre</TableHead>
+                  <TableHead className="text-right">Fotoğraf</TableHead>
                   <TableHead className="text-right">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((v) => (
+                {filtered.map((v) => {
+                  const group = groups.find((item) => item.id === v.groupId);
+                  const groupName =
+                    group?.nameTr ??
+                    group?.nameEn ??
+                    group?.name ??
+                    v.groupName ??
+                    v.group?.name ??
+                    "—";
+                  const officeName =
+                    offices.find((office) => office.id === v.officeId)?.name ??
+                    v.officeName ??
+                    v.office?.name ??
+                    "—";
+
+                  return (
                   <TableRow key={v.id}>
                     <TableCell className="font-medium">{v.plate}</TableCell>
-                    <TableCell>{v.name}</TableCell>
-                    <TableCell>{v.groupName || v.group?.name || "—"}</TableCell>
-                    <TableCell>{v.officeName || v.office?.name || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(v.status)}>
-                        {statusLabel(v.status)}
+                      {v.brand && v.model
+                        ? `${v.brand} ${v.model}${v.year ? ` (${v.year})` : ""}${v.color ? ` · ${v.color}` : ""}`
+                        : v.name ?? "—"}
+                    </TableCell>
+                    <TableCell>{groupName}</TableCell>
+                    <TableCell>{officeName}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusBadgeVariant(normalizeStatus(v.status))}>
+                        {statusLabel(normalizeStatus(v.status))}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      {v.mileage?.toLocaleString("tr-TR")} km
-                    </TableCell>
+                    <TableCell className="text-right">{v.photoUrl ? "Var" : "Yok"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => handleEdit(v)}>
@@ -185,7 +217,8 @@ export default function VehiclesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell

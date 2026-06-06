@@ -6,12 +6,9 @@ import Link from "next/link";
 import {
   Car,
   Users,
-  Briefcase,
   Fuel,
   Calendar,
-  MapPin,
   Gauge,
-  Snowflake,
   Shield,
   Check,
   ChevronLeft,
@@ -19,8 +16,9 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
-import type { AvailableVehicleGroup } from "@/lib/api/types";
+import { useVehicle } from "@/hooks/useVehicles";
+import { API_CONFIG } from "@/lib/api/config";
+import type { PublicVehicle } from "@/lib/api/types";
 
 interface VehicleDetail {
   id: string;
@@ -39,47 +37,39 @@ interface VehicleDetail {
   reviews: number;
 }
 
-function mapAvailableToDetail(group: AvailableVehicleGroup): VehicleDetail {
+function resolveMediaUrl(url: string | null): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  const apiOrigin = new URL(API_CONFIG.baseUrl).origin;
+  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
+function mapPublicToDetail(vehicle: PublicVehicle): VehicleDetail {
+  const name = `${vehicle.brand} ${vehicle.model}`;
+
   return {
-    id: group.groupId,
-    name: group.groupNameEn || group.groupName,
-    group: group.groupNameEn || group.groupName,
-    images: group.imageUrl ? [group.imageUrl] : [],
+    id: vehicle.id,
+    name,
+    group: vehicle.groupNameEn || vehicle.groupName,
+    images: vehicle.photoUrl ? [resolveMediaUrl(vehicle.photoUrl)] : [],
     passengers: 5,
     luggage: 2,
     transmission: "Automatic",
     fuelType: "Gasoline",
-    dailyRate: group.dailyPrice,
-    features: group.features,
+    dailyRate: vehicle.dailyPrice,
+    features: vehicle.features,
     specifications: {
-      engine: "2.0L",
-      power: "150 HP",
+      engine: vehicle.color,
+      power: vehicle.plate,
       doors: 4,
-      minAge: group.minAge,
+      minAge: vehicle.minAge,
       license: "B",
     },
-    description: `The ${group.groupNameEn || group.groupName} is a perfect choice for exploring Alanya and its surroundings.`,
+    description: `${vehicle.year} model ${name}, ${vehicle.groupName || vehicle.groupNameEn} grubunda kayıtlı fiziksel filo aracıdır.`,
     rating: 4.5,
     reviews: 0,
   };
 }
-
-const fallbackVehicle: VehicleDetail = {
-  id: "",
-  name: "Vehicle",
-  group: "",
-  images: [],
-  passengers: 5,
-  luggage: 2,
-  transmission: "Automatic",
-  fuelType: "Gasoline",
-  dailyRate: 0,
-  features: [],
-  specifications: { engine: "2.0L", power: "150 HP", doors: 4, minAge: 21, license: "B" },
-  description: "",
-  rating: 4.5,
-  reviews: 0,
-};
 
 const offices = [
   { id: "ala", name: "Alanya City Center" },
@@ -90,28 +80,6 @@ const offices = [
   { id: "konakli", name: "Konakli" },
   { id: "avsallar", name: "Avsallar" },
 ];
-
-const officeSlugPatterns: Record<string, string> = {
-  ala: "alanya",
-  gzp: "gazipasa",
-  ayt: "antalya",
-  mahmutlar: "mahmutlar",
-  kargicak: "kargicak",
-  konakli: "konakli",
-  avsallar: "avsallar",
-};
-
-function isGuid(value: string): boolean {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-}
-
-function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
-  if (isGuid(slugOrGuid)) return slugOrGuid;
-  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
-  if (!pattern) return slugOrGuid;
-  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
-  return matched?.id ?? slugOrGuid;
-}
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -126,31 +94,12 @@ export default function VehicleDetailPage() {
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
   const returnTime = searchParams.get("returnTime") || "09:00";
 
-  const { offices: apiOffices, isLoading: officesLoading } = useOffices();
-  const pickupOfficeGuid = resolveOfficeGuid(apiOffices, pickupOffice);
-  const canSearchVehicles =
-    pickupDate &&
-    pickupTime &&
-    returnDate &&
-    returnTime &&
-    pickupOfficeGuid &&
-    !officesLoading &&
-    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice);
-
-  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    canSearchVehicles
-      ? {
-          office_id: pickupOfficeGuid,
-          pickup_datetime: `${pickupDate}T${pickupTime}`,
-          return_datetime: `${returnDate}T${returnTime}`,
-        }
-      : null
-  );
-
-  const matchedGroup = availableGroups.find((g) => g.groupId === params.id);
-  const vehicle: VehicleDetail = matchedGroup
-    ? mapAvailableToDetail(matchedGroup)
-    : fallbackVehicle;
+  const {
+    vehicle: publicVehicle,
+    isLoading,
+    isError,
+  } = useVehicle(typeof params.id === "string" ? params.id : null);
+  const vehicle: VehicleDetail | null = publicVehicle ? mapPublicToDetail(publicVehicle) : null;
 
   const getDays = (start: string, end: string) => {
     const s = new Date(start);
@@ -160,7 +109,7 @@ export default function VehicleDetailPage() {
   };
 
   const days = getDays(pickupDate, returnDate);
-  const totalPrice = vehicle.dailyRate * days;
+  const totalPrice = (vehicle?.dailyRate ?? 0) * days;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -187,12 +136,41 @@ export default function VehicleDetailPage() {
           </div>
         )}
 
-        {!isLoading && !isError && (
+        {!isLoading && !isError && !vehicle && (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+            <Car className="h-12 w-12 text-slate-300 mx-auto" />
+            <h1
+              className="mt-4 text-2xl font-semibold text-slate-900"
+              style={{ fontFamily: "Lexend, sans-serif" }}
+            >
+              Vehicle not found
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Please return to the vehicle list and choose an available vehicle group.
+            </p>
+            <Link
+              href={`/${locale}/vehicles?pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+              className="mt-6 inline-flex items-center justify-center rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-800"
+            >
+              Back to vehicles
+            </Link>
+          </div>
+        )}
+
+        {!isLoading && !isError && vehicle && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className="relative bg-slate-100 h-80 lg:h-96 flex items-center justify-center">
-                <Car className="h-32 w-32 text-slate-300" />
+                {vehicle.images[0] ? (
+                  <img
+                    src={vehicle.images[0]}
+                    alt={vehicle.name}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <Car className="h-32 w-32 text-slate-300" />
+                )}
                 <button
                   type="button"
                   onClick={() => setCurrentImage((p) => (p > 0 ? p - 1 : 2))}
@@ -297,8 +275,12 @@ export default function VehicleDetailPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-24">
               <div className="text-center pb-6 border-b border-slate-200">
                 <p className="text-sm text-slate-500">Total for {days} days</p>
-                <p className="text-4xl font-bold text-sky-700">₺{totalPrice}</p>
-                <p className="text-sm text-slate-500">₺{vehicle.dailyRate} per day</p>
+                <p className="text-4xl font-bold text-sky-700">
+                  {vehicle.dailyRate > 0 ? `₺${totalPrice}` : "Fiyat al"}
+                </p>
+                {vehicle.dailyRate > 0 && (
+                  <p className="text-sm text-slate-500">₺{vehicle.dailyRate} per day</p>
+                )}
               </div>
 
               <div className="py-6 space-y-4">
@@ -319,7 +301,7 @@ export default function VehicleDetailPage() {
               </div>
 
               <Link
-                href={`/${locale}/booking/step2?vehicle=${vehicle.id}&pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+                href={`/${locale}/booking/step2?vehicle=${publicVehicle?.groupId ?? vehicle.id}&pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
                 className="block w-full py-4 bg-sky-700 text-white text-center font-semibold rounded-lg hover:bg-sky-800 transition-colors"
               >
                 Book Now

@@ -35,6 +35,26 @@ export interface VehicleGroup {
   };
 }
 
+export interface PublicVehicle {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
+  groupId: string;
+  groupName: string;
+  groupNameEn: string;
+  officeId: string;
+  status: 'Available' | 'Maintenance' | 'Retired' | 'OutOfService' | string;
+  photoUrl: string | null;
+  dailyPrice: number;
+  depositAmount: number;
+  minAge: number;
+  minLicenseYears: number;
+  features: string[];
+}
+
 export interface AvailableVehicleGroup {
   groupId: string;
   groupName: string;

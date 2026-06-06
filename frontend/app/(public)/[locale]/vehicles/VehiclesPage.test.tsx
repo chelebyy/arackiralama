@@ -5,7 +5,7 @@ import VehiclesPage from "./page";
 
 const useSearchParamsMock = vi.fn();
 const useOfficesMock = vi.fn();
-const useAvailableVehiclesMock = vi.fn();
+const usePublicVehiclesMock = vi.fn();
 const translationHasMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -26,8 +26,31 @@ vi.mock("@/i18n/routing", () => ({
 
 vi.mock("@/hooks/useVehicles", () => ({
   useOffices: () => useOfficesMock(),
-  useAvailableVehicles: (...args: unknown[]) => useAvailableVehiclesMock(...args),
+  usePublicVehicles: () => usePublicVehiclesMock(),
 }));
+
+function createVehicle(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "vehicle-1",
+    plate: "07 ABC 001",
+    brand: "Renault",
+    model: "Clio",
+    year: 2024,
+    color: "White",
+    groupId: "group-1",
+    groupName: "Ekonomi",
+    groupNameEn: "Economy",
+    officeId: "office-1",
+    status: "Available",
+    photoUrl: null,
+    dailyPrice: 1200,
+    depositAmount: 5000,
+    minAge: 21,
+    minLicenseYears: 2,
+    features: ["Bluetooth"],
+    ...overrides,
+  };
+}
 
 describe("VehiclesPage", () => {
   beforeEach(() => {
@@ -46,7 +69,7 @@ describe("VehiclesPage", () => {
       offices: [{ id: "office-1", name: "Alanya City Center" }],
       isLoading: false,
     });
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [],
       isLoading: false,
       isError: false,
@@ -54,7 +77,7 @@ describe("VehiclesPage", () => {
   });
 
   it("shows a loading state while available vehicles are being fetched", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [],
       isLoading: true,
       isError: false,
@@ -62,32 +85,14 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    expect(screen.getByText("Loading available vehicles...")).toBeInTheDocument();
+    expect(screen.getByText("Araçlar yükleniyor...")).toBeInTheDocument();
   });
 
   it("renders fetched vehicles, resolved office label, and unavailable state", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "SUV",
-          groupNameEn: "SUV Elite",
-          imageUrl: "",
-          dailyPrice: 2500,
-          features: ["Bluetooth"],
-          availableCount: 1,
-          minAge: 24,
-        },
-        {
-          groupId: "group-2",
-          groupName: "Economy",
-          groupNameEn: "Economy",
-          imageUrl: "",
-          dailyPrice: 1200,
-          features: ["Air Conditioning"],
-          availableCount: 0,
-          minAge: 21,
-        },
+        createVehicle({ id: "vehicle-1", brand: "Nissan", model: "Qashqai", groupNameEn: "SUV", dailyPrice: 2500 }),
+        createVehicle({ id: "vehicle-2", brand: "Fiat", model: "Egea", status: "Maintenance" }),
       ],
       isLoading: false,
       isError: false,
@@ -96,8 +101,8 @@ describe("VehiclesPage", () => {
     render(<VehiclesPage />);
 
     expect(screen.getByText("Alanya City Center")).toBeInTheDocument();
-    expect(screen.getByText("SUV Elite")).toBeInTheDocument();
-    expect(screen.getByText("Economy")).toBeInTheDocument();
+    expect(screen.getByText("Nissan Qashqai")).toBeInTheDocument();
+    expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "bookNow" })).toBeInTheDocument();
     expect(screen.getByText("unavailable")).toBeInTheDocument();
   });
@@ -111,7 +116,7 @@ describe("VehiclesPage", () => {
   });
 
   it("shows an error state when vehicle loading fails", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [],
       isLoading: false,
       isError: true,
@@ -119,33 +124,15 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    expect(screen.getByText("Failed to load vehicles. Please try again.")).toBeInTheDocument();
+    expect(screen.getByText("Araçlar yüklenemedi. Lütfen tekrar deneyin.")).toBeInTheDocument();
   });
 
   it("filters vehicles by selected group and uses translated category labels when available", () => {
     translationHasMock.mockImplementation((key: string) => key === "categories.suv");
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "SUV",
-          groupNameEn: "SUV",
-          imageUrl: "",
-          dailyPrice: 2500,
-          features: ["Bluetooth"],
-          availableCount: 1,
-          minAge: 24,
-        },
-        {
-          groupId: "group-2",
-          groupName: "Economy",
-          groupNameEn: "Economy",
-          imageUrl: "",
-          dailyPrice: 1200,
-          features: ["Air Conditioning"],
-          availableCount: 1,
-          minAge: 21,
-        },
+        createVehicle({ id: "vehicle-1", brand: "Nissan", model: "Qashqai", groupNameEn: "SUV" }),
+        createVehicle({ id: "vehicle-2", brand: "Fiat", model: "Egea", groupNameEn: "Economy" }),
       ],
       isLoading: false,
       isError: false,
@@ -153,23 +140,21 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "categories.suv" }));
+    fireEvent.click(screen.getByRole("button", { name: "SUV" }));
 
-    expect(screen.getByText("SUV")).toBeInTheDocument();
-    expect(screen.queryByText("Economy")).not.toBeInTheDocument();
+    expect(screen.getByText("Nissan Qashqai")).toBeInTheDocument();
+    expect(screen.queryByText("Fiat Egea")).not.toBeInTheDocument();
   });
 
   it("switches to list view and renders pagination controls for long result sets", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: Array.from({ length: 7 }, (_, index) => ({
-        groupId: `group-${index + 1}`,
-        groupName: "Economy",
-        groupNameEn: `Economy ${index + 1}`,
-        imageUrl: "",
-        dailyPrice: 1000 + index,
-        features: ["Air Conditioning"],
-        availableCount: 1,
-        minAge: 21,
+        ...createVehicle({
+          id: `vehicle-${index + 1}`,
+          plate: `07 ABC 00${index + 1}`,
+          model: `Clio ${index + 1}`,
+          dailyPrice: 1000 + index,
+        }),
       })),
       isLoading: false,
       isError: false,
@@ -190,11 +175,6 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    expect(useAvailableVehiclesMock).toHaveBeenCalledWith({
-      office_id: "office-1",
-      pickup_datetime: "2025-04-01T10:00",
-      return_datetime: "2025-04-08T09:00",
-    });
     expect(screen.getByText("Alanya City Center")).toBeInTheDocument();
   });
 
@@ -209,44 +189,26 @@ describe("VehiclesPage", () => {
         returnTime: "09:00",
       }),
     );
-    useAvailableVehiclesMock.mockReturnValue({
-      vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "Economy",
-          groupNameEn: "Economy",
-          imageUrl: "",
-          dailyPrice: 1200,
-          features: ["Air Conditioning"],
-          availableCount: 1,
-          minAge: 21,
-        },
-      ],
+    usePublicVehiclesMock.mockReturnValue({
+      vehicles: [createVehicle()],
       isLoading: false,
       isError: false,
     });
 
     render(<VehiclesPage />);
 
-    expect(useAvailableVehiclesMock).toHaveBeenCalledWith({
-      office_id: guid,
-      pickup_datetime: "2026-06-10T10:00",
-      return_datetime: "2026-06-14T09:00",
-    });
     expect(screen.getByText(guid)).toBeInTheDocument();
   });
 
   it("updates pagination controls as the active page changes", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: Array.from({ length: 7 }, (_, index) => ({
-        groupId: `group-${index + 1}`,
-        groupName: "Economy",
-        groupNameEn: `Economy ${index + 1}`,
-        imageUrl: "",
-        dailyPrice: 1000 + index,
-        features: ["Air Conditioning"],
-        availableCount: 1,
-        minAge: 21,
+        ...createVehicle({
+          id: `vehicle-${index + 1}`,
+          plate: `07 ABC 00${index + 1}`,
+          model: `Clio ${index + 1}`,
+          dailyPrice: 1000 + index,
+        }),
       })),
       isLoading: false,
       isError: false,
@@ -267,18 +229,9 @@ describe("VehiclesPage", () => {
   });
 
   it("hides a broken vehicle image and keeps the fallback visible", () => {
-    useAvailableVehiclesMock.mockReturnValue({
+    usePublicVehiclesMock.mockReturnValue({
       vehicles: [
-        {
-          groupId: "group-1",
-          groupName: "SUV",
-          groupNameEn: "SUV Elite",
-          imageUrl: "https://example.test/car.png",
-          dailyPrice: 2500,
-          features: ["Bluetooth"],
-          availableCount: 1,
-          minAge: 24,
-        },
+        createVehicle({ brand: "Nissan", model: "Qashqai", photoUrl: "https://example.test/car.png" }),
       ],
       isLoading: false,
       isError: false,
@@ -286,7 +239,7 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    const image = screen.getByRole("img", { name: "SUV Elite" });
+    const image = screen.getByRole("img", { name: "Nissan Qashqai" });
     fireEvent.error(image);
 
     expect(image).toHaveStyle({ display: "none" });

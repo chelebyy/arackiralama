@@ -1,8 +1,8 @@
 import useSWR from 'swr';
-import useSWRInfinite from 'swr/infinite';
 import {
   getAvailableVehicles,
   getOffices,
+  getPublicVehicles,
   getVehicleById,
   getVehicleGroups,
 } from '@/lib/api/vehicles';
@@ -10,8 +10,7 @@ import type {
   AvailableVehicleGroup,
   AvailableVehiclesParams,
   Office,
-  PaginatedResponse,
-  Vehicle,
+  PublicVehicle,
   VehicleGroup,
 } from '@/lib/api/types';
 
@@ -52,6 +51,24 @@ export function useAvailableVehicles(params: AvailableVehiclesParams | null) {
   };
 }
 
+export function usePublicVehicles() {
+  const { data, error, isLoading, mutate } = useSWR<PublicVehicle[], Error>(
+    VEHICLE_KEYS.lists(),
+    getPublicVehicles,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    }
+  );
+
+  return {
+    vehicles: data ?? [],
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+
 export function useVehicleGroups() {
   const { data, error, isLoading } = useSWR<VehicleGroup[], Error>(
     VEHICLE_KEYS.groups(),
@@ -70,7 +87,7 @@ export function useVehicleGroups() {
 }
 
 export function useVehicle(id: string | null) {
-  const { data, error, isLoading, mutate } = useSWR<Vehicle, Error>(
+  const { data, error, isLoading, mutate } = useSWR<PublicVehicle, Error>(
     id ? VEHICLE_KEYS.detail(id) : null,
     () => getVehicleById(id!),
     {
@@ -102,5 +119,3 @@ export function useOffices() {
     isError: error,
   };
 }
-
-

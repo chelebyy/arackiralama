@@ -4,6 +4,7 @@ import type {
   AvailableVehicleGroup,
   AvailableVehiclesParams,
   Office,
+  PublicVehicle,
   Vehicle,
   VehicleGroup,
 } from './types';
@@ -29,15 +30,19 @@ export async function getAvailableVehicles(
     vehicle_group_id: params.vehicle_group_id,
   });
 
-  return get<AvailableVehicleGroup[]>(`${API_ENDPOINTS.vehicles.list}${queryString}`);
+  return get<AvailableVehicleGroup[]>(`${API_ENDPOINTS.vehicles.available}${queryString}`);
+}
+
+export async function getPublicVehicles(): Promise<PublicVehicle[]> {
+  return get<PublicVehicle[]>(API_ENDPOINTS.vehicles.list);
 }
 
 export async function getVehicleGroups(): Promise<VehicleGroup[]> {
   return get<VehicleGroup[]>(API_ENDPOINTS.vehicles.groups);
 }
 
-export async function getVehicleById(id: string): Promise<Vehicle> {
-  return get<Vehicle>(API_ENDPOINTS.vehicles.detail(id));
+export async function getVehicleById(id: string): Promise<PublicVehicle> {
+  return get<PublicVehicle>(API_ENDPOINTS.vehicles.detail(id));
 }
 
 export async function getOffices(): Promise<Office[]> {
