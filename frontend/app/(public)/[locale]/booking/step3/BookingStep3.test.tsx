@@ -43,11 +43,11 @@ describe("BookingStep3Page", () => {
 
     await user.type(screen.getByLabelText("First Name"), "Jane");
     await user.type(screen.getByLabelText("Last Name"), "Doe");
-    await user.type(screen.getByLabelText("Email Address"), "jane@example.com");
-    await user.type(screen.getByLabelText("Phone Number"), "+905551234567");
+    await user.type(screen.getByLabelText("Email"), "jane@example.com");
+    await user.type(screen.getByLabelText("Phone"), "+905551234567");
     await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
-    await user.type(screen.getByLabelText("Driver License Number"), "TR-12345");
-    const childSeatOption = screen.getByRole("button", { name: /child safety seat/i });
+    await user.type(screen.getByLabelText("License Number"), "TR-12345");
+    const childSeatOption = screen.getByRole("button", { name: /child seat/i });
     const gpsOption = screen.getByRole("button", { name: /gps navigation/i });
 
     await user.click(childSeatOption);
