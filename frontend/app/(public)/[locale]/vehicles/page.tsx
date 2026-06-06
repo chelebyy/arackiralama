@@ -340,10 +340,10 @@ export default function VehiclesPage() {
                       </div>
                     </div>
 
-                    <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex items-center justify-between gap-[var(--space-fluid-xs)] overflow-hidden">
-                      <div className="space-y-0.5 whitespace-nowrap min-w-0">
-                        <div className="flex items-baseline gap-1 truncate">
-                          <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
+                    <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex flex-col gap-[var(--space-fluid-sm)] @md:flex-row @md:items-end @md:justify-between">
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                          <span className="break-words text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
                             {vehicle.dailyRate > 0 ? `₺ ${vehicle.dailyRate}` : "Fiyat al"}
                           </span>
                           {vehicle.dailyRate > 0 && (
@@ -358,7 +358,7 @@ export default function VehiclesPage() {
                         <Link
                           href={{ pathname: "/vehicles/[id]", params: { id: vehicle.id } }}
                           className={cn(
-                            "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
+                            "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
                             "transition-all duration-200",
                             "focus:outline-none focus:ring-2 focus:ring-offset-2",
                             "text-white bg-[#0369A1]",
@@ -372,7 +372,7 @@ export default function VehiclesPage() {
                       ) : (
                         <span
                           className={cn(
-                            "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap shrink-0",
+                            "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
                             "text-[#94A3B8] bg-[#F1F5F9]",
                             "cursor-not-allowed"
                           )}
