@@ -20,6 +20,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
 import { useBookingActions } from "@/hooks/useBooking";
 import { FuelType, TransmissionType, type AvailableVehicleGroup } from "@/lib/api/types";
+import { useTranslations } from "next-intl";
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
@@ -37,9 +38,15 @@ function isGuid(value: string): boolean {
 
 function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
   if (isGuid(slugOrGuid)) return slugOrGuid;
-  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
+
+  const inputLower = slugOrGuid.toLowerCase();
+  const directMatch = offices.find((office) => office.name.toLowerCase() === inputLower);
+  if (directMatch) return directMatch.id;
+
+  const pattern = officeSlugPatterns[inputLower] ?? Object.values(officeSlugPatterns).find((value) => inputLower.includes(value));
   if (!pattern) return slugOrGuid;
-  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
+
+  const matched = offices.find((office) => office.name.toLowerCase().includes(pattern));
   return matched?.id ?? slugOrGuid;
 }
 
@@ -58,30 +65,42 @@ interface VehicleGroup {
   reviews: number;
 }
 
-function mapAvailableGroup(group: AvailableVehicleGroup): VehicleGroup {
-  return {
-    id: group.groupId,
-    name: group.groupName,
-    category: group.groupName,
-    dailyRate: group.dailyPrice,
-    passengers: 5,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
-    features: group.features,
-    image: group.imageUrl ?? "",
-    rating: 4.5,
-    reviews: 0,
-  };
-}
-
 export default function BookingStep2Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
+  const t = useTranslations("booking");
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const { setDates, selectVehicle } = useBookingActions();
+
+  function translateVehicleFeature(feature: string): string {
+    switch (feature) {
+      case "AirConditioning":
+        return t("features.airConditioning");
+      case "AutomaticTransmission":
+        return t("features.automatic");
+      default:
+        return feature;
+    }
+  }
+
+  function mapAvailableGroup(group: AvailableVehicleGroup): VehicleGroup {
+    return {
+      id: group.groupId,
+      name: group.groupName,
+      category: group.groupName,
+      dailyRate: group.dailyPrice,
+      passengers: 5,
+      luggage: 2,
+      transmission: t("features.automatic"),
+      fuelType: t("features.gasoline"),
+      features: group.features.map(translateVehicleFeature),
+      image: group.imageUrl ?? "",
+      rating: 4.5,
+      reviews: 0,
+    };
+  }
 
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || "ala";
@@ -162,6 +181,10 @@ export default function BookingStep2Page() {
 
     const queryParams = new URLSearchParams(searchParams.toString());
     queryParams.set("vehicle", selectedVehicle);
+    if (selectedGroup) {
+      queryParams.set("dailyPrice", selectedGroup.dailyPrice.toString());
+      queryParams.set("vehicleName", selectedGroup.groupName);
+    }
     router.push(`/${locale}/booking/step3?${queryParams.toString()}`);
   };
 
@@ -179,24 +202,24 @@ export default function BookingStep2Page() {
           className="text-3xl font-bold text-slate-900 mb-2"
           style={{ fontFamily: "Lexend, sans-serif" }}
         >
-          Select Your Vehicle
+          {t("step2.title")}
         </h1>
-        <p className="text-slate-600">Choose the vehicle group that best fits your needs.</p>
+        <p className="text-slate-600">{t("step2.subtitle")}</p>
       </div>
 
-      {isLoading && (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading available vehicles...</p>
-        </div>
-      )}
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
+            <p className="mt-4 text-slate-600">{t("loadingVehicles")}</p>
+          </div>
+        )}
 
-      {isError && (
-        <div className="text-center py-12">
-          <Info className="h-12 w-12 text-red-400 mx-auto" />
-          <p className="mt-4 text-slate-600">Failed to load vehicles. Please try again.</p>
-        </div>
-      )}
+        {isError && (
+          <div className="text-center py-12">
+            <Info className="h-12 w-12 text-red-400 mx-auto" />
+            <p className="mt-4 text-slate-600">{t("failedToLoadVehicles")}</p>
+          </div>
+        )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {vehicleGroups.map((vehicle) => (
@@ -238,12 +261,12 @@ export default function BookingStep2Page() {
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                         <span className="text-sm font-medium text-slate-700">{vehicle.rating}</span>
-                        <span className="text-sm text-slate-400">({vehicle.reviews} reviews)</span>
+                        <span className="text-sm text-slate-400">({vehicle.reviews} {t("reviews")})</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-sky-700">₺{vehicle.dailyRate}</p>
-                      <p className="text-sm text-slate-500">per day</p>
+                      <p className="text-sm text-slate-500">{t("perDay")}</p>
                     </div>
                   </div>
 
@@ -275,7 +298,7 @@ export default function BookingStep2Page() {
 
                   <div className="mt-4 pt-4 border-t border-slate-100">
                     <p className="text-sm text-slate-600">
-                      Total for {days} days:{" "}
+                      {t("totalForDays", { days })}{" "}
                       <span className="font-semibold text-slate-900">
                         ₺{vehicle.dailyRate * days}
                       </span>
@@ -288,13 +311,13 @@ export default function BookingStep2Page() {
         ))}
       </div>
 
-      <div className="flex items-center justify-between mt-8">
+        <div className="flex items-center justify-between mt-8">
         <Link
           href={`/${locale}/booking/step1?${searchParams.toString()}`}
           className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
-          Back
+          {t("back")}
         </Link>
 
         <button
@@ -308,7 +331,7 @@ export default function BookingStep2Page() {
               : "bg-slate-200 text-slate-400 cursor-not-allowed"
           )}
         >
-          Continue
+          {t("continueToPayment")}
           <ArrowRight className="h-5 w-5" />
         </button>
       </div>
