@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -138,6 +139,98 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
     }
 
     [Fact]
+    public async Task Update_WithValidPayload_UpdatesProfileAndRevokesSessions()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var admin = CreateAdminUser("profile@test.com", role: AuthRoleNames.Admin);
+        dbContext.AdminUsers.Add(admin);
+        dbContext.AuthSessions.Add(CreateActiveAdminSession(admin.Id));
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        var result = await controller.Update(
+            admin.Id,
+            new AdminUserUpdateRequest(
+                Email: " Updated.Profile@Test.com ",
+                FullName: " Updated Profile ",
+                Role: AuthRoleNames.SuperAdmin),
+            CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse<AdminUserDto>>().Subject;
+        response.Success.Should().BeTrue();
+        response.Message.Should().Be("Yonetici kullanicisi guncellendi.");
+        response.Data.Should().NotBeNull();
+        response.Data!.Email.Should().Be("Updated.Profile@Test.com");
+        response.Data.FullName.Should().Be("Updated Profile");
+        response.Data.Role.Should().Be(AuthRoleNames.SuperAdmin);
+
+        var persistedAdmin = dbContext.AdminUsers.Should().ContainSingle().Subject;
+        persistedAdmin.NormalizedEmail.Should().Be("UPDATED.PROFILE@TEST.COM");
+        persistedAdmin.TokenVersion.Should().Be(1);
+
+        var persistedSession = dbContext.AuthSessions.Should().ContainSingle().Subject;
+        persistedSession.RevokedAtUtc.Should().NotBeNull();
+        persistedSession.LastSeenAtUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Update_WithDuplicateEmail_ReturnsBadRequestAndKeepsOriginalValues()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var admin = CreateAdminUser("profile@test.com", role: AuthRoleNames.Admin);
+        var otherAdmin = CreateAdminUser("taken@test.com", role: AuthRoleNames.Admin);
+        dbContext.AdminUsers.AddRange(admin, otherAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        var result = await controller.Update(
+            admin.Id,
+            new AdminUserUpdateRequest(
+                Email: "TAKEN@test.com",
+                FullName: "Updated Profile",
+                Role: AuthRoleNames.SuperAdmin),
+            CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Bu email ile kayitli bir yonetici zaten var.");
+
+        var persistedAdmin = dbContext.AdminUsers.Single(user => user.Id == admin.Id);
+        persistedAdmin.Email.Should().Be("profile@test.com");
+        persistedAdmin.FullName.Should().Be("Admin User");
+        persistedAdmin.Role.Should().Be(AuthRoleNames.Admin);
+    }
+
+    [Fact]
+    public async Task Update_WhenLastActiveSuperAdminWouldBeDemoted_ReturnsBadRequest()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var superAdmin = CreateAdminUser("last-super@test.com", role: AuthRoleNames.SuperAdmin);
+        dbContext.AdminUsers.Add(superAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        var result = await controller.Update(
+            superAdmin.Id,
+            new AdminUserUpdateRequest(
+                Email: superAdmin.Email,
+                FullName: superAdmin.FullName,
+                Role: AuthRoleNames.Admin),
+            CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Son aktif SuperAdmin kullanicisinin rolu dusurulemez.");
+        dbContext.AdminUsers.Should().ContainSingle().Which.Role.Should().Be(AuthRoleNames.SuperAdmin);
+    }
+
+    [Fact]
     public async Task UpdateRole_WithInvalidRole_ReturnsBadRequestAndKeepsRole()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -187,6 +280,45 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
     }
 
     [Fact]
+    public async Task Deactivate_WhenCurrentUser_ReturnsBadRequestAndKeepsActive()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var admin = CreateAdminUser("self-deactivate@test.com", role: AuthRoleNames.SuperAdmin, isActive: true);
+        dbContext.AdminUsers.Add(admin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        SetCurrentAdmin(controller, admin.Id);
+
+        var result = await controller.Deactivate(admin.Id, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Kendi yonetici hesabinizi pasife alamazsiniz.");
+        dbContext.AdminUsers.Should().ContainSingle().Which.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Deactivate_WhenLastActiveSuperAdmin_ReturnsBadRequestAndKeepsActive()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var superAdmin = CreateAdminUser("last-active-super@test.com", role: AuthRoleNames.SuperAdmin, isActive: true);
+        dbContext.AdminUsers.Add(superAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        var result = await controller.Deactivate(superAdmin.Id, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Son aktif SuperAdmin kullanicisi pasife alinamaz.");
+        dbContext.AdminUsers.Should().ContainSingle().Which.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Activate_WithExistingAdmin_SetsIsActiveTrue()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -203,6 +335,71 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
         response.Data.Should().NotBeNull();
         response.Data!.IsActive.Should().BeTrue();
         dbContext.AdminUsers.Should().ContainSingle().Which.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WithExistingAdmin_RemovesAdminAndRevokesSessions()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var superAdmin = CreateAdminUser("owner@test.com", role: AuthRoleNames.SuperAdmin);
+        var admin = CreateAdminUser("delete@test.com", role: AuthRoleNames.Admin);
+        dbContext.AdminUsers.AddRange(superAdmin, admin);
+        dbContext.AuthSessions.Add(CreateActiveAdminSession(admin.Id));
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        SetCurrentAdmin(controller, superAdmin.Id);
+
+        var result = await controller.Delete(admin.Id, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var payloadJson = JsonSerializer.Serialize(okResult.Value);
+        payloadJson.Should().Contain("\"Success\":true");
+        payloadJson.Should().Contain("\"Message\":\"Yonetici kullanicisi silindi.\"");
+
+        dbContext.AdminUsers.Should().ContainSingle().Which.Email.Should().Be("owner@test.com");
+        var persistedSession = dbContext.AuthSessions.Should().ContainSingle().Subject;
+        persistedSession.RevokedAtUtc.Should().NotBeNull();
+        persistedSession.LastSeenAtUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Delete_WhenCurrentUser_ReturnsBadRequestAndKeepsAdmin()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var admin = CreateAdminUser("self-delete@test.com", role: AuthRoleNames.SuperAdmin);
+        dbContext.AdminUsers.Add(admin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        SetCurrentAdmin(controller, admin.Id);
+
+        var result = await controller.Delete(admin.Id, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Kendi yonetici hesabinizi silemezsiniz.");
+        dbContext.AdminUsers.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Delete_WhenLastActiveSuperAdmin_ReturnsBadRequestAndKeepsAdmin()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var superAdmin = CreateAdminUser("last-delete-super@test.com", role: AuthRoleNames.SuperAdmin, isActive: true);
+        dbContext.AdminUsers.Add(superAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+
+        var result = await controller.Delete(superAdmin.Id, CancellationToken.None);
+
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequest.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Son aktif SuperAdmin kullanicisi silinemez.");
+        dbContext.AdminUsers.Should().ContainSingle();
     }
 
     [Fact]
@@ -343,5 +540,16 @@ public sealed class AdminUsersControllerTests : IClassFixture<TestDbContextFacto
             RefreshTokenHash = "session-hash",
             RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddHours(1)
         };
+    }
+
+    private static void SetCurrentAdmin(AdminUsersController controller, Guid adminId)
+    {
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
+                    new Claim(ClaimTypes.Role, AuthRoleNames.SuperAdmin)
+                ],
+                "TestAuth"));
     }
 }
