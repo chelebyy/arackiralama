@@ -29,74 +29,75 @@ import { createReservation } from "@/lib/api/reservations";
 import { createPaymentIntent } from "@/lib/api/payments";
 import type { PaymentIntentResponse } from "@/lib/api/payments";
 import type { CreateReservationData } from "@/lib/api/types";
-
-const extraOptions = [
-  { id: "child_seat", name: "Child Safety Seat", price: 10, priceType: "per_day" as const },
-  { id: "additional_driver", name: "Additional Driver", price: 15, priceType: "per_rental" as const },
-  { id: "gps", name: "GPS Navigation", price: 8, priceType: "per_day" as const },
-  { id: "wifi", name: "Mobile WiFi", price: 12, priceType: "per_day" as const },
-];
-
-const step4Schema = z.object({
-  paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]),
-  cardNumber: z.string().optional(),
-  cardHolder: z.string().optional(),
-  expiryDate: z.string().optional(),
-  cvv: z.string().optional(),
-  campaignCode: z.string().optional(),
-  termsAccepted: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions",
-  }),
-})
-  .refine((data) => {
-    if (data.paymentMethod === "paypal") return true;
-    if (!data.cardNumber) return false;
-    return /^[\d\s]{16,19}$/.test(data.cardNumber.replace(/\s/g, ""));
-  }, { message: "Card number is required and must be 16 digits", path: ["cardNumber"] })
-  .refine((data) => {
-    if (data.paymentMethod === "paypal") return true;
-    if (!data.expiryDate) return false;
-    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate);
-  }, { message: "Expiry date is required and must be MM/YY", path: ["expiryDate"] })
-  .refine((data) => {
-    if (data.paymentMethod === "paypal") return true;
-    if (!data.cvv) return false;
-    return /^\d{3,4}$/.test(data.cvv);
-  }, { message: "CVV is required and must be 3-4 digits", path: ["cvv"] });
-
-type Step4FormData = z.infer<typeof step4Schema>;
-
-const paymentMethods = [
-  {
-    id: "credit_card",
-    name: "Credit Card",
-    description: "Pay with Visa, Mastercard, or Amex",
-    icon: <CreditCard className="h-5 w-5" />,
-  },
-  {
-    id: "debit_card",
-    name: "Debit Card",
-    description: "Direct bank payment",
-    icon: <Banknote className="h-5 w-5" />,
-  },
-  {
-    id: "paypal",
-    name: "PayPal",
-    description: "Pay with your PayPal account",
-    icon: <Wallet className="h-5 w-5" />,
-  },
-];
+import { useTranslations } from "next-intl";
 
 export default function BookingStep4Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
+  const t = useTranslations("booking");
   const booking = useBookingState();
   const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
+
+  const extraOptions = [
+    { id: "child_seat", name: t("extras.childSeat"), price: 10, priceType: "per_day" as const },
+    { id: "additional_driver", name: t("extras.additionalDriver"), price: 15, priceType: "per_rental" as const },
+    { id: "gps", name: t("extras.gps"), price: 8, priceType: "per_day" as const },
+    { id: "wifi", name: t("extras.wifi"), price: 12, priceType: "per_day" as const },
+  ];
+
+  const step4Schema = z.object({
+    paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]),
+    cardNumber: z.string().optional(),
+    cardHolder: z.string().optional(),
+    expiryDate: z.string().optional(),
+    cvv: z.string().optional(),
+    campaignCode: z.string().optional(),
+    termsAccepted: z.boolean().refine((val) => val === true, {
+      message: t("validation.requiredTerms"),
+    }),
+  })
+    .refine((data) => {
+      if (data.paymentMethod === "paypal") return true;
+      if (!data.cardNumber) return false;
+      return /^[\d\s]{16,19}$/.test(data.cardNumber.replace(/\s/g, ""));
+    }, { message: t("validation.requiredCardNumber"), path: ["cardNumber"] })
+    .refine((data) => {
+      if (data.paymentMethod === "paypal") return true;
+      if (!data.expiryDate) return false;
+      return /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate);
+    }, { message: t("validation.requiredExpiryDate"), path: ["expiryDate"] })
+    .refine((data) => {
+      if (data.paymentMethod === "paypal") return true;
+      if (!data.cvv) return false;
+      return /^\d{3,4}$/.test(data.cvv);
+    }, { message: t("validation.requiredCvv"), path: ["cvv"] });
+  type Step4FormData = z.infer<typeof step4Schema>;
+
+  const paymentMethods = [
+    {
+      id: "credit_card",
+      name: t("payment.creditCard"),
+      description: t("payment.creditCardDesc"),
+      icon: <CreditCard className="h-5 w-5" />,
+    },
+    {
+      id: "debit_card",
+      name: t("payment.debitCard"),
+      description: t("payment.debitCardDesc"),
+      icon: <Banknote className="h-5 w-5" />,
+    },
+    {
+      id: "paypal",
+      name: t("payment.paypal"),
+      description: t("payment.paypalDesc"),
+      icon: <Wallet className="h-5 w-5" />,
+    },
+  ];
 
   const {
     register,
@@ -128,6 +129,9 @@ export default function BookingStep4Page() {
   const vehicleParam = searchParams.get("vehicleGroupId") || searchParams.get("vehicle") || "";
   const selectedVehicleGroupId = booking.vehicle?.vehicleGroupId ?? vehicleParam;
   const vehicle = booking.vehicle;
+  const dailyPriceParam = Number(searchParams.get("dailyPrice") ?? 0);
+  const dailyRate = vehicle?.dailyPrice ?? (Number.isFinite(dailyPriceParam) ? dailyPriceParam : 0);
+  const vehicleGroupName = vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : searchParams.get("vehicleName") ?? selectedVehicleGroupId;
 
   const applyCampaign = async () => {
     const normalizedCode = campaignInput.trim().toUpperCase();
@@ -137,7 +141,7 @@ export default function BookingStep4Page() {
     }
 
     if (!selectedVehicleGroupId || !pickupDate) {
-      toast.error("Missing booking details for campaign validation.");
+      toast.error(t("missingBookingDetails"));
       return;
     }
 
@@ -151,14 +155,14 @@ export default function BookingStep4Page() {
     if (!validation) {
       setAppliedCampaign(null);
       setValue("campaignCode", "");
-      toast.error("Failed to validate campaign code.");
+      toast.error(t("failedToValidateCampaign"));
       return;
     }
 
     if (!validation.valid) {
       setAppliedCampaign(null);
       setValue("campaignCode", "");
-      toast.error("Invalid campaign code.");
+      toast.error(t("invalidCampaign"));
       return;
     }
 
@@ -168,7 +172,7 @@ export default function BookingStep4Page() {
 
   const onSubmit = async (data: Step4FormData) => {
     if (!booking.customer || !booking.driver) {
-      toast.error("Booking details are missing. Please return to the previous step.");
+      toast.error(t("missingBookingDetailsStep"));
       return;
     }
 
@@ -191,7 +195,7 @@ export default function BookingStep4Page() {
       const holdResult = await placeHold(reservation.id, { durationMinutes: 15 });
 
       if (!holdResult) {
-        toast.error("Failed to hold reservation. Please try again.");
+        toast.error(t("failedToHoldReservation"));
         return;
       }
 
@@ -222,7 +226,7 @@ export default function BookingStep4Page() {
       queryParams.set("code", reservation.publicCode);
       router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to complete booking";
+      const message = error instanceof Error ? error.message : t("failedToProcessPayment");
       toast.error(message);
     }
   };
@@ -245,9 +249,9 @@ export default function BookingStep4Page() {
           className="text-3xl font-bold text-slate-900 mb-2"
           style={{ fontFamily: "Lexend, sans-serif" }}
         >
-          Payment
+          {t("step4.title")}
         </h1>
-        <p className="text-slate-600">Complete your booking by providing payment details.</p>
+        <p className="text-slate-600">{t("step4.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -259,7 +263,7 @@ export default function BookingStep4Page() {
                   <Tag className="h-5 w-5 text-sky-600" />
                 </div>
                 <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                  Campaign Code
+                  {t("campaignCode")}
                 </h2>
               </div>
 
@@ -268,7 +272,7 @@ export default function BookingStep4Page() {
                   type="text"
                   value={campaignInput}
                   onChange={(e) => setCampaignInput(e.target.value)}
-                  placeholder="Enter code"
+                  placeholder={t("enterCode")}
                   className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 uppercase"
                 />
                 <button
@@ -282,7 +286,7 @@ export default function BookingStep4Page() {
                       : "bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-50"
                   )}
                 >
-                  {appliedCampaign ? "Applied" : isValidating ? "Validating..." : "Apply"}
+                  {appliedCampaign ? t("applied") : isValidating ? t("validating") : t("apply")}
                 </button>
               </div>
 
@@ -290,8 +294,8 @@ export default function BookingStep4Page() {
                 <div className="mt-4 p-4 bg-green-50 rounded-lg flex items-center gap-3">
                   <Check className="h-5 w-5 text-green-600" />
                   <div>
-                    <p className="font-medium text-green-900">Code {appliedCampaign.code} applied!</p>
-                    <p className="text-sm text-green-700">Campaign code validated and ready for your reservation.</p>
+                    <p className="font-medium text-green-900">{t("applied")}</p>
+                    <p className="text-sm text-green-700">{t("campaignCode")} {appliedCampaign.code}</p>
                   </div>
                 </div>
               )}
@@ -303,7 +307,7 @@ export default function BookingStep4Page() {
                   <CreditCard className="h-5 w-5 text-sky-600" />
                 </div>
                 <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                  Payment Method
+                  {t("payment.title")}
                 </h2>
               </div>
 
@@ -344,7 +348,7 @@ export default function BookingStep4Page() {
                 <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
                   <div>
                     <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700 mb-2">
-                      Card Number
+                      {t("payment.cardNumber")}
                     </label>
                     <div className="relative">
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -360,7 +364,7 @@ export default function BookingStep4Page() {
 
                   <div>
                     <label htmlFor="cardHolder" className="block text-sm font-medium text-slate-700 mb-2">
-                      Card Holder Name
+                      {t("payment.cardHolder")}
                     </label>
                     <input
                       type="text"
@@ -374,7 +378,7 @@ export default function BookingStep4Page() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="expiryDate" className="block text-sm font-medium text-slate-700 mb-2">
-                        Expiry Date
+                        {t("payment.expiryDate")}
                       </label>
                       <input
                         type="text"
@@ -387,7 +391,7 @@ export default function BookingStep4Page() {
 
                     <div>
                       <label htmlFor="cvv" className="block text-sm font-medium text-slate-700 mb-2">
-                        CVV
+                        {t("payment.cvv")}
                       </label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -405,9 +409,9 @@ export default function BookingStep4Page() {
                   <div className="p-4 bg-sky-50 rounded-lg flex items-start gap-3">
                     <Shield className="h-5 w-5 text-sky-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-sky-900">3D Secure Payment</p>
+                      <p className="text-sm font-medium text-sky-900">{t("payment.3dSecure")}</p>
                       <p className="text-xs text-sky-700 mt-1">
-                        Your payment is secured with 3D Secure authentication. You may be redirected to your bank&apos;s verification page.
+                        {t("payment.3dSecureDesc")}
                       </p>
                     </div>
                   </div>
@@ -424,15 +428,15 @@ export default function BookingStep4Page() {
                 />
                 <div>
                   <p className="text-sm text-slate-700">
-                    I agree to the{" "}
+                    {t("termsAgreement")}{" "}
                     <Link href={`/${locale}/terms`} className="text-sky-700 hover:underline">
-                      Terms and Conditions
-                    </Link>{" "}
-                    and{" "}
-                    <Link href={`/${locale}/privacy`} className="text-sky-700 hover:underline">
-                      Privacy Policy
+                      {t("terms")}
                     </Link>
-                    . I confirm that I have a valid driver&apos;s license and meet the minimum age requirements.
+                    {" "}{t("and")}{" "}
+                    <Link href={`/${locale}/privacy`} className="text-sky-700 hover:underline">
+                      {t("privacy")}
+                    </Link>
+                    {t("termsAgreementEnd")}
                   </p>
                   {errors.termsAccepted && (
                     <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
@@ -445,22 +449,22 @@ export default function BookingStep4Page() {
             </div>
 
             <div className="flex items-center justify-between">
-              <Link
-                href={`/${locale}/booking/step3?${searchParams.toString()}`}
-                className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                Back
-              </Link>
+          <Link
+            href={`/${locale}/booking/step3?${searchParams.toString()}`}
+            className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            {t("back")}
+          </Link>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
-              >
-                {isSubmitting ? "Completing..." : "Complete Booking"}
-                <ArrowRight className="h-5 w-5" />
-              </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
+          >
+            {isSubmitting ? t("completing") : t("completeBooking")}
+            <ArrowRight className="h-5 w-5" />
+          </button>
             </div>
           </form>
         </div>
@@ -468,9 +472,9 @@ export default function BookingStep4Page() {
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <PriceBreakdown
-              dailyRate={vehicle?.dailyPrice ?? 0}
+              dailyRate={dailyRate}
               days={rentalDays}
-              vehicleGroup={vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : "Unknown Vehicle"}
+              vehicleGroup={vehicleGroupName}
               extras={selectedExtras}
               campaignDiscount={booking.campaignDiscount ?? 0}
               currency="TRY"
