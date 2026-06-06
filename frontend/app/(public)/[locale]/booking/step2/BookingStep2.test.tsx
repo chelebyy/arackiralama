@@ -70,7 +70,7 @@ describe("BookingStep2Page", () => {
   it("displays rental duration pricing for each vehicle group", () => {
     render(<BookingStep2Page />);
 
-    expect(screen.getAllByText("Total for 3 days:")).toHaveLength(6);
+    expect(screen.getAllByText("Total for {days} days:")).toHaveLength(6);
     expect(screen.getByText("₺135")).toBeInTheDocument();
     expect(screen.getByText("₺165")).toBeInTheDocument();
   });
@@ -80,7 +80,7 @@ describe("BookingStep2Page", () => {
 
     render(<BookingStep2Page />);
 
-    const continueButton = screen.getByRole("button", { name: /^continue$/i });
+    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
     expect(continueButton).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: /fiat egea or similar/i }));
@@ -94,10 +94,10 @@ describe("BookingStep2Page", () => {
     render(<BookingStep2Page />);
 
     await user.click(screen.getByRole("button", { name: /renault megane or similar/i }));
-    await user.click(screen.getByRole("button", { name: /^continue$/i }));
+    await user.click(screen.getByRole("button", { name: /continue to payment/i }));
 
     expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact"
+      "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
     );
   });
 
@@ -132,10 +132,10 @@ describe("BookingStep2Page", () => {
     render(<BookingStep2Page />);
 
     await user.click(screen.getByRole("button", { name: /fiat egea or similar/i }));
-    await user.click(screen.getByRole("button", { name: /^continue$/i }));
+    await user.click(screen.getByRole("button", { name: /continue to payment/i }));
 
     expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/step3?pickup=gzp&return=ala&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=economy"
+      "/en/booking/step3?pickup=gzp&return=ala&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=economy&dailyPrice=45&vehicleName=Fiat+Egea+Or+Similar"
     );
   });
 });
