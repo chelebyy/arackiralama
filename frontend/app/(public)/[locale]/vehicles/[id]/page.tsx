@@ -6,12 +6,9 @@ import Link from "next/link";
 import {
   Car,
   Users,
-  Briefcase,
   Fuel,
   Calendar,
-  MapPin,
   Gauge,
-  Snowflake,
   Shield,
   Check,
   ChevronLeft,

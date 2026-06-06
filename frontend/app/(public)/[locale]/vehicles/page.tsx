@@ -99,9 +99,7 @@ export default function VehiclesPage() {
 
   const pickupOffice = searchParams.get("pickup") || "ala";
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
-  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
-  const returnTime = searchParams.get("returnTime") || "09:00";
 
   const { offices } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
