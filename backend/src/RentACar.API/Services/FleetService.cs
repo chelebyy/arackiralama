@@ -159,17 +159,40 @@ public sealed class FleetService(
                 select new { Vehicle = vehicle, VehicleGroup = vehicleGroup })
             .ToListAsync(cancellationToken);
 
+        var vehicleGroupIds = availableVehicles
+            .Select(item => item.VehicleGroup.Id)
+            .Distinct()
+            .ToList();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var candidateRules = await dbContext.PricingRules
+            .AsNoTracking()
+            .Where(rule =>
+                vehicleGroupIds.Contains(rule.VehicleGroupId) &&
+                rule.StartDate <= today &&
+                rule.EndDate >= today)
+            .OrderByDescending(rule => rule.Priority)
+            .ThenByDescending(rule => rule.StartDate)
+            .ThenByDescending(rule => rule.EndDate)
+            .ThenByDescending(rule => rule.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var dailyPrices = candidateRules
+            .GroupBy(rule => rule.VehicleGroupId)
+            .ToDictionary(grouping => grouping.Key, grouping => CalculateDailyRate(grouping.First(), today));
+
         return availableVehicles
             .GroupBy(item => item.VehicleGroup.Id)
             .Select(grouping =>
             {
                 var group = grouping.First().VehicleGroup;
+                var dailyPrice = dailyPrices.GetValueOrDefault(group.Id);
                 return new AvailableVehicleGroupDto(
                     GroupId: group.Id,
                     GroupName: group.NameTr,
                     GroupNameEn: group.NameEn,
                     AvailableCount: grouping.Count(),
-                    DailyPrice: 0m,
+                    DailyPrice: dailyPrice,
                     Currency: "TRY",
                     DepositAmount: group.DepositAmount,
                     MinAge: group.MinAge,
@@ -592,5 +615,23 @@ public sealed class FleetService(
             .Select(feature => feature.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static decimal CalculateDailyRate(PricingRule pricingRule, DateOnly date)
+    {
+        var calculationType = pricingRule.CalculationType.Trim().ToLowerInvariant();
+        var baseRate = calculationType == "fixed"
+            ? pricingRule.DailyPrice
+            : pricingRule.DailyPrice * ResolveMultiplier(pricingRule.Multiplier);
+        var dayMultiplier = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+            ? ResolveMultiplier(pricingRule.WeekendMultiplier)
+            : ResolveMultiplier(pricingRule.WeekdayMultiplier);
+
+        return decimal.Round(baseRate * dayMultiplier, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static decimal ResolveMultiplier(decimal multiplier)
+    {
+        return multiplier <= 0m ? 1m : multiplier;
     }
 }
