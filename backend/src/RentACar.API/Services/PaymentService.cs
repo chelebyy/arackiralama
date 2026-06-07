@@ -696,7 +696,7 @@ public sealed class PaymentService(
             .AsNoTracking()
             .FirstOrDefault(x => x.Name == "EnableOnlinePayment");
 
-        if (paymentFeatureFlag is { Enabled: false })
+        if (paymentFeatureFlag is not { Enabled: true })
         {
             throw new InvalidOperationException("Online ödeme şu anda aktif değil.");
         }

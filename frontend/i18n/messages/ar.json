@@ -176,6 +176,8 @@
     "confirmation": {
       "title": "تم تأكيد الحجز!",
       "message": "تم إنشاء حجزك بنجاح. تم إرسال التفاصيل إلى عنوان بريدك الإلكتروني.",
+      "unpaidRequestTitle": "تم استلام الطلب!",
+      "unpaidRequestMessage": "تم استلام طلب الحجز بنجاح. سيتم حجز السيارة لك لمدة 24 ساعة، وسيتواصل فريقنا معك للتأكيد.",
       "reservationNumber": "رقم الحجز",
       "downloadVoucher": "تحميل القسيمة",
       "whatNext": "ما الخطوة التالية؟",
@@ -214,6 +216,8 @@
     "continueToVehicle": "متابعة إلى اختيار المركبة",
     "continueToPayment": "متابعة إلى الدفع",
     "completeBooking": "إكمال الحجز",
+    "completeRequest": "إرسال الطلب",
+    "sendUnpaidRequest": "إرسال الطلب بدون دفع",
     "back": "رجوع",
     "loadingVehicles": "جارٍ تحميل المركبات المتاحة...",
     "failedToLoadVehicles": "فشل تحميل المركبات. يرجى المحاولة مرة أخرى.",
@@ -233,6 +237,10 @@
     "termsAgreementEnd": ". أؤكد أن لدي رخصة قيادة سارية وأنني أستوفي متطلبات الحد الأدنى للعمر.",
     "processingPayment": "جارٍ معالجة الدفع...",
     "failedToProcessPayment": "فشل معالجة الدفع. يرجى المحاولة مرة أخرى.",
+    "unpaidRequest": {
+      "title": "طلب بدون دفع إلكتروني",
+      "description": "سيتم إرسال طلبك إلى فريقنا وسيتم حجز السيارة المختارة لمدة 24 ساعة."
+    },
     "returnToPayment": "العودة إلى الدفع",
     "priceBreakdown": "تفاصيل السعر",
     "rentalPeriod": "فترة التأجير",

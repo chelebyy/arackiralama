@@ -50,6 +50,44 @@ public sealed class ReservationsController(IReservationService reservationServic
         }
     }
 
+    [HttpPost("unpaid-requests")]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
+    [Idempotent(ExpirationHours = 24)]
+    public async Task<IActionResult> CreateUnpaidRequest(
+        [FromBody] CreateReservationRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (vehicleGroupOrOfficeInvalid(request))
+        {
+            return BadRequestResponse("Geçerli bir araç grubu ve alış ofisi seçilmelidir.");
+        }
+
+        if (request.PickupDateTimeUtc >= request.ReturnDateTimeUtc)
+        {
+            return BadRequestResponse("Alış tarihi dönüş tarihinden önce olmalıdır.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Customer.Email))
+        {
+            return BadRequestResponse("Müşteri e-posta adresi gereklidir.");
+        }
+
+        try
+        {
+            var reservation = await reservationService.CreateUnpaidRequestAsync(request, cancellationToken);
+            return OkResponse(reservation, "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+
+        static bool vehicleGroupOrOfficeInvalid(CreateReservationRequest request)
+        {
+            return request.VehicleGroupId == Guid.Empty || request.PickupOfficeId == Guid.Empty;
+        }
+    }
+
     [HttpGet("{publicCode}")]
     public async Task<IActionResult> GetByPublicCode(
         string publicCode,

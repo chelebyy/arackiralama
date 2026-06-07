@@ -104,6 +104,7 @@ public sealed class AdminPublicSiteSettingsControllerTests
         "https://www.google.com/maps/embed?pb=managed",
         true,
         [CreateManagedPage()],
+        false,
         DateTime.UtcNow);
 
     private static PublicManagedPageDto CreateManagedPage() => new(

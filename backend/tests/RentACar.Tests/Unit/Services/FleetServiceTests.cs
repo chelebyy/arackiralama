@@ -83,6 +83,19 @@ public sealed class FleetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SearchAvailableVehicleGroupsAsync_WhenBlockedByUnpaidRequest_ExcludesVehicle()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34UNP123", group.Id, office.Id);
+        await SeedReservationAsync(vehicle.Id, new DateTime(2030, 6, 9, 10, 0, 0, DateTimeKind.Utc), new DateTime(2030, 6, 11, 10, 0, 0, DateTimeKind.Utc), ReservationStatus.UnpaidRequest);
+
+        var result = await _sut.SearchAvailableVehicleGroupsAsync(
+            office.Id, new DateTime(2030, 6, 10, 10, 0, 0, DateTimeKind.Utc), new DateTime(2030, 6, 12, 10, 0, 0, DateTimeKind.Utc));
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SearchAvailableVehicleGroupsAsync_WhenDatesInvalid_ThrowsArgumentException()
     {
         var (office, _) = await SeedOfficeAndGroupAsync();

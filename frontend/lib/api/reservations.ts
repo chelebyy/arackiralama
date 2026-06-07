@@ -11,6 +11,10 @@ export async function createReservation(data: CreateReservationData): Promise<Re
   return post<Reservation>(API_ENDPOINTS.reservations.create, data);
 }
 
+export async function createUnpaidReservationRequest(data: CreateReservationData): Promise<Reservation> {
+  return post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
+}
+
 export async function getReservationByPublicCode(code: string): Promise<Reservation> {
   return get<Reservation>(API_ENDPOINTS.reservations.detail(code));
 }

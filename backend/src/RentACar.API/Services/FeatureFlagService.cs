@@ -6,9 +6,12 @@ namespace RentACar.API.Services;
 
 public sealed class FeatureFlagService(IApplicationDbContext dbContext) : IFeatureFlagService
 {
+    private const string OnlinePaymentDescription =
+        "Online ödeme seçeneklerini public rezervasyon akışında gösterir. Kapalıyken müşteriler ödeme yapmadan 24 saat stok bloklu talep oluşturur.";
+
     private static readonly (string Name, bool Enabled, string Description)[] RequiredFlags =
     [
-        ("EnableOnlinePayment", false, "Online payment provider integration toggle"),
+        ("EnableOnlinePayment", false, OnlinePaymentDescription),
         ("EnableSmsNotifications", true, "SMS bildirimlerinin gönderimini etkinleştirir"),
         ("EnableCampaigns", true, "Campaign and discount rules toggle"),
         ("EnableArabicLanguage", true, "Arabic (RTL) dil desteğini etkinleştirir"),
@@ -84,13 +87,13 @@ public sealed class FeatureFlagService(IApplicationDbContext dbContext) : IFeatu
     private async Task EnsureRequiredFlagsAsync(CancellationToken cancellationToken)
     {
         var existing = await dbContext.FeatureFlags
-            .AsNoTracking()
-            .Select(x => x.Name)
+            .Where(x => RequiredFlags.Select(flag => flag.Name).Contains(x.Name))
             .ToListAsync(cancellationToken);
+        var existingNames = existing.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
 
         var now = DateTime.UtcNow;
         var missing = RequiredFlags
-            .Where(x => !existing.Contains(x.Name, StringComparer.Ordinal))
+            .Where(x => !existingNames.Contains(x.Name))
             .Select(x => new Core.Entities.FeatureFlag
             {
                 Name = x.Name,
@@ -101,7 +104,19 @@ public sealed class FeatureFlagService(IApplicationDbContext dbContext) : IFeatu
             })
             .ToList();
 
-        if (missing.Count == 0)
+        var descriptionsUpdated = false;
+        foreach (var flag in existing)
+        {
+            var template = RequiredFlags.First(x => x.Name == flag.Name);
+            if (!string.Equals(flag.Description, template.Description, StringComparison.Ordinal))
+            {
+                flag.Description = template.Description;
+                flag.UpdatedAt = now;
+                descriptionsUpdated = true;
+            }
+        }
+
+        if (missing.Count == 0 && !descriptionsUpdated)
         {
             return;
         }

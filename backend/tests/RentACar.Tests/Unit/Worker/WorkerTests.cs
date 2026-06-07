@@ -289,6 +289,50 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task ProcessExpiredUnpaidRequestsAsync_WhenRequestsExpired_MarksOnlyExpiredRequestsAsExpired()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var now = DateTime.UtcNow;
+        var expiredRequest = new Reservation
+        {
+            Status = ReservationStatus.UnpaidRequest,
+            UnpaidRequestExpiresAtUtc = now.AddMinutes(-1),
+            PickupDateTime = now.AddDays(1),
+            ReturnDateTime = now.AddDays(3),
+            TotalAmount = 1000m
+        };
+        var freshRequest = new Reservation
+        {
+            Status = ReservationStatus.UnpaidRequest,
+            UnpaidRequestExpiresAtUtc = now.AddHours(1),
+            PickupDateTime = now.AddDays(4),
+            ReturnDateTime = now.AddDays(6),
+            TotalAmount = 1000m
+        };
+        var confirmedReservation = new Reservation
+        {
+            Status = ReservationStatus.Confirmed,
+            PickupDateTime = now.AddDays(7),
+            ReturnDateTime = now.AddDays(9),
+            TotalAmount = 1000m
+        };
+        dbContext.Reservations.AddRange(expiredRequest, freshRequest, confirmedReservation);
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<RentACar.Worker.Worker>>();
+        var serviceProvider = CreateServiceProvider(dbContext, logger: loggerMock.Object);
+        var worker = new RentACar.Worker.Worker(serviceProvider, Options.Create(new DailyBackupOptions { Enabled = false }), loggerMock.Object);
+
+        await InvokePrivateAsync(worker, "ProcessExpiredUnpaidRequestsAsync", CancellationToken.None);
+
+        expiredRequest.Status.Should().Be(ReservationStatus.Expired);
+        expiredRequest.UnpaidRequestExpiresAtUtc.Should().BeNull();
+        freshRequest.Status.Should().Be(ReservationStatus.UnpaidRequest);
+        freshRequest.UnpaidRequestExpiresAtUtc.Should().NotBeNull();
+        confirmedReservation.Status.Should().Be(ReservationStatus.Confirmed);
+    }
+
+    [Fact]
     public void BackgroundJobConfiguration_ConfiguresUniqueFilteredIndexForRunnableDuplicatePayloads()
     {
         using var dbContext = _dbContextFactory.CreateContext();

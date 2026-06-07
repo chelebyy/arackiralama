@@ -37,6 +37,7 @@ public sealed class Worker(
                 await ProcessNotificationJobsAsync(stoppingToken);
                 await EnqueueExpiredHoldJobsAsync(stoppingToken);
                 await ProcessExpiredHoldJobsAsync(stoppingToken);
+                await ProcessExpiredUnpaidRequestsAsync(stoppingToken);
                 await EnsureDailyBackupJobScheduledAsync(stoppingToken);
                 await ProcessDailyBackupJobsAsync(stoppingToken);
             }
@@ -242,6 +243,40 @@ public sealed class Worker(
         {
             logger.LogInformation("Processed {ProcessedCount} expired hold release jobs", processedCount);
         }
+    }
+
+    private async Task ProcessExpiredUnpaidRequestsAsync(CancellationToken cancellationToken)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var now = DateTime.UtcNow;
+
+        var expiredRequests = await dbContext.Reservations
+            .Where(x =>
+                x.Status == ReservationStatus.UnpaidRequest
+                && x.UnpaidRequestExpiresAtUtc != null
+                && x.UnpaidRequestExpiresAtUtc <= now)
+            .OrderBy(x => x.UnpaidRequestExpiresAtUtc)
+            .Take(Math.Max(_backgroundJobProcessorOptions.BatchSize, 1))
+            .ToListAsync(cancellationToken);
+
+        if (expiredRequests.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var reservation in expiredRequests)
+        {
+            reservation.Status = ReservationStatus.Expired;
+            reservation.UnpaidRequestExpiresAtUtc = null;
+            reservation.UpdatedAt = now;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Expired {ExpiredCount} unpaid reservation requests",
+            expiredRequests.Count);
     }
 
     private async Task EnsureDailyBackupJobScheduledAsync(CancellationToken cancellationToken)

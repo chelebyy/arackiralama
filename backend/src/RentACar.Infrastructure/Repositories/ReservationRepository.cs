@@ -15,7 +15,9 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
             .Include(r => r.Vehicle)
                 .ThenInclude(v => v!.Group)
             .Include(r => r.Vehicle)
-                .ThenInclude(v => v!.Office);
+                .ThenInclude(v => v!.Office)
+            .Include(r => r.PickupOffice)
+            .Include(r => r.ReturnOffice);
     }
 
     protected override IQueryable<Reservation> BuildListQuery()
@@ -58,18 +60,10 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
 
     public async Task<IReadOnlyList<Reservation>> GetActiveReservationsForVehicleAsync(Guid vehicleId, CancellationToken cancellationToken = default)
     {
-        var activeStatuses = new[]
-        {
-            ReservationStatus.Hold,
-            ReservationStatus.PendingPayment,
-            ReservationStatus.Paid,
-            ReservationStatus.Active
-        };
-
         var results = await Entities
             .AsNoTracking()
             .Include(r => r.Customer)
-            .Where(r => r.VehicleId == vehicleId && activeStatuses.Contains(r.Status))
+            .Where(r => r.VehicleId == vehicleId && ReservationStatusGroups.StockBlocking.Contains(r.Status))
             .OrderBy(r => r.PickupDateTime)
             .ToListAsync(cancellationToken);
 
@@ -83,18 +77,10 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
         Guid? excludeReservationId = null,
         CancellationToken cancellationToken = default)
     {
-        var activeStatuses = new[]
-        {
-            ReservationStatus.Hold,
-            ReservationStatus.PendingPayment,
-            ReservationStatus.Paid,
-            ReservationStatus.Active
-        };
-
         var query = Entities
             .AsNoTracking()
             .Where(r => r.VehicleId == vehicleId)
-            .Where(r => activeStatuses.Contains(r.Status))
+            .Where(r => ReservationStatusGroups.StockBlocking.Contains(r.Status))
             .Where(r => r.PickupDateTime < returnDateTime && r.ReturnDateTime > pickupDateTime);
 
         if (excludeReservationId.HasValue)

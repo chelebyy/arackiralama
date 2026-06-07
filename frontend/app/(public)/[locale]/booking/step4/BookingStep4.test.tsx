@@ -5,7 +5,9 @@ import userEvent from "@testing-library/user-event";
 import BookingStep4Page from "./page";
 
 const createReservationMock = vi.fn();
+const createUnpaidReservationRequestMock = vi.fn();
 const createPaymentIntentMock = vi.fn();
+const getPublicSiteSettingsMock = vi.fn();
 const validateCampaignMock = vi.fn();
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -107,6 +109,11 @@ vi.mock("@/hooks/useBooking", () => ({
 
 vi.mock("@/lib/api/reservations", () => ({
   createReservation: (...args: unknown[]) => createReservationMock(...args),
+  createUnpaidReservationRequest: (...args: unknown[]) => createUnpaidReservationRequestMock(...args),
+}));
+
+vi.mock("@/lib/api/publicSiteSettings", () => ({
+  getPublicSiteSettings: (...args: unknown[]) => getPublicSiteSettingsMock(...args),
 }));
 
 vi.mock("@/lib/api/payments", () => ({
@@ -138,8 +145,12 @@ describe("BookingStep4Page", () => {
     vi.restoreAllMocks();
     createReservationMock.mockReset();
     createReservationMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
+    createUnpaidReservationRequestMock.mockReset();
+    createUnpaidReservationRequestMock.mockResolvedValue({ id: "res-unpaid", publicCode: "ALN-REQ-123" });
     createPaymentIntentMock.mockReset();
     createPaymentIntentMock.mockResolvedValue({ paymentIntentId: "pi-123" });
+    getPublicSiteSettingsMock.mockReset();
+    getPublicSiteSettingsMock.mockResolvedValue({ onlinePaymentEnabled: true });
     placeHoldMock.mockReset();
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
@@ -165,7 +176,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await user.click(await screen.findByRole("button", { name: /complete booking/i }));
 
     expect(await screen.findByText("You must accept the terms and conditions")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
@@ -181,6 +192,8 @@ describe("BookingStep4Page", () => {
     validateCampaignMock.mockResolvedValue({ valid: true });
 
     render(<BookingStep4Page />);
+
+    await screen.findByRole("button", { name: /complete booking/i });
 
     await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -204,6 +217,8 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
+    await screen.findByRole("button", { name: /complete booking/i });
+
     await user.type(screen.getByPlaceholderText(/enter code/i), "badcode");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
@@ -222,6 +237,8 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
+    await screen.findByRole("button", { name: /send request/i });
+
     await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
@@ -234,6 +251,8 @@ describe("BookingStep4Page", () => {
     validateCampaignMock.mockResolvedValue(null);
 
     render(<BookingStep4Page />);
+
+    await screen.findByRole("button", { name: /complete booking/i });
 
     await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -248,7 +267,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(screen.getByRole("radio", { name: /paypal/i }));
+    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
     expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("checkbox"));
@@ -262,6 +281,7 @@ describe("BookingStep4Page", () => {
         pickupDateTimeUtc: "2026-05-10T10:00:00Z",
         returnDateTimeUtc: "2026-05-13T09:00:00Z",
         customer: bookingState.customer,
+        driver: bookingState.driver,
         extraDriverCount: 1,
         childSeatCount: 0,
         campaignCode: undefined,
@@ -279,7 +299,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(screen.getByRole("radio", { name: /paypal/i }));
+    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
@@ -296,7 +316,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(screen.getByRole("radio", { name: /paypal/i }));
+    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
@@ -316,7 +336,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.type(screen.getByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
     await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
     await user.type(screen.getByLabelText("Expiry Date"), "12/30");
     await user.type(screen.getByLabelText("CVV"), "123");
@@ -342,5 +362,54 @@ describe("BookingStep4Page", () => {
     expect(pushMock).toHaveBeenCalledWith(
       "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"
     );
+  });
+
+  it("creates an unpaid request without card fields, hold, or payment intent when online payment is disabled", async () => {
+    const user = userEvent.setup();
+    getPublicSiteSettingsMock.mockResolvedValueOnce({ onlinePaymentEnabled: false });
+
+    render(<BookingStep4Page />);
+
+    expect(await screen.findByText("Request without online payment")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /send request/i }));
+
+    await waitFor(() => {
+      expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith({
+        vehicleGroupId: "economy",
+        pickupOfficeId: "ala",
+        returnOfficeId: "gzp",
+        pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+        returnDateTimeUtc: "2026-05-13T09:00:00Z",
+        customer: bookingState.customer,
+        driver: bookingState.driver,
+        extraDriverCount: 1,
+        childSeatCount: 0,
+        campaignCode: undefined,
+      });
+    });
+    expect(placeHoldMock).not.toHaveBeenCalled();
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith(
+      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REQ-123&request=unpaid"
+    );
+  });
+
+  it("offers an unpaid request secondary action when online payment is enabled", async () => {
+    const user = userEvent.setup();
+
+    render(<BookingStep4Page />);
+
+    await screen.findByRole("button", { name: /complete booking/i });
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /send request without payment/i }));
+
+    await waitFor(() => {
+      expect(createUnpaidReservationRequestMock).toHaveBeenCalled();
+    });
+    expect(createReservationMock).not.toHaveBeenCalled();
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
   });
 });

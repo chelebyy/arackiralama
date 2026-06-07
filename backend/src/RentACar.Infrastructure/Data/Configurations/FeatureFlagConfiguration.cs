@@ -6,6 +6,9 @@ namespace RentACar.Infrastructure.Data.Configurations;
 
 public sealed class FeatureFlagConfiguration : IEntityTypeConfiguration<FeatureFlag>
 {
+    private const string OnlinePaymentDescription =
+        "Online ödeme seçeneklerini public rezervasyon akışında gösterir. Kapalıyken müşteriler ödeme yapmadan 24 saat stok bloklu talep oluşturur.";
+
     public void Configure(EntityTypeBuilder<FeatureFlag> builder)
     {
         builder.ToTable("feature_flags");
@@ -25,7 +28,7 @@ public sealed class FeatureFlagConfiguration : IEntityTypeConfiguration<FeatureF
                 Id = SeedDataConstants.OnlinePaymentFeatureFlagId,
                 Name = "EnableOnlinePayment",
                 Enabled = false,
-                Description = "Online payment provider integration toggle",
+                Description = OnlinePaymentDescription,
                 CreatedAt = SeedDataConstants.SeededAtUtc,
                 UpdatedAt = SeedDataConstants.SeededAtUtc
             },

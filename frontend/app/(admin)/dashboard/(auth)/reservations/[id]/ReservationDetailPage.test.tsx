@@ -9,6 +9,7 @@ import ReservationDetailPage from "./page";
 const useParamsMock = vi.fn();
 const useAdminReservationMock = vi.fn();
 const mutateCancelReservationMock = vi.fn();
+const mutateConfirmUnpaidRequestMock = vi.fn();
 const mutateCheckInMock = vi.fn();
 const mutateCheckOutMock = vi.fn();
 const mutateRefundReservationMock = vi.fn();
@@ -31,6 +32,8 @@ vi.mock("next/link", () => ({
 vi.mock("@/hooks/admin", () => ({
   useAdminReservation: (...args: unknown[]) => useAdminReservationMock(...args),
   mutateCancelReservation: (...args: unknown[]) => mutateCancelReservationMock(...args),
+  mutateConfirmUnpaidRequest: (...args: unknown[]) =>
+    mutateConfirmUnpaidRequestMock(...args),
   mutateCheckIn: (...args: unknown[]) => mutateCheckInMock(...args),
   mutateCheckOut: (...args: unknown[]) => mutateCheckOutMock(...args),
   mutateRefundReservation: (...args: unknown[]) => mutateRefundReservationMock(...args),
@@ -136,6 +139,7 @@ describe("ReservationDetailPage", () => {
     useParamsMock.mockReset();
     useAdminReservationMock.mockReset();
     mutateCancelReservationMock.mockReset();
+    mutateConfirmUnpaidRequestMock.mockReset();
     mutateCheckInMock.mockReset();
     mutateCheckOutMock.mockReset();
     mutateRefundReservationMock.mockReset();
@@ -231,6 +235,26 @@ describe("ReservationDetailPage", () => {
       );
     });
     expect(toastSuccessMock).toHaveBeenCalledWith("Rezervasyon iptal edildi");
+    expect(mutate).toHaveBeenCalled();
+  });
+
+  it("confirms unpaid reservation requests and refreshes detail data", async () => {
+    const user = userEvent.setup();
+    const mutate = mockReservation({
+      status: ReservationStatus.UNPAID_REQUEST,
+      paymentStatus: PaymentStatus.PENDING,
+    });
+    mutateConfirmUnpaidRequestMock.mockResolvedValue(undefined);
+
+    render(<ReservationDetailPage />);
+
+    expect(screen.getByText("Talep Alındı")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Onayla" }));
+
+    await waitFor(() => {
+      expect(mutateConfirmUnpaidRequestMock).toHaveBeenCalledWith("reservation-1");
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith("Rezervasyon onaylandı");
     expect(mutate).toHaveBeenCalled();
   });
 

@@ -36,6 +36,14 @@ public interface IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<ReservationDto> CreateUnpaidRequestAsync(
+        CreateReservationRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ReservationDto> CreateManualReservationAsync(
+        AdminManualReservationRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<ReservationDto?> UpdateReservationAsync(
         Guid id,
         UpdateReservationRequest request,
@@ -113,6 +121,10 @@ public interface IReservationService
     Task<ReservationDto?> AdminCancelReservationAsync(
         Guid reservationId,
         string? reason = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ReservationDto?> ConfirmUnpaidRequestAsync(
+        Guid reservationId,
         CancellationToken cancellationToken = default);
 
     // Validation Helpers

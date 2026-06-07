@@ -176,6 +176,8 @@
     "confirmation": {
       "title": "Reservation Confirmed!",
       "message": "Your reservation has been successfully created. Details have been sent to your email address.",
+      "unpaidRequestTitle": "Request Received!",
+      "unpaidRequestMessage": "Your reservation request has been received. The vehicle is blocked for you for 24 hours; our team will contact you for confirmation.",
       "reservationNumber": "Reservation Number",
       "downloadVoucher": "Download Voucher",
       "whatNext": "What's Next?",
@@ -214,6 +216,8 @@
     "continueToVehicle": "Continue to Vehicle Selection",
     "continueToPayment": "Continue to Payment",
     "completeBooking": "Complete Booking",
+    "completeRequest": "Send Request",
+    "sendUnpaidRequest": "Send request without payment",
     "back": "Back",
     "loadingVehicles": "Loading available vehicles...",
     "failedToLoadVehicles": "Failed to load vehicles. Please try again.",
@@ -233,6 +237,10 @@
     "termsAgreementEnd": ". I confirm that I have a valid driver's license and meet the minimum age requirements.",
     "processingPayment": "Processing payment...",
     "failedToProcessPayment": "Failed to process payment. Please try again.",
+    "unpaidRequest": {
+      "title": "Request without online payment",
+      "description": "Your request will be sent to our team and the selected vehicle will be blocked for 24 hours."
+    },
     "returnToPayment": "Return to Payment",
     "priceBreakdown": "Price Breakdown",
     "rentalPeriod": "Rental period",

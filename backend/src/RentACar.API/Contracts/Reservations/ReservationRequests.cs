@@ -8,6 +8,7 @@ public record CreateReservationRequest
     public DateTime PickupDateTimeUtc { get; init; }
     public DateTime ReturnDateTimeUtc { get; init; }
     public CustomerInfoRequest Customer { get; init; } = new();
+    public DriverInfoRequest? Driver { get; init; }
     public string? CampaignCode { get; init; }
     public int ExtraDriverCount { get; init; }
     public int ChildSeatCount { get; init; }
@@ -29,6 +30,33 @@ public record CustomerInfoRequest
     public DateTime? DateOfBirth { get; init; }
 }
 
+public record DriverInfoRequest
+{
+    public string FirstName { get; init; } = string.Empty;
+    public string LastName { get; init; } = string.Empty;
+    public DateTime? DateOfBirth { get; init; }
+    public string LicenseNumber { get; init; } = string.Empty;
+    public string LicenseCountry { get; init; } = string.Empty;
+    public DateTime? LicenseIssueDate { get; init; }
+    public DateTime? LicenseExpiryDate { get; init; }
+}
+
+public record AdminManualReservationRequest
+{
+    public Guid VehicleId { get; init; }
+    public Guid PickupOfficeId { get; init; }
+    public Guid ReturnOfficeId { get; init; }
+    public DateTime PickupDateTimeUtc { get; init; }
+    public DateTime ReturnDateTimeUtc { get; init; }
+    public string CustomerFirstName { get; init; } = string.Empty;
+    public string CustomerLastName { get; init; } = string.Empty;
+    public string CustomerPhone { get; init; } = string.Empty;
+    public string? CustomerEmail { get; init; }
+    public DriverInfoRequest? Driver { get; init; }
+    public string? Notes { get; init; }
+    public decimal? TotalAmount { get; init; }
+}
+
 public record UpdateReservationRequest
 {
     public DateTime? PickupDateTimeUtc { get; init; }
@@ -36,6 +64,7 @@ public record UpdateReservationRequest
     public Guid? PickupOfficeId { get; init; }
     public Guid? ReturnOfficeId { get; init; }
     public CustomerInfoRequest? Customer { get; init; }
+    public DriverInfoRequest? Driver { get; init; }
     public string? Notes { get; init; }
 }
 

@@ -1,9 +1,12 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
+using RentACar.API.Contracts.Pricing;
 using RentACar.API.Contracts.Reservations;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -292,11 +295,17 @@ public sealed class ReservationService : IReservationService
             Customer = customer, // Set navigation property for mapping
             VehicleId = vehicle.Id,
             Vehicle = vehicle,
+            PickupOfficeId = request.PickupOfficeId,
+            PickupOffice = await _officeRepository.GetByIdAsync(request.PickupOfficeId, cancellationToken),
+            ReturnOfficeId = returnOfficeId,
+            ReturnOffice = await _officeRepository.GetByIdAsync(returnOfficeId, cancellationToken),
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Draft,
-            TotalAmount = pricing.FinalTotal
+            TotalAmount = pricing.FinalTotal,
+            Notes = request.Notes
         };
+        ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
 
         await _reservationRepository.AddAsync(reservation, cancellationToken);
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
@@ -304,6 +313,213 @@ public sealed class ReservationService : IReservationService
         _logger.LogInformation(
             "Created draft reservation {PublicCode} for customer {CustomerId}",
             reservation.PublicCode, customer.Id);
+
+        return MapToDto(reservation);
+    }
+
+    public async Task<ReservationDto> CreateUnpaidRequestAsync(
+        CreateReservationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var isAvailable = await IsVehicleGroupAvailableAsync(
+            request.VehicleGroupId,
+            request.PickupOfficeId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            cancellationToken);
+
+        if (!isAvailable)
+        {
+            throw new InvalidOperationException("Vehicle group is not available for the selected dates");
+        }
+
+        var customer = await GetOrCreateCustomerAsync(request, cancellationToken);
+        var returnOfficeId = request.ReturnOfficeId == Guid.Empty
+            ? request.PickupOfficeId
+            : request.ReturnOfficeId;
+        var pricing = await _pricingService.CalculateBreakdownAsync(
+            request.VehicleGroupId,
+            request.PickupOfficeId,
+            returnOfficeId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            request.CampaignCode,
+            request.ExtraDriverCount,
+            request.ChildSeatCount,
+            request.DriverAge,
+            request.FullCoverageWaiver,
+            cancellationToken);
+
+        if (pricing == null)
+        {
+            throw new InvalidOperationException("Could not calculate pricing for the reservation");
+        }
+
+        var vehicle = await FindAvailableVehicleAsync(
+            request.VehicleGroupId,
+            request.PickupOfficeId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            request.SessionId,
+            cancellationToken);
+
+        if (vehicle is null)
+        {
+            throw new InvalidOperationException("Vehicle group is not available for the selected dates");
+        }
+
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var reservation = new Reservation
+        {
+            PublicCode = GeneratePublicCode(),
+            CustomerId = customer.Id,
+            Customer = customer,
+            VehicleId = vehicle.Id,
+            Vehicle = vehicle,
+            PickupOfficeId = request.PickupOfficeId,
+            PickupOffice = await _officeRepository.GetByIdAsync(request.PickupOfficeId, cancellationToken),
+            ReturnOfficeId = returnOfficeId,
+            ReturnOffice = await _officeRepository.GetByIdAsync(returnOfficeId, cancellationToken),
+            PickupDateTime = request.PickupDateTimeUtc,
+            ReturnDateTime = request.ReturnDateTimeUtc,
+            Status = ReservationStatus.UnpaidRequest,
+            TotalAmount = pricing.FinalTotal,
+            Notes = request.Notes,
+            UnpaidRequestExpiresAtUtc = now.AddHours(24),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
+
+        try
+        {
+            await _reservationRepository.AddAsync(reservation, cancellationToken);
+            await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch (DbUpdateException ex) when (IsReservationOverlapViolation(ex))
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            throw new InvalidOperationException("Selected vehicle is no longer available for these dates.", ex);
+        }
+
+        _logger.LogInformation(
+            "Created unpaid reservation request {PublicCode} for customer {CustomerId}",
+            reservation.PublicCode,
+            customer.Id);
+
+        return MapToDto(reservation);
+    }
+
+    public async Task<ReservationDto> CreateManualReservationAsync(
+        AdminManualReservationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var vehicle = await _vehicleRepository
+            .GetQueryable()
+            .Include(x => x.Group)
+            .Include(x => x.Office)
+            .FirstOrDefaultAsync(x => x.Id == request.VehicleId, cancellationToken);
+
+        if (vehicle is null)
+        {
+            throw new InvalidOperationException("Vehicle not found.");
+        }
+
+        var pickupOffice = await _officeRepository.GetByIdAsync(request.PickupOfficeId, cancellationToken)
+            ?? throw new InvalidOperationException("Pickup office not found.");
+        var returnOffice = await _officeRepository.GetByIdAsync(request.ReturnOfficeId, cancellationToken)
+            ?? throw new InvalidOperationException("Return office not found.");
+
+        var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
+            request.VehicleId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            null,
+            cancellationToken);
+
+        if (hasOverlap)
+        {
+            throw new InvalidOperationException("Vehicle has overlapping reservations");
+        }
+
+        var customer = await GetOrCreateManualCustomerAsync(request, cancellationToken);
+        var totalAmount = request.TotalAmount;
+        if (!totalAmount.HasValue)
+        {
+            var pricing = await _pricingService.CalculateBreakdownAsync(
+                vehicle.GroupId,
+                request.PickupOfficeId,
+                request.ReturnOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                0,
+                0,
+                null,
+                false,
+                cancellationToken);
+
+            totalAmount = pricing?.FinalTotal
+                ?? throw new InvalidOperationException("Could not calculate pricing for the reservation");
+        }
+
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var reservation = new Reservation
+        {
+            PublicCode = GeneratePublicCode(),
+            CustomerId = customer.Id,
+            Customer = customer,
+            VehicleId = vehicle.Id,
+            Vehicle = vehicle,
+            PickupOfficeId = request.PickupOfficeId,
+            PickupOffice = pickupOffice,
+            ReturnOfficeId = request.ReturnOfficeId,
+            ReturnOffice = returnOffice,
+            PickupDateTime = request.PickupDateTimeUtc,
+            ReturnDateTime = request.ReturnDateTimeUtc,
+            Status = ReservationStatus.Confirmed,
+            TotalAmount = totalAmount.Value,
+            Notes = request.Notes,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        ApplyDriverSnapshot(reservation, null, request.Driver);
+
+        try
+        {
+            await _reservationRepository.AddAsync(reservation, cancellationToken);
+            await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch (DbUpdateException ex) when (IsReservationOverlapViolation(ex))
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            throw new InvalidOperationException("Vehicle has overlapping reservations", ex);
+        }
+
+        _logger.LogInformation(
+            "Created admin manual reservation {PublicCode} for vehicle {VehicleId}",
+            reservation.PublicCode,
+            vehicle.Id);
 
         return MapToDto(reservation);
     }
@@ -319,21 +535,99 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
-        // Only allow updates for certain statuses
         if (!CanModifyReservation(reservation.Status))
         {
             throw new InvalidOperationException($"Cannot update reservation in {reservation.Status} status");
         }
 
-        // Update dates if provided
-        if (request.PickupDateTimeUtc.HasValue)
+        if (reservation.PickupDateTime <= DateTime.UtcNow)
         {
-            reservation.PickupDateTime = request.PickupDateTimeUtc.Value;
+            throw new InvalidOperationException("Cannot update a reservation after pickup has started.");
         }
 
-        if (request.ReturnDateTimeUtc.HasValue)
+        var newPickupDateTime = request.PickupDateTimeUtc ?? reservation.PickupDateTime;
+        var newReturnDateTime = request.ReturnDateTimeUtc ?? reservation.ReturnDateTime;
+        var newPickupOfficeId = request.PickupOfficeId ?? reservation.PickupOfficeId;
+        var newReturnOfficeId = request.ReturnOfficeId ?? reservation.ReturnOfficeId;
+
+        if (newReturnDateTime <= newPickupDateTime)
         {
-            reservation.ReturnDateTime = request.ReturnDateTimeUtc.Value;
+            throw new InvalidOperationException("Return date must be after pickup date.");
+        }
+
+        var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
+            reservation.VehicleId,
+            newPickupDateTime,
+            newReturnDateTime,
+            reservation.Id,
+            cancellationToken);
+
+        if (hasOverlap)
+        {
+            throw new InvalidOperationException("Vehicle has overlapping reservations");
+        }
+
+        var vehicleGroupId = reservation.Vehicle?.GroupId
+            ?? await _vehicleRepository
+                .GetQueryable()
+                .Where(x => x.Id == reservation.VehicleId)
+                .Select(x => x.GroupId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+        if (vehicleGroupId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Vehicle group not found.");
+        }
+
+        var pricing = await _pricingService.CalculateBreakdownAsync(
+            vehicleGroupId,
+            newPickupOfficeId,
+            newReturnOfficeId,
+            newPickupDateTime,
+            newReturnDateTime,
+            null,
+            0,
+            0,
+            null,
+            false,
+            cancellationToken);
+
+        if (pricing == null)
+        {
+            throw new InvalidOperationException("Could not calculate pricing for the reservation");
+        }
+
+        if (request.PickupOfficeId.HasValue && request.PickupOfficeId.Value != reservation.PickupOfficeId)
+        {
+            reservation.PickupOffice = await _officeRepository.GetByIdAsync(request.PickupOfficeId.Value, cancellationToken)
+                ?? throw new InvalidOperationException("Pickup office not found.");
+        }
+
+        if (request.ReturnOfficeId.HasValue && request.ReturnOfficeId.Value != reservation.ReturnOfficeId)
+        {
+            reservation.ReturnOffice = await _officeRepository.GetByIdAsync(request.ReturnOfficeId.Value, cancellationToken)
+                ?? throw new InvalidOperationException("Return office not found.");
+        }
+
+        reservation.PickupDateTime = newPickupDateTime;
+        reservation.ReturnDateTime = newReturnDateTime;
+        reservation.PickupOfficeId = newPickupOfficeId;
+        reservation.ReturnOfficeId = newReturnOfficeId;
+        reservation.TotalAmount = pricing.FinalTotal;
+
+        if (request.Customer is not null)
+        {
+            await ApplyCustomerUpdateAsync(reservation, request.Customer, cancellationToken);
+        }
+
+        if (request.Driver is not null || request.Customer is not null)
+        {
+            ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
+        }
+
+        if (request.Notes is not null)
+        {
+            reservation.Notes = request.Notes;
         }
 
         reservation.UpdatedAt = DateTime.UtcNow;
@@ -693,13 +987,18 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
+        var oldStatus = reservation.Status;
         reservation.Status = newStatus;
+        if (newStatus != ReservationStatus.UnpaidRequest)
+        {
+            reservation.UnpaidRequestExpiresAtUtc = null;
+        }
         reservation.UpdatedAt = DateTime.UtcNow;
         await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
 
         _logger.LogInformation(
             "Reservation {ReservationId} transitioned from {OldStatus} to {NewStatus}",
-            reservationId, reservation.Status, newStatus);
+            reservationId, oldStatus, newStatus);
 
         return MapToDto(reservation);
     }
@@ -803,7 +1102,7 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
-        if (reservation.Status != ReservationStatus.Paid)
+        if (reservation.Status is not (ReservationStatus.Paid or ReservationStatus.Confirmed))
         {
             throw new InvalidOperationException($"Cannot check in reservation in {reservation.Status} status");
         }
@@ -870,7 +1169,7 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
-        if (reservation.Status != ReservationStatus.Hold && reservation.Status != ReservationStatus.Draft)
+        if (reservation.Status is not (ReservationStatus.Hold or ReservationStatus.Draft or ReservationStatus.UnpaidRequest))
         {
             _logger.LogWarning(
                 "Cannot expire reservation {ReservationId} in status {Status}",
@@ -879,6 +1178,7 @@ public sealed class ReservationService : IReservationService
         }
 
         reservation.Status = ReservationStatus.Expired;
+        reservation.UnpaidRequestExpiresAtUtc = null;
         reservation.UpdatedAt = DateTime.UtcNow;
 
         await _holdService.ReleaseHoldAsync(reservationId, cancellationToken);
@@ -892,6 +1192,7 @@ public sealed class ReservationService : IReservationService
     public async Task ProcessExpiredReservationsAsync(CancellationToken cancellationToken = default)
     {
         var expiredHolds = await _holdService.GetExpiredHoldsAsync(cancellationToken);
+        var now = DateTime.UtcNow;
 
         foreach (var reservationId in expiredHolds)
         {
@@ -907,7 +1208,29 @@ public sealed class ReservationService : IReservationService
             }
         }
 
-        _logger.LogInformation("Processed {Count} expired reservations", expiredHolds.Count);
+        var expiredUnpaidRequests = await _applicationDbContext.Reservations
+            .Where(x =>
+                x.Status == ReservationStatus.UnpaidRequest
+                && x.UnpaidRequestExpiresAtUtc != null
+                && x.UnpaidRequestExpiresAtUtc <= now)
+            .ToListAsync(cancellationToken);
+
+        foreach (var reservation in expiredUnpaidRequests)
+        {
+            reservation.Status = ReservationStatus.Expired;
+            reservation.UnpaidRequestExpiresAtUtc = null;
+            reservation.UpdatedAt = now;
+        }
+
+        if (expiredUnpaidRequests.Count > 0)
+        {
+            await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+        }
+
+        _logger.LogInformation(
+            "Processed {HoldCount} expired holds and {UnpaidRequestCount} expired unpaid requests",
+            expiredHolds.Count,
+            expiredUnpaidRequests.Count);
     }
 
     public async Task<IReadOnlyList<ReservationDto>> GetAllReservationsAsync(
@@ -1015,6 +1338,7 @@ public sealed class ReservationService : IReservationService
         }
 
         reservation.Status = ReservationStatus.Cancelled;
+        reservation.UnpaidRequestExpiresAtUtc = null;
         reservation.UpdatedAt = DateTime.UtcNow;
 
         await _holdService.ReleaseHoldAsync(reservationId, cancellationToken);
@@ -1024,6 +1348,31 @@ public sealed class ReservationService : IReservationService
         _logger.LogInformation(
             "Admin cancelled reservation {ReservationId}. HasReason: {HasReason}",
             reservationId, !string.IsNullOrWhiteSpace(reason));
+        return MapToDto(reservation);
+    }
+
+    public async Task<ReservationDto?> ConfirmUnpaidRequestAsync(
+        Guid reservationId,
+        CancellationToken cancellationToken = default)
+    {
+        var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
+        if (reservation == null)
+        {
+            return null;
+        }
+
+        if (reservation.Status != ReservationStatus.UnpaidRequest)
+        {
+            throw new InvalidOperationException($"Cannot confirm reservation in {reservation.Status} status");
+        }
+
+        reservation.Status = ReservationStatus.Confirmed;
+        reservation.UnpaidRequestExpiresAtUtc = null;
+        reservation.UpdatedAt = DateTime.UtcNow;
+        await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
+        _logger.LogInformation("Confirmed unpaid reservation request {ReservationId}", reservationId);
+
         return MapToDto(reservation);
     }
 
@@ -1103,6 +1452,7 @@ public sealed class ReservationService : IReservationService
         var vehicleId = isDraftWithoutAssignedVehicle ? Guid.Empty : reservation.VehicleId;
         var vehicleGroupId = reservation.Vehicle?.GroupId
             ?? (isDraftWithoutAssignedVehicle ? reservation.VehicleId : Guid.Empty);
+        var customerStats = GetCustomerStats(reservation.CustomerId);
 
         return new ReservationDto
         {
@@ -1110,7 +1460,7 @@ public sealed class ReservationService : IReservationService
             PublicCode = reservation.PublicCode,
             CustomerId = reservation.CustomerId,
             CustomerName = reservation.Customer?.FullName ?? string.Empty,
-            CustomerEmail = reservation.Customer?.Email ?? string.Empty,
+            CustomerEmail = IsInternalManualEmail(reservation.Customer?.Email) ? string.Empty : reservation.Customer?.Email ?? string.Empty,
             CustomerPhone = reservation.Customer?.Phone ?? string.Empty,
             VehicleId = vehicleId,
             VehiclePlate = reservation.Vehicle?.Plate,
@@ -1118,19 +1468,149 @@ public sealed class ReservationService : IReservationService
             VehicleModel = reservation.Vehicle?.Model ?? string.Empty,
             VehicleGroupId = vehicleGroupId,
             VehicleGroupName = reservation.Vehicle?.Group?.NameTr ?? string.Empty,
-            PickupOfficeId = reservation.Vehicle?.OfficeId ?? Guid.Empty,
-            PickupOfficeName = reservation.Vehicle?.Office?.Name ?? string.Empty,
-            ReturnOfficeId = reservation.Vehicle?.OfficeId ?? Guid.Empty,
-            ReturnOfficeName = reservation.Vehicle?.Office?.Name ?? string.Empty,
+            PickupOfficeId = reservation.PickupOfficeId,
+            PickupOfficeName = reservation.PickupOffice?.Name ?? reservation.Vehicle?.Office?.Name ?? string.Empty,
+            ReturnOfficeId = reservation.ReturnOfficeId,
+            ReturnOfficeName = reservation.ReturnOffice?.Name ?? reservation.Vehicle?.Office?.Name ?? string.Empty,
             PickupDateTime = reservation.PickupDateTime,
             ReturnDateTime = reservation.ReturnDateTime,
             Status = reservation.Status.ToString(),
             TotalAmount = reservation.TotalAmount,
-            DepositAmount = 0, // Will be calculated from pricing
+            DepositAmount = reservation.Vehicle?.Group?.DepositAmount ?? 0,
             RentalDays = rentalDays,
+            CustomerReservationCount = customerStats.ReservationCount,
+            CustomerTotalSpent = customerStats.TotalSpent,
+            Driver = BuildDriverDto(reservation),
+            PriceBreakdown = BuildReservationPriceBreakdown(reservation, rentalDays),
             CreatedAt = reservation.CreatedAt,
-            UpdatedAt = reservation.UpdatedAt
+            UpdatedAt = reservation.UpdatedAt,
+            UnpaidRequestExpiresAtUtc = reservation.UnpaidRequestExpiresAtUtc,
+            Notes = reservation.Notes
         };
+    }
+
+    private (int ReservationCount, decimal TotalSpent) GetCustomerStats(Guid customerId)
+    {
+        var query = _applicationDbContext.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId);
+
+        var reservationCount = query.Count(r =>
+            r.Status != ReservationStatus.Cancelled &&
+            r.Status != ReservationStatus.Expired);
+
+        var totalSpent = query
+            .Where(r => r.Status == ReservationStatus.Confirmed ||
+                        r.Status == ReservationStatus.Active ||
+                        r.Status == ReservationStatus.Completed)
+            .Sum(r => (decimal?)r.TotalAmount) ?? 0m;
+
+        return (reservationCount, totalSpent);
+    }
+
+    private static ReservationDriverDto? BuildDriverDto(Reservation reservation)
+    {
+        if (string.IsNullOrWhiteSpace(reservation.DriverLicenseNumber))
+        {
+            return null;
+        }
+
+        return new ReservationDriverDto
+        {
+            FirstName = reservation.DriverFirstName ?? string.Empty,
+            LastName = reservation.DriverLastName ?? string.Empty,
+            DateOfBirth = reservation.DriverDateOfBirth,
+            LicenseNumber = reservation.DriverLicenseNumber,
+            LicenseCountry = reservation.DriverLicenseCountry ?? string.Empty,
+            LicenseIssueDate = reservation.DriverLicenseIssueDate,
+            LicenseExpiryDate = reservation.DriverLicenseExpiryDate
+        };
+    }
+
+    private static PriceBreakdownDto BuildReservationPriceBreakdown(Reservation reservation, int rentalDays)
+    {
+        var depositAmount = reservation.Vehicle?.Group?.DepositAmount ?? 0m;
+        var dailyRate = rentalDays > 0 ? Math.Round(reservation.TotalAmount / rentalDays, 2) : reservation.TotalAmount;
+
+        return new PriceBreakdownDto(
+            DailyRate: dailyRate,
+            RentalDays: rentalDays,
+            BaseTotal: reservation.TotalAmount,
+            ExtrasTotal: 0m,
+            CampaignDiscount: 0m,
+            AirportFee: 0m,
+            OneWayFee: 0m,
+            ExtraDriverFee: 0m,
+            ChildSeatFee: 0m,
+            YoungDriverFee: 0m,
+            FullCoverageWaiverFee: 0m,
+            FinalTotal: reservation.TotalAmount,
+            DepositAmount: depositAmount,
+            PreAuthorizationAmount: depositAmount,
+            Currency: "TRY",
+            AppliedCampaignCode: null);
+    }
+
+    private static void ApplyDriverSnapshot(
+        Reservation reservation,
+        CustomerInfoRequest? customer,
+        DriverInfoRequest? driver)
+    {
+        reservation.DriverFirstName = ValueOrNull(driver?.FirstName) ?? customer?.FirstName ?? reservation.DriverFirstName;
+        reservation.DriverLastName = ValueOrNull(driver?.LastName) ?? customer?.LastName ?? reservation.DriverLastName;
+        reservation.DriverDateOfBirth = driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth;
+        reservation.DriverLicenseNumber = ValueOrNull(driver?.LicenseNumber) ?? customer?.DriverLicenseNumber ?? reservation.DriverLicenseNumber;
+        reservation.DriverLicenseCountry = ValueOrNull(driver?.LicenseCountry) ?? reservation.DriverLicenseCountry;
+        reservation.DriverLicenseIssueDate = driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate;
+        reservation.DriverLicenseExpiryDate = driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate;
+    }
+
+    private async Task ApplyCustomerUpdateAsync(
+        Reservation reservation,
+        CustomerInfoRequest customerRequest,
+        CancellationToken cancellationToken)
+    {
+        var customer = reservation.Customer ?? await _customerRepository.GetByIdAsync(reservation.CustomerId, cancellationToken);
+        if (customer == null)
+        {
+            return;
+        }
+
+        var fullName = $"{customerRequest.FirstName} {customerRequest.LastName}".Trim();
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            customer.FullName = fullName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(customerRequest.Email))
+        {
+            customer.Email = customerRequest.Email;
+        }
+
+        if (!string.IsNullOrWhiteSpace(customerRequest.Phone))
+        {
+            customer.Phone = customerRequest.Phone;
+        }
+
+        if (customerRequest.DateOfBirth.HasValue)
+        {
+            customer.BirthDate = DateOnly.FromDateTime(customerRequest.DateOfBirth.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customerRequest.IdentityNumber))
+        {
+            customer.IdentityNumber = customerRequest.IdentityNumber;
+        }
+
+        if (customerRequest.DriverLicenseIssueDate.HasValue)
+        {
+            customer.LicenseYear = customerRequest.DriverLicenseIssueDate.Value.Year;
+        }
+    }
+
+    private static string? ValueOrNull(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private async Task<Customer> GetOrCreateCustomerAsync(
@@ -1168,6 +1648,69 @@ public sealed class ReservationService : IReservationService
         await _customerRepository.AddAsync(customer, cancellationToken);
 
         return customer;
+    }
+
+    private async Task<Customer> GetOrCreateManualCustomerAsync(
+        AdminManualReservationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var email = string.IsNullOrWhiteSpace(request.CustomerEmail)
+            ? BuildInternalManualEmail(request.CustomerPhone)
+            : request.CustomerEmail.Trim();
+        var normalizedEmail = Customer.NormalizeEmail(email);
+
+        var existingCustomer = await _customerRepository
+            .GetQueryable()
+            .FirstOrDefaultAsync(c => c.NormalizedEmail == normalizedEmail, cancellationToken);
+
+        if (existingCustomer != null)
+        {
+            return existingCustomer;
+        }
+
+        var customer = new Customer
+        {
+            FullName = $"{request.CustomerFirstName} {request.CustomerLastName}".Trim(),
+            Email = email,
+            Phone = request.CustomerPhone,
+            IdentityNumber = string.Empty,
+            LicenseYear = 0,
+            Nationality = "TR"
+        };
+
+        await _customerRepository.AddAsync(customer, cancellationToken);
+        return customer;
+    }
+
+    private static string BuildInternalManualEmail(string phone)
+    {
+        var normalizedPhone = NormalizePhoneForHash(phone);
+        if (string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            normalizedPhone = Guid.NewGuid().ToString("N");
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPhone));
+        var token = Convert.ToHexString(hash)[..16].ToLowerInvariant();
+        return $"manual-{token}@internal.rentacar.local";
+    }
+
+    private static string NormalizePhoneForHash(string phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            return string.Empty;
+        }
+
+        var digits = phone.Where(char.IsDigit).ToArray();
+        return new string(digits);
+    }
+
+    private static bool IsInternalManualEmail(string? email)
+    {
+        return !string.IsNullOrWhiteSpace(email)
+            && email.StartsWith("manual-", StringComparison.OrdinalIgnoreCase)
+            && email.EndsWith("@internal.rentacar.local", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<Vehicle?> FindAvailableVehicleAsync(
@@ -1283,15 +1826,17 @@ public sealed class ReservationService : IReservationService
 
     private static bool CanModifyReservation(ReservationStatus status)
     {
-        return status is ReservationStatus.Draft or ReservationStatus.Hold;
+        return status is ReservationStatus.UnpaidRequest or ReservationStatus.Confirmed;
     }
 
     private static bool CanCancelReservation(ReservationStatus status)
     {
         return status is ReservationStatus.Draft
             or ReservationStatus.Hold
+            or ReservationStatus.UnpaidRequest
             or ReservationStatus.PendingPayment
-            or ReservationStatus.Paid;
+            or ReservationStatus.Paid
+            or ReservationStatus.Confirmed;
     }
 
     private async Task QueueReservationCancelledNotificationsAsync(
@@ -1492,6 +2037,7 @@ public sealed class ReservationService : IReservationService
             ReservationStatus.Draft => new[]
             {
                 ReservationStatus.Hold,
+                ReservationStatus.UnpaidRequest,
                 ReservationStatus.Cancelled,
                 ReservationStatus.Expired
             },
@@ -1506,7 +2052,18 @@ public sealed class ReservationService : IReservationService
                 ReservationStatus.Paid,
                 ReservationStatus.Cancelled
             },
+            ReservationStatus.UnpaidRequest => new[]
+            {
+                ReservationStatus.Confirmed,
+                ReservationStatus.Cancelled,
+                ReservationStatus.Expired
+            },
             ReservationStatus.Paid => new[]
+            {
+                ReservationStatus.Active,
+                ReservationStatus.Cancelled
+            },
+            ReservationStatus.Confirmed => new[]
             {
                 ReservationStatus.Active,
                 ReservationStatus.Cancelled
