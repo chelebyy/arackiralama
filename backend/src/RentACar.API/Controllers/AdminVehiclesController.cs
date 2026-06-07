@@ -116,8 +116,9 @@ public sealed class AdminVehiclesController(
     {
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var deleted = await fleetService.DeleteVehicleAsync(id, cancellationToken);
-        if (!deleted)
+        var deletionOutcome = await fleetService.DeleteVehicleAsync(id, cancellationToken);
+
+        if (deletionOutcome == VehicleDeletionOutcome.NotFound)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
         }
@@ -132,7 +133,11 @@ public sealed class AdminVehiclesController(
             GetClientIpAddress(),
             cancellationToken);
 
-        return OkResponse(new { Id = id }, "Arac silindi.");
+        var message = deletionOutcome == VehicleDeletionOutcome.Archived
+            ? "Arac rezervasyon gecmisi oldugu icin arsivlendi."
+            : "Arac silindi.";
+
+        return OkResponse(new { Id = id, Outcome = deletionOutcome.ToString() }, message);
     }
 
     [HttpPatch("{id:guid}/status")]

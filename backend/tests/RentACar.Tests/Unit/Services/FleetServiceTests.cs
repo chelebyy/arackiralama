@@ -47,11 +47,12 @@ public sealed class FleetServiceTests : IDisposable
     {
         var request = new CreateVehicleGroupRequest(
             "Ekonomi", "Economy", "Economy", "Economy", "Economy",
-            2000m, 21, 2, ["  Klima  ", "Klima", "", "Otomatik"]);
+            2000m, 21, 2, true, ["  Klima  ", "Klima", "", "Otomatik"]);
 
         var result = await _sut.CreateVehicleGroupAsync(request);
 
         result.NameTr.Should().Be("Ekonomi");
+        result.IsActive.Should().BeTrue();
         result.Features.Should().BeEquivalentTo(["Klima", "Otomatik"]);
     }
 
@@ -144,7 +145,25 @@ public sealed class FleetServiceTests : IDisposable
 
         var result = await _sut.DeleteVehicleAsync(vehicle.Id);
 
-        result.Should().BeTrue();
+        result.Should().Be(VehicleDeletionOutcome.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteVehicleAsync_WhenVehicleHasReservation_ArchivesAndKeepsVehicle()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34DEL999", group.Id, office.Id);
+        await SeedReservationAsync(
+            vehicle.Id,
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(3),
+            ReservationStatus.Paid);
+
+        var result = await _sut.DeleteVehicleAsync(vehicle.Id);
+
+        result.Should().Be(VehicleDeletionOutcome.Archived);
+        _dbContext.Vehicles.Should().ContainSingle(x => x.Id == vehicle.Id && x.Status == VehicleStatus.Retired);
+        _photoStorageMock.Verify(x => x.DeleteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -162,13 +181,14 @@ public sealed class FleetServiceTests : IDisposable
     public async Task CreateOfficeAsync_WhenValid_CreatesOffice()
     {
         var request = new CreateOfficeRequest(
-            "ayt", "Antalya Havalimani", "Havalimani", "+90 242 111 11 11", true, "00:00-23:59");
+            "ayt", "Antalya Havalimani", "Havalimani", "+90 242 111 11 11", true, true, "00:00-23:59");
 
         var result = await _sut.CreateOfficeAsync(request);
 
         result.Code.Should().Be("ayt");
         result.Name.Should().Be("Antalya Havalimani");
         result.IsAirport.Should().BeTrue();
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -176,20 +196,21 @@ public sealed class FleetServiceTests : IDisposable
     {
         var office = await SeedOfficeAsync("Alanya");
         var request = new UpdateOfficeRequest(
-            "ala", "Alanya Merkez", "Saray Mah.", "+90 242 000 00 00", false, "09:00-18:00");
+            "ala", "Alanya Merkez", "Saray Mah.", "+90 242 000 00 00", false, false, "09:00-18:00");
 
         var result = await _sut.UpdateOfficeAsync(office.Id, request);
 
         result.Should().NotBeNull();
         result!.Code.Should().Be("ala");
         result!.Name.Should().Be("Alanya Merkez");
+        result!.IsActive.Should().BeFalse();
     }
 
     [Fact]
     public async Task UpdateOfficeAsync_WhenNotExists_ReturnsNull()
     {
         var request = new UpdateOfficeRequest(
-            "x", "X", "Y", "Z", false, "09:00-18:00");
+            "x", "X", "Y", "Z", false, true, "09:00-18:00");
 
         var result = await _sut.UpdateOfficeAsync(Guid.NewGuid(), request);
 

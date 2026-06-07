@@ -1,5 +1,4 @@
 import { adminDel, adminGet, adminPatch, adminPost, adminPostFormData, adminPut } from '../client';
-import { mockOffices, mockVehicleGroups, mockVehicles } from './mock';
 import type {
   AdminOffice,
   AdminPaginatedResponse,
@@ -19,8 +18,6 @@ import type {
   AdminVehicleStatus,
 } from './types';
 
-const USE_MOCK = false;
-
 const ADMIN_BASE = '/v1';
 const VEHICLES_ENDPOINT = `${ADMIN_BASE}/vehicles`;
 const VEHICLE_GROUPS_ENDPOINT = `${ADMIN_BASE}/vehicle-groups`;
@@ -38,8 +35,9 @@ function toBackendVehicleStatus(status: AdminVehicleStatus | number) {
     case 'Maintenance':
       return 3;
     case 'OutOfService':
-    case 'Retired':
       return 4;
+    case 'Retired':
+      return 5;
     default:
       return 0;
   }
@@ -81,17 +79,17 @@ function unwrapResponse<T>(response: AdminResponse<T>): T {
 
 function unwrapPaginated<T>(response: AdminPaginatedResponse<T>) {
   if (Array.isArray(response)) {
-    return createMockPaginated(response);
+    return createPaginated(response);
   }
 
   if (response && typeof response === 'object' && 'data' in response) {
     const data = (response as { data: PaginatedResponse<T> | T[] }).data;
-    return Array.isArray(data) ? createMockPaginated(data) : data;
+    return Array.isArray(data) ? createPaginated(data) : data;
   }
   return response as PaginatedResponse<T>;
 }
 
-function createMockPaginated<T>(items: T[]): PaginatedResponse<T> {
+function createPaginated<T>(items: T[]): PaginatedResponse<T> {
   return {
     items,
     page: 1,
@@ -105,33 +103,21 @@ function createMockPaginated<T>(items: T[]): PaginatedResponse<T> {
 
 
 export async function getVehicles(params?: VehicleListParams | Record<string, unknown>) {
-  if (USE_MOCK) {
-    return createMockPaginated(mockVehicles);
-  }
   const response = await adminGet<AdminPaginatedResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
 
 export async function getVehicleById(id: string) {
-  if (USE_MOCK) {
-    return mockVehicles.find((vehicle) => vehicle.id === id) || mockVehicles[0];
-  }
   const response = await adminGet<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}`);
   return unwrapResponse(response);
 }
 
 export async function createVehicle(data: CreateVehicleData) {
-  if (USE_MOCK) {
-    return mockVehicles[0];
-  }
   const response = await adminPost<AdminResponse<AdminVehicle>>(VEHICLES_ENDPOINT, withBackendVehicleStatus(data));
   return unwrapResponse(response);
 }
 
 export async function updateVehicle(id: string, data: UpdateVehicleData) {
-  if (USE_MOCK) {
-    return mockVehicles[0];
-  }
   const response = await adminPut<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}`, withBackendVehicleStatus(data));
   return unwrapResponse(response);
 }
@@ -143,17 +129,12 @@ export async function uploadVehiclePhoto(id: string, file: File) {
   return unwrapResponse(response);
 }
 
-export async function deleteVehicle(id: string): Promise<void> {
-  if (USE_MOCK) {
-    return Promise.resolve();
-  }
-  await adminDel<void>(`${VEHICLES_ENDPOINT}/${id}`);
+export async function deleteVehicle(id: string) {
+  const response = await adminDel<AdminResponse<{ id: string; outcome?: 'Deleted' | 'Archived' }>>(`${VEHICLES_ENDPOINT}/${id}`);
+  return unwrapResponse(response);
 }
 
 export async function updateVehicleStatus(id: string, status: AdminVehicleStatus) {
-  if (USE_MOCK) {
-    return mockVehicles[0];
-  }
   const response = await adminPatch<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/status`, {
     status: toBackendVehicleStatus(status),
   });
@@ -161,65 +142,49 @@ export async function updateVehicleStatus(id: string, status: AdminVehicleStatus
 }
 
 export async function transferVehicle(id: string, officeId: TransferVehicleData['officeId']) {
-  if (USE_MOCK) {
-    return mockVehicles[0];
-  }
   const response = await adminPatch<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/transfer`, { officeId });
   return unwrapResponse(response);
 }
 
 export async function scheduleMaintenance(id: string, data: VehicleMaintenanceData) {
-  if (USE_MOCK) {
-    return mockVehicles[0];
-  }
   const response = await adminPatch<AdminResponse<AdminVehicle>>(`${VEHICLES_ENDPOINT}/${id}/maintenance`, data);
   return unwrapResponse(response);
 }
 
 export async function getVehicleGroups() {
-  if (USE_MOCK) {
-    return createMockPaginated(mockVehicleGroups);
-  }
   const response = await adminGet<AdminPaginatedResponse<AdminVehicleGroup>>(VEHICLE_GROUPS_ENDPOINT);
   return unwrapPaginated(response);
 }
 
 export async function createVehicleGroup(data: CreateVehicleGroupData) {
-  if (USE_MOCK) {
-    return mockVehicleGroups[0];
-  }
   const response = await adminPost<AdminResponse<AdminVehicleGroup>>(VEHICLE_GROUPS_ENDPOINT, data);
   return unwrapResponse(response);
 }
 
 export async function updateVehicleGroup(id: string, data: UpdateVehicleGroupData) {
-  if (USE_MOCK) {
-    return mockVehicleGroups[0];
-  }
   const response = await adminPut<AdminResponse<AdminVehicleGroup>>(`${VEHICLE_GROUPS_ENDPOINT}/${id}`, data);
   return unwrapResponse(response);
 }
 
+export async function deleteVehicleGroup(id: string): Promise<void> {
+  await adminDel<void>(`${VEHICLE_GROUPS_ENDPOINT}/${id}`);
+}
+
 export async function getOffices() {
-  if (USE_MOCK) {
-    return createMockPaginated(mockOffices);
-  }
   const response = await adminGet<AdminPaginatedResponse<AdminOffice>>(OFFICES_ENDPOINT);
   return unwrapPaginated(response);
 }
 
 export async function createOffice(data: CreateOfficeData) {
-  if (USE_MOCK) {
-    return mockOffices[0];
-  }
   const response = await adminPost<AdminResponse<AdminOffice>>(OFFICES_ENDPOINT, data);
   return unwrapResponse(response);
 }
 
 export async function updateOffice(id: string, data: UpdateOfficeData) {
-  if (USE_MOCK) {
-    return mockOffices[0];
-  }
   const response = await adminPut<AdminResponse<AdminOffice>>(`${OFFICES_ENDPOINT}/${id}`, data);
   return unwrapResponse(response);
+}
+
+export async function deleteOffice(id: string): Promise<void> {
+  await adminDel<void>(`${OFFICES_ENDPOINT}/${id}`);
 }

@@ -53,6 +53,7 @@ export interface AdminVehicleGroup {
   depositAmount: number;
   minAge: number;
   minLicenseYears: number;
+  isActive: boolean;
   features: string[];
   createdAt?: string;
   updatedAt?: string;
@@ -340,6 +341,7 @@ export interface CreateVehicleGroupData {
   depositAmount: number;
   minAge: number;
   minLicenseYears: number;
+  isActive: boolean;
   features?: string[];
 }
 

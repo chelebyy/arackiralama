@@ -69,6 +69,25 @@ public sealed class AdminVehicleGroupsController(IFleetService fleetService) : B
         return OkResponse(updatedVehicleGroup, "Arac grubu guncellendi.");
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await fleetService.DeleteVehicleGroupAsync(id, cancellationToken);
+            if (!deleted)
+            {
+                return NotFound(ApiResponse<object>.Fail("Arac grubu bulunamadi."));
+            }
+
+            return OkResponse<object?>(null, "Arac grubu silindi.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
     private static string? ValidateVehicleGroupInput(
         string nameTr,
         string nameEn,

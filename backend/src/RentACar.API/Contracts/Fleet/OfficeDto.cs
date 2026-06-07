@@ -7,4 +7,5 @@ public sealed record OfficeDto(
     string Address,
     string Phone,
     bool IsAirport,
+    bool IsActive,
     string OpeningHours);

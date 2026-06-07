@@ -62,6 +62,27 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
     }
 
     [Fact]
+    public async Task GetAll_WhenVehiclesAreNotAvailable_ExcludesThemFromPublicList()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (group, office) = await SeedGroupAndOfficeAsync(dbContext, "Merkez Ofis");
+        var availableVehicle = CreateVehicle("07PUB001", group.Id, office.Id, VehicleStatus.Available);
+        var retiredVehicle = CreateVehicle("07PUB002", group.Id, office.Id, VehicleStatus.Retired);
+        dbContext.Vehicles.AddRange(availableVehicle, retiredVehicle);
+        await dbContext.SaveChangesAsync();
+
+        var controller = new VehiclesController(CreateFleetService(dbContext), dbContext);
+        var result = await controller.GetAll(CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse<List<PublicVehicleDto>>>().Subject;
+        response.Success.Should().BeTrue();
+        response.Data.Should().ContainSingle();
+        response.Data![0].Id.Should().Be(availableVehicle.Id);
+        response.Data.Should().NotContain(vehicle => vehicle.Id == retiredVehicle.Id);
+    }
+
+    [Fact]
     public async Task GetById_WhenVehicleExists_ReturnsPhysicalVehicle()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -79,6 +100,21 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         response.Data.Should().NotBeNull();
         response.Data!.Id.Should().Be(vehicle.Id);
         response.Data.GroupName.Should().Be(group.NameTr);
+    }
+
+    [Fact]
+    public async Task GetById_WhenVehicleIsRetired_ReturnsNotFound()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (group, office) = await SeedGroupAndOfficeAsync(dbContext, "Merkez Ofis");
+        var vehicle = CreateVehicle("07RET001", group.Id, office.Id, VehicleStatus.Retired);
+        dbContext.Vehicles.Add(vehicle);
+        await dbContext.SaveChangesAsync();
+
+        var controller = new VehiclesController(CreateFleetService(dbContext), dbContext);
+        var result = await controller.GetById(vehicle.Id, CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]

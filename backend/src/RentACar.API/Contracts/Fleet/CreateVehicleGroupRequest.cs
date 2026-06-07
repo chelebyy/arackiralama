@@ -9,4 +9,5 @@ public sealed record CreateVehicleGroupRequest(
     decimal DepositAmount,
     int MinAge,
     int MinLicenseYears,
+    bool IsActive,
     IReadOnlyList<string>? Features);

@@ -132,7 +132,7 @@ export default function OfficeDialog({
         address: office.address,
         phone: office.phone,
         email: office.email,
-        isActive: office.isActive,
+        isActive: office.isActive ?? true,
         isAirport: office.isAirport,
         isHotel: office.isHotel,
         coordinates: office.coordinates || { latitude: 0, longitude: 0 },

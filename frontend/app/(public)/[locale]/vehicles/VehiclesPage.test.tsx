@@ -97,7 +97,7 @@ describe("VehiclesPage", () => {
     expect(screen.getByText("Araçlar yükleniyor...")).toBeInTheDocument();
   });
 
-  it("renders fetched vehicles, resolved office label, and unavailable state", () => {
+  it("renders available fetched vehicles and resolved office label", () => {
     usePublicVehiclesMock.mockReturnValue({
       vehicles: [
         createVehicle({ id: "vehicle-1", brand: "Nissan", model: "Qashqai", groupNameEn: "SUV", dailyPrice: 2500 }),
@@ -111,12 +111,12 @@ describe("VehiclesPage", () => {
 
     expect(screen.getByText("Alanya City Center")).toBeInTheDocument();
     expect(screen.getByText("Nissan Qashqai")).toBeInTheDocument();
-    expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
+    expect(screen.queryByText("Fiat Egea")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "bookNow" })).toHaveAttribute(
       "href",
       "/tr/booking/step2?pickup=ala&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&return=ala&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
     );
-    expect(screen.getByText("unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("unavailable")).not.toBeInTheDocument();
   });
 
   it("opens the mobile filters drawer when filter button is clicked", () => {
@@ -252,6 +252,24 @@ describe("VehiclesPage", () => {
 
     expect(screen.getByRole("button", { name: "buttons.back" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "buttons.next" })).toBeEnabled();
+  });
+
+  it("renders only available vehicles in the public catalogue", () => {
+    usePublicVehiclesMock.mockReturnValue({
+      vehicles: [
+        createVehicle({ id: "vehicle-available", brand: "Fiat", model: "Egea", status: "Available" }),
+        createVehicle({ id: "vehicle-retired", brand: "Renault", model: "Clio", status: "Retired" }),
+        createVehicle({ id: "vehicle-maintenance", brand: "Dacia", model: "Duster", status: "Maintenance" }),
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<VehiclesPage />);
+
+    expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
+    expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dacia Duster")).not.toBeInTheDocument();
   });
 
   it("hides a broken vehicle image and keeps the fallback visible", () => {

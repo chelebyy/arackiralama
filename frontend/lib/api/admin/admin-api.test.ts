@@ -72,7 +72,9 @@ import {
   createOffice,
   createVehicle,
   createVehicleGroup,
+  deleteOffice,
   deleteVehicle,
+  deleteVehicleGroup,
   getOffices,
   getVehicleById,
   getVehicleGroups,
@@ -172,18 +174,22 @@ describe("admin vehicles API", () => {
     await getVehicleGroups();
     await createVehicleGroup({ name: "SUV" } as never);
     await updateVehicleGroup("group-1", { minAge: 25 } as never);
+    await deleteVehicleGroup("group-1");
     await getOffices();
     await createOffice({ name: "Center" } as never);
     await updateOffice("office-1", { city: "Alanya" } as never);
+    await deleteOffice("office-1");
 
     expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups");
     expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups", { name: "SUV" });
     expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups/group-1", {
       minAge: 25,
     });
+    expect(mockedDel).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups/group-1");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/offices");
     expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/offices", { name: "Center" });
     expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/offices/office-1", { city: "Alanya" });
+    expect(mockedDel).toHaveBeenNthCalledWith(2, "/v1/offices/office-1");
   });
 });
 

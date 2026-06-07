@@ -10,6 +10,7 @@ public class VehicleGroup : BaseEntity
     public decimal DepositAmount { get; set; }
     public int MinAge { get; set; }
     public int MinLicenseYears { get; set; }
+    public bool IsActive { get; set; } = true;
     public List<string> Features { get; set; } = new();
 
     public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();

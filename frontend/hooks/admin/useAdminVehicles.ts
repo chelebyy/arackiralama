@@ -14,8 +14,10 @@ import {
   scheduleMaintenance,
   createVehicleGroup,
   updateVehicleGroup,
+  deleteVehicleGroup,
   createOffice,
   updateOffice,
+  deleteOffice,
 } from '@/lib/api/admin/vehicles';
 import type {
   AdminVehicle,
@@ -106,7 +108,7 @@ export async function mutateUpdateVehicle(
 }
 
 export async function mutateDeleteVehicle(id: string) {
-  await deleteVehicle(id);
+  return deleteVehicle(id);
 }
 
 export async function mutateUpdateVehicleStatus(
@@ -141,10 +143,18 @@ export async function mutateUpdateVehicleGroup(
   return updateVehicleGroup(id, data);
 }
 
+export async function mutateDeleteVehicleGroup(id: string) {
+  await deleteVehicleGroup(id);
+}
+
 export async function mutateCreateOffice(data: Parameters<typeof createOffice>[0]) {
   return createOffice(data);
 }
 
 export async function mutateUpdateOffice(id: string, data: Parameters<typeof updateOffice>[1]) {
   return updateOffice(id, data);
+}
+
+export async function mutateDeleteOffice(id: string) {
+  await deleteOffice(id);
 }

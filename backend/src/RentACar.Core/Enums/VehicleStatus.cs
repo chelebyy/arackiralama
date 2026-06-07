@@ -6,5 +6,6 @@ public enum VehicleStatus
     Reserved = 1,
     Rented = 2,
     Maintenance = 3,
-    OutOfService = 4
+    OutOfService = 4,
+    Retired = 5
 }

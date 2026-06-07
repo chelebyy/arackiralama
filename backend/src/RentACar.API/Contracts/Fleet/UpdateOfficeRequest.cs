@@ -6,4 +6,5 @@ public sealed record UpdateOfficeRequest(
     string Address,
     string Phone,
     bool IsAirport,
+    bool IsActive,
     string OpeningHours);

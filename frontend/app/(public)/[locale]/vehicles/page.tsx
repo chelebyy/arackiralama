@@ -120,7 +120,9 @@ export default function VehiclesPage() {
 
   const { vehicles: publicVehicles, isLoading, isError } = usePublicVehicles();
 
-  const vehicles = publicVehicles.map((vehicle) => mapPublicToVehicle(vehicle, locale));
+  const vehicles = publicVehicles
+    .filter((vehicle) => vehicle.status === "Available")
+    .map((vehicle) => mapPublicToVehicle(vehicle, locale));
   const vehicleGroups = [
     "all",
     ...Array.from(new Set(vehicles.map((vehicle) => vehicle.group))).sort((a, b) =>

@@ -18,6 +18,7 @@ public sealed class OfficeConfiguration : IEntityTypeConfiguration<Office>
         builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(250).IsRequired();
         builder.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(40).IsRequired();
         builder.Property(x => x.IsAirport).HasColumnName("is_airport");
+        builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
         builder.Property(x => x.OpeningHours).HasColumnName("opening_hours").HasMaxLength(120).IsRequired();
 
         builder.HasIndex(x => x.Code).IsUnique();
@@ -31,6 +32,7 @@ public sealed class OfficeConfiguration : IEntityTypeConfiguration<Office>
                 Address = "Sekerhane Mah. Ataturk Blv. No:10 Alanya/Antalya",
                 Phone = "+90 242 000 00 01",
                 IsAirport = false,
+                IsActive = true,
                 OpeningHours = "08:00-22:00",
                 CreatedAt = SeedDataConstants.SeededAtUtc,
                 UpdatedAt = SeedDataConstants.SeededAtUtc
@@ -43,6 +45,7 @@ public sealed class OfficeConfiguration : IEntityTypeConfiguration<Office>
                 Address = "Gazipasa-Alanya Havalimani Terminal Ici",
                 Phone = "+90 242 000 00 02",
                 IsAirport = true,
+                IsActive = true,
                 OpeningHours = "24/7",
                 CreatedAt = SeedDataConstants.SeededAtUtc,
                 UpdatedAt = SeedDataConstants.SeededAtUtc

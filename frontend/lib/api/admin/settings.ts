@@ -1,5 +1,4 @@
 import { adminGet, adminPatch, adminPut } from '../client';
-import { mockAuditLogs, mockFeatureFlags } from './mock';
 import type {
   AdminPaginatedResponse,
   AdminResponse,
@@ -10,8 +9,6 @@ import type {
   UpdatePublicSiteSettingsData,
   PaginatedResponse,
 } from './types';
-
-const USE_MOCK = false;
 
 const FEATURE_FLAGS_ENDPOINT = '/v1/feature-flags';
 const AUDIT_LOGS_ENDPOINT = '/v1/audit-logs';
@@ -50,39 +47,17 @@ function unwrapPaginated<T>(response: AdminPaginatedResponse<T>) {
   return response as PaginatedResponse<T>;
 }
 
-function createMockPaginated<T>(items: T[]): PaginatedResponse<T> {
-  return {
-    items,
-    page: 1,
-    pageSize: items.length,
-    totalCount: items.length,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  };
-}
-
-
 export async function getFeatureFlags() {
-  if (USE_MOCK) {
-    return mockFeatureFlags;
-  }
   const response = await adminGet<AdminResponse<FeatureFlag[]>>(FEATURE_FLAGS_ENDPOINT);
   return unwrapResponse(response);
 }
 
 export async function updateFeatureFlag(id: string, enabled: boolean) {
-  if (USE_MOCK) {
-    return mockFeatureFlags[0];
-  }
   const response = await adminPatch<AdminResponse<FeatureFlag>>(`${FEATURE_FLAGS_ENDPOINT}/${id}`, { enabled });
   return unwrapResponse(response);
 }
 
 export async function getAuditLogs(params?: AuditLogListParams | Record<string, unknown>) {
-  if (USE_MOCK) {
-    return createMockPaginated(mockAuditLogs);
-  }
   const response = await adminGet<AdminPaginatedResponse<AuditLog>>(`${AUDIT_LOGS_ENDPOINT}${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
