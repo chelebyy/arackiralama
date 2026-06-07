@@ -7,6 +7,7 @@ public class Office : BaseEntity
     public string Address { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public bool IsAirport { get; set; }
+    public bool IsActive { get; set; } = true;
     public string OpeningHours { get; set; } = string.Empty;
 
     public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();

@@ -4,7 +4,9 @@ import {
   mutateCreateOffice,
   mutateCreateVehicle,
   mutateCreateVehicleGroup,
+  mutateDeleteOffice,
   mutateDeleteVehicle,
+  mutateDeleteVehicleGroup,
   mutateScheduleMaintenance,
   mutateTransferVehicle,
   mutateUpdateOffice,
@@ -73,8 +75,10 @@ const vehicleApi = vi.hoisted(() => ({
   scheduleMaintenance: vi.fn(),
   createVehicleGroup: vi.fn(),
   updateVehicleGroup: vi.fn(),
+  deleteVehicleGroup: vi.fn(),
   createOffice: vi.fn(),
   updateOffice: vi.fn(),
+  deleteOffice: vi.fn(),
 }));
 
 const pricingApi = vi.hoisted(() => ({
@@ -259,14 +263,18 @@ describe("admin hooks", () => {
     await expect(mutateUpdateVehicleGroup("group-1", { name: "SUV" } as any)).resolves.toEqual({
       id: "group-updated",
     });
+    await mutateDeleteVehicleGroup("group-1");
     await expect(mutateCreateOffice({ name: "Airport" } as any)).resolves.toEqual({
       id: "office",
     });
     await expect(mutateUpdateOffice("office-1", { name: "Center" } as any)).resolves.toEqual({
       id: "office-updated",
     });
+    await mutateDeleteOffice("office-1");
 
     expect(vehicleApi.deleteVehicle).toHaveBeenCalledWith("vehicle-1");
+    expect(vehicleApi.deleteVehicleGroup).toHaveBeenCalledWith("group-1");
+    expect(vehicleApi.deleteOffice).toHaveBeenCalledWith("office-1");
   });
 
   it("maps pricing hooks and delegates pricing mutations", async () => {

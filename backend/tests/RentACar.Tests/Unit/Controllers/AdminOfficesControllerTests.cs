@@ -6,6 +6,7 @@ using RentACar.API.Controllers;
 using RentACar.API.Services;
 using RentACar.Core.Interfaces;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Repositories;
 using RentACar.Tests.TestFixtures;
@@ -60,6 +61,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
             Address: "Saray Mah. Ataturk Cad. No:1",
             Phone: "+90 242 000 00 00",
             IsAirport: false,
+            IsActive: true,
             OpeningHours: "09:00-18:00");
 
         var result = await controller.Create(request, CancellationToken.None);
@@ -92,6 +94,7 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
             Address: "Gazipasa Havalimani",
             Phone: "+90 242 111 11 11",
             IsAirport: true,
+            IsActive: false,
             OpeningHours: "07:00-23:00");
 
         var result = await controller.Update(office.Id, request, CancellationToken.None);
@@ -103,6 +106,79 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         response.Data!.Code.Should().Be("gzp");
         response.Data!.Name.Should().Be("Havalimani Ofisi");
         response.Data.IsAirport.Should().BeTrue();
+        response.Data.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_WhenOfficeHasNoVehicles_DeletesOffice()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var office = new Office
+        {
+            Name = "Silinecek Ofis",
+            Code = "del",
+            Address = "Adres",
+            Phone = "+90 242 000 00 00",
+            IsAirport = false,
+            IsActive = true,
+            OpeningHours = "09:00-18:00"
+        };
+        dbContext.Offices.Add(office);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        var result = await controller.Delete(office.Id, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        dbContext.Offices.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Delete_WhenOfficeHasVehicles_ReturnsBadRequest()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var office = new Office
+        {
+            Name = "Kullanilan Ofis",
+            Code = "use",
+            Address = "Adres",
+            Phone = "+90 242 000 00 00",
+            IsAirport = false,
+            IsActive = true,
+            OpeningHours = "09:00-18:00"
+        };
+        var group = new VehicleGroup
+        {
+            NameTr = "Ekonomi",
+            NameEn = "Economy",
+            NameRu = "Economy",
+            NameAr = "Economy",
+            NameDe = "Economy",
+            DepositAmount = 2000,
+            MinAge = 21,
+            MinLicenseYears = 2,
+            IsActive = true
+        };
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.Add(new Vehicle
+        {
+            Plate = "07OFF001",
+            Brand = "Toyota",
+            Model = "Corolla",
+            Year = 2022,
+            Color = "White",
+            GroupId = group.Id,
+            OfficeId = office.Id,
+            Status = VehicleStatus.Available
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        var result = await controller.Delete(office.Id, CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        dbContext.Offices.Should().ContainSingle(item => item.Id == office.Id);
     }
 
     private static AdminOfficesController CreateController(RentACarDbContext dbContext)
@@ -116,7 +192,5 @@ public sealed class AdminOfficesControllerTests : IClassFixture<TestDbContextFac
         return new AdminOfficesController(fleetService);
     }
 }
-
-
 
 

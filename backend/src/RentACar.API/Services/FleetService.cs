@@ -50,6 +50,7 @@ public sealed class FleetService(
             DepositAmount = request.DepositAmount,
             MinAge = request.MinAge,
             MinLicenseYears = request.MinLicenseYears,
+            IsActive = request.IsActive,
             Features = NormalizeFeatures(request.Features)
         };
 
@@ -65,6 +66,7 @@ public sealed class FleetService(
                 vehicleGroup.DepositAmount,
                 vehicleGroup.MinAge,
                 vehicleGroup.MinLicenseYears,
+                vehicleGroup.IsActive,
                 vehicleGroup.Features
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -87,6 +89,7 @@ public sealed class FleetService(
             existingVehicleGroup.DepositAmount,
             existingVehicleGroup.MinAge,
             existingVehicleGroup.MinLicenseYears,
+            existingVehicleGroup.IsActive,
             Features = existingVehicleGroup.Features.ToList()
         };
 
@@ -98,6 +101,7 @@ public sealed class FleetService(
         existingVehicleGroup.DepositAmount = request.DepositAmount;
         existingVehicleGroup.MinAge = request.MinAge;
         existingVehicleGroup.MinLicenseYears = request.MinLicenseYears;
+        existingVehicleGroup.IsActive = request.IsActive;
         existingVehicleGroup.Features = NormalizeFeatures(request.Features);
 
         WriteAuditLog(
@@ -114,12 +118,48 @@ public sealed class FleetService(
                     existingVehicleGroup.DepositAmount,
                     existingVehicleGroup.MinAge,
                     existingVehicleGroup.MinLicenseYears,
+                    existingVehicleGroup.IsActive,
                     existingVehicleGroup.Features
                 }
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingVehicleGroup);
+    }
+
+    public async Task<bool> DeleteVehicleGroupAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var existingVehicleGroup = await vehicleGroupRepository.GetByIdAsync(id, cancellationToken);
+        if (existingVehicleGroup is null)
+        {
+            return false;
+        }
+
+        var hasVehicles = await dbContext.Vehicles
+            .AsNoTracking()
+            .AnyAsync(vehicle => vehicle.GroupId == id, cancellationToken);
+        var hasPricingRules = await dbContext.PricingRules
+            .AsNoTracking()
+            .AnyAsync(rule => rule.VehicleGroupId == id, cancellationToken);
+
+        if (hasVehicles || hasPricingRules)
+        {
+            throw new InvalidOperationException("Bagli arac veya fiyat kurali bulunan arac gruplari silinemez.");
+        }
+
+        WriteAuditLog(
+            action: "VehicleGroupDeleted",
+            entityType: nameof(VehicleGroup),
+            entityId: existingVehicleGroup.Id,
+            details: new
+            {
+                existingVehicleGroup.NameTr,
+                existingVehicleGroup.NameEn,
+                existingVehicleGroup.IsActive
+            });
+        vehicleGroupRepository.Remove(existingVehicleGroup);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<IReadOnlyList<VehicleDto>> GetVehiclesAsync(CancellationToken cancellationToken = default)
@@ -290,12 +330,40 @@ public sealed class FleetService(
         return MapToDto(existingVehicle);
     }
 
-    public async Task<bool> DeleteVehicleAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<VehicleDeletionOutcome> DeleteVehicleAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var existingVehicle = await vehicleRepository.GetByIdAsync(id, cancellationToken);
         if (existingVehicle is null)
         {
-            return false;
+            return VehicleDeletionOutcome.NotFound;
+        }
+
+        var hasReservations = await dbContext.Reservations
+            .AsNoTracking()
+            .AnyAsync(reservation => reservation.VehicleId == id, cancellationToken);
+        var hasReservationHolds = await dbContext.ReservationHolds
+            .AsNoTracking()
+            .AnyAsync(hold => hold.VehicleId == id, cancellationToken);
+
+        if (hasReservations || hasReservationHolds)
+        {
+            var previousStatus = existingVehicle.Status;
+            existingVehicle.Status = VehicleStatus.Retired;
+            WriteAuditLog(
+                action: "VehicleArchived",
+                entityType: nameof(Vehicle),
+                entityId: existingVehicle.Id,
+                details: new
+                {
+                    existingVehicle.Plate,
+                    existingVehicle.Brand,
+                    existingVehicle.Model,
+                    PreviousStatus = previousStatus.ToString(),
+                    NewStatus = VehicleStatus.Retired.ToString(),
+                    Reason = "Linked reservation or reservation hold"
+                });
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return VehicleDeletionOutcome.Archived;
         }
 
         await vehiclePhotoStorage.DeleteAsync(existingVehicle.PhotoUrl, cancellationToken);
@@ -313,7 +381,7 @@ public sealed class FleetService(
             });
         vehicleRepository.Remove(existingVehicle);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return true;
+        return VehicleDeletionOutcome.Deleted;
     }
 
     public async Task<VehicleDto?> UpdateVehicleStatusAsync(Guid id, VehicleStatus status, CancellationToken cancellationToken = default)
@@ -481,6 +549,7 @@ public sealed class FleetService(
             Address = request.Address.Trim(),
             Phone = request.Phone.Trim(),
             IsAirport = request.IsAirport,
+            IsActive = request.IsActive,
             OpeningHours = request.OpeningHours.Trim()
         };
 
@@ -493,6 +562,7 @@ public sealed class FleetService(
             {
                 office.Name,
                 office.IsAirport,
+                office.IsActive,
                 office.OpeningHours
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -515,6 +585,7 @@ public sealed class FleetService(
             existingOffice.Address,
             existingOffice.Phone,
             existingOffice.IsAirport,
+            existingOffice.IsActive,
             existingOffice.OpeningHours
         };
 
@@ -523,6 +594,7 @@ public sealed class FleetService(
         existingOffice.Address = request.Address.Trim();
         existingOffice.Phone = request.Phone.Trim();
         existingOffice.IsAirport = request.IsAirport;
+        existingOffice.IsActive = request.IsActive;
         existingOffice.OpeningHours = request.OpeningHours.Trim();
 
         WriteAuditLog(
@@ -539,12 +611,45 @@ public sealed class FleetService(
                     existingOffice.Address,
                     existingOffice.Phone,
                     existingOffice.IsAirport,
+                    existingOffice.IsActive,
                     existingOffice.OpeningHours
                 }
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToDto(existingOffice);
+    }
+
+    public async Task<bool> DeleteOfficeAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var existingOffice = await officeRepository.GetByIdAsync(id, cancellationToken);
+        if (existingOffice is null)
+        {
+            return false;
+        }
+
+        var hasVehicles = await dbContext.Vehicles
+            .AsNoTracking()
+            .AnyAsync(vehicle => vehicle.OfficeId == id, cancellationToken);
+
+        if (hasVehicles)
+        {
+            throw new InvalidOperationException("Bagli arac bulunan ofisler silinemez.");
+        }
+
+        WriteAuditLog(
+            action: "OfficeDeleted",
+            entityType: nameof(Office),
+            entityId: existingOffice.Id,
+            details: new
+            {
+                existingOffice.Code,
+                existingOffice.Name,
+                existingOffice.IsActive
+            });
+        officeRepository.Remove(existingOffice);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private void WriteAuditLog(string action, string entityType, Guid entityId, object details)
@@ -578,6 +683,7 @@ public sealed class FleetService(
             vehicleGroup.DepositAmount,
             vehicleGroup.MinAge,
             vehicleGroup.MinLicenseYears,
+            vehicleGroup.IsActive,
             vehicleGroup.Features);
     }
 
@@ -605,6 +711,7 @@ public sealed class FleetService(
             office.Address,
             office.Phone,
             office.IsAirport,
+            office.IsActive,
             office.OpeningHours);
     }
 

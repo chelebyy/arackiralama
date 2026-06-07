@@ -13,10 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Plane, Hotel, Plus } from "lucide-react";
-import { useAdminOffices } from "@/hooks/admin";
+import { Pencil, Plane, Hotel, Plus, Power, Trash2 } from "lucide-react";
+import { mutateDeleteOffice, mutateUpdateOffice, useAdminOffices } from "@/hooks/admin";
 import type { AdminOffice } from "@/lib/api/admin/types";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 
 const OfficeDialog = dynamic(() => import("@/components/admin/dialogs/OfficeDialog"), {
   ssr: false,
@@ -42,6 +43,47 @@ export default function OfficesPage() {
     setDialogOpen(false);
     setEditingOffice(undefined);
     mutate();
+  };
+
+  const handleDelete = async (office: AdminOffice) => {
+    if (!window.confirm(`${office.name} kaydı silinsin mi? Bağlı araç varsa işlem reddedilir.`)) {
+      return;
+    }
+
+    try {
+      await mutateDeleteOffice(office.id);
+      toast.success("Ofis silindi");
+      mutate();
+    } catch (error) {
+      toast.error("Ofis silinemedi");
+      console.error(error);
+    }
+  };
+
+  const handleToggleActive = async (office: AdminOffice) => {
+    try {
+      await mutateUpdateOffice(office.id, {
+        name: office.name,
+        code: office.code,
+        type: office.type,
+        city: office.city,
+        district: office.district,
+        address: office.address,
+        phone: office.phone,
+        email: office.email,
+        isActive: !office.isActive,
+        isAirport: office.isAirport,
+        isHotel: office.isHotel,
+        coordinates: office.coordinates,
+        openingHours: office.openingHours,
+        services: office.services,
+      });
+      toast.success(office.isActive ? "Ofis pasif edildi" : "Ofis aktif edildi");
+      mutate();
+    } catch (error) {
+      toast.error("Ofis durumu güncellenemedi");
+      console.error(error);
+    }
   };
 
   return (
@@ -105,9 +147,29 @@ export default function OfficesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => handleEdit(o)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => handleEdit(o)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleActive(o)}
+                          aria-label={o.isActive ? "Ofisi pasif et" : "Ofisi aktif et"}
+                          title={o.isActive ? "Pasif et" : "Aktif et"}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(o)}
+                          aria-label="Ofisi sil"
+                          title="Sil"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

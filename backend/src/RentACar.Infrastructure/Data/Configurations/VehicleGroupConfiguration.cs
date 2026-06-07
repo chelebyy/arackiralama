@@ -23,6 +23,7 @@ public sealed class VehicleGroupConfiguration : IEntityTypeConfiguration<Vehicle
         builder.Property(x => x.DepositAmount).HasColumnName("deposit_amount").HasPrecision(18, 2);
         builder.Property(x => x.MinAge).HasColumnName("min_age");
         builder.Property(x => x.MinLicenseYears).HasColumnName("min_license_years");
+        builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
         builder
             .Property(x => x.Features)
             .HasColumnName("features")
@@ -49,6 +50,7 @@ public sealed class VehicleGroupConfiguration : IEntityTypeConfiguration<Vehicle
                 DepositAmount = 2000m,
                 MinAge = 21,
                 MinLicenseYears = 2,
+                IsActive = true,
                 Features = ["AirConditioning", "AutomaticTransmission"],
                 CreatedAt = SeedDataConstants.SeededAtUtc,
                 UpdatedAt = SeedDataConstants.SeededAtUtc
@@ -64,6 +66,7 @@ public sealed class VehicleGroupConfiguration : IEntityTypeConfiguration<Vehicle
                 DepositAmount = 3500m,
                 MinAge = 25,
                 MinLicenseYears = 3,
+                IsActive = true,
                 Features = ["AirConditioning", "AutomaticTransmission", "BackupCamera"],
                 CreatedAt = SeedDataConstants.SeededAtUtc,
                 UpdatedAt = SeedDataConstants.SeededAtUtc

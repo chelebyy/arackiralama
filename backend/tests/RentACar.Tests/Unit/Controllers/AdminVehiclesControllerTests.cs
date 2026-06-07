@@ -147,6 +147,47 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
     }
 
     [Fact]
+    public async Task Delete_WhenVehicleHasReservation_ArchivesAndKeepsVehicle()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (groupId, officeId) = await SeedGroupAndOfficeAsync(dbContext);
+
+        var vehicle = new Vehicle
+        {
+            Plate = "07DEL999",
+            Brand = "Opel",
+            Model = "Corsa",
+            Year = 2021,
+            Color = "Blue",
+            GroupId = groupId,
+            OfficeId = officeId,
+            Status = VehicleStatus.Available
+        };
+        var reservation = new Reservation
+        {
+            PublicCode = "R" + Guid.NewGuid().ToString("N")[..8],
+            CustomerId = Guid.NewGuid(),
+            VehicleId = vehicle.Id,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Paid,
+            TotalAmount = 1000m
+        };
+        dbContext.Vehicles.Add(vehicle);
+        dbContext.Reservations.Add(reservation);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        var result = await controller.Delete(vehicle.Id, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        dynamic response = okResult.Value!;
+        ((bool)response.Success).Should().BeTrue();
+        ((string)response.Message).Should().Be("Arac rezervasyon gecmisi oldugu icin arsivlendi.");
+        dbContext.Vehicles.Should().ContainSingle(x => x.Id == vehicle.Id && x.Status == VehicleStatus.Retired);
+    }
+
+    [Fact]
     public async Task UpdateStatus_WhenVehicleExists_UpdatesStatus()
     {
         using var dbContext = _dbContextFactory.CreateContext();

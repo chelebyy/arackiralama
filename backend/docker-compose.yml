@@ -29,6 +29,13 @@ services:
       timeout: 3s
       retries: 10
 
+  api-upload-permissions:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    container_name: rentacar-api-upload-permissions
+    command: sh -c "mkdir -p /uploads/vehicles && chown -R 10000:10000 /uploads"
+    volumes:
+      - api_uploads:/uploads
+
   api:
     build:
       context: .
@@ -39,6 +46,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api-upload-permissions:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -55,6 +64,8 @@ services:
       LoadTesting__ConcurrentBookingInventorySeedEnabled: "true"
     ports:
       - "5000:8080"
+    volumes:
+      - api_uploads:/app/wwwroot/uploads
 
   worker:
     build:
@@ -94,3 +105,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  api_uploads:

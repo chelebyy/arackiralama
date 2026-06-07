@@ -46,7 +46,7 @@ const vehicleSchema = z.object({
   color: z.string().min(1, "Renk gereklidir"),
   groupId: z.string().min(1, "Araç grubu seçilmelidir"),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
-  status: z.enum(["Available", "Maintenance", "OutOfService"]),
+  status: z.enum(["Available", "Maintenance", "OutOfService", "Retired"]),
   photo: z.instanceof(File).optional(),
 });
 
@@ -74,7 +74,8 @@ export default function VehicleDialog({
   const normalizeStatus = (status: AdminVehicle["status"] | undefined): VehicleFormData["status"] => {
     if (status === 0 || status === "Available") return "Available";
     if (status === 3 || status === "Maintenance") return "Maintenance";
-    if (status === 4 || status === "OutOfService" || status === "Retired") return "OutOfService";
+    if (status === 4 || status === "OutOfService") return "OutOfService";
+    if (status === 5 || status === "Retired") return "Retired";
     return "Available";
   };
 
@@ -139,17 +140,23 @@ export default function VehicleDialog({
 
       if (isEditing && vehicle) {
         savedVehicle = await updateVehicle(vehicle.id, payload);
-        toast.success("Araç başarıyla güncellendi");
       } else {
         savedVehicle = await createVehicle(payload);
-        toast.success("Araç başarıyla oluşturuldu");
       }
 
       if (data.photo) {
         await uploadVehiclePhoto(savedVehicle.id, data.photo);
-        toast.success("Araç görseli başarıyla yüklendi");
       }
 
+      toast.success(
+        isEditing
+          ? data.photo
+            ? "Araç ve görsel başarıyla güncellendi"
+            : "Araç başarıyla güncellendi"
+          : data.photo
+          ? "Araç ve görsel başarıyla oluşturuldu"
+          : "Araç başarıyla oluşturuldu",
+      );
       onSuccess();
     } catch (error) {
       toast.error(isEditing ? "Araç güncellenemedi" : "Araç oluşturulamadı");
@@ -220,7 +227,7 @@ export default function VehicleDialog({
                       <Input
                         type="number"
                         name={field.name}
-                        value={typeof field.value === "number" ? field.value : ""}
+                        value={field.value == null ? "" : String(field.value)}
                         onBlur={field.onBlur}
                         onChange={(event) => field.onChange(event.target.value)}
                         ref={field.ref}
@@ -315,6 +322,7 @@ export default function VehicleDialog({
                         <SelectItem value="Available">Müsait</SelectItem>
                         <SelectItem value="Maintenance">Bakımda</SelectItem>
                         <SelectItem value="OutOfService">Servis Dışı</SelectItem>
+                        <SelectItem value="Retired">Arşivli</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

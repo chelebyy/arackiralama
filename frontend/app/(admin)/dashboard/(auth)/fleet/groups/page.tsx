@@ -5,10 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Plus } from "lucide-react";
-import { useAdminVehicleGroups } from "@/hooks/admin";
+import { Pencil, Plus, Power, Trash2 } from "lucide-react";
+import {
+  mutateDeleteVehicleGroup,
+  mutateUpdateVehicleGroup,
+  useAdminVehicleGroups,
+} from "@/hooks/admin";
 import type { AdminVehicleGroup } from "@/lib/api/admin/types";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 
 const VehicleGroupDialog = dynamic(() => import("@/components/admin/dialogs/VehicleGroupDialog"), {
   ssr: false,
@@ -34,6 +39,44 @@ export default function VehicleGroupsPage() {
     setDialogOpen(false);
     setEditingGroup(undefined);
     mutate();
+  };
+
+  const handleDelete = async (group: AdminVehicleGroup) => {
+    const groupLabel = group.nameTr ?? group.nameEn ?? group.name ?? "bu grup";
+    if (!window.confirm(`${groupLabel} kaydı silinsin mi? Bağlı araç/fiyat varsa işlem reddedilir.`)) {
+      return;
+    }
+
+    try {
+      await mutateDeleteVehicleGroup(group.id);
+      toast.success("Araç grubu silindi");
+      mutate();
+    } catch (error) {
+      toast.error("Araç grubu silinemedi");
+      console.error(error);
+    }
+  };
+
+  const handleToggleActive = async (group: AdminVehicleGroup) => {
+    try {
+      await mutateUpdateVehicleGroup(group.id, {
+        nameTr: group.nameTr ?? group.name ?? "",
+        nameEn: group.nameEn ?? group.name ?? "",
+        nameRu: group.nameRu ?? group.name ?? "",
+        nameAr: group.nameAr ?? group.name ?? "",
+        nameDe: group.nameDe ?? group.name ?? "",
+        depositAmount: group.depositAmount,
+        minAge: group.minAge,
+        minLicenseYears: group.minLicenseYears,
+        isActive: !group.isActive,
+        features: group.features ?? [],
+      });
+      toast.success(group.isActive ? "Araç grubu pasif edildi" : "Araç grubu aktif edildi");
+      mutate();
+    } catch (error) {
+      toast.error("Araç grubu durumu güncellenemedi");
+      console.error(error);
+    }
   };
 
   return (
@@ -65,9 +108,30 @@ export default function VehicleGroupsPage() {
                     <Button size="sm" variant="ghost" onClick={() => handleEdit(g)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleToggleActive(g)}
+                      aria-label={g.isActive ? "Araç grubunu pasif et" : "Araç grubunu aktif et"}
+                      title={g.isActive ? "Pasif et" : "Aktif et"}
+                    >
+                      <Power className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(g)}
+                      aria-label="Araç grubunu sil"
+                      title="Sil"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">{g.nameEn}</p>
+                <Badge variant={g.isActive ? "default" : "destructive"} className="w-fit">
+                  {g.isActive ? "Aktif" : "Pasif"}
+                </Badge>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">

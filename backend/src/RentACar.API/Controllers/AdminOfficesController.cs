@@ -51,6 +51,25 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
         return OkResponse(updatedOffice, "Ofis guncellendi.");
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await fleetService.DeleteOfficeAsync(id, cancellationToken);
+            if (!deleted)
+            {
+                return NotFound(ApiResponse<object>.Fail("Ofis bulunamadi."));
+            }
+
+            return OkResponse<object?>(null, "Ofis silindi.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
     private static string? ValidateOfficeInput(string code, string name, string address, string phone, string openingHours)
     {
         if (string.IsNullOrWhiteSpace(code) ||

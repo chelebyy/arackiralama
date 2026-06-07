@@ -6,6 +6,7 @@ using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Services;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 
 namespace RentACar.API.Controllers;
@@ -26,6 +27,7 @@ public sealed class VehiclesController(
             cancellationToken);
 
         var publicVehicles = vehicles
+            .Where(vehicle => vehicle.Status == VehicleStatus.Available)
             .Select(vehicle => MapToPublicVehicle(
                 vehicle,
                 groups.FirstOrDefault(group => group.Id == vehicle.GroupId),
@@ -98,6 +100,11 @@ public sealed class VehiclesController(
     {
         var vehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
         if (vehicle is null)
+        {
+            return NotFoundResponse("Arac bulunamadi.");
+        }
+
+        if (vehicle.Status != VehicleStatus.Available)
         {
             return NotFoundResponse("Arac bulunamadi.");
         }

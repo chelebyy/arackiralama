@@ -4,6 +4,8 @@ using RentACar.API.Contracts;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Repositories;
@@ -64,6 +66,7 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
             DepositAmount: 1000,
             MinAge: 21,
             MinLicenseYears: 2,
+            IsActive: true,
             Features: null);
 
         var result = await controller.Create(request, CancellationToken.None);
@@ -88,6 +91,7 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
             DepositAmount: 4500,
             MinAge: 25,
             MinLicenseYears: 3,
+            IsActive: true,
             Features: ["LeatherSeats", "Navigation"]);
 
         var result = await controller.Create(request, CancellationToken.None);
@@ -115,6 +119,7 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
             DepositAmount: 3000,
             MinAge: 24,
             MinLicenseYears: 2,
+            IsActive: true,
             Features: ["BackupCamera"]);
 
         var result = await controller.Update(Guid.NewGuid(), request, CancellationToken.None);
@@ -151,6 +156,7 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
             DepositAmount: 5500,
             MinAge: 27,
             MinLicenseYears: 4,
+            IsActive: false,
             Features: ["Sunroof", "LeatherSeats"]);
 
         var result = await controller.Update(vehicleGroup.Id, request, CancellationToken.None);
@@ -160,7 +166,82 @@ public sealed class AdminVehicleGroupsControllerTests : IClassFixture<TestDbCont
         response.Success.Should().BeTrue();
         response.Data.Should().NotBeNull();
         response.Data!.NameTr.Should().Be("Luks");
+        response.Data.IsActive.Should().BeFalse();
         response.Data.Features.Should().BeEquivalentTo(["Sunroof", "LeatherSeats"]);
+    }
+
+    [Fact]
+    public async Task Delete_WhenVehicleGroupHasNoDependencies_DeletesVehicleGroup()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var vehicleGroup = new VehicleGroup
+        {
+            NameTr = "Silinecek",
+            NameEn = "Delete",
+            NameRu = "Delete",
+            NameAr = "Delete",
+            NameDe = "Delete",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2,
+            IsActive = true
+        };
+        dbContext.VehicleGroups.Add(vehicleGroup);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        var result = await controller.Delete(vehicleGroup.Id, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        dbContext.VehicleGroups.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Delete_WhenVehicleGroupHasVehicles_ReturnsBadRequest()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var vehicleGroup = new VehicleGroup
+        {
+            NameTr = "Kullanilan",
+            NameEn = "Used",
+            NameRu = "Used",
+            NameAr = "Used",
+            NameDe = "Used",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2,
+            IsActive = true
+        };
+        var office = new Office
+        {
+            Name = "Merkez",
+            Code = "ctr",
+            Address = "Adres",
+            Phone = "+90 242 000 00 00",
+            IsAirport = false,
+            IsActive = true,
+            OpeningHours = "09:00-18:00"
+        };
+        dbContext.VehicleGroups.Add(vehicleGroup);
+        dbContext.Offices.Add(office);
+        dbContext.Vehicles.Add(new Vehicle
+        {
+            Plate = "07GRP001",
+            Brand = "Toyota",
+            Model = "Corolla",
+            Year = 2022,
+            Color = "White",
+            GroupId = vehicleGroup.Id,
+            OfficeId = office.Id,
+            Status = VehicleStatus.Available
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext);
+        var result = await controller.Delete(vehicleGroup.Id, CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        dbContext.VehicleGroups.Should().ContainSingle(item => item.Id == vehicleGroup.Id);
     }
 
     private static AdminVehicleGroupsController CreateController(RentACarDbContext dbContext)

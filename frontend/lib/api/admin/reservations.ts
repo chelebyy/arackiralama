@@ -1,5 +1,4 @@
 import { adminGet, adminPatch, adminPost } from '../client';
-import { mockReservations } from './mock';
 import type {
   AdminPaginatedResponse,
   AdminPaymentOperation,
@@ -13,8 +12,6 @@ import type {
   ReservationCheckOutData,
   ReservationListParams,
 } from './types';
-
-const USE_MOCK = false;
 
 const RESERVATIONS_ENDPOINT = '/v1/reservations';
 
@@ -51,31 +48,12 @@ function unwrapPaginated<T>(response: AdminPaginatedResponse<T>) {
   return response as PaginatedResponse<T>;
 }
 
-function createMockPaginated<T>(items: T[]): PaginatedResponse<T> {
-  return {
-    items,
-    page: 1,
-    pageSize: items.length,
-    totalCount: items.length,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  };
-}
-
-
 export async function getReservations(params?: ReservationListParams | Record<string, unknown>) {
-  if (USE_MOCK) {
-    return createMockPaginated(mockReservations);
-  }
   const response = await adminGet<AdminPaginatedResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}${buildQueryString(params)}`);
   return unwrapPaginated(response);
 }
 
 export async function getReservationById(id: string) {
-  if (USE_MOCK) {
-    return mockReservations.find((reservation) => reservation.id === id) || mockReservations[0];
-  }
   const response = await adminGet<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}`);
   return unwrapResponse(response);
 }
@@ -84,34 +62,22 @@ export async function cancelReservation(
   id: string,
   reason: CancelReservationData['reason'] | CancelReservationData
 ) {
-  if (USE_MOCK) {
-    return mockReservations[0];
-  }
   const payload = typeof reason === 'string' ? { reason } : reason;
   const response = await adminPatch<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}/cancel`, payload);
   return unwrapResponse(response);
 }
 
 export async function assignVehicle(id: string, vehicleId: AssignVehicleData['vehicleId']) {
-  if (USE_MOCK) {
-    return mockReservations[0];
-  }
   const response = await adminPatch<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}/assign-vehicle`, { vehicleId });
   return unwrapResponse(response);
 }
 
 export async function checkIn(id: string, data: ReservationCheckInData) {
-  if (USE_MOCK) {
-    return mockReservations[0];
-  }
   const response = await adminPatch<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}/check-in`, data);
   return unwrapResponse(response);
 }
 
 export async function checkOut(id: string, data: ReservationCheckOutData) {
-  if (USE_MOCK) {
-    return mockReservations[0];
-  }
   const response = await adminPatch<AdminResponse<AdminReservation>>(`${RESERVATIONS_ENDPOINT}/${id}/check-out`, data);
   return unwrapResponse(response);
 }
@@ -120,9 +86,6 @@ export async function refundReservation(
   id: string,
   data: AdminRefundData
 ) {
-  if (USE_MOCK) {
-    return mockReservations[0];
-  }
   const response = await adminPost<AdminResponse<AdminPaymentOperation>>(`${RESERVATIONS_ENDPOINT}/${id}/refund`, data);
   return unwrapResponse(response);
 }

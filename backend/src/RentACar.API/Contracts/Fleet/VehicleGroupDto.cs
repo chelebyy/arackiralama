@@ -10,4 +10,5 @@ public sealed record VehicleGroupDto(
     decimal DepositAmount,
     int MinAge,
     int MinLicenseYears,
+    bool IsActive,
     IReadOnlyList<string> Features);

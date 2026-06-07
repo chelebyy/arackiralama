@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { createVehicleGroup, updateVehicleGroup } from "@/lib/api/admin/vehicles";
@@ -38,6 +39,7 @@ const vehicleGroupSchema = z.object({
   depositAmount: z.coerce.number().min(0, "Depozito 0 veya daha büyük olmalıdır"),
   minAge: z.coerce.number().min(18, "Minimum yaş 18 veya daha büyük olmalıdır"),
   minLicenseYears: z.coerce.number().min(0, "Ehliyet yılı 0 veya daha büyük olmalıdır"),
+  isActive: z.boolean(),
   featuresText: z.string().optional(),
 });
 
@@ -77,6 +79,7 @@ export default function VehicleGroupDialog({
       depositAmount: 0,
       minAge: 21,
       minLicenseYears: 1,
+      isActive: true,
       featuresText: "",
     },
   });
@@ -91,6 +94,7 @@ export default function VehicleGroupDialog({
       depositAmount: group?.depositAmount ?? 0,
       minAge: group?.minAge ?? 21,
       minLicenseYears: group?.minLicenseYears ?? 1,
+      isActive: group?.isActive ?? true,
       featuresText: group?.features?.join(", ") ?? "",
     });
   }, [form, group, open]);
@@ -104,6 +108,7 @@ export default function VehicleGroupDialog({
     depositAmount: data.depositAmount,
     minAge: data.minAge,
     minLicenseYears: data.minLicenseYears,
+    isActive: data.isActive,
     features: buildFeatures(data.featuresText),
   });
 
@@ -225,6 +230,24 @@ export default function VehicleGroupDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <FormLabel>Aktif grup</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Pasif gruplar yeni araç ve fiyat akışlarında kullanılmamalıdır.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
