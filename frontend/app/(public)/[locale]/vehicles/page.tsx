@@ -133,7 +133,7 @@ export default function VehiclesPage() {
       ? vehicles
       : vehicles.filter((v) => v.group === selectedGroup);
 
-  function buildBookingStep3Href(vehicle: Vehicle): string {
+  function buildBookingStep2Href(vehicle: Vehicle): string {
     const query = new URLSearchParams(Object.fromEntries(searchParams.entries()));
     query.set("pickup", pickupOffice);
     query.set("return", returnOffice);
@@ -144,7 +144,7 @@ export default function VehiclesPage() {
     query.set("vehicle", vehicle.groupId);
     query.set("dailyPrice", String(vehicle.dailyRate));
     query.set("vehicleName", vehicle.name);
-    return `/${locale}/booking/step3?${query.toString()}`;
+    return `/${locale}/booking/step2?${query.toString()}`;
   }
 
   const totalPages = Math.ceil(filteredVehicles.length / 6);
@@ -381,7 +381,7 @@ export default function VehiclesPage() {
 
                       {vehicle.available ? (
                         <NextLink
-                          href={buildBookingStep3Href(vehicle)}
+                          href={buildBookingStep2Href(vehicle)}
                           className={cn(
                             "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
                             "transition-all duration-200",

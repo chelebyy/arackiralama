@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Car,
   Users,
@@ -73,6 +73,7 @@ export default function BookingStep2Page() {
   const t = useTranslations("booking");
   const requestedVehicle = searchParams.get("vehicle");
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(requestedVehicle);
+  const autoAdvancedVehicleRef = useRef<string | null>(null);
   const { setDates, selectVehicle } = useBookingActions();
 
   function translateVehicleFeature(feature: string): string {
@@ -144,7 +145,7 @@ export default function BookingStep2Page() {
   const vehicleGroups = availableGroups.map(mapAvailableGroup);
   const selectedVehicleIsAvailable = vehicleGroups.some((vehicle) => vehicle.id === selectedVehicle);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (!selectedVehicle || !selectedVehicleIsAvailable) return;
     const selectedGroup = availableGroups.find((group) => group.groupId === selectedVehicle);
     const selectedGroupName = selectedGroup ? resolveAvailableGroupName(selectedGroup) : undefined;
@@ -196,7 +197,39 @@ export default function BookingStep2Page() {
       queryParams.set("vehicleName", selectedGroupName ?? selectedGroup.groupName);
     }
     router.push(`/${locale}/booking/step3?${queryParams.toString()}`);
-  };
+  }, [
+    availableGroups,
+    locale,
+    pickupDate,
+    pickupOfficeGuid,
+    pickupOfficeObj,
+    pickupTime,
+    returnDate,
+    returnOfficeGuid,
+    returnOfficeObj,
+    returnTime,
+    router,
+    searchParams,
+    selectVehicle,
+    selectedVehicle,
+    selectedVehicleIsAvailable,
+    setDates,
+  ]);
+
+  useEffect(() => {
+    if (
+      !requestedVehicle ||
+      isLoading ||
+      isError ||
+      !selectedVehicleIsAvailable ||
+      autoAdvancedVehicleRef.current === requestedVehicle
+    ) {
+      return;
+    }
+
+    autoAdvancedVehicleRef.current = requestedVehicle;
+    handleContinue();
+  }, [handleContinue, isError, isLoading, requestedVehicle, selectedVehicleIsAvailable]);
 
   const days = Math.max(
     1,

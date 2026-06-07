@@ -84,7 +84,16 @@ export default function BookingStep3Page() {
   const t = useTranslations("booking");
   const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
   const { updateCustomerDetails, setDates } = useBookingActions();
-  const { offices } = useOffices();
+  const { offices, isLoading: officesLoading, isError: officesError } = useOffices();
+  const pickupOffice = searchParams.get("pickup") || "ala";
+  const returnOffice = searchParams.get("return") || pickupOffice;
+  const pickupOfficeMatch = resolveOffice(offices, pickupOffice);
+  const returnOfficeMatch = resolveOffice(offices, returnOffice);
+  const officesReady =
+    !officesLoading &&
+    !officesError &&
+    isGuid(pickupOfficeMatch.id) &&
+    isGuid(returnOfficeMatch.id);
 
   const step3Schema = z.object({
     firstName: z.string().min(2, t("validation.requiredFirstName")),
@@ -154,10 +163,7 @@ export default function BookingStep3Page() {
   };
 
   const onSubmit = (data: Step3FormData) => {
-    const pickupOffice = searchParams.get("pickup") || "ala";
-    const returnOffice = searchParams.get("return") || pickupOffice;
-    const pickupOfficeMatch = resolveOffice(offices, pickupOffice);
-    const returnOfficeMatch = resolveOffice(offices, returnOffice);
+    if (!officesReady) return;
 
     setDates({
       pickupOfficeId: pickupOfficeMatch.id,
@@ -417,12 +423,25 @@ export default function BookingStep3Page() {
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
+            disabled={!officesReady}
+            className={cn(
+              "inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-lg transition-colors",
+              officesReady
+                ? "bg-sky-700 text-white hover:bg-sky-800"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+            )}
           >
             {t("continueToPayment")}
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>
+
+        {!officesReady && (
+          <div className="flex items-start gap-2 text-sm text-slate-600">
+            <Info className="h-4 w-4 mt-0.5 text-sky-600" />
+            <span>{t("loadingOffices")}</span>
+          </div>
+        )}
       </form>
     </div>
   );

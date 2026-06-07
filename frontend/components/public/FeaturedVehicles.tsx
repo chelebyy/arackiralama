@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import VehicleCard from "@/components/public/VehicleCard";
 import { usePublicVehicles } from "@/hooks/useVehicles";
+import { API_CONFIG } from "@/lib/api/config";
 import type { PublicVehicle } from "@/lib/api/types";
 
 const DEFAULT_LOCATION = "ala";
@@ -22,6 +23,13 @@ function resolveGroupLabel(vehicle: PublicVehicle, locale: string): string {
   return vehicle.groupNameEn || vehicle.groupName || "fleet";
 }
 
+function resolveMediaUrl(url: string | null): string | undefined {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  const apiOrigin = new URL(API_CONFIG.baseUrl).origin;
+  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 function buildBookingHref(vehicle: PublicVehicle, locale: string) {
   const query = new URLSearchParams({
     pickup: DEFAULT_LOCATION,
@@ -35,7 +43,7 @@ function buildBookingHref(vehicle: PublicVehicle, locale: string) {
     vehicleName: `${vehicle.brand} ${vehicle.model}`,
   });
 
-  return `/${locale}/booking/step3?${query.toString()}`;
+  return `/${locale}/booking/step2?${query.toString()}`;
 }
 
 export default function FeaturedVehicles() {
@@ -85,7 +93,7 @@ export default function FeaturedVehicles() {
             name={vehicleName}
             category={vehicle.groupNameEn?.toLowerCase() || vehicle.groupName?.toLowerCase() || "fleet"}
             categoryLabel={resolveGroupLabel(vehicle, locale)}
-            image={vehicle.photoUrl ?? undefined}
+            image={resolveMediaUrl(vehicle.photoUrl)}
             seats={5}
             transmission="automatic"
             fuelType="gasoline"

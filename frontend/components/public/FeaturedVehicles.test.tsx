@@ -80,7 +80,7 @@ describe("FeaturedVehicles", () => {
     vi.clearAllMocks();
   });
 
-  it("renders featured vehicles from public API data with backend price and booking link", () => {
+  it("renders featured vehicles from public API data with backend price and availability-checked booking link", () => {
     render(<FeaturedVehicles />);
 
     expect(screen.getByRole("heading", { name: "Dacia Duster" })).toBeInTheDocument();
@@ -88,7 +88,22 @@ describe("FeaturedVehicles", () => {
     expect(screen.getByText("SUV")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Hemen Rezerve Et" })).toHaveAttribute(
       "href",
-      "/tr/booking/step3?pickup=ala&return=ala&pickupDate=2026-06-07&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=10%3A00&vehicle=group-suv&dailyPrice=1800&vehicleName=Dacia+Duster"
+      "/tr/booking/step2?pickup=ala&return=ala&pickupDate=2026-06-07&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=10%3A00&vehicle=group-suv&dailyPrice=1800&vehicleName=Dacia+Duster"
+    );
+  });
+
+  it("resolves relative backend photo URLs before rendering images", () => {
+    usePublicVehiclesMock.mockReturnValue({
+      vehicles: [createVehicle({ photoUrl: "/uploads/vehicles/duster.jpg" })],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<FeaturedVehicles />);
+
+    expect(screen.getByRole("img", { name: "Dacia Duster" })).toHaveAttribute(
+      "src",
+      "http://localhost:5000/uploads/vehicles/duster.jpg"
     );
   });
 

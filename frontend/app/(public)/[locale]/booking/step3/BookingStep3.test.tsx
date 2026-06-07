@@ -37,9 +37,11 @@ describe("BookingStep3Page", () => {
     searchParams = new URLSearchParams({ vehicle: "compact" });
     useOfficesMock.mockReturnValue({
       offices: [
-        { id: "office-ala", name: "Alanya City Center" },
-        { id: "office-gzp", name: "Gazipasa Airport" },
+        { id: "11111111-1111-1111-1111-111111111111", name: "Alanya City Center" },
+        { id: "22222222-2222-2222-2222-222222222222", name: "Gazipasa Airport" },
       ],
+      isLoading: false,
+      isError: false,
     });
   });
 
@@ -109,15 +111,43 @@ describe("BookingStep3Page", () => {
       );
     });
     expect(setDatesMock).toHaveBeenCalledWith({
-      pickupOfficeId: "office-ala",
+      pickupOfficeId: "11111111-1111-1111-1111-111111111111",
       pickupOfficeName: "Alanya City Center",
       pickupDate: "2026-06-10",
       pickupTime: "10:00",
-      returnOfficeId: "office-gzp",
+      returnOfficeId: "22222222-2222-2222-2222-222222222222",
       returnOfficeName: "Gazipasa Airport",
       returnDate: "2026-06-14",
       returnTime: "09:00",
     });
     expect(updateCustomerDetailsMock).toHaveBeenCalled();
+  });
+
+  it("does not continue while direct office slugs have not resolved to backend IDs", async () => {
+    const user = userEvent.setup();
+    useOfficesMock.mockReturnValue({
+      offices: [],
+      isLoading: true,
+      isError: false,
+    });
+    searchParams = new URLSearchParams({
+      pickup: "ala",
+      return: "gzp",
+      pickupDate: "2026-06-10",
+      pickupTime: "10:00",
+      returnDate: "2026-06-14",
+      returnTime: "09:00",
+      vehicle: "group-1",
+    });
+
+    render(<BookingStep3Page />);
+
+    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
+    expect(continueButton).toBeDisabled();
+
+    await user.click(continueButton);
+
+    expect(setDatesMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

@@ -217,6 +217,7 @@
     "back": "Geri",
     "loadingVehicles": "Müsait araçlar yükleniyor...",
     "failedToLoadVehicles": "Araçlar yüklenemedi. Lütfen tekrar deneyin.",
+    "loadingOffices": "Teslim alma ve iade ofisleri hazırlanıyor...",
     "perDay": "Günlük",
     "totalForDays": "{days} gün için toplam:",
     "reviews": "yorum",
