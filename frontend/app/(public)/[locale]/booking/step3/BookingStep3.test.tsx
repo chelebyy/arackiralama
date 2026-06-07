@@ -5,6 +5,9 @@ import userEvent from "@testing-library/user-event";
 import BookingStep3Page from "./page";
 
 const pushMock = vi.fn();
+const updateCustomerDetailsMock = vi.fn();
+const setDatesMock = vi.fn();
+const useOfficesMock = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
@@ -17,10 +20,29 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a>,
 }));
 
+vi.mock("@/hooks/useBooking", () => ({
+  useBookingActions: () => ({
+    updateCustomerDetails: updateCustomerDetailsMock,
+    setDates: setDatesMock,
+  }),
+}));
+
+vi.mock("@/hooks/useVehicles", () => ({
+  useOffices: () => useOfficesMock(),
+}));
+
 describe("BookingStep3Page", () => {
   beforeEach(() => {
-    pushMock.mockReset();
+    vi.clearAllMocks();
     searchParams = new URLSearchParams({ vehicle: "compact" });
+    useOfficesMock.mockReturnValue({
+      offices: [
+        { id: "11111111-1111-1111-1111-111111111111", name: "Alanya City Center" },
+        { id: "22222222-2222-2222-2222-222222222222", name: "Gazipasa Airport" },
+      ],
+      isLoading: false,
+      isError: false,
+    });
   });
 
   it("validates required customer details before advancing", async () => {
@@ -55,6 +77,77 @@ describe("BookingStep3Page", () => {
 
     expect(childSeatOption).toHaveClass("border-sky-600");
     expect(gpsOption).toHaveClass("border-sky-600");
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("stores resolved pickup and return offices before continuing from a direct vehicle selection", async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({
+      pickup: "ala",
+      return: "gzp",
+      pickupDate: "2026-06-10",
+      pickupTime: "10:00",
+      returnDate: "2026-06-14",
+      returnTime: "09:00",
+      vehicle: "group-1",
+      dailyPrice: "2500",
+      vehicleName: "Nissan Qashqai",
+    });
+
+    render(<BookingStep3Page />);
+
+    await user.type(screen.getByLabelText("First Name"), "Jane");
+    await user.type(screen.getByLabelText("Last Name"), "Doe");
+    await user.type(screen.getByLabelText("Email"), "jane@example.com");
+    await user.type(screen.getByLabelText("Phone"), "+905551234567");
+    await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
+    await user.type(screen.getByLabelText("License Number"), "TR-12345");
+    await user.type(screen.getByLabelText("License Country"), "TR");
+    await user.click(screen.getByRole("button", { name: /continue to payment/i }));
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith(
+        "/en/booking/step4?pickup=ala&return=gzp&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai&extras="
+      );
+    });
+    expect(setDatesMock).toHaveBeenCalledWith({
+      pickupOfficeId: "11111111-1111-1111-1111-111111111111",
+      pickupOfficeName: "Alanya City Center",
+      pickupDate: "2026-06-10",
+      pickupTime: "10:00",
+      returnOfficeId: "22222222-2222-2222-2222-222222222222",
+      returnOfficeName: "Gazipasa Airport",
+      returnDate: "2026-06-14",
+      returnTime: "09:00",
+    });
+    expect(updateCustomerDetailsMock).toHaveBeenCalled();
+  });
+
+  it("does not continue while direct office slugs have not resolved to backend IDs", async () => {
+    const user = userEvent.setup();
+    useOfficesMock.mockReturnValue({
+      offices: [],
+      isLoading: true,
+      isError: false,
+    });
+    searchParams = new URLSearchParams({
+      pickup: "ala",
+      return: "gzp",
+      pickupDate: "2026-06-10",
+      pickupTime: "10:00",
+      returnDate: "2026-06-14",
+      returnTime: "09:00",
+      vehicle: "group-1",
+    });
+
+    render(<BookingStep3Page />);
+
+    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
+    expect(continueButton).toBeDisabled();
+
+    await user.click(continueButton);
+
+    expect(setDatesMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
 });

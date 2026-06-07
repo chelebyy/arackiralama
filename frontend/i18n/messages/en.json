@@ -217,6 +217,7 @@
     "back": "Back",
     "loadingVehicles": "Loading available vehicles...",
     "failedToLoadVehicles": "Failed to load vehicles. Please try again.",
+    "loadingOffices": "Preparing pickup and return offices...",
     "perDay": "per day",
     "totalForDays": "Total for {days} days:",
     "reviews": "reviews",

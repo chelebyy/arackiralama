@@ -217,6 +217,7 @@
     "back": "Zurück",
     "loadingVehicles": "Verfügbare Fahrzeuge werden geladen...",
     "failedToLoadVehicles": "Fahrzeuge konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "loadingOffices": "Abhol- und Rückgabestationen werden vorbereitet...",
     "perDay": "pro Tag",
     "totalForDays": "Gesamt für {days} Tage:",
     "reviews": "Bewertungen",

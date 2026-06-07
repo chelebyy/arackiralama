@@ -10,50 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Hero from "@/components/public/Hero";
-import VehicleCard from "@/components/public/VehicleCard";
-
-const featuredVehicles = [
-  {
-    id: "1",
-    name: "Renault Clio",
-    category: "economy",
-    seats: 5,
-    transmission: "manual" as const,
-    fuelType: "gasoline" as const,
-    pricePerDay: 45,
-    freeKm: 200,
-  },
-  {
-    id: "2",
-    name: "Volkswagen Golf",
-    category: "compact",
-    seats: 5,
-    transmission: "automatic" as const,
-    fuelType: "diesel" as const,
-    pricePerDay: 65,
-    freeKm: 250,
-  },
-  {
-    id: "3",
-    name: "BMW X5",
-    category: "suv",
-    seats: 7,
-    transmission: "automatic" as const,
-    fuelType: "diesel" as const,
-    pricePerDay: 120,
-    freeKm: 300,
-  },
-  {
-    id: "4",
-    name: "Mercedes S-Class",
-    category: "luxury",
-    seats: 5,
-    transmission: "automatic" as const,
-    fuelType: "hybrid" as const,
-    pricePerDay: 200,
-    freeKm: 300,
-  },
-];
+import FeaturedVehicles from "@/components/public/FeaturedVehicles";
 
 const whyChooseUsIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   insurance: Shield,
@@ -91,11 +48,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-fluid-lg)]">
-            {featuredVehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} {...vehicle} />
-            ))}
-          </div>
+          <FeaturedVehicles />
 
           <div className="mt-[var(--space-fluid-xl)] text-center">
             <Link

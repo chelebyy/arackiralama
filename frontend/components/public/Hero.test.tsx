@@ -31,14 +31,14 @@ describe("Hero", () => {
     useSWRMock.mockReturnValue({ data: undefined });
   });
 
-  it("renders trust messaging, ctas, and the hero search form", () => {
+  it("renders trust messaging, a browse CTA, and the hero search form", () => {
     render(<Hero />);
 
     expect(screen.getByText("trustBadge")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "headline" })).toBeInTheDocument();
     expect(screen.getByText("subtitle")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ctaPrimary" })).toHaveAttribute("href", "/vehicles");
-    expect(screen.getByRole("link", { name: "ctaSecondary" })).toHaveAttribute("href", "/booking");
+    expect(screen.queryByRole("link", { name: "ctaSecondary" })).not.toBeInTheDocument();
     expect(screen.getByTestId("search-form")).toHaveTextContent("hero");
   });
 
@@ -51,12 +51,12 @@ describe("Hero", () => {
     expect(screen.getByText("features.delivery")).toBeInTheDocument();
   });
 
-  it("uses managed hero CTA settings and hides disabled CTAs", () => {
+  it("uses managed primary CTA settings and ignores the duplicated booking CTA", () => {
     useSWRMock.mockReturnValue({
       data: {
         heroLinks: [
           { id: "ctaPrimary", label: "Managed Fleet", href: "/managed-fleet", isVisible: true, sortOrder: 0 },
-          { id: "ctaSecondary", label: "Hidden Booking", href: "/booking", isVisible: false, sortOrder: 1 },
+          { id: "ctaSecondary", label: "Hidden Booking", href: "/booking", isVisible: true, sortOrder: 1 },
         ],
       },
     });

@@ -30,8 +30,8 @@ vi.mock("@/components/public/Hero", () => ({
   default: () => <div data-testid="hero-component">Hero section</div>,
 }));
 
-vi.mock("@/components/public/VehicleCard", () => ({
-  default: ({ name }: { name: string }) => <div data-testid="vehicle-card">{name}</div>,
+vi.mock("@/components/public/FeaturedVehicles", () => ({
+  default: () => <div data-testid="featured-vehicles">Featured vehicles</div>,
 }));
 
 describe("HomePage", () => {
@@ -39,8 +39,7 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(screen.getByTestId("hero-component")).toBeInTheDocument();
-    expect(screen.getAllByTestId("vehicle-card")).toHaveLength(4);
-    expect(screen.getByText("Renault Clio")).toBeInTheDocument();
+    expect(screen.getByTestId("featured-vehicles")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "viewAllVehicles" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "cta.contactUs" })).toHaveAttribute("href", "/contact");
   });

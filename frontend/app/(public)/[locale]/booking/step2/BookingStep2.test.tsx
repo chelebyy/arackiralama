@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import BookingStep2Page from "./page";
@@ -115,6 +115,18 @@ describe("BookingStep2Page", () => {
     expect(pushMock).toHaveBeenCalledWith(
       "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
     );
+  });
+
+  it("auto-advances a preselected available vehicle after availability is loaded", async () => {
+    searchParams.set("vehicle", "compact");
+
+    render(<BookingStep2Page />);
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith(
+        "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
+      );
+    });
   });
 
   it("shows a loading state while available vehicles are being fetched", () => {
