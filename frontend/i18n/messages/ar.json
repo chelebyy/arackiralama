@@ -82,7 +82,25 @@
     "viewDetails": "عرض التفاصيل",
     "unavailable": "غير متاح لهذه التواريخ",
     "freeCancellation": "إلغاء مجاني",
-    "freeKm": "{km} كم في اليوم مشمولة"
+    "freeKm": "{km} كم في اليوم مشمولة",
+    "priceOnRequest": "اطلب السعر",
+    "detail": {
+      "backToSearch": "العودة إلى البحث",
+      "loading": "جارٍ تحميل تفاصيل السيارة...",
+      "failed": "تعذر تحميل تفاصيل السيارة. يرجى المحاولة مرة أخرى.",
+      "notFoundTitle": "لم يتم العثور على السيارة",
+      "notFoundBody": "يرجى العودة إلى قائمة السيارات واختيار سيارة متاحة.",
+      "backToVehicles": "العودة إلى السيارات",
+      "features": "الميزات",
+      "specifications": "المواصفات الفنية",
+      "color": "اللون",
+      "plate": "اللوحة",
+      "minAge": "الحد الأدنى للعمر",
+      "fullProtection": "حماية كاملة",
+      "zeroExcess": "بدون تحمل",
+      "theftProtection": "حماية من السرقة",
+      "assistance": "مساعدة 24/7"
+    }
   },
   "booking": {
     "title": "الحجز",

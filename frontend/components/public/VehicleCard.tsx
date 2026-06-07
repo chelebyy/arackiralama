@@ -44,6 +44,15 @@ export default function VehicleCard({
   isAvailable = true,
 }: VehicleCardProps) {
   const t = useTranslations("vehicles");
+  const bookingHref = {
+    pathname: "/vehicles" as const,
+    query: {
+      preferredVehicleId: id,
+      vehicleName: name,
+      category,
+      dailyPrice: String(pricePerDay),
+    },
+  };
 
   return (
     <div
@@ -134,7 +143,7 @@ export default function VehicleCard({
 
           {isAvailable ? (
             <Link
-              href={{ pathname: "/vehicles/[id]", params: { id } }}
+              href={bookingHref}
               className={cn(
                 "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
                 "transition-all duration-200",

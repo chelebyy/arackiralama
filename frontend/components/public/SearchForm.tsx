@@ -25,6 +25,8 @@ const getToday = () => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+const DEFAULT_LOCATION = "ala";
+
 const getWeekLater = () => {
   const d = new Date();
   d.setDate(d.getDate() + 7);
@@ -52,8 +54,11 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
   const handleSearch = useCallback(() => {
     const query = new URLSearchParams();
-    query.set("pickup", pickupLocation || locations[0].value);
-    query.set("return", returnLocation || pickupLocation || locations[0].value);
+    const resolvedPickupLocation = pickupLocation || DEFAULT_LOCATION;
+    const resolvedReturnLocation = returnLocation || resolvedPickupLocation;
+
+    query.set("pickup", resolvedPickupLocation);
+    query.set("return", resolvedReturnLocation);
     query.set("pickupDate", pickupDate || getToday());
     query.set("pickupTime", pickupTime);
     query.set("returnDate", returnDate || getWeekLater());

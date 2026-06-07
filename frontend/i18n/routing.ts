@@ -22,13 +22,7 @@ export const routing = defineRouting({
       ar: "/",
       de: "/"
     },
-    "/vehicles": {
-      tr: "/araclar",
-      en: "/vehicles",
-      ru: "/avtomobili",
-      ar: "/al-sayarat",
-      de: "/fahrzeuge"
-    },
+    "/vehicles": "/vehicles",
     "/about": {
       tr: "/hakkimizda",
       en: "/about",
@@ -71,13 +65,7 @@ export const routing = defineRouting({
       ar: "/privacy",
       de: "/privacy"
     },
-    "/vehicles/[id]": {
-      tr: "/araclar/[id]",
-      en: "/vehicles/[id]",
-      ru: "/avtomobili/[id]",
-      ar: "/al-sayarat/[id]",
-      de: "/fahrzeuge/[id]"
-    }
+    "/vehicles/[id]": "/vehicles/[id]"
   }
 });
 

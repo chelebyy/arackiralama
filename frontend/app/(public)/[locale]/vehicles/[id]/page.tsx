@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Car,
@@ -44,13 +45,19 @@ function resolveMediaUrl(url: string | null): string {
   return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
-function mapPublicToDetail(vehicle: PublicVehicle): VehicleDetail {
+function resolveGroupName(vehicle: PublicVehicle, locale: string): string {
+  if (locale === "tr") return vehicle.groupName || vehicle.groupNameEn || "fleet";
+  return vehicle.groupNameEn || vehicle.groupName || "fleet";
+}
+
+function mapPublicToDetail(vehicle: PublicVehicle, locale: string): VehicleDetail {
   const name = `${vehicle.brand} ${vehicle.model}`;
+  const groupName = resolveGroupName(vehicle, locale);
 
   return {
     id: vehicle.id,
     name,
-    group: vehicle.groupNameEn || vehicle.groupName,
+    group: groupName,
     images: vehicle.photoUrl ? [resolveMediaUrl(vehicle.photoUrl)] : [],
     passengers: 5,
     luggage: 2,
@@ -65,7 +72,7 @@ function mapPublicToDetail(vehicle: PublicVehicle): VehicleDetail {
       minAge: vehicle.minAge,
       license: "B",
     },
-    description: `${vehicle.year} model ${name}, ${vehicle.groupName || vehicle.groupNameEn} grubunda kayıtlı fiziksel filo aracıdır.`,
+    description: `${vehicle.year} model ${name}, ${groupName} grubunda kayıtlı fiziksel filo aracıdır.`,
     rating: 4.5,
     reviews: 0,
   };
@@ -85,6 +92,8 @@ export default function VehicleDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = params.locale as string;
+  const t = useTranslations("vehicles");
+  const tBooking = useTranslations("booking");
   const [currentImage, setCurrentImage] = useState(0);
 
   const pickupOffice = searchParams.get("pickup") || "ala";
@@ -99,7 +108,7 @@ export default function VehicleDetailPage() {
     isLoading,
     isError,
   } = useVehicle(typeof params.id === "string" ? params.id : null);
-  const vehicle: VehicleDetail | null = publicVehicle ? mapPublicToDetail(publicVehicle) : null;
+  const vehicle: VehicleDetail | null = publicVehicle ? mapPublicToDetail(publicVehicle, locale) : null;
 
   const getDays = (start: string, end: string) => {
     const s = new Date(start);
@@ -110,29 +119,43 @@ export default function VehicleDetailPage() {
 
   const days = getDays(pickupDate, returnDate);
   const totalPrice = (vehicle?.dailyRate ?? 0) * days;
+  const backToVehiclesParams = new URLSearchParams({
+    pickup: pickupOffice,
+    return: returnOffice,
+    pickupDate,
+    pickupTime,
+    returnDate,
+    returnTime,
+  });
+  const bookingParams = new URLSearchParams(backToVehiclesParams);
+  if (publicVehicle) {
+    bookingParams.set("vehicle", publicVehicle.groupId);
+    bookingParams.set("dailyPrice", publicVehicle.dailyPrice.toString());
+    bookingParams.set("vehicleName", `${publicVehicle.brand} ${publicVehicle.model}`);
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <Link
-          href={`/${locale}/vehicles?pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+          href={`/${locale}/vehicles?${backToVehiclesParams.toString()}`}
           className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-sky-700 transition-colors mb-6"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to search
+          {t("detail.backToSearch")}
         </Link>
 
         {isLoading && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
-            <p className="mt-4 text-slate-600">Loading vehicle details...</p>
+            <p className="mt-4 text-slate-600">{t("detail.loading")}</p>
           </div>
         )}
 
         {isError && (
           <div className="text-center py-12">
             <Car className="h-12 w-12 text-red-400 mx-auto" />
-            <p className="mt-4 text-slate-600">Failed to load vehicle details. Please try again.</p>
+            <p className="mt-4 text-slate-600">{t("detail.failed")}</p>
           </div>
         )}
 
@@ -143,16 +166,16 @@ export default function VehicleDetailPage() {
               className="mt-4 text-2xl font-semibold text-slate-900"
               style={{ fontFamily: "Lexend, sans-serif" }}
             >
-              Vehicle not found
+              {t("detail.notFoundTitle")}
             </h1>
             <p className="mt-2 text-slate-600">
-              Please return to the vehicle list and choose an available vehicle group.
+              {t("detail.notFoundBody")}
             </p>
             <Link
-              href={`/${locale}/vehicles?pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+              href={`/${locale}/vehicles?${backToVehiclesParams.toString()}`}
               className="mt-6 inline-flex items-center justify-center rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-800"
             >
-              Back to vehicles
+              {t("detail.backToVehicles")}
             </Link>
           </div>
         )}
@@ -219,7 +242,7 @@ export default function VehicleDetailPage() {
                   <div className="flex items-center gap-2 mt-2">
                     <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                     <span className="font-semibold text-slate-900">{vehicle.rating}</span>
-                    <span className="text-slate-500">({vehicle.reviews} reviews)</span>
+                    <span className="text-slate-500">({vehicle.reviews} {tBooking("reviews")})</span>
                   </div>
                 </div>
               </div>
@@ -232,7 +255,7 @@ export default function VehicleDetailPage() {
                 className="text-xl font-semibold text-slate-900 mb-4"
                 style={{ fontFamily: "Lexend, sans-serif" }}
               >
-                Features
+                {t("detail.features")}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {vehicle.features.map((feature) => (
@@ -252,14 +275,14 @@ export default function VehicleDetailPage() {
                 className="text-xl font-semibold text-slate-900 mb-4"
                 style={{ fontFamily: "Lexend, sans-serif" }}
               >
-                Technical Specifications
+                {t("detail.specifications")}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Engine", value: vehicle.specifications.engine, icon: Gauge },
-                  { label: "Power", value: vehicle.specifications.power, icon: Fuel },
-                  { label: "Doors", value: vehicle.specifications.doors, icon: Car },
-                  { label: "Min. Age", value: vehicle.specifications.minAge, icon: Users },
+                  { label: t("detail.color"), value: vehicle.specifications.engine, icon: Gauge },
+                  { label: t("detail.plate"), value: vehicle.specifications.power, icon: Fuel },
+                  { label: t("features.doors"), value: vehicle.specifications.doors, icon: Car },
+                  { label: t("detail.minAge"), value: vehicle.specifications.minAge, icon: Users },
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="text-center p-4 bg-slate-50 rounded-lg">
                     <Icon className="h-6 w-6 text-slate-400 mx-auto mb-2" />
@@ -274,12 +297,12 @@ export default function VehicleDetailPage() {
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-24">
               <div className="text-center pb-6 border-b border-slate-200">
-                <p className="text-sm text-slate-500">Total for {days} days</p>
+                <p className="text-sm text-slate-500">{tBooking("totalForDays", { days })}</p>
                 <p className="text-4xl font-bold text-sky-700">
-                  {vehicle.dailyRate > 0 ? `₺${totalPrice}` : "Fiyat al"}
+                  {vehicle.dailyRate > 0 ? `₺${totalPrice}` : t("priceOnRequest")}
                 </p>
                 {vehicle.dailyRate > 0 && (
-                  <p className="text-sm text-slate-500">₺{vehicle.dailyRate} per day</p>
+                  <p className="text-sm text-slate-500">₺{vehicle.dailyRate} / {t("pricePerDay")}</p>
                 )}
               </div>
 
@@ -301,19 +324,19 @@ export default function VehicleDetailPage() {
               </div>
 
               <Link
-                href={`/${locale}/booking/step2?vehicle=${publicVehicle?.groupId ?? vehicle.id}&pickup=${pickupOffice}&return=${returnOffice}&pickupDate=${pickupDate}&returnDate=${returnDate}`}
+                href={`/${locale}/booking/step2?${bookingParams.toString()}`}
                 className="block w-full py-4 bg-sky-700 text-white text-center font-semibold rounded-lg hover:bg-sky-800 transition-colors"
               >
-                Book Now
+                {t("bookNow")}
               </Link>
 
               <div className="mt-6 p-4 bg-sky-50 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-sky-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-sky-900">Full Protection</p>
+                    <p className="text-sm font-medium text-sky-900">{t("detail.fullProtection")}</p>
                     <ul className="mt-2 space-y-1 text-xs text-sky-800">
-                      {["Zero excess", "Theft protection", "24/7 assistance"].map((item) => (
+                      {[t("detail.zeroExcess"), t("detail.theftProtection"), t("detail.assistance")].map((item) => (
                         <li key={item} className="flex items-center gap-1">
                           <Check className="h-3 w-3" /> {item}
                         </li>

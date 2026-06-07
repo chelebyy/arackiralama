@@ -82,7 +82,25 @@
     "viewDetails": "Detayları Gör",
     "unavailable": "Bu tarihlerde müsait değil",
     "freeCancellation": "Ücretsiz iptal",
-    "freeKm": "Günlük {km} km dahil"
+    "freeKm": "Günlük {km} km dahil",
+    "priceOnRequest": "Fiyat al",
+    "detail": {
+      "backToSearch": "Aramaya dön",
+      "loading": "Araç detayları yükleniyor...",
+      "failed": "Araç detayları yüklenemedi. Lütfen tekrar deneyin.",
+      "notFoundTitle": "Araç bulunamadı",
+      "notFoundBody": "Lütfen araç listesine dönüp müsait bir araç seçin.",
+      "backToVehicles": "Araçlara dön",
+      "features": "Özellikler",
+      "specifications": "Teknik Bilgiler",
+      "color": "Renk",
+      "plate": "Plaka",
+      "minAge": "Min. Yaş",
+      "fullProtection": "Tam Koruma",
+      "zeroExcess": "Sıfır muafiyet",
+      "theftProtection": "Hırsızlık koruması",
+      "assistance": "7/24 destek"
+    }
   },
   "booking": {
     "title": "Rezervasyon",

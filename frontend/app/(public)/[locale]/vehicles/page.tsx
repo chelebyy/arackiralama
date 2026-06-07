@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import NextLink from "next/link";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import {
@@ -31,11 +32,17 @@ function resolveMediaUrl(url: string | null): string {
   return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
-function mapPublicToVehicle(vehicle: PublicVehicle): Vehicle {
-  const groupName = vehicle.groupNameEn || vehicle.groupName || "fleet";
+function resolveGroupName(vehicle: PublicVehicle, locale: string): string {
+  if (locale === "tr") return vehicle.groupName || vehicle.groupNameEn || "fleet";
+  return vehicle.groupNameEn || vehicle.groupName || "fleet";
+}
+
+function mapPublicToVehicle(vehicle: PublicVehicle, locale: string): Vehicle {
+  const groupName = resolveGroupName(vehicle, locale);
 
   return {
     id: vehicle.id,
+    groupId: vehicle.groupId,
     name: `${vehicle.brand} ${vehicle.model}`,
     group: groupName,
     image: resolveMediaUrl(vehicle.photoUrl),
@@ -52,6 +59,7 @@ function mapPublicToVehicle(vehicle: PublicVehicle): Vehicle {
 
 interface Vehicle {
   id: string;
+  groupId: string;
   name: string;
   group: string;
   image: string;
@@ -88,7 +96,9 @@ function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: 
 }
 
 export default function VehiclesPage() {
+  const params = useParams();
   const searchParams = useSearchParams();
+  const locale = typeof params.locale === "string" ? params.locale : "tr";
   const t = useTranslations("vehicles");
   const tCommon = useTranslations("common");
 
@@ -98,8 +108,11 @@ export default function VehiclesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const pickupOffice = searchParams.get("pickup") || "ala";
+  const returnOffice = searchParams.get("return") || pickupOffice;
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
+  const returnTime = searchParams.get("returnTime") || "09:00";
 
   const { offices } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
@@ -107,7 +120,7 @@ export default function VehiclesPage() {
 
   const { vehicles: publicVehicles, isLoading, isError } = usePublicVehicles();
 
-  const vehicles = publicVehicles.map(mapPublicToVehicle);
+  const vehicles = publicVehicles.map((vehicle) => mapPublicToVehicle(vehicle, locale));
   const vehicleGroups = [
     "all",
     ...Array.from(new Set(vehicles.map((vehicle) => vehicle.group))).sort((a, b) =>
@@ -119,6 +132,20 @@ export default function VehiclesPage() {
     selectedGroup === "all"
       ? vehicles
       : vehicles.filter((v) => v.group === selectedGroup);
+
+  function buildBookingStep2Href(vehicle: Vehicle): string {
+    const query = new URLSearchParams(Object.fromEntries(searchParams.entries()));
+    query.set("pickup", pickupOffice);
+    query.set("return", returnOffice);
+    query.set("pickupDate", pickupDate);
+    query.set("pickupTime", pickupTime);
+    query.set("returnDate", returnDate);
+    query.set("returnTime", returnTime);
+    query.set("vehicle", vehicle.groupId);
+    query.set("dailyPrice", String(vehicle.dailyRate));
+    query.set("vehicleName", vehicle.name);
+    return `/${locale}/booking/step2?${query.toString()}`;
+  }
 
   const totalPages = Math.ceil(filteredVehicles.length / 6);
 
@@ -353,8 +380,8 @@ export default function VehiclesPage() {
                       </div>
 
                       {vehicle.available ? (
-                        <Link
-                          href={{ pathname: "/vehicles/[id]", params: { id: vehicle.id } }}
+                        <NextLink
+                          href={buildBookingStep2Href(vehicle)}
                           className={cn(
                             "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
                             "transition-all duration-200",
@@ -366,7 +393,7 @@ export default function VehiclesPage() {
                           )}
                         >
                           {t("bookNow")}
-                        </Link>
+                        </NextLink>
                       ) : (
                         <span
                           className={cn(
