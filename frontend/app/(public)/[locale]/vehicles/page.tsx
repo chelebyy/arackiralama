@@ -381,7 +381,7 @@ export default function VehiclesPage() {
 
                       {vehicle.available ? (
                         <NextLink
-                          href={buildBookingStep2Href(vehicle) as never}
+                          href={buildBookingStep2Href(vehicle)}
                           className={cn(
                             "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
                             "transition-all duration-200",
