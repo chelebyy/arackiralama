@@ -49,6 +49,8 @@ services:
       Redis__ConnectionString: redis:6379
       Jwt__Secret: local-dev-only-jwt-secret-change-me-12345
       Database__AutoMigrateOnStartup: "true"
+      LocalAdminSeed__Enabled: "true"
+      LocalAdminSeed__Password: IntegrationTestPassword123!
       RateLimiting__LoadTestSessionPartition: "true"
       LoadTesting__ConcurrentBookingInventorySeedEnabled: "true"
     ports:
