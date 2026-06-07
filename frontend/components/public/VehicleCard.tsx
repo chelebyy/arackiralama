@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
+import Link from "next/link";
 import {
   Users,
   Fuel,
@@ -25,6 +25,8 @@ interface VehicleCardProps {
   readonly days?: number;
   readonly freeKm?: number;
   readonly isAvailable?: boolean;
+  readonly categoryLabel?: string;
+  readonly bookingHref?: Parameters<typeof Link>[0]["href"];
 }
 
 export default function VehicleCard({
@@ -42,9 +44,11 @@ export default function VehicleCard({
   days = 1,
   freeKm = 200,
   isAvailable = true,
+  categoryLabel,
+  bookingHref: bookingHrefOverride,
 }: VehicleCardProps) {
   const t = useTranslations("vehicles");
-  const bookingHref = {
+  const bookingHref = bookingHrefOverride ?? {
     pathname: "/vehicles" as const,
     query: {
       preferredVehicleId: id,
@@ -80,7 +84,7 @@ export default function VehicleCard({
         {/* Top Badges */}
         <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
           <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
-            {t(`categories.${category}`)}
+            {categoryLabel ?? t(`categories.${category}`)}
           </span>
           <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
             <Check className="h-3 w-3 shrink-0" />

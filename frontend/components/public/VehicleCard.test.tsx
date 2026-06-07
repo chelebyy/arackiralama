@@ -5,8 +5,8 @@ import messages from "@/i18n/messages/en.json";
 
 import VehicleCard from "./VehicleCard";
 
-vi.mock("@/i18n/routing", () => ({
-  Link: ({
+vi.mock("next/link", () => ({
+  default: ({
     href,
     children,
     ...props

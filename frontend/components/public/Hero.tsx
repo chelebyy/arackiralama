@@ -19,7 +19,6 @@ import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
 
 const defaultHeroLinks = [
   { id: "ctaPrimary", label: "", href: "/vehicles", isVisible: true, sortOrder: 0 },
-  { id: "ctaSecondary", label: "", href: "/booking", isVisible: true, sortOrder: 1 },
 ] satisfies PublicSiteLink[];
 
 export default function Hero() {
@@ -29,10 +28,10 @@ export default function Hero() {
     shouldRetryOnError: false,
   });
   const heroLinks = (settings?.heroLinks ?? defaultHeroLinks)
+    .filter((link) => link.id === "ctaPrimary")
     .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const primaryLink = heroLinks.find((link) => link.id === "ctaPrimary");
-  const secondaryLink = heroLinks.find((link) => link.id === "ctaSecondary");
+  const primaryLink = heroLinks[0];
 
   const trustBadges = [
     { icon: Shield, key: "insurance" },
@@ -83,41 +82,22 @@ export default function Hero() {
                 {t("subtitle")}
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4">
-                {primaryLink && (
-                  <Link
-                    href={primaryLink.href as never}
-                    className={cn(
-                      "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
-                      "text-base font-bold text-[#0F172A] bg-white",
-                      "hover:bg-[#F8FAFC] active:bg-[#E2E8F0]",
-                      "transition-all duration-200 cursor-pointer",
-                      "focus:outline-none focus:ring-4 focus:ring-white/30",
-                      "shadow-lg hover:shadow-xl"
-                    )}
-                  >
-                    {primaryLink.label || t("ctaPrimary")}
-                    <ArrowRight className="h-5 w-5" />
-                  </Link>
-                )}
-
-                {secondaryLink && (
-                  <Link
-                    href={secondaryLink.href as never}
-                    className={cn(
-                      "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
-                      "text-base font-bold text-white",
-                      "border-2 border-white/30 bg-white/5 backdrop-blur-sm",
-                      "hover:bg-white/10 hover:border-white/50",
-                      "transition-all duration-200 cursor-pointer",
-                      "focus:outline-none focus:ring-4 focus:ring-white/20"
-                    )}
-                  >
-                    {secondaryLink.label || t("ctaSecondary")}
-                  </Link>
-                )}
-              </div>
+              {primaryLink && (
+                <Link
+                  href={primaryLink.href as never}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-8 py-4 rounded-xl",
+                    "text-base font-bold text-[#0F172A] bg-white",
+                    "hover:bg-[#F8FAFC] active:bg-[#E2E8F0]",
+                    "transition-all duration-200 cursor-pointer",
+                    "focus:outline-none focus:ring-4 focus:ring-white/30",
+                    "shadow-lg hover:shadow-xl"
+                  )}
+                >
+                  {primaryLink.label || t("ctaPrimary")}
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              )}
 
               {/* Trust Badges */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">

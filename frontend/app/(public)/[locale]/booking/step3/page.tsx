@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useBookingActions } from "@/hooks/useBooking";
+import { useOffices } from "@/hooks/useVehicles";
 import { useTranslations } from "next-intl";
 
 interface ExtraOption {
@@ -36,6 +37,45 @@ function openDatePicker(event: MouseEvent<HTMLInputElement>) {
   event.currentTarget.showPicker?.();
 }
 
+const officeSlugPatterns: Record<string, string> = {
+  ala: "alanya",
+  gzp: "gazipasa",
+  ayt: "antalya",
+  mahmutlar: "mahmutlar",
+  kargicak: "kargicak",
+  konakli: "konakli",
+  avsallar: "avsallar",
+};
+
+function normalizeOfficeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function isGuid(value: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function resolveOffice(offices: { id: string; name: string }[], slugOrGuid: string): { id: string; name: string } {
+  if (isGuid(slugOrGuid)) {
+    const matchedGuid = offices.find((office) => office.id === slugOrGuid);
+    return { id: slugOrGuid, name: matchedGuid?.name ?? slugOrGuid };
+  }
+
+  const input = normalizeOfficeText(slugOrGuid);
+  const directMatch = offices.find((office) => normalizeOfficeText(office.name) === input);
+  if (directMatch) return directMatch;
+
+  const pattern = officeSlugPatterns[input] ?? Object.values(officeSlugPatterns).find((value) => input.includes(value));
+  const matched = pattern
+    ? offices.find((office) => normalizeOfficeText(office.name).includes(pattern))
+    : undefined;
+
+  return matched ?? { id: slugOrGuid, name: slugOrGuid };
+}
+
 export default function BookingStep3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -43,7 +83,8 @@ export default function BookingStep3Page() {
   const locale = params.locale as string;
   const t = useTranslations("booking");
   const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
-  const { updateCustomerDetails } = useBookingActions();
+  const { updateCustomerDetails, setDates } = useBookingActions();
+  const { offices } = useOffices();
 
   const step3Schema = z.object({
     firstName: z.string().min(2, t("validation.requiredFirstName")),
@@ -113,6 +154,22 @@ export default function BookingStep3Page() {
   };
 
   const onSubmit = (data: Step3FormData) => {
+    const pickupOffice = searchParams.get("pickup") || "ala";
+    const returnOffice = searchParams.get("return") || pickupOffice;
+    const pickupOfficeMatch = resolveOffice(offices, pickupOffice);
+    const returnOfficeMatch = resolveOffice(offices, returnOffice);
+
+    setDates({
+      pickupOfficeId: pickupOfficeMatch.id,
+      pickupOfficeName: pickupOfficeMatch.name,
+      pickupDate: searchParams.get("pickupDate") || "",
+      pickupTime: searchParams.get("pickupTime") || "10:00",
+      returnOfficeId: returnOfficeMatch.id,
+      returnOfficeName: returnOfficeMatch.name,
+      returnDate: searchParams.get("returnDate") || "",
+      returnTime: searchParams.get("returnTime") || "09:00",
+    });
+
     updateCustomerDetails(
       {
         firstName: data.firstName,

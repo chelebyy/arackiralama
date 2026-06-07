@@ -324,7 +324,7 @@ export default function VehicleDetailPage() {
               </div>
 
               <Link
-                href={`/${locale}/booking/step2?${bookingParams.toString()}`}
+                href={`/${locale}/booking/step3?${bookingParams.toString()}`}
                 className="block w-full py-4 bg-sky-700 text-white text-center font-semibold rounded-lg hover:bg-sky-800 transition-colors"
               >
                 {t("bookNow")}

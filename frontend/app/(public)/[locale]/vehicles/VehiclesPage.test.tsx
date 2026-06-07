@@ -114,7 +114,7 @@ describe("VehiclesPage", () => {
     expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "bookNow" })).toHaveAttribute(
       "href",
-      "/tr/booking/step2?pickup=ala&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&return=ala&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
+      "/tr/booking/step3?pickup=ala&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&return=ala&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
     );
     expect(screen.getByText("unavailable")).toBeInTheDocument();
   });
