@@ -7,8 +7,8 @@ namespace RentACar.API.Configuration;
 
 public static class LocalAdminSeedExtensions
 {
+    private static readonly Guid SeedAdminId = Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc1");
     private const string DefaultEmail = "integration-admin@rentacar.test";
-    private const string DefaultPassword = "IntegrationTestPassword123!";
     private const string DefaultFullName = "Integration Test Admin";
 
     public static async Task ApplyLocalAdminSeedAsync(
@@ -19,6 +19,7 @@ public static class LocalAdminSeedExtensions
         var serviceProvider = scope.ServiceProvider;
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
         var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("LocalAdminSeed");
+        var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
 
         if (!configuration.GetValue<bool>("LocalAdminSeed:Enabled"))
         {
@@ -26,30 +27,36 @@ public static class LocalAdminSeedExtensions
             return;
         }
 
-        var email = configuration["LocalAdminSeed:Email"] ?? DefaultEmail;
-        var password = configuration["LocalAdminSeed:Password"] ?? DefaultPassword;
-        var fullName = configuration["LocalAdminSeed:FullName"] ?? DefaultFullName;
-
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        if (!environment.IsDevelopment())
         {
-            logger.LogWarning("Local admin seed skipped because email or password is empty.");
+            logger.LogWarning("Local admin seed is enabled outside Development and was skipped.");
+            return;
+        }
+
+        var password = configuration["LocalAdminSeed:Password"];
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            logger.LogWarning("Local admin seed skipped because password is empty.");
             return;
         }
 
         var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();
         var passwordHasher = serviceProvider.GetRequiredService<IPasswordHasher>();
-        var normalizedEmail = AdminUser.NormalizeEmail(email);
+        var normalizedEmail = AdminUser.NormalizeEmail(DefaultEmail);
         var admin = await dbContext.AdminUsers
-            .FirstOrDefaultAsync(user => user.NormalizedEmail == normalizedEmail, cancellationToken);
+            .FirstOrDefaultAsync(
+                user => user.Id == SeedAdminId || user.NormalizedEmail == normalizedEmail,
+                cancellationToken);
 
         if (admin is null)
         {
             dbContext.AdminUsers.Add(new AdminUser
             {
-                Id = Guid.Parse("cccccccc-cccc-cccc-cccc-ccccccccccc1"),
-                Email = email,
+                Id = SeedAdminId,
+                Email = DefaultEmail,
                 PasswordHash = passwordHasher.HashPassword(password),
-                FullName = fullName,
+                FullName = DefaultFullName,
                 Role = AuthRoleNames.SuperAdmin,
                 IsActive = true,
                 FailedLoginCount = 0,
@@ -58,8 +65,8 @@ public static class LocalAdminSeedExtensions
         }
         else
         {
-            admin.Email = email;
-            admin.FullName = string.IsNullOrWhiteSpace(admin.FullName) ? fullName : admin.FullName;
+            admin.Email = DefaultEmail;
+            admin.FullName = string.IsNullOrWhiteSpace(admin.FullName) ? DefaultFullName : admin.FullName;
             admin.PasswordHash = passwordHasher.HashPassword(password);
             admin.Role = AuthRoleNames.SuperAdmin;
             admin.IsActive = true;
@@ -69,6 +76,6 @@ public static class LocalAdminSeedExtensions
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Local SuperAdmin seed applied for {Email}.", email);
+        logger.LogInformation("Local SuperAdmin seed applied.");
     }
 }
