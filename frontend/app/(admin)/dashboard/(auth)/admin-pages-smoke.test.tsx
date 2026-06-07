@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   useCampaigns: vi.fn(),
   useAdminCustomers: vi.fn(),
   useAdminUsers: vi.fn(),
+  mutateDeleteAdminUser: vi.fn(),
   mutateUpdateAdminUserRole: vi.fn(),
   mutateUpdateAdminUserStatus: vi.fn(),
   useFeatureFlags: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock("next/dynamic", () => ({
         props.office?.name ||
         props.rule?.id ||
         props.campaign?.name ||
+        props.adminUser?.email ||
         "new record";
 
       return (
@@ -93,6 +95,7 @@ vi.mock("@/hooks/admin", () => ({
   useCampaigns: (...args: unknown[]) => mocks.useCampaigns(...args),
   useAdminCustomers: (...args: unknown[]) => mocks.useAdminCustomers(...args),
   useAdminUsers: (...args: unknown[]) => mocks.useAdminUsers(...args),
+  mutateDeleteAdminUser: (...args: unknown[]) => mocks.mutateDeleteAdminUser(...args),
   mutateUpdateAdminUserRole: (...args: unknown[]) =>
     mocks.mutateUpdateAdminUserRole(...args),
   mutateUpdateAdminUserStatus: (...args: unknown[]) =>
@@ -411,10 +414,10 @@ describe("admin dashboard page surfaces", () => {
     );
   });
 
-  it("filters customers and toggles admin user role and status", async () => {
+  it("filters customers and manages admin user edit, status, and delete actions", async () => {
     const user = userEvent.setup();
-    mocks.mutateUpdateAdminUserRole.mockResolvedValue(undefined);
     mocks.mutateUpdateAdminUserStatus.mockResolvedValue(undefined);
+    mocks.mutateDeleteAdminUser.mockResolvedValue(undefined);
 
     const { rerender } = render(<CustomersPage />);
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
@@ -426,28 +429,37 @@ describe("admin dashboard page surfaces", () => {
     expect(screen.getByText("Root Admin")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /yeni admin/i }));
     expect(screen.getByRole("dialog", { name: "admin dialog" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "dialog success" }));
+    expect(mutate).toHaveBeenCalled();
 
-    await user.click(screen.getAllByRole("button", { name: "" })[0]);
-    await waitFor(() =>
-      expect(mocks.mutateUpdateAdminUserRole).toHaveBeenCalledWith("admin-1", "Admin"),
+    await user.click(screen.getByRole("button", { name: "root@example.test düzenle" }));
+    expect(screen.getByRole("dialog", { name: "admin dialog" })).toHaveTextContent(
+      "root@example.test",
     );
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Rol güncellendi");
 
-    await user.click(screen.getAllByRole("button", { name: "" })[1]);
+    await user.click(screen.getByRole("button", { name: "root@example.test pasif et" }));
     await waitFor(() =>
       expect(mocks.mutateUpdateAdminUserStatus).toHaveBeenCalledWith("admin-1", false),
     );
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Durum güncellendi");
+
+    await user.click(screen.getByRole("button", { name: "desk@example.test sil" }));
+    expect(screen.getByText(/kalıcı olarak silinecek/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Sil" }));
+    await waitFor(() =>
+      expect(mocks.mutateDeleteAdminUser).toHaveBeenCalledWith("admin-2"),
+    );
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Admin kullanıcı silindi");
   });
 
   it("shows admin update errors through toast feedback", async () => {
     const user = userEvent.setup();
-    mocks.mutateUpdateAdminUserRole.mockRejectedValue(new Error("role failed"));
+    mocks.mutateUpdateAdminUserStatus.mockRejectedValue(new Error("status failed"));
     mocks.mutateUpdateFeatureFlag.mockRejectedValue(new Error("flag failed"));
 
     const { rerender } = render(<AdminUsersPage />);
-    await user.click(screen.getAllByRole("button", { name: "" })[0]);
-    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith("Rol güncellenemedi"));
+    await user.click(screen.getByRole("button", { name: "root@example.test pasif et" }));
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith("Durum güncellenemedi"));
 
     rerender(<FeatureFlagsPage />);
     await user.click(screen.getByRole("switch"));

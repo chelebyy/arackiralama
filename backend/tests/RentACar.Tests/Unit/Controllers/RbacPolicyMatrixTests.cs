@@ -35,9 +35,11 @@ public sealed class RbacPolicyMatrixTests
     [Theory]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.GetAll))]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.Create))]
+    [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.Update))]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.UpdateRole))]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.Activate))]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.Deactivate))]
+    [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.Delete))]
     [InlineData(typeof(AdminUsersController), nameof(AdminUsersController.InitiatePasswordReset))]
     public void SuperAdminProtectedEndpoints_RequireSuperAdminOnlyPolicy(Type controllerType, string actionName)
     {

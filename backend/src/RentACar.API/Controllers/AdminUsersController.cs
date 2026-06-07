@@ -92,6 +92,78 @@ public sealed class AdminUsersController(
         return OkResponse(MapToDto(adminUser), "Yonetici kullanicisi olusturuldu.");
     }
 
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] AdminUserUpdateRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.FullName))
+        {
+            return BadRequestResponse("Email ve ad soyad zorunludur.");
+        }
+
+        if (!AuthRoleNames.TryNormalizeAdminRole(request.Role, out var normalizedRole))
+        {
+            return BadRequestResponse("Rol yalnizca Admin veya SuperAdmin olabilir.");
+        }
+
+        var adminUser = await dbContext.AdminUsers.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+        if (adminUser is null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
+        }
+
+        if (adminUser.Role == AuthRoleNames.SuperAdmin &&
+            normalizedRole != AuthRoleNames.SuperAdmin &&
+            await IsLastActiveSuperAdminAsync(adminUser.Id, cancellationToken))
+        {
+            return BadRequestResponse("Son aktif SuperAdmin kullanicisinin rolu dusurulemez.");
+        }
+
+        var email = request.Email.Trim();
+        var normalizedEmail = AdminUser.NormalizeEmail(email);
+        var emailTaken = await dbContext.AdminUsers
+            .AnyAsync(user => user.Id != id && user.NormalizedEmail == normalizedEmail, cancellationToken);
+
+        if (emailTaken)
+        {
+            return BadRequestResponse("Bu email ile kayitli bir yonetici zaten var.");
+        }
+
+        var oldValues = new
+        {
+            adminUser.Email,
+            adminUser.FullName,
+            adminUser.Role
+        };
+
+        var utcNow = DateTime.UtcNow;
+        adminUser.Email = email;
+        adminUser.FullName = request.FullName.Trim();
+        adminUser.Role = normalizedRole;
+        adminUser.TokenVersion += 1;
+
+        var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "Update",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(oldValues),
+            System.Text.Json.JsonSerializer.Serialize(new { adminUser.Email, adminUser.FullName, adminUser.Role }),
+            GetClientIpAddress(),
+            cancellationToken);
+
+        logger.LogInformation(
+            "Admin updated. admin_id={AdminId} token_version={TokenVersion} revoked_session_count={RevokedSessionCount}",
+            adminUser.Id,
+            adminUser.TokenVersion,
+            revokedSessionCount);
+
+        return OkResponse(MapToDto(adminUser), "Yonetici kullanicisi guncellendi.");
+    }
+
     [HttpPut("{id:guid}/role")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] AdminUserUpdateRoleRequest request, CancellationToken cancellationToken)
     {
@@ -104,6 +176,13 @@ public sealed class AdminUsersController(
         if (adminUser is null)
         {
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
+        }
+
+        if (adminUser.Role == AuthRoleNames.SuperAdmin &&
+            normalizedRole != AuthRoleNames.SuperAdmin &&
+            await IsLastActiveSuperAdminAsync(adminUser.Id, cancellationToken))
+        {
+            return BadRequestResponse("Son aktif SuperAdmin kullanicisinin rolu dusurulemez.");
         }
 
         var oldRole = adminUser.Role;
@@ -170,6 +249,18 @@ public sealed class AdminUsersController(
             return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
         }
 
+        if (IsCurrentUser(id))
+        {
+            return BadRequestResponse("Kendi yonetici hesabinizi pasife alamazsiniz.");
+        }
+
+        if (adminUser.Role == AuthRoleNames.SuperAdmin &&
+            adminUser.IsActive &&
+            await IsLastActiveSuperAdminAsync(adminUser.Id, cancellationToken))
+        {
+            return BadRequestResponse("Son aktif SuperAdmin kullanicisi pasife alinamaz.");
+        }
+
         var wasActive = adminUser.IsActive;
 
         var utcNow = DateTime.UtcNow;
@@ -196,6 +287,58 @@ public sealed class AdminUsersController(
             revokedSessionCount);
 
         return OkResponse(MapToDto(adminUser), "Yonetici pasif edildi.");
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var adminUser = await dbContext.AdminUsers.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+        if (adminUser is null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Yonetici kullanicisi bulunamadi."));
+        }
+
+        if (IsCurrentUser(id))
+        {
+            return BadRequestResponse("Kendi yonetici hesabinizi silemezsiniz.");
+        }
+
+        if (adminUser.Role == AuthRoleNames.SuperAdmin &&
+            adminUser.IsActive &&
+            await IsLastActiveSuperAdminAsync(adminUser.Id, cancellationToken))
+        {
+            return BadRequestResponse("Son aktif SuperAdmin kullanicisi silinemez.");
+        }
+
+        var utcNow = DateTime.UtcNow;
+        var oldValues = new
+        {
+            adminUser.Email,
+            adminUser.FullName,
+            adminUser.Role,
+            adminUser.IsActive
+        };
+
+        var revokedSessionCount = await RevokeActiveAdminSessionsAsync(adminUser.Id, utcNow, cancellationToken);
+        dbContext.AdminUsers.Remove(adminUser);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "Delete",
+            EntityType,
+            id.ToString(),
+            GetCurrentUserId(),
+            System.Text.Json.JsonSerializer.Serialize(oldValues),
+            null,
+            GetClientIpAddress(),
+            cancellationToken);
+
+        logger.LogInformation(
+            "Admin deleted. admin_id={AdminId} revoked_session_count={RevokedSessionCount}",
+            id,
+            revokedSessionCount);
+
+        return OkResponse(new { success = true }, "Yonetici kullanicisi silindi.");
     }
 
     [HttpPost("{id:guid}/reset-password")]
@@ -292,6 +435,17 @@ public sealed class AdminUsersController(
 
         return activeSessions.Count;
     }
+
+    private async Task<bool> IsLastActiveSuperAdminAsync(Guid adminId, CancellationToken cancellationToken) =>
+        !await dbContext.AdminUsers.AnyAsync(
+            user =>
+                user.Id != adminId &&
+                user.Role == AuthRoleNames.SuperAdmin &&
+                user.IsActive,
+            cancellationToken);
+
+    private bool IsCurrentUser(Guid adminId) =>
+        Guid.TryParse(GetCurrentUserId(), out var currentUserId) && currentUserId == adminId;
 
     private string? GetCurrentUserId()
     {

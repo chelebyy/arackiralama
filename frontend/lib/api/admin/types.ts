@@ -441,11 +441,18 @@ export interface AdminUserListParams extends AdminListParams {
 
 export interface CreateAdminUserData {
   email: string;
+  password: string;
   fullName: string;
   role: AdminUserRole;
 }
 
 export interface UpdateAdminUserRoleData {
+  role: AdminUserRole;
+}
+
+export interface UpdateAdminUserData {
+  email: string;
+  fullName: string;
   role: AdminUserRole;
 }
 
@@ -472,6 +479,9 @@ export interface AdminPaymentOperation {
 }
 
 export type AdminResponse<T> = T | ApiSuccessResponse<T>;
-export type AdminPaginatedResponse<T> = PaginatedResponse<T> | ApiSuccessResponse<PaginatedResponse<T>>;
+export type AdminPaginatedResponse<T> =
+  | PaginatedResponse<T>
+  | T[]
+  | ApiSuccessResponse<PaginatedResponse<T> | T[]>;
 
 export type { ApiSuccessResponse, PaginatedResponse } from '../types';

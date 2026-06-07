@@ -35,6 +35,8 @@ import {
 } from "./useAdminSettings";
 import {
   mutateCreateAdminUser,
+  mutateDeleteAdminUser,
+  mutateUpdateAdminUser,
   mutateUpdateAdminUserRole,
   mutateUpdateAdminUserStatus,
   useAdminCustomer,
@@ -99,6 +101,8 @@ const usersApi = vi.hoisted(() => ({
   getCustomerById: vi.fn(),
   getAdminUsers: vi.fn(),
   createAdminUser: vi.fn(),
+  deleteAdminUser: vi.fn(),
+  updateAdminUser: vi.fn(),
   updateAdminUserRole: vi.fn(),
   updateAdminUserStatus: vi.fn(),
 }));
@@ -408,8 +412,10 @@ describe("admin hooks", () => {
         mutate,
       });
     usersApi.createAdminUser.mockResolvedValue({ id: "admin-created" });
+    usersApi.updateAdminUser.mockResolvedValue({ id: "admin-updated" });
     usersApi.updateAdminUserRole.mockResolvedValue({ id: "admin-role" });
     usersApi.updateAdminUserStatus.mockResolvedValue({ id: "admin-status" });
+    usersApi.deleteAdminUser.mockResolvedValue(undefined);
 
     expect(useAdminCustomers({ q: "ada" }).customers).toEqual([{ id: "customer-1" }]);
     await useSWRMock.mock.calls[0][1]();
@@ -422,12 +428,17 @@ describe("admin hooks", () => {
     await expect(mutateCreateAdminUser({ email: "admin@example.com" } as any)).resolves.toEqual({
       id: "admin-created",
     });
+    await expect(mutateUpdateAdminUser("admin-1", { email: "admin@example.com" } as any)).resolves.toEqual({
+      id: "admin-updated",
+    });
     await expect(mutateUpdateAdminUserRole("admin-1", "SuperAdmin" as any)).resolves.toEqual({
       id: "admin-role",
     });
     await expect(mutateUpdateAdminUserStatus("admin-1", false)).resolves.toEqual({
       id: "admin-status",
     });
+    await mutateDeleteAdminUser("admin-1");
+    expect(usersApi.deleteAdminUser).toHaveBeenCalledWith("admin-1");
   });
 
   it("maps report hooks and period fetchers", async () => {
