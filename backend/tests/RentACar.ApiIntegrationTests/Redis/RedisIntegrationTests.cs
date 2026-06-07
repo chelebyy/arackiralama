@@ -64,7 +64,10 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
             disconnectedRedis,
             dbContext,
             NullLogger<RedisReservationHoldService>.Instance);
-        var vehicleId = await dbContext.Vehicles.Select(vehicle => vehicle.Id).FirstAsync();
+        var vehicleSeed = await dbContext.Vehicles
+            .Select(vehicle => new { vehicle.Id, vehicle.OfficeId })
+            .FirstAsync();
+        var vehicleId = vehicleSeed.Id;
 
         // Create a valid customer and reservation first to satisfy FK constraints
         var customer = new Customer
@@ -82,6 +85,8 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
         {
             PublicCode = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
             VehicleId = vehicleId,
+            PickupOfficeId = vehicleSeed.OfficeId,
+            ReturnOfficeId = vehicleSeed.OfficeId,
             CustomerId = customer.Id,
             PickupDateTime = DateTime.UtcNow.Date.AddDays(1).AddHours(10),
             ReturnDateTime = DateTime.UtcNow.Date.AddDays(4).AddHours(10),

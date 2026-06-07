@@ -55,7 +55,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "RES-12345",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(3),
             Status = ReservationStatus.Paid,
@@ -122,7 +122,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "RES-67890",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(4),
             Status = ReservationStatus.Draft,
@@ -188,8 +188,8 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "RES-001", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(3), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "RES-002", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(7), Status = ReservationStatus.Draft, TotalAmount = 1200 },
+            new Reservation { PublicCode = "RES-001", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(3), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "RES-002", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(7), Status = ReservationStatus.Draft, TotalAmount = 1200 },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -237,13 +237,13 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "ACTIVE-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Hold, TotalAmount = 1000 },
-            new Reservation { PublicCode = "ACTIVE-2", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.PendingPayment, TotalAmount = 1000 },
-            new Reservation { PublicCode = "ACTIVE-3", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "ACTIVE-4", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(7), ReturnDateTime = DateTime.UtcNow.AddDays(8), Status = ReservationStatus.Active, TotalAmount = 1000 },
-            new Reservation { PublicCode = "CANCELLED-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(9), ReturnDateTime = DateTime.UtcNow.AddDays(10), Status = ReservationStatus.Cancelled, TotalAmount = 1000 },
-            new Reservation { PublicCode = "COMPLETED-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(-5), ReturnDateTime = DateTime.UtcNow.AddDays(-3), Status = ReservationStatus.Completed, TotalAmount = 1000 },
-            new Reservation { PublicCode = "DRAFT-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(11), ReturnDateTime = DateTime.UtcNow.AddDays(12), Status = ReservationStatus.Draft, TotalAmount = 1000 },
+            new Reservation { PublicCode = "ACTIVE-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Hold, TotalAmount = 1000 },
+            new Reservation { PublicCode = "ACTIVE-2", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.PendingPayment, TotalAmount = 1000 },
+            new Reservation { PublicCode = "ACTIVE-3", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "ACTIVE-4", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(7), ReturnDateTime = DateTime.UtcNow.AddDays(8), Status = ReservationStatus.Active, TotalAmount = 1000 },
+            new Reservation { PublicCode = "CANCELLED-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(9), ReturnDateTime = DateTime.UtcNow.AddDays(10), Status = ReservationStatus.Cancelled, TotalAmount = 1000 },
+            new Reservation { PublicCode = "COMPLETED-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(-5), ReturnDateTime = DateTime.UtcNow.AddDays(-3), Status = ReservationStatus.Completed, TotalAmount = 1000 },
+            new Reservation { PublicCode = "DRAFT-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(11), ReturnDateTime = DateTime.UtcNow.AddDays(12), Status = ReservationStatus.Draft, TotalAmount = 1000 },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -294,7 +294,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "EXISTING",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc),
             ReturnDateTime = new DateTime(2026, 3, 17, 10, 0, 0, DateTimeKind.Utc),
             Status = ReservationStatus.Paid,
@@ -350,7 +350,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "EXISTING",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc),
             ReturnDateTime = new DateTime(2026, 3, 17, 10, 0, 0, DateTimeKind.Utc),
             Status = ReservationStatus.Paid,
@@ -404,9 +404,9 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "PAID-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "PAID-2", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "DRAFT-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Draft, TotalAmount = 1000 },
+            new Reservation { PublicCode = "PAID-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "PAID-2", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "DRAFT-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Draft, TotalAmount = 1000 },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -456,10 +456,10 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "EXPIRED-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-5) },
-            new Reservation { PublicCode = "EXPIRED-2", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-10) },
-            new Reservation { PublicCode = "FRESH-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = DateTime.UtcNow.AddMinutes(-5) },
-            new Reservation { PublicCode = "PAID-1", Customer = customer, Vehicle = vehicle, PickupDateTime = DateTime.UtcNow.AddDays(7), ReturnDateTime = DateTime.UtcNow.AddDays(8), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-20) },
+            new Reservation { PublicCode = "EXPIRED-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(1), ReturnDateTime = DateTime.UtcNow.AddDays(2), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-5) },
+            new Reservation { PublicCode = "EXPIRED-2", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(3), ReturnDateTime = DateTime.UtcNow.AddDays(4), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-10) },
+            new Reservation { PublicCode = "FRESH-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(6), Status = ReservationStatus.Hold, TotalAmount = 1000, CreatedAt = DateTime.UtcNow.AddMinutes(-5) },
+            new Reservation { PublicCode = "PAID-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = DateTime.UtcNow.AddDays(7), ReturnDateTime = DateTime.UtcNow.AddDays(8), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = cutoffDate.AddMinutes(-20) },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -504,9 +504,9 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "SEARCH-1", Customer = customer1, Vehicle = vehicle1, PickupDateTime = baseDate.AddDays(5), ReturnDateTime = baseDate.AddDays(7), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "SEARCH-2", Customer = customer1, Vehicle = vehicle2, PickupDateTime = baseDate.AddDays(10), ReturnDateTime = baseDate.AddDays(12), Status = ReservationStatus.Draft, TotalAmount = 1000 },
-            new Reservation { PublicCode = "SEARCH-3", Customer = customer2, Vehicle = vehicle1, PickupDateTime = baseDate.AddDays(15), ReturnDateTime = baseDate.AddDays(17), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "SEARCH-1", Customer = customer1, Vehicle = vehicle1, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(5), ReturnDateTime = baseDate.AddDays(7), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "SEARCH-2", Customer = customer1, Vehicle = vehicle2, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(10), ReturnDateTime = baseDate.AddDays(12), Status = ReservationStatus.Draft, TotalAmount = 1000 },
+            new Reservation { PublicCode = "SEARCH-3", Customer = customer2, Vehicle = vehicle1, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(15), ReturnDateTime = baseDate.AddDays(17), Status = ReservationStatus.Paid, TotalAmount = 1000 },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -560,9 +560,9 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var reservations = new[]
         {
-            new Reservation { PublicCode = "LATER", Customer = customer, Vehicle = vehicle, PickupDateTime = baseDate.AddDays(10), ReturnDateTime = baseDate.AddDays(12), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "EARLIER", Customer = customer, Vehicle = vehicle, PickupDateTime = baseDate.AddDays(5), ReturnDateTime = baseDate.AddDays(7), Status = ReservationStatus.Paid, TotalAmount = 1000 },
-            new Reservation { PublicCode = "LATEST", Customer = customer, Vehicle = vehicle, PickupDateTime = baseDate.AddDays(15), ReturnDateTime = baseDate.AddDays(17), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "LATER", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(10), ReturnDateTime = baseDate.AddDays(12), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "EARLIER", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(5), ReturnDateTime = baseDate.AddDays(7), Status = ReservationStatus.Paid, TotalAmount = 1000 },
+            new Reservation { PublicCode = "LATEST", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(15), ReturnDateTime = baseDate.AddDays(17), Status = ReservationStatus.Paid, TotalAmount = 1000 },
         };
 
         dbContext.Reservations.AddRange(reservations);
@@ -612,7 +612,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "EXISTING",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc),
             ReturnDateTime = new DateTime(2026, 3, 17, 10, 0, 0, DateTimeKind.Utc),
             Status = ReservationStatus.Paid,
@@ -676,7 +676,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
             {
                 PublicCode = "OLDER-HOLD",
                 Customer = customer,
-                Vehicle = vehicle,
+                Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
                 PickupDateTime = cutoffDate.AddDays(1),
                 ReturnDateTime = cutoffDate.AddDays(2),
                 Status = ReservationStatus.Hold,
@@ -687,7 +687,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
             {
                 PublicCode = "BOUNDARY-HOLD",
                 Customer = customer,
-                Vehicle = vehicle,
+                Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
                 PickupDateTime = cutoffDate.AddDays(3),
                 ReturnDateTime = cutoffDate.AddDays(4),
                 Status = ReservationStatus.Hold,
@@ -741,7 +741,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "BOUNDARY-SEARCH",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = pickup,
             ReturnDateTime = dropoff,
             Status = ReservationStatus.Paid,
@@ -796,7 +796,7 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         {
             PublicCode = "PAGE-ONLY",
             Customer = customer,
-            Vehicle = vehicle,
+            Vehicle = vehicle, PickupOffice = office, ReturnOffice = office,
             PickupDateTime = DateTime.UtcNow.AddDays(1),
             ReturnDateTime = DateTime.UtcNow.AddDays(2),
             Status = ReservationStatus.Paid,
@@ -928,10 +928,10 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var baseCreatedAt = new DateTime(2026, 7, 1, 8, 0, 0, DateTimeKind.Utc);
         dbContext.Reservations.AddRange(
-            new Reservation { PublicCode = "PAGE-CUST-1", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
-            new Reservation { PublicCode = "PAGE-CUST-2", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) },
-            new Reservation { PublicCode = "PAGE-CUST-3", Customer = customer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
-            new Reservation { PublicCode = "PAGE-OTHER-1", Customer = otherCustomer, Vehicle = vehicle, PickupDateTime = baseCreatedAt.AddDays(7), ReturnDateTime = baseCreatedAt.AddDays(8), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(4) });
+            new Reservation { PublicCode = "PAGE-CUST-1", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
+            new Reservation { PublicCode = "PAGE-CUST-2", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) },
+            new Reservation { PublicCode = "PAGE-CUST-3", Customer = customer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
+            new Reservation { PublicCode = "PAGE-OTHER-1", Customer = otherCustomer, Vehicle = vehicle, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(7), ReturnDateTime = baseCreatedAt.AddDays(8), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(4) });
 
         await dbContext.SaveChangesAsync();
 
@@ -971,9 +971,9 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
 
         var baseCreatedAt = new DateTime(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc);
         dbContext.Reservations.AddRange(
-            new Reservation { PublicCode = "VEHICLE-1-OLD", Customer = customer, Vehicle = vehicle1, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
-            new Reservation { PublicCode = "VEHICLE-1-NEW", Customer = customer, Vehicle = vehicle1, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
-            new Reservation { PublicCode = "VEHICLE-2", Customer = customer, Vehicle = vehicle2, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) });
+            new Reservation { PublicCode = "VEHICLE-1-OLD", Customer = customer, Vehicle = vehicle1, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(1), ReturnDateTime = baseCreatedAt.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(1) },
+            new Reservation { PublicCode = "VEHICLE-1-NEW", Customer = customer, Vehicle = vehicle1, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(3), ReturnDateTime = baseCreatedAt.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(3) },
+            new Reservation { PublicCode = "VEHICLE-2", Customer = customer, Vehicle = vehicle2, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseCreatedAt.AddDays(5), ReturnDateTime = baseCreatedAt.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseCreatedAt.AddMinutes(2) });
 
         await dbContext.SaveChangesAsync();
 
