@@ -215,6 +215,108 @@ public sealed class AdminReservationsController(
         }
     }
 
+    [HttpPost("manual")]
+    public async Task<IActionResult> CreateManual(
+        [FromBody] AdminManualReservationRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.VehicleId == Guid.Empty)
+        {
+            return BadRequestResponse("Gecerli bir arac secilmelidir.");
+        }
+
+        if (request.PickupOfficeId == Guid.Empty || request.ReturnOfficeId == Guid.Empty)
+        {
+            return BadRequestResponse("Gecerli alis ve iade ofisleri secilmelidir.");
+        }
+
+        if (request.PickupDateTimeUtc >= request.ReturnDateTimeUtc)
+        {
+            return BadRequestResponse("Alis tarihi iade tarihinden once olmalidir.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CustomerFirstName) ||
+            string.IsNullOrWhiteSpace(request.CustomerLastName) ||
+            string.IsNullOrWhiteSpace(request.CustomerPhone))
+        {
+            return BadRequestResponse("Musteri ad, soyad ve telefon bilgileri gereklidir.");
+        }
+
+        if (request.TotalAmount is <= 0)
+        {
+            return BadRequestResponse("Toplam tutar pozitif olmalidir.");
+        }
+
+        try
+        {
+            var reservation = await reservationService.CreateManualReservationAsync(request, cancellationToken);
+
+            await auditLogService.LogAsync(
+                "CreateManualReservation",
+                EntityType,
+                reservation.Id.ToString(),
+                GetCurrentUserId(),
+                null,
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    reservation.Status,
+                    reservation.VehicleId,
+                    reservation.PickupOfficeId,
+                    reservation.ReturnOfficeId,
+                    reservation.PickupDateTime,
+                    reservation.ReturnDateTime,
+                    HasCustomerEmail = !string.IsNullOrWhiteSpace(request.CustomerEmail),
+                    HasNotes = !string.IsNullOrWhiteSpace(request.Notes),
+                    HasManualTotal = request.TotalAmount.HasValue
+                }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Manuel rezervasyon olusturuldu.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/confirm-unpaid-request")]
+    public async Task<IActionResult> ConfirmUnpaidRequest(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var existingReservation = await reservationService.GetReservationByIdAsync(id, cancellationToken);
+            if (existingReservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            var reservation = await reservationService.ConfirmUnpaidRequestAsync(id, cancellationToken);
+            if (reservation == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
+            }
+
+            await auditLogService.LogAsync(
+                "ConfirmUnpaidRequest",
+                EntityType,
+                id.ToString(),
+                GetCurrentUserId(),
+                System.Text.Json.JsonSerializer.Serialize(new { existingReservation.Status }),
+                System.Text.Json.JsonSerializer.Serialize(new { reservation.Status }),
+                GetClientIpAddress(),
+                cancellationToken);
+
+            return OkResponse(reservation, "Rezervasyon onaylandi.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
     [HttpPost("{id:guid}/check-in")]
     public async Task<IActionResult> CheckIn(
         Guid id,

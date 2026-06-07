@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,7 +25,8 @@ import { differenceInCalendarDays } from "date-fns";
 import { useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
 import { usePlaceHold } from "@/hooks/useReservations";
-import { createReservation } from "@/lib/api/reservations";
+import { createReservation, createUnpaidReservationRequest } from "@/lib/api/reservations";
+import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import { createPaymentIntent } from "@/lib/api/payments";
 import type { PaymentIntentResponse } from "@/lib/api/payments";
 import type { CreateReservationData } from "@/lib/api/types";
@@ -42,6 +43,28 @@ export default function BookingStep4Page() {
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
+  const [onlinePaymentEnabled, setOnlinePaymentEnabled] = useState(false);
+  const submitModeRef = useRef<"payment" | "unpaid">("unpaid");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getPublicSiteSettings()
+      .then((settings) => {
+        if (isMounted) {
+          setOnlinePaymentEnabled(Boolean(settings.onlinePaymentEnabled));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setOnlinePaymentEnabled(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const extraOptions = [
     { id: "child_seat", name: t("extras.childSeat"), price: 10, priceType: "per_day" as const },
@@ -51,7 +74,7 @@ export default function BookingStep4Page() {
   ];
 
   const step4Schema = z.object({
-    paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]),
+    paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]).optional(),
     cardNumber: z.string().optional(),
     cardHolder: z.string().optional(),
     expiryDate: z.string().optional(),
@@ -62,16 +85,19 @@ export default function BookingStep4Page() {
     }),
   })
     .refine((data) => {
+      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
       if (data.paymentMethod === "paypal") return true;
       if (!data.cardNumber) return false;
       return /^[\d\s]{16,19}$/.test(data.cardNumber.replace(/\s/g, ""));
     }, { message: t("validation.requiredCardNumber"), path: ["cardNumber"] })
     .refine((data) => {
+      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
       if (data.paymentMethod === "paypal") return true;
       if (!data.expiryDate) return false;
       return /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate);
     }, { message: t("validation.requiredExpiryDate"), path: ["expiryDate"] })
     .refine((data) => {
+      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
       if (data.paymentMethod === "paypal") return true;
       if (!data.cvv) return false;
       return /^\d{3,4}$/.test(data.cvv);
@@ -113,7 +139,7 @@ export default function BookingStep4Page() {
     },
   });
 
-  const selectedPaymentMethod = watch("paymentMethod");
+  const selectedPaymentMethod = watch("paymentMethod") ?? "credit_card";
   const isCreditCard = selectedPaymentMethod === "credit_card" || selectedPaymentMethod === "debit_card";
 
   const pickupDate = booking.dates?.pickupDate ?? searchParams.get("pickupDate") ?? "";
@@ -170,7 +196,7 @@ export default function BookingStep4Page() {
     setValue("campaignCode", normalizedCode);
   };
 
-  const onSubmit = async (data: Step4FormData) => {
+  const onSubmit = async (data: Step4FormData, submitMode: "payment" | "unpaid") => {
     if (!booking.customer || !booking.driver) {
       toast.error(t("missingBookingDetailsStep"));
       return;
@@ -185,12 +211,22 @@ export default function BookingStep4Page() {
       pickupDateTimeUtc: `${booking.dates?.pickupDate ?? pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
       returnDateTimeUtc: `${booking.dates?.returnDate ?? returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
       customer: booking.customer,
+      driver: booking.driver,
       extraDriverCount: selectedExtraIds.filter((id) => id.trim() === "additional_driver").length,
       childSeatCount: selectedExtraIds.filter((id) => id.trim() === "child_seat").length,
       campaignCode: appliedCampaign?.code,
     };
 
     try {
+      if (submitMode === "unpaid") {
+        const reservation = await createUnpaidReservationRequest(reservationData);
+        const queryParams = new URLSearchParams(searchParams.toString());
+        queryParams.set("code", reservation.publicCode);
+        queryParams.set("request", "unpaid");
+        router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
+        return;
+      }
+
       const reservation = await createReservation(reservationData);
       const holdResult = await placeHold(reservation.id, { durationMinutes: 15 });
 
@@ -256,7 +292,7 @@ export default function BookingStep4Page() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit((data) => onSubmit(data, onlinePaymentEnabled ? "payment" : "unpaid"))} className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
@@ -301,123 +337,139 @@ export default function BookingStep4Page() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-sky-600" />
+            {onlinePaymentEnabled ? (
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-sky-600" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
+                    {t("payment.title")}
+                  </h2>
                 </div>
-                <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                  {t("payment.title")}
-                </h2>
-              </div>
 
-              <div className="space-y-3">
-                {paymentMethods.map((method) => (
-                  <label
-                    key={method.id}
-                    className={cn(
-                      "flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all",
-                      selectedPaymentMethod === method.id
-                        ? "border-sky-600 bg-sky-50"
-                        : "border-slate-200 hover:border-sky-300"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      value={method.id}
-                      {...register("paymentMethod")}
-                      className="w-4 h-4 text-sky-600 border-slate-300 focus:ring-sky-500"
-                    />
-                    <div
+                <div className="space-y-3">
+                  {paymentMethods.map((method) => (
+                    <label
+                      key={method.id}
                       className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
+                        "flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all",
+                        selectedPaymentMethod === method.id
+                          ? "border-sky-600 bg-sky-50"
+                          : "border-slate-200 hover:border-sky-300"
                       )}
                     >
-                      {method.icon}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{method.name}</p>
-                      <p className="text-sm text-slate-500">{method.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              {isCreditCard && (
-                <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
-                  <div>
-                    <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700 mb-2">
-                      {t("payment.cardNumber")}
-                    </label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <input
-                        type="text"
-                        id="cardNumber"
-                        {...register("cardNumber")}
-                        placeholder="1234 5678 9012 3456"
-                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                        type="radio"
+                        value={method.id}
+                        {...register("paymentMethod")}
+                        className="w-4 h-4 text-sky-600 border-slate-300 focus:ring-sky-500"
                       />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="cardHolder" className="block text-sm font-medium text-slate-700 mb-2">
-                      {t("payment.cardHolder")}
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
+                        )}
+                      >
+                        {method.icon}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{method.name}</p>
+                        <p className="text-sm text-slate-500">{method.description}</p>
+                      </div>
                     </label>
-                    <input
-                      type="text"
-                      id="cardHolder"
-                      {...register("cardHolder")}
-                      placeholder="John Doe"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                    />
-                  </div>
+                  ))}
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                {isCreditCard && (
+                  <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
                     <div>
-                      <label htmlFor="expiryDate" className="block text-sm font-medium text-slate-700 mb-2">
-                        {t("payment.expiryDate")}
-                      </label>
-                      <input
-                        type="text"
-                        id="expiryDate"
-                        {...register("expiryDate")}
-                        placeholder="MM/YY"
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="cvv" className="block text-sm font-medium text-slate-700 mb-2">
-                        {t("payment.cvv")}
+                      <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700 mb-2">
+                        {t("payment.cardNumber")}
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                         <input
                           type="text"
-                          id="cvv"
-                          {...register("cvv")}
-                          placeholder="123"
+                          id="cardNumber"
+                          {...register("cardNumber")}
+                          placeholder="1234 5678 9012 3456"
                           className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                         />
                       </div>
                     </div>
-                  </div>
 
-                  <div className="p-4 bg-sky-50 rounded-lg flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-sky-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-sky-900">{t("payment.3dSecure")}</p>
-                      <p className="text-xs text-sky-700 mt-1">
-                        {t("payment.3dSecureDesc")}
-                      </p>
+                      <label htmlFor="cardHolder" className="block text-sm font-medium text-slate-700 mb-2">
+                        {t("payment.cardHolder")}
+                      </label>
+                      <input
+                        type="text"
+                        id="cardHolder"
+                        {...register("cardHolder")}
+                        placeholder="John Doe"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="expiryDate" className="block text-sm font-medium text-slate-700 mb-2">
+                          {t("payment.expiryDate")}
+                        </label>
+                        <input
+                          type="text"
+                          id="expiryDate"
+                          {...register("expiryDate")}
+                          placeholder="MM/YY"
+                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="cvv" className="block text-sm font-medium text-slate-700 mb-2">
+                          {t("payment.cvv")}
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                          <input
+                            type="text"
+                            id="cvv"
+                            {...register("cvv")}
+                            placeholder="123"
+                            className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-sky-50 rounded-lg flex items-start gap-3">
+                      <Shield className="h-5 w-5 text-sky-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-sky-900">{t("payment.3dSecure")}</p>
+                        <p className="text-xs text-sky-700 mt-1">
+                          {t("payment.3dSecureDesc")}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <Check className="h-5 w-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
+                      {t("unpaidRequest.title")}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">{t("unpaidRequest.description")}</p>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -460,11 +512,27 @@ export default function BookingStep4Page() {
           <button
             type="submit"
             disabled={isSubmitting}
+            onClick={() => {
+              submitModeRef.current = onlinePaymentEnabled ? "payment" : "unpaid";
+            }}
             className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
           >
-            {isSubmitting ? t("completing") : t("completeBooking")}
+            {isSubmitting ? t("completing") : onlinePaymentEnabled ? t("completeBooking") : t("completeRequest")}
             <ArrowRight className="h-5 w-5" />
           </button>
+          {onlinePaymentEnabled && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                submitModeRef.current = "unpaid";
+                void handleSubmit((data) => onSubmit(data, "unpaid"))();
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 text-slate-700 hover:text-slate-950 transition-colors"
+            >
+              {t("sendUnpaidRequest")}
+            </button>
+          )}
             </div>
           </form>
         </div>

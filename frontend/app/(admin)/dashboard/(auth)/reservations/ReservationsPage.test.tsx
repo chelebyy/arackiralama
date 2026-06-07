@@ -1,11 +1,14 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import ReservationsPage from "./page";
 
 const useAdminReservationsMock = vi.fn();
+const useAdminVehiclesMock = vi.fn();
+const useAdminOfficesMock = vi.fn();
 const mutateCancelReservationMock = vi.fn();
+const mutateCreateManualReservationMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -19,7 +22,11 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/hooks/admin", () => ({
   useAdminReservations: (...args: unknown[]) => useAdminReservationsMock(...args),
+  useAdminVehicles: (...args: unknown[]) => useAdminVehiclesMock(...args),
+  useAdminOffices: (...args: unknown[]) => useAdminOfficesMock(...args),
   mutateCancelReservation: (...args: unknown[]) => mutateCancelReservationMock(...args),
+  mutateCreateManualReservation: (...args: unknown[]) =>
+    mutateCreateManualReservationMock(...args),
 }));
 
 vi.mock("sonner", () => ({
@@ -43,6 +50,14 @@ vi.mock("@/components/ui/select", () => ({
   SelectItem: ({ value, children }: any) => <option value={value}>{children}</option>,
   SelectTrigger: ({ children }: any) => <>{children}</>,
   SelectValue: () => null,
+}));
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: any) => (open ? <div role="dialog">{children}</div> : null),
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+  DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
 
 const basePagination = {
@@ -78,9 +93,28 @@ const reservations = [
 describe("ReservationsPage", () => {
   beforeEach(() => {
     useAdminReservationsMock.mockReset();
+    useAdminVehiclesMock.mockReset();
+    useAdminOfficesMock.mockReset();
     mutateCancelReservationMock.mockReset();
+    mutateCreateManualReservationMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
+
+    useAdminVehiclesMock.mockReturnValue({
+      vehicles: [
+        {
+          id: "vehicle-1",
+          plate: "07 ABC 123",
+          name: "Renault Clio",
+        },
+      ],
+    });
+    useAdminOfficesMock.mockReturnValue({
+      offices: [
+        { id: "office-1", name: "Alanya Merkez" },
+        { id: "office-2", name: "Gazipaşa Havalimanı" },
+      ],
+    });
   });
 
   it("renders loading placeholders while reservations are loading", () => {
@@ -210,6 +244,53 @@ describe("ReservationsPage", () => {
       );
     });
     expect(toastSuccessMock).toHaveBeenCalledWith("Rezervasyon iptal edildi");
+    expect(mutate).toHaveBeenCalled();
+  });
+
+  it("creates a manual reservation and refreshes the list", async () => {
+    const user = userEvent.setup();
+    const mutate = vi.fn();
+    mutateCreateManualReservationMock.mockResolvedValue(undefined);
+    useAdminReservationsMock.mockReturnValue({
+      reservations,
+      pagination: basePagination,
+      isLoading: false,
+      isError: false,
+      mutate,
+    });
+
+    render(<ReservationsPage />);
+
+    await user.click(screen.getByRole("button", { name: "Manuel Rezervasyon" }));
+    fireEvent.change(screen.getByLabelText("Fiziksel Araç"), { target: { value: "vehicle-1" } });
+    fireEvent.change(screen.getByLabelText("Alış Ofisi"), { target: { value: "office-1" } });
+    fireEvent.change(screen.getByLabelText("İade Ofisi"), { target: { value: "office-2" } });
+    fireEvent.change(screen.getByLabelText("Alış Tarihi UTC"), { target: { value: "2026-06-10T10:00" } });
+    fireEvent.change(screen.getByLabelText("İade Tarihi UTC"), { target: { value: "2026-06-12T10:00" } });
+    fireEvent.change(screen.getByLabelText("Müşteri Adı"), { target: { value: "Jane" } });
+    fireEvent.change(screen.getByLabelText("Müşteri Soyadı"), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText("Telefon"), { target: { value: "+905551234567" } });
+    fireEvent.change(screen.getByLabelText("E-posta (opsiyonel)"), { target: { value: "jane@example.test" } });
+    fireEvent.change(screen.getByLabelText("Toplam Tutar (opsiyonel)"), { target: { value: "4500" } });
+    fireEvent.change(screen.getByLabelText("Notlar (opsiyonel)"), { target: { value: "Telefonla alındı" } });
+    await user.click(screen.getByRole("button", { name: "Oluştur" }));
+
+    await waitFor(() => {
+      expect(mutateCreateManualReservationMock).toHaveBeenCalledWith({
+        vehicleId: "vehicle-1",
+        pickupOfficeId: "office-1",
+        returnOfficeId: "office-2",
+        pickupDateTimeUtc: "2026-06-10T10:00",
+        returnDateTimeUtc: "2026-06-12T10:00",
+        customerFirstName: "Jane",
+        customerLastName: "Doe",
+        customerPhone: "+905551234567",
+        customerEmail: "jane@example.test",
+        notes: "Telefonla alındı",
+        totalAmount: 4500,
+      });
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith("Manuel rezervasyon oluşturuldu");
     expect(mutate).toHaveBeenCalled();
   });
 

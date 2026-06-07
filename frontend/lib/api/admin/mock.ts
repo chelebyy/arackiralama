@@ -928,7 +928,12 @@ export const mockCampaigns: Campaign[] = [
 ];
 
 export const mockFeatureFlags: FeatureFlag[] = [
-  { id: 'flag-001', name: 'admin.reports.revenue', enabled: true, description: 'Gelir raporu ekranını gösterir.' },
+  {
+    id: 'flag-001',
+    name: 'EnableOnlinePayment',
+    enabled: false,
+    description: 'Online ödeme seçeneklerini public rezervasyon akışında gösterir. Kapalıyken müşteriler ödeme yapmadan 24 saat stok bloklu talep oluşturur.',
+  },
   { id: 'flag-002', name: 'admin.reservations.manualRefund', enabled: true, description: 'Rezervasyon ekranında manuel iade akışını açar.' },
   { id: 'flag-003', name: 'admin.vehicles.maintenancePlanner', enabled: true, description: 'Araç bakım planlama modülünü etkinleştirir.' },
   { id: 'flag-004', name: 'admin.users.supervisorApproval', enabled: false, description: 'Admin kullanıcı aksiyonlarında ikinci onay ister.' },

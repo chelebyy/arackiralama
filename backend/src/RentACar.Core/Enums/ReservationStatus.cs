@@ -9,5 +9,7 @@ public enum ReservationStatus
     Active = 4,
     Completed = 5,
     Cancelled = 6,
-    Expired = 7
+    Expired = 7,
+    UnpaidRequest = 8,
+    Confirmed = 9
 }

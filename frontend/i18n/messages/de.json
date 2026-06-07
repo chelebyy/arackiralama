@@ -176,6 +176,8 @@
     "confirmation": {
       "title": "Reservierung bestätigt!",
       "message": "Ihre Reservierung wurde erfolgreich erstellt. Die Details wurden an Ihre E-Mail-Adresse gesendet.",
+      "unpaidRequestTitle": "Anfrage erhalten!",
+      "unpaidRequestMessage": "Ihre Reservierungsanfrage wurde erhalten. Das Fahrzeug ist 24 Stunden für Sie blockiert; unser Team kontaktiert Sie zur Bestätigung.",
       "reservationNumber": "Reservierungsnummer",
       "downloadVoucher": "Voucher herunterladen",
       "whatNext": "Was kommt als Nächstes?",
@@ -214,6 +216,8 @@
     "continueToVehicle": "Weiter zur Fahrzeugauswahl",
     "continueToPayment": "Weiter zur Zahlung",
     "completeBooking": "Buchung abschließen",
+    "completeRequest": "Anfrage senden",
+    "sendUnpaidRequest": "Anfrage ohne Zahlung senden",
     "back": "Zurück",
     "loadingVehicles": "Verfügbare Fahrzeuge werden geladen...",
     "failedToLoadVehicles": "Fahrzeuge konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
@@ -233,6 +237,10 @@
     "termsAgreementEnd": " zu. Ich bestätige, dass ich einen gültigen Führerschein habe und die Mindestaltersanforderungen erfülle.",
     "processingPayment": "Zahlung wird verarbeitet...",
     "failedToProcessPayment": "Zahlung konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.",
+    "unpaidRequest": {
+      "title": "Anfrage ohne Online-Zahlung",
+      "description": "Ihre Anfrage wird an unser Team gesendet und das ausgewählte Fahrzeug wird 24 Stunden blockiert."
+    },
     "returnToPayment": "Zurück zur Zahlung",
     "priceBreakdown": "Preisaufschlüsselung",
     "rentalPeriod": "Mietdauer",

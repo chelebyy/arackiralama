@@ -78,6 +78,7 @@ public sealed record PublicSiteSettingsDto(
     string ContactPageMapEmbedUrl,
     bool ContactPageMapIsVisible,
     IReadOnlyList<PublicManagedPageDto> Pages,
+    bool OnlinePaymentEnabled,
     DateTime UpdatedAt);
 
 public sealed record UpdatePublicSiteSettingsRequest(

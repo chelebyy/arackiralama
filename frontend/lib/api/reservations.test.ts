@@ -9,6 +9,7 @@ vi.mock("./client", () => ({
 import { get, patch, post } from "./client";
 import {
   createReservation,
+  createUnpaidReservationRequest,
   extendHold,
   getReservationByPublicCode,
   placeHold,
@@ -41,6 +42,21 @@ describe("reservations API", () => {
     await createReservation(payload);
 
     expect(mockedPost).toHaveBeenCalledWith("/reservations", payload);
+  });
+
+  it("posts unpaid reservation request payloads", async () => {
+    const payload = {
+      vehicleGroupId: "vehicle-1",
+      pickupOfficeId: "ala",
+      returnOfficeId: "gzp",
+      pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+      returnDateTimeUtc: "2026-05-12T09:00:00Z",
+      customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.com", phone: "+905551234567" },
+    };
+
+    await createUnpaidReservationRequest(payload);
+
+    expect(mockedPost).toHaveBeenCalledWith("/reservations/unpaid-requests", payload);
   });
 
   it("gets reservations by public code", async () => {

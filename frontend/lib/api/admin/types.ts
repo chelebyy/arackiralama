@@ -92,6 +92,14 @@ export interface AdminCustomer extends Customer {
   createdAt: string;
 }
 
+export interface AdminUpdateReservationData {
+  pickupDateTimeUtc?: string;
+  returnDateTimeUtc?: string;
+  pickupOfficeId?: string;
+  returnOfficeId?: string;
+  notes?: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -377,6 +385,20 @@ export interface AssignVehicleData {
 export interface ReservationCheckInData {
   checkedInBy: string;
   adminNotes?: string;
+}
+
+export interface AdminManualReservationData {
+  vehicleId: string;
+  pickupOfficeId: string;
+  returnOfficeId: string;
+  pickupDateTimeUtc: string;
+  returnDateTimeUtc: string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  notes?: string;
+  totalAmount?: number;
 }
 
 export interface ReservationCheckOutData {

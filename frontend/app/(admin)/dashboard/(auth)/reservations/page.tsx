@@ -13,6 +13,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -22,12 +31,20 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Eye, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
-import { useAdminReservations, mutateCancelReservation } from "@/hooks/admin";
+import { Search, Eye, XCircle, ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
+import {
+  useAdminReservations,
+  useAdminVehicles,
+  useAdminOffices,
+  mutateCancelReservation,
+  mutateCreateManualReservation,
+} from "@/hooks/admin";
+import type { AdminManualReservationData } from "@/lib/api/admin";
 import { toast } from "sonner";
 
 const statusOptions = [
   { value: "ALL", label: "Tümü" },
+  { value: "UnpaidRequest", label: "Talep Alındı" },
   { value: "CONFIRMED", label: "Onaylı" },
   { value: "PENDING", label: "Beklemede" },
   { value: "ACTIVE", label: "Aktif" },
@@ -37,7 +54,9 @@ const statusOptions = [
 ];
 
 const statusBadgeVariant = (status: string) => {
-  switch (status) {
+  switch (normalizeStatus(status)) {
+    case "UNPAID_REQUEST":
+      return "secondary";
     case "CONFIRMED":
       return "default";
     case "PENDING":
@@ -56,14 +75,37 @@ const statusBadgeVariant = (status: string) => {
 };
 
 const statusLabel = (status: string) => {
-  const opt = statusOptions.find((o) => o.value === status);
+  const opt = statusOptions.find((o) => normalizeStatus(o.value) === normalizeStatus(status));
   return opt?.label || status;
+};
+
+function normalizeStatus(status: string) {
+  return status.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+}
+
+const emptyManualReservationForm: AdminManualReservationData = {
+  vehicleId: "",
+  pickupOfficeId: "",
+  returnOfficeId: "",
+  pickupDateTimeUtc: "",
+  returnDateTimeUtc: "",
+  customerFirstName: "",
+  customerLastName: "",
+  customerPhone: "",
+  customerEmail: "",
+  notes: "",
+  totalAmount: undefined,
 };
 
 export default function ReservationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualForm, setManualForm] = useState<AdminManualReservationData>(
+    emptyManualReservationForm,
+  );
+  const [isCreatingManual, setIsCreatingManual] = useState(false);
 
   const params: Record<string, unknown> = { page, pageSize: 10 };
   if (statusFilter !== "ALL") params.status = statusFilter;
@@ -71,6 +113,8 @@ export default function ReservationsPage() {
 
   const { reservations, pagination, isLoading, isError, mutate } =
     useAdminReservations(params);
+  const { vehicles } = useAdminVehicles({ page: 1, pageSize: 100 });
+  const { offices } = useAdminOffices();
 
   const handleCancel = async (id: string) => {
     try {
@@ -79,6 +123,36 @@ export default function ReservationsPage() {
       mutate();
     } catch {
       toast.error("İptal işlemi başarısız");
+    }
+  };
+
+  const updateManualForm = (
+    field: keyof AdminManualReservationData,
+    value: string,
+  ) => {
+    setManualForm((current) => ({
+      ...current,
+      [field]: field === "totalAmount" ? (value ? Number(value) : undefined) : value,
+    }));
+  };
+
+  const handleCreateManualReservation = async () => {
+    setIsCreatingManual(true);
+    try {
+      await mutateCreateManualReservation({
+        ...manualForm,
+        customerEmail: manualForm.customerEmail || undefined,
+        notes: manualForm.notes || undefined,
+        totalAmount: manualForm.totalAmount || undefined,
+      });
+      toast.success("Manuel rezervasyon oluşturuldu");
+      setManualDialogOpen(false);
+      setManualForm(emptyManualReservationForm);
+      mutate();
+    } catch {
+      toast.error("Manuel rezervasyon oluşturulamadı");
+    } finally {
+      setIsCreatingManual(false);
     }
   };
 
@@ -97,6 +171,10 @@ export default function ReservationsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">Rezervasyon Listesi</CardTitle>
           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setManualDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Manuel Rezervasyon
+            </Button>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -169,7 +247,7 @@ export default function ReservationsPage() {
                               <Eye className="h-4 w-4" />
                             </Link>
                           </Button>
-                          {["PENDING", "CONFIRMED"].includes(r.status) && (
+                          {["PENDING", "CONFIRMED", "UNPAID_REQUEST"].includes(normalizeStatus(r.status)) && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -224,6 +302,152 @@ export default function ReservationsPage() {
           </>
         )}
       </CardContent>
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manuel Rezervasyon</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="manualVehicleId">Fiziksel Araç</Label>
+              <select
+                id="manualVehicleId"
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                value={manualForm.vehicleId}
+                onChange={(event) => updateManualForm("vehicleId", event.target.value)}
+              >
+                <option value="">Araç seçin</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.plate} - {vehicle.name || `${vehicle.brand ?? ""} ${vehicle.model ?? ""}`.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualPickupOfficeId">Alış Ofisi</Label>
+              <select
+                id="manualPickupOfficeId"
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                value={manualForm.pickupOfficeId}
+                onChange={(event) => updateManualForm("pickupOfficeId", event.target.value)}
+              >
+                <option value="">Alış ofisi seçin</option>
+                {offices.map((office) => (
+                  <option key={office.id} value={office.id}>
+                    {office.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualReturnOfficeId">İade Ofisi</Label>
+              <select
+                id="manualReturnOfficeId"
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                value={manualForm.returnOfficeId}
+                onChange={(event) => updateManualForm("returnOfficeId", event.target.value)}
+              >
+                <option value="">İade ofisi seçin</option>
+                {offices.map((office) => (
+                  <option key={office.id} value={office.id}>
+                    {office.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualPickupDateTimeUtc">Alış Tarihi UTC</Label>
+              <Input
+                id="manualPickupDateTimeUtc"
+                type="datetime-local"
+                value={manualForm.pickupDateTimeUtc}
+                onChange={(event) =>
+                  updateManualForm("pickupDateTimeUtc", event.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualReturnDateTimeUtc">İade Tarihi UTC</Label>
+              <Input
+                id="manualReturnDateTimeUtc"
+                type="datetime-local"
+                value={manualForm.returnDateTimeUtc}
+                onChange={(event) =>
+                  updateManualForm("returnDateTimeUtc", event.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualFirstName">Müşteri Adı</Label>
+              <Input
+                id="manualFirstName"
+                value={manualForm.customerFirstName}
+                onChange={(event) =>
+                  updateManualForm("customerFirstName", event.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualLastName">Müşteri Soyadı</Label>
+              <Input
+                id="manualLastName"
+                value={manualForm.customerLastName}
+                onChange={(event) =>
+                  updateManualForm("customerLastName", event.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualPhone">Telefon</Label>
+              <Input
+                id="manualPhone"
+                value={manualForm.customerPhone}
+                onChange={(event) => updateManualForm("customerPhone", event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualEmail">E-posta (opsiyonel)</Label>
+              <Input
+                id="manualEmail"
+                type="email"
+                value={manualForm.customerEmail}
+                onChange={(event) => updateManualForm("customerEmail", event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manualTotalAmount">Toplam Tutar (opsiyonel)</Label>
+              <Input
+                id="manualTotalAmount"
+                type="number"
+                min="0"
+                value={manualForm.totalAmount ?? ""}
+                onChange={(event) => updateManualForm("totalAmount", event.target.value)}
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="manualNotes">Notlar (opsiyonel)</Label>
+              <Textarea
+                id="manualNotes"
+                value={manualForm.notes}
+                onChange={(event) => updateManualForm("notes", event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setManualDialogOpen(false)}
+              disabled={isCreatingManual}
+            >
+              Vazgeç
+            </Button>
+            <Button onClick={handleCreateManualReservation} disabled={isCreatingManual}>
+              {isCreatingManual ? "Oluşturuluyor..." : "Oluştur"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

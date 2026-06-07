@@ -70,6 +70,9 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
+        _applicationDbContextMock
+            .Setup(x => x.Reservations)
+            .Returns(new List<Reservation>().BuildMockDbSet().Object);
 
         _redisMock
             .Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
@@ -1781,6 +1784,11 @@ public sealed class ReservationServiceTests
         // Arrange
         var reservationId = Guid.NewGuid();
         var originalVehicleId = Guid.NewGuid();
+        var pickupOfficeId = Guid.NewGuid();
+        var returnOfficeId = Guid.NewGuid();
+        var newPickupOfficeId = Guid.NewGuid();
+        var newReturnOfficeId = Guid.NewGuid();
+        var vehicleGroupId = Guid.NewGuid();
         var originalCustomer = new Customer { FullName = "Original Customer", Email = "original@example.com", Phone = "+90 555 000 0000" };
         var reservation = new Reservation
         {
@@ -1789,18 +1797,26 @@ public sealed class ReservationServiceTests
             CustomerId = Guid.NewGuid(),
             Customer = originalCustomer,
             VehicleId = originalVehicleId,
-            PickupDateTime = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
-            ReturnDateTime = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
-            Status = ReservationStatus.Hold,
+            Vehicle = new Vehicle
+            {
+                Id = originalVehicleId,
+                GroupId = vehicleGroupId,
+                Group = new VehicleGroup { Id = vehicleGroupId, NameTr = "Ekonomi", DepositAmount = 2000m }
+            },
+            PickupOfficeId = pickupOfficeId,
+            ReturnOfficeId = returnOfficeId,
+            PickupDateTime = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2026, 7, 3, 10, 0, 0, DateTimeKind.Utc),
+            Status = ReservationStatus.Confirmed,
             TotalAmount = 1500m
         };
 
         var request = new UpdateReservationRequest
         {
-            PickupDateTimeUtc = new DateTime(2026, 4, 2, 9, 0, 0, DateTimeKind.Utc),
-            ReturnDateTimeUtc = new DateTime(2026, 4, 5, 9, 0, 0, DateTimeKind.Utc),
-            PickupOfficeId = Guid.NewGuid(),
-            ReturnOfficeId = Guid.NewGuid(),
+            PickupDateTimeUtc = new DateTime(2026, 7, 2, 9, 0, 0, DateTimeKind.Utc),
+            ReturnDateTimeUtc = new DateTime(2026, 7, 5, 9, 0, 0, DateTimeKind.Utc),
+            PickupOfficeId = newPickupOfficeId,
+            ReturnOfficeId = newReturnOfficeId,
             Customer = new CustomerInfoRequest
             {
                 FirstName = "Changed",
@@ -1814,6 +1830,34 @@ public sealed class ReservationServiceTests
         _reservationRepositoryMock
             .Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                originalVehicleId,
+                request.PickupDateTimeUtc.Value,
+                request.ReturnDateTimeUtc.Value,
+                reservationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _officeRepositoryMock
+            .Setup(x => x.GetByIdAsync(newPickupOfficeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Office { Id = newPickupOfficeId, Name = "New Pickup" });
+        _officeRepositoryMock
+            .Setup(x => x.GetByIdAsync(newReturnOfficeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Office { Id = newReturnOfficeId, Name = "New Return" });
+        _pricingServiceMock
+            .Setup(x => x.CalculateBreakdownAsync(
+                vehicleGroupId,
+                newPickupOfficeId,
+                newReturnOfficeId,
+                request.PickupDateTimeUtc.Value,
+                request.ReturnDateTimeUtc.Value,
+                null,
+                0,
+                0,
+                null,
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1500m, 2000m, 2000m, "TRY", null));
 
         // Act
         var result = await _sut.UpdateReservationAsync(reservationId, request, CancellationToken.None);
@@ -1983,6 +2027,45 @@ public sealed class ReservationServiceTests
                 It.Is<Exception>(ex => ex is InvalidOperationException && ex.Message == "boom"),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessExpiredReservationsAsync_WhenUnpaidRequestExpired_MarksItExpiredAndClearsExpiry()
+    {
+        var now = DateTime.UtcNow;
+        var expiredUnpaidRequest = new Reservation
+        {
+            Id = Guid.NewGuid(),
+            Status = ReservationStatus.UnpaidRequest,
+            UnpaidRequestExpiresAtUtc = now.AddMinutes(-5),
+            PickupDateTime = now.AddDays(1),
+            ReturnDateTime = now.AddDays(2),
+            TotalAmount = 1000m
+        };
+        var freshUnpaidRequest = new Reservation
+        {
+            Id = Guid.NewGuid(),
+            Status = ReservationStatus.UnpaidRequest,
+            UnpaidRequestExpiresAtUtc = now.AddHours(1),
+            PickupDateTime = now.AddDays(3),
+            ReturnDateTime = now.AddDays(4),
+            TotalAmount = 1000m
+        };
+
+        _holdServiceMock
+            .Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>());
+        _applicationDbContextMock
+            .Setup(x => x.Reservations)
+            .Returns(new List<Reservation> { expiredUnpaidRequest, freshUnpaidRequest }.BuildMockDbSet().Object);
+
+        await _sut.ProcessExpiredReservationsAsync(CancellationToken.None);
+
+        expiredUnpaidRequest.Status.Should().Be(ReservationStatus.Expired);
+        expiredUnpaidRequest.UnpaidRequestExpiresAtUtc.Should().BeNull();
+        freshUnpaidRequest.Status.Should().Be(ReservationStatus.UnpaidRequest);
+        freshUnpaidRequest.UnpaidRequestExpiresAtUtc.Should().NotBeNull();
+        _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

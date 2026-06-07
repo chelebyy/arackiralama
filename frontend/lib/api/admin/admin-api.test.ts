@@ -36,6 +36,8 @@ import {
   cancelReservation,
   checkIn,
   checkOut,
+  confirmUnpaidRequest,
+  createManualReservation,
   getReservationById,
   getReservations,
   refundReservation,
@@ -207,6 +209,17 @@ describe("admin reservations API", () => {
     await cancelReservation("reservation-1", "Customer request");
     await cancelReservation("reservation-2", { reason: "Duplicate" });
     await assignVehicle("reservation-1", "vehicle-1");
+    await createManualReservation({
+      vehicleId: "vehicle-1",
+      pickupOfficeId: "ala",
+      returnOfficeId: "gzp",
+      pickupDateTimeUtc: "2026-06-10T10:00:00Z",
+      returnDateTimeUtc: "2026-06-12T10:00:00Z",
+      customerFirstName: "Jane",
+      customerLastName: "Doe",
+      customerPhone: "+905551234567",
+    });
+    await confirmUnpaidRequest("reservation-3");
     await checkIn("reservation-1", { mileage: 1200 } as never);
     await checkOut("reservation-1", { mileage: 1400 } as never);
     await refundReservation("reservation-1", { amount: 100, reason: "Refund" } as never);
@@ -216,28 +229,35 @@ describe("admin reservations API", () => {
       "/v1/reservations?page=1&status=Confirmed"
     );
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-1");
-    expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/reservations/reservation-1/cancel", {
-      reason: "Customer request",
-    });
-    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-2/cancel", {
-      reason: "Duplicate",
-    });
+    expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/reservations/reservation-1/cancel", "Customer request");
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-2/cancel", "Duplicate");
     expect(mockedPatch).toHaveBeenNthCalledWith(
-      3,
+      1,
       "/v1/reservations/reservation-1/assign-vehicle",
       { vehicleId: "vehicle-1" }
     );
+    expect(mockedPost).toHaveBeenNthCalledWith(3, "/v1/reservations/manual", {
+      vehicleId: "vehicle-1",
+      pickupOfficeId: "ala",
+      returnOfficeId: "gzp",
+      pickupDateTimeUtc: "2026-06-10T10:00:00Z",
+      returnDateTimeUtc: "2026-06-12T10:00:00Z",
+      customerFirstName: "Jane",
+      customerLastName: "Doe",
+      customerPhone: "+905551234567",
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(4, "/v1/reservations/reservation-3/confirm-unpaid-request", {});
     expect(mockedPatch).toHaveBeenNthCalledWith(
-      4,
+      2,
       "/v1/reservations/reservation-1/check-in",
       { mileage: 1200 }
     );
     expect(mockedPatch).toHaveBeenNthCalledWith(
-      5,
+      3,
       "/v1/reservations/reservation-1/check-out",
       { mileage: 1400 }
     );
-    expect(mockedPost).toHaveBeenCalledWith("/v1/reservations/reservation-1/refund", {
+    expect(mockedPost).toHaveBeenNthCalledWith(5, "/v1/reservations/reservation-1/refund", {
       amount: 100,
       reason: "Refund",
     });

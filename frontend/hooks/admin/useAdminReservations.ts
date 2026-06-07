@@ -4,6 +4,9 @@ import useSWR from 'swr';
 import {
   getReservations,
   getReservationById,
+  createManualReservation,
+  updateReservation,
+  confirmUnpaidRequest,
   cancelReservation,
   assignVehicle,
   checkIn,
@@ -12,6 +15,7 @@ import {
 } from '@/lib/api/admin/reservations';
 import type {
   AdminRefundData,
+  AdminManualReservationData,
   AdminReservation,
   PaginatedResponse,
 } from '@/lib/api/admin';
@@ -69,6 +73,21 @@ export async function mutateCancelReservation(
 
 export async function mutateAssignVehicle(id: string, vehicleId: string) {
   return assignVehicle(id, vehicleId);
+}
+
+export async function mutateCreateManualReservation(data: AdminManualReservationData) {
+  return createManualReservation(data);
+}
+
+export async function mutateUpdateReservation(
+  id: string,
+  data: Parameters<typeof updateReservation>[1]
+) {
+  return updateReservation(id, data);
+}
+
+export async function mutateConfirmUnpaidRequest(id: string) {
+  return confirmUnpaidRequest(id);
 }
 
 export async function mutateCheckIn(id: string, data: Parameters<typeof checkIn>[1]) {

@@ -62,6 +62,30 @@ public sealed class DatabaseIntegrationTests(RedisFixture redisFixture) : ApiInt
         });
     }
 
+    [Theory]
+    [InlineData(ReservationStatus.UnpaidRequest)]
+    [InlineData(ReservationStatus.Confirmed)]
+    public async Task OverlapConstraint_RejectsConflictingNewBlockingStatuses(ReservationStatus blockingStatus)
+    {
+        await WithDbContextAsync(async dbContext =>
+        {
+            var vehicleId = await dbContext.Vehicles.Select(vehicle => vehicle.Id).FirstAsync();
+            var customerId = await CreateCustomerAsync(dbContext, $"overlap-{blockingStatus}-a");
+            var pickup = DateTime.UtcNow.Date.AddDays(24).AddHours(10);
+
+            dbContext.Reservations.Add(CreateReservation(customerId, vehicleId, pickup, pickup.AddDays(3), blockingStatus));
+            await dbContext.SaveChangesAsync();
+
+            var secondCustomerId = await CreateCustomerAsync(dbContext, $"overlap-{blockingStatus}-b");
+            dbContext.Reservations.Add(CreateReservation(secondCustomerId, vehicleId, pickup.AddDays(1), pickup.AddDays(4), ReservationStatus.Hold));
+
+            var act = () => dbContext.SaveChangesAsync();
+
+            await act.Should().ThrowAsync<DbUpdateException>();
+            return true;
+        });
+    }
+
     [Fact]
     public async Task TransactionRollback_RemovesWritesWhenTransactionIsRolledBack()
     {
@@ -149,6 +173,9 @@ public sealed class DatabaseIntegrationTests(RedisFixture redisFixture) : ApiInt
         PickupDateTime = pickup,
         ReturnDateTime = dropoff,
         Status = status,
+        PickupOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        ReturnOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        UnpaidRequestExpiresAtUtc = status == ReservationStatus.UnpaidRequest ? DateTime.UtcNow.AddHours(24) : null,
         TotalAmount = 1000m
     };
 }

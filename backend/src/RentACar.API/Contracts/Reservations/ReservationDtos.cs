@@ -1,3 +1,5 @@
+using RentACar.API.Contracts.Pricing;
+
 namespace RentACar.API.Contracts.Reservations;
 
 public record ReservationDto
@@ -24,14 +26,30 @@ public record ReservationDto
     public decimal TotalAmount { get; init; }
     public decimal DepositAmount { get; init; }
     public int RentalDays { get; init; }
+    public int CustomerReservationCount { get; init; }
+    public decimal CustomerTotalSpent { get; init; }
+    public ReservationDriverDto? Driver { get; init; }
+    public PriceBreakdownDto? PriceBreakdown { get; init; }
     public string? CampaignCode { get; init; }
     public decimal DiscountAmount { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
+    public DateTime? UnpaidRequestExpiresAtUtc { get; init; }
     public DateTime? CheckedInAt { get; init; }
     public DateTime? CheckedOutAt { get; init; }
     public string? Notes { get; init; }
     public ReservationHoldDto? ActiveHold { get; init; }
+}
+
+public record ReservationDriverDto
+{
+    public string FirstName { get; init; } = string.Empty;
+    public string LastName { get; init; } = string.Empty;
+    public DateTime? DateOfBirth { get; init; }
+    public string LicenseNumber { get; init; } = string.Empty;
+    public string LicenseCountry { get; init; } = string.Empty;
+    public DateTime? LicenseIssueDate { get; init; }
+    public DateTime? LicenseExpiryDate { get; init; }
 }
 
 public record ReservationHoldDto

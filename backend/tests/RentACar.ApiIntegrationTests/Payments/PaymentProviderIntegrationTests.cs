@@ -50,6 +50,8 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
         {
             PublicCode = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
             VehicleId = vehicle.Id,
+            PickupOfficeId = vehicle.OfficeId,
+            ReturnOfficeId = vehicle.OfficeId,
             CustomerId = customer.Id,
             PickupDateTime = pickup,
             ReturnDateTime = dropoff,

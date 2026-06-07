@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   },
   reservations: {
     create: '/reservations',
+    createUnpaidRequest: '/reservations/unpaid-requests',
     detail: (code: string) => `/reservations/${code}`,
     hold: (id: string) => `/reservations/${id}/hold`,
     extendHold: (id: string) => `/reservations/${id}/hold/extend`,

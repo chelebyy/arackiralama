@@ -26,6 +26,7 @@ import {
   CreditCard,
   MapPin,
   NotebookPen,
+  Pencil,
   Timer,
   User,
   XCircle,
@@ -33,6 +34,8 @@ import {
 import {
   useAdminReservation,
   mutateCancelReservation,
+  mutateUpdateReservation,
+  mutateConfirmUnpaidRequest,
   mutateCheckIn,
   mutateCheckOut,
   mutateRefundReservation,
@@ -40,7 +43,9 @@ import {
 import { toast } from "sonner";
 
 const statusBadgeVariant = (status: string) => {
-  switch (status) {
+  switch (normalizeStatus(status)) {
+    case "UNPAID_REQUEST":
+      return "secondary";
     case "CONFIRMED":
       return "default";
     case "PENDING":
@@ -60,6 +65,7 @@ const statusBadgeVariant = (status: string) => {
 
 const statusLabel = (status: string) => {
   const map: Record<string, string> = {
+    UNPAID_REQUEST: "Talep Alındı",
     CONFIRMED: "Onaylı",
     PENDING: "Beklemede",
     ACTIVE: "Aktif",
@@ -67,7 +73,7 @@ const statusLabel = (status: string) => {
     CANCELLED: "İptal",
     EXPIRED: "Süresi Doldu",
   };
-  return map[status] || status;
+  return map[normalizeStatus(status)] || status;
 };
 
 const paymentStatusLabel = (status: string) => {
@@ -100,6 +106,12 @@ const paymentStatusVariant = (status: string) => {
   }
 };
 
+function normalizeStatus(status: string) {
+  const normalized = status.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+  if (normalized === "UNPAID_REQUEST") return "UNPAID_REQUEST";
+  return normalized;
+}
+
 function currency(value?: number) {
   if (value === undefined || value === null) return "—";
   return `₺${value.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -115,6 +127,13 @@ export default function ReservationDetailPage() {
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReason, setRefundReason] = useState("");
   const [isRefunding, setIsRefunding] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editPickupDate, setEditPickupDate] = useState("");
+  const [editPickupTime, setEditPickupTime] = useState("");
+  const [editReturnDate, setEditReturnDate] = useState("");
+  const [editReturnTime, setEditReturnTime] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleCancel = async () => {
     if (!id) return;
@@ -124,6 +143,17 @@ export default function ReservationDetailPage() {
       mutate();
     } catch {
       toast.error("İptal işlemi başarısız");
+    }
+  };
+
+  const handleConfirmUnpaidRequest = async () => {
+    if (!id) return;
+    try {
+      await mutateConfirmUnpaidRequest(id);
+      toast.success("Rezervasyon onaylandı");
+      mutate();
+    } catch {
+      toast.error("Onay işlemi başarısız");
     }
   };
 
@@ -170,6 +200,40 @@ export default function ReservationDetailPage() {
     }
   };
 
+  const openEditDialog = () => {
+    if (!reservation) return;
+    setEditPickupDate(reservation.pickupDate || "");
+    setEditPickupTime(reservation.pickupTime || "");
+    setEditReturnDate(reservation.returnDate || "");
+    setEditReturnTime(reservation.returnTime || "");
+    setEditNotes(reservation.notes || reservation.adminNotes || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateReservation = async () => {
+    if (!id) return;
+    if (!editPickupDate || !editPickupTime || !editReturnDate || !editReturnTime) {
+      toast.error("Tarih ve saat alanları zorunludur");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await mutateUpdateReservation(id, {
+        pickupDateTimeUtc: `${editPickupDate}T${editPickupTime}:00Z`,
+        returnDateTimeUtc: `${editReturnDate}T${editReturnTime}:00Z`,
+        notes: editNotes,
+      });
+      toast.success("Rezervasyon güncellendi");
+      setEditDialogOpen(false);
+      mutate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Güncelleme işlemi başarısız");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -202,9 +266,14 @@ export default function ReservationDetailPage() {
 
   const r = reservation;
   const pb = r.priceBreakdown;
-  const canCancel = ["PENDING", "CONFIRMED"].includes(r.status);
-  const canCheckIn = r.status === "CONFIRMED";
-  const canCheckOut = r.status === "ACTIVE";
+  const normalizedStatus = normalizeStatus(r.status);
+  const canConfirmUnpaidRequest = normalizedStatus === "UNPAID_REQUEST";
+  const canCancel = ["PENDING", "CONFIRMED", "UNPAID_REQUEST"].includes(normalizedStatus);
+  const canCheckIn = normalizedStatus === "CONFIRMED";
+  const canCheckOut = normalizedStatus === "ACTIVE";
+  const canEdit =
+    ["CONFIRMED", "UNPAID_REQUEST"].includes(normalizedStatus) &&
+    new Date(`${r.pickupDate}T${r.pickupTime || "00:00"}:00`).getTime() > Date.now();
 
   return (
     <div className="space-y-6">
@@ -224,6 +293,18 @@ export default function ReservationDetailPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={openEditDialog}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Düzenle
+            </Button>
+          )}
+          {canConfirmUnpaidRequest && (
+            <Button variant="default" size="sm" onClick={handleConfirmUnpaidRequest}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Onayla
+            </Button>
+          )}
           {canCancel && (
             <Button variant="destructive" size="sm" onClick={handleCancel}>
               <XCircle className="mr-2 h-4 w-4" />
@@ -553,6 +634,69 @@ export default function ReservationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rezervasyonu Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="editPickupDate">Alış Tarihi</Label>
+              <Input
+                id="editPickupDate"
+                type="date"
+                value={editPickupDate}
+                onChange={(event) => setEditPickupDate(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editPickupTime">Alış Saati</Label>
+              <Input
+                id="editPickupTime"
+                type="time"
+                value={editPickupTime}
+                onChange={(event) => setEditPickupTime(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editReturnDate">İade Tarihi</Label>
+              <Input
+                id="editReturnDate"
+                type="date"
+                value={editReturnDate}
+                onChange={(event) => setEditReturnDate(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editReturnTime">İade Saati</Label>
+              <Input
+                id="editReturnTime"
+                type="time"
+                value={editReturnTime}
+                onChange={(event) => setEditReturnTime(event.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="editNotes">Admin Notu</Label>
+              <Input
+                id="editNotes"
+                value={editNotes}
+                onChange={(event) => setEditNotes(event.target.value)}
+                placeholder="Müşteri talebi, tarih değişikliği vb."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isUpdating}>
+              Vazgeç
+            </Button>
+            <Button variant="default" onClick={handleUpdateReservation} disabled={isUpdating}>
+              {isUpdating ? "Güncelleniyor..." : "Kaydet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
         <DialogContent>

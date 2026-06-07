@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RentACar.Infrastructure.Data;
@@ -11,9 +12,11 @@ using RentACar.Infrastructure.Data;
 namespace RentACar.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(RentACarDbContext))]
-    partial class RentACarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607163225_AddUnpaidRequestAndManualReservationFields")]
+    partial class AddUnpaidRequestAndManualReservationFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1025,38 +1028,6 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid")
                         .HasColumnName("customer_id");
-
-                    b.Property<DateTime?>("DriverDateOfBirth")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("driver_date_of_birth");
-
-                    b.Property<string>("DriverFirstName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("driver_first_name");
-
-                    b.Property<string>("DriverLastName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("driver_last_name");
-
-                    b.Property<string>("DriverLicenseCountry")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("driver_license_country");
-
-                    b.Property<DateTime?>("DriverLicenseExpiryDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("driver_license_expiry_date");
-
-                    b.Property<DateTime?>("DriverLicenseIssueDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("driver_license_issue_date");
-
-                    b.Property<string>("DriverLicenseNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("driver_license_number");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)

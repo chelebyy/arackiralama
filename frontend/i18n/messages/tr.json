@@ -176,6 +176,8 @@
     "confirmation": {
       "title": "Rezervasyon Onaylandı!",
       "message": "Rezervasyonunuz başarıyla oluşturuldu. Detaylar e-posta adresinize gönderildi.",
+      "unpaidRequestTitle": "Talebiniz Alındı!",
+      "unpaidRequestMessage": "Rezervasyon talebiniz başarıyla alındı. Araç 24 saat boyunca sizin için bloke edildi; ekibimiz onay için sizinle iletişime geçecek.",
       "reservationNumber": "Rezervasyon Numarası",
       "downloadVoucher": "Voucher İndir",
       "whatNext": "Sırada Ne Var?",
@@ -214,6 +216,8 @@
     "continueToVehicle": "Araç Seçimine Devam Et",
     "continueToPayment": "Ödemeye Devam Et",
     "completeBooking": "Rezervasyonu Tamamla",
+    "completeRequest": "Talebi Gönder",
+    "sendUnpaidRequest": "Ödeme yapmadan talep gönder",
     "back": "Geri",
     "loadingVehicles": "Müsait araçlar yükleniyor...",
     "failedToLoadVehicles": "Araçlar yüklenemedi. Lütfen tekrar deneyin.",
@@ -233,6 +237,10 @@
     "termsAgreementEnd": "'nı kabul ediyorum. Geçerli bir sürücü belgem olduğunu ve minimum yaş şartını karşıladığımı onaylıyorum.",
     "processingPayment": "Ödeme işleniyor...",
     "failedToProcessPayment": "Ödeme işlenemedi. Lütfen tekrar deneyin.",
+    "unpaidRequest": {
+      "title": "Online ödeme olmadan talep",
+      "description": "Talebiniz ekibimize iletilir ve seçilen araç 24 saat boyunca bloke edilir."
+    },
     "returnToPayment": "Ödemeye Dön",
     "priceBreakdown": "Fiyat Detayları",
     "rentalPeriod": "Kiralama Süresi",

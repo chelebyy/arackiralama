@@ -56,6 +56,19 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateIntentAsync_WhenFeatureFlagMissing_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        _dbContext.FeatureFlags.RemoveRange(_dbContext.FeatureFlags);
+        await _dbContext.SaveChangesAsync();
+
+        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "missing-flag"), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Online ödeme şu anda aktif değil.");
+    }
+
+    [Fact]
     public async Task CreateIntentAsync_WhenIdempotencyKeyBelongsToDifferentReservation_ThrowsInvalidOperationException()
     {
         var reservation = await SeedReservationAsync();

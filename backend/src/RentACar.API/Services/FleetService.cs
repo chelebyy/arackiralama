@@ -18,14 +18,6 @@ public sealed class FleetService(
     IApplicationDbContext dbContext,
     IHttpContextAccessor? httpContextAccessor = null) : IFleetService
 {
-    private static readonly ReservationStatus[] BlockingReservationStatuses =
-    [
-        ReservationStatus.Hold,
-        ReservationStatus.PendingPayment,
-        ReservationStatus.Paid,
-        ReservationStatus.Active
-    ];
-
     public async Task<IReadOnlyList<VehicleGroupDto>> GetVehicleGroupsAsync(CancellationToken cancellationToken = default)
     {
         var vehicleGroups = await vehicleGroupRepository.ListAsync(cancellationToken);
@@ -183,7 +175,7 @@ public sealed class FleetService(
         var blockedVehicleIds = await dbContext.Reservations
             .AsNoTracking()
             .Where(reservation =>
-                BlockingReservationStatuses.Contains(reservation.Status) &&
+                ReservationStatusGroups.StockBlocking.Contains(reservation.Status) &&
                 pickupDateTimeUtc < reservation.ReturnDateTime &&
                 returnDateTimeUtc > reservation.PickupDateTime)
             .Select(reservation => reservation.VehicleId)

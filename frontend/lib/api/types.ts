@@ -181,6 +181,7 @@ export interface Reservation {
 export enum ReservationStatus {
   PENDING = 'PENDING',
   HOLD = 'HOLD',
+  UNPAID_REQUEST = 'UNPAID_REQUEST',
   CONFIRMED = 'CONFIRMED',
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
@@ -360,6 +361,7 @@ export interface CreateReservationData {
   pickupDateTimeUtc: string;
   returnDateTimeUtc: string;
   customer: Customer;
+  driver?: Driver;
   campaignCode?: string;
   extraDriverCount?: number;
   childSeatCount?: number;

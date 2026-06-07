@@ -40,7 +40,13 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     public async Task<PublicSiteSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
         var settings = await GetOrCreateAsync(cancellationToken);
-        return Map(settings);
+        var onlinePaymentEnabled = await dbContext.FeatureFlags
+            .AsNoTracking()
+            .Where(x => x.Name == "EnableOnlinePayment")
+            .Select(x => x.Enabled)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return Map(settings, onlinePaymentEnabled);
     }
 
     public async Task<PublicSiteSettingsDto> UpdateAsync(UpdatePublicSiteSettingsRequest request, CancellationToken cancellationToken = default)
@@ -68,7 +74,13 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return Map(settings);
+        var onlinePaymentEnabled = await dbContext.FeatureFlags
+            .AsNoTracking()
+            .Where(x => x.Name == "EnableOnlinePayment")
+            .Select(x => x.Enabled)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return Map(settings, onlinePaymentEnabled);
     }
 
     private async Task<PublicSiteSettings> GetOrCreateAsync(CancellationToken cancellationToken)
@@ -467,7 +479,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static bool IsEmptyJsonArray(string value) =>
         string.IsNullOrWhiteSpace(value) || value.Trim().Equals("[]", StringComparison.Ordinal);
 
-    private static PublicSiteSettingsDto Map(PublicSiteSettings settings) => new(
+    private static PublicSiteSettingsDto Map(PublicSiteSettings settings, bool onlinePaymentEnabled) => new(
         settings.CompanyName,
         settings.CompanyAddress,
         settings.CompanyPhone,
@@ -485,6 +497,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.ContactPageMapEmbedUrl,
         settings.ContactPageMapIsVisible,
         DeserializePages(settings.PagesJson, DefaultPages()).OrderBy(x => x.SortOrder).ToList(),
+        onlinePaymentEnabled,
         settings.UpdatedAt);
 
     private static IReadOnlyList<PublicSiteLinkDto> DefaultHeaderLinks() =>
