@@ -49,6 +49,10 @@ services:
       Redis__ConnectionString: redis:6379
       Jwt__Secret: local-dev-only-jwt-secret-change-me-12345
       Database__AutoMigrateOnStartup: "true"
+      LocalAdminSeed__Enabled: "true"
+      LocalAdminSeed__Email: integration-admin@rentacar.test
+      LocalAdminSeed__Password: IntegrationTestPassword123!
+      LocalAdminSeed__FullName: Integration Test Admin
       RateLimiting__LoadTestSessionPartition: "true"
       LoadTesting__ConcurrentBookingInventorySeedEnabled: "true"
     ports:
