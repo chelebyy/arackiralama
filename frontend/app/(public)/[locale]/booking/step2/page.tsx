@@ -147,6 +147,7 @@ export default function BookingStep2Page() {
   const handleContinue = () => {
     if (!selectedVehicle || !selectedVehicleIsAvailable) return;
     const selectedGroup = availableGroups.find((group) => group.groupId === selectedVehicle);
+    const selectedGroupName = selectedGroup ? resolveAvailableGroupName(selectedGroup) : undefined;
 
     if (pickupOfficeObj && returnOfficeObj) {
       setDates({
@@ -164,12 +165,12 @@ export default function BookingStep2Page() {
     if (selectedGroup) {
       selectVehicle({
         id: selectedGroup.groupId,
-        name: selectedGroup.groupName,
+        name: selectedGroupName ?? selectedGroup.groupName,
         description: "",
         imageUrl: selectedGroup.imageUrl ?? "",
         images: selectedGroup.imageUrl ? [selectedGroup.imageUrl] : [],
         groupId: selectedGroup.groupId,
-        groupName: selectedGroup.groupName,
+        groupName: selectedGroupName ?? selectedGroup.groupName,
         transmission: TransmissionType.AUTOMATIC,
         fuelType: FuelType.PETROL,
         seatCount: 5,
@@ -192,7 +193,7 @@ export default function BookingStep2Page() {
     queryParams.set("vehicle", selectedVehicle);
     if (selectedGroup) {
       queryParams.set("dailyPrice", selectedGroup.dailyPrice.toString());
-      queryParams.set("vehicleName", selectedGroup.groupName);
+      queryParams.set("vehicleName", selectedGroupName ?? selectedGroup.groupName);
     }
     router.push(`/${locale}/booking/step3?${queryParams.toString()}`);
   };

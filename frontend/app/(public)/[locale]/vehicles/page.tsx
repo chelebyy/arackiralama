@@ -108,8 +108,11 @@ export default function VehiclesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const pickupOffice = searchParams.get("pickup") || "ala";
+  const returnOffice = searchParams.get("return") || pickupOffice;
   const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
+  const pickupTime = searchParams.get("pickupTime") || "10:00";
   const returnDate = searchParams.get("returnDate") || "2025-04-08";
+  const returnTime = searchParams.get("returnTime") || "09:00";
 
   const { offices } = useOffices();
   const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
@@ -132,6 +135,12 @@ export default function VehiclesPage() {
 
   function buildBookingStep2Href(vehicle: Vehicle): string {
     const query = new URLSearchParams(Object.fromEntries(searchParams.entries()));
+    query.set("pickup", pickupOffice);
+    query.set("return", returnOffice);
+    query.set("pickupDate", pickupDate);
+    query.set("pickupTime", pickupTime);
+    query.set("returnDate", returnDate);
+    query.set("returnTime", returnTime);
     query.set("vehicle", vehicle.groupId);
     query.set("dailyPrice", String(vehicle.dailyRate));
     query.set("vehicleName", vehicle.name);

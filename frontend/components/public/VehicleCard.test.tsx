@@ -6,8 +6,18 @@ import messages from "@/i18n/messages/en.json";
 import VehicleCard from "./VehicleCard";
 
 vi.mock("@/i18n/routing", () => ({
-  Link: ({ href, children, ...props }: { href: string | { pathname: string; params?: { id?: string } }; children: React.ReactNode }) => {
-    const resolvedHref = typeof href === "string" ? href : `/vehicles/${href.params?.id ?? ""}`;
+  Link: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string | { pathname: string; params?: { id?: string }; query?: Record<string, string> };
+    children: React.ReactNode;
+  }) => {
+    const resolvedHref =
+      typeof href === "string"
+        ? href
+        : `${href.pathname}${href.query ? `?${new URLSearchParams(href.query).toString()}` : ""}`;
     return <a href={resolvedHref} {...props}>{children}</a>;
   },
 }));
@@ -38,7 +48,10 @@ describe("VehicleCard", () => {
     expect(screen.getByText("Economy")).toBeInTheDocument();
     expect(screen.getByText("Free cancellation")).toBeInTheDocument();
     expect(screen.getByText("5 Seats")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute("href", "/booking");
+    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute(
+      "href",
+      "/vehicles?preferredVehicleId=vehicle-1&vehicleName=Renault+Clio&category=economy&dailyPrice=55"
+    );
   });
 
   it("shows per-day and total pricing when the rental spans multiple days", () => {
