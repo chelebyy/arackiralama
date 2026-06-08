@@ -316,6 +316,104 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task SearchAvailabilityAsync_WhenInvalidatedDuringComputation_DoesNotCacheStaleResult()
+    {
+        // Arrange
+        var pickupOfficeId = Guid.NewGuid();
+        var pickup = DateTime.UtcNow.AddDays(2);
+        var dropoff = pickup.AddDays(2);
+        var groupId = Guid.NewGuid();
+
+        var availableGroup = new FleetContracts.AvailableVehicleGroupDto(
+            groupId,
+            "SUV",
+            "SUV",
+            1,
+            1300,
+            "TRY",
+            3500,
+            25,
+            3,
+            ["Klima", "Otomatik"],
+            null);
+
+        _fleetServiceMock
+            .SetupSequence(x => x.SearchAvailableVehicleGroupsAsync(
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto> { availableGroup })
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>());
+
+        _pricingServiceMock
+            .Setup(x => x.CalculateBreakdownAsync(
+                groupId,
+                pickupOfficeId,
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                0,
+                0,
+                null,
+                false,
+                It.IsAny<CancellationToken>()))
+            .Callback(() => _availabilityCacheInvalidationSignal.Invalidate())
+            .ReturnsAsync(new PriceBreakdownDto(
+                DailyRate: 1300,
+                RentalDays: 2,
+                BaseTotal: 2600,
+                ExtrasTotal: 0,
+                CampaignDiscount: 0,
+                AirportFee: 0,
+                OneWayFee: 0,
+                ExtraDriverFee: 0,
+                ChildSeatFee: 0,
+                YoungDriverFee: 0,
+                FullCoverageWaiverFee: 0,
+                FinalTotal: 2600,
+                DepositAmount: 3500,
+                PreAuthorizationAmount: 3500,
+                Currency: "TRY",
+                AppliedCampaignCode: null));
+
+        // Act
+        var first = await _sut.SearchAvailabilityAsync(
+            pickupOfficeId,
+            null,
+            pickup,
+            dropoff,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        var second = await _sut.SearchAvailabilityAsync(
+            pickupOfficeId,
+            null,
+            pickup,
+            dropoff,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        // Assert
+        first.Should().ContainSingle();
+        second.Should().BeEmpty();
+
+        _fleetServiceMock.Verify(x => x.SearchAvailableVehicleGroupsAsync(
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task CreateUnpaidRequestAsync_WhenAvailabilityWasCached_InvalidatesSameDateSearch()
     {
         // Arrange

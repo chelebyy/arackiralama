@@ -104,6 +104,8 @@ public sealed class ReservationService : IReservationService
             return cachedResult;
         }
 
+        var availabilityCacheInvalidationToken = _availabilityCacheInvalidationSignal.Token;
+
         // Get available vehicle groups from fleet service
         var fleetGroups = (await _fleetService.SearchAvailableVehicleGroupsAsync(
             pickupOfficeId,
@@ -194,11 +196,14 @@ public sealed class ReservationService : IReservationService
             }
         }
 
-        _memoryCache.Set(cacheKey, result, new MemoryCacheEntryOptions
+        if (!availabilityCacheInvalidationToken.IsCancellationRequested)
         {
-            AbsoluteExpirationRelativeToNow = _availabilityCacheTtl,
-            ExpirationTokens = { new CancellationChangeToken(_availabilityCacheInvalidationSignal.Token) }
-        });
+            _memoryCache.Set(cacheKey, result, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = _availabilityCacheTtl,
+                ExpirationTokens = { new CancellationChangeToken(availabilityCacheInvalidationToken) }
+            });
+        }
 
         return result;
     }
