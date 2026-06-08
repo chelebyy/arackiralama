@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using RentACar.API.Contracts.Pricing;
 using RentACar.API.Contracts.Reservations;
@@ -37,6 +38,7 @@ public sealed class ReservationService : IReservationService
     private readonly TimeSpan _maxHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _availabilityCacheTtl = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _holdCreationLockTtl = TimeSpan.FromSeconds(30);
+    private CancellationTokenSource _availabilityCacheInvalidationToken = new();
 
     public ReservationService(
         IReservationRepository reservationRepository,
@@ -192,7 +194,8 @@ public sealed class ReservationService : IReservationService
 
         _memoryCache.Set(cacheKey, result, new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = _availabilityCacheTtl
+            AbsoluteExpirationRelativeToNow = _availabilityCacheTtl,
+            ExpirationTokens = { new CancellationChangeToken(_availabilityCacheInvalidationToken.Token) }
         });
 
         return result;
@@ -309,6 +312,7 @@ public sealed class ReservationService : IReservationService
 
         await _reservationRepository.AddAsync(reservation, cancellationToken);
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
+        InvalidateAvailabilityCache();
 
         _logger.LogInformation(
             "Created draft reservation {PublicCode} for customer {CustomerId}",
@@ -401,6 +405,8 @@ public sealed class ReservationService : IReservationService
             {
                 await transaction.CommitAsync(cancellationToken);
             }
+
+            InvalidateAvailabilityCache();
         }
         catch (DbUpdateException ex) when (IsReservationOverlapViolation(ex))
         {
@@ -2091,6 +2097,19 @@ public sealed class ReservationService : IReservationService
     {
         var groupPart = vehicleGroupId?.ToString("N") ?? "all";
         return $"availability:{pickupOfficeId:N}:{returnOfficeId:N}:{pickupDateTimeUtc:O}:{returnDateTimeUtc:O}:{groupPart}:{page}:{pageSize}";
+    }
+
+    private void InvalidateAvailabilityCache()
+    {
+        var previousToken = Interlocked.Exchange(ref _availabilityCacheInvalidationToken, new CancellationTokenSource());
+        try
+        {
+            previousToken.Cancel();
+        }
+        finally
+        {
+            previousToken.Dispose();
+        }
     }
 
     private async Task SaveChangesWithConcurrencyHandlingAsync(CancellationToken cancellationToken)
