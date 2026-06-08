@@ -68,8 +68,8 @@ export function useAuditLogs(params?: Record<string, unknown>) {
   };
 }
 
-export async function mutateUpdateFeatureFlag(id: string, enabled: boolean) {
-  return updateFeatureFlag(id, enabled);
+export async function mutateUpdateFeatureFlag(name: string, enabled: boolean) {
+  return updateFeatureFlag(name, enabled);
 }
 
 export async function mutateUpdatePublicSiteSettings(data: UpdatePublicSiteSettingsData) {

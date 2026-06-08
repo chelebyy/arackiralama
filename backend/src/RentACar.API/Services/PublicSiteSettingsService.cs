@@ -40,13 +40,9 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     public async Task<PublicSiteSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
         var settings = await GetOrCreateAsync(cancellationToken);
-        var onlinePaymentEnabled = await dbContext.FeatureFlags
-            .AsNoTracking()
-            .Where(x => x.Name == "EnableOnlinePayment")
-            .Select(x => x.Enabled)
-            .FirstOrDefaultAsync(cancellationToken);
+        var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
 
-        return Map(settings, onlinePaymentEnabled);
+        return Map(settings, paymentMethods);
     }
 
     public async Task<PublicSiteSettingsDto> UpdateAsync(UpdatePublicSiteSettingsRequest request, CancellationToken cancellationToken = default)
@@ -74,13 +70,9 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        var onlinePaymentEnabled = await dbContext.FeatureFlags
-            .AsNoTracking()
-            .Where(x => x.Name == "EnableOnlinePayment")
-            .Select(x => x.Enabled)
-            .FirstOrDefaultAsync(cancellationToken);
+        var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
 
-        return Map(settings, onlinePaymentEnabled);
+        return Map(settings, paymentMethods);
     }
 
     private async Task<PublicSiteSettings> GetOrCreateAsync(CancellationToken cancellationToken)
@@ -479,7 +471,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static bool IsEmptyJsonArray(string value) =>
         string.IsNullOrWhiteSpace(value) || value.Trim().Equals("[]", StringComparison.Ordinal);
 
-    private static PublicSiteSettingsDto Map(PublicSiteSettings settings, bool onlinePaymentEnabled) => new(
+    private static PublicSiteSettingsDto Map(PublicSiteSettings settings, PaymentMethodAvailability paymentMethods) => new(
         settings.CompanyName,
         settings.CompanyAddress,
         settings.CompanyPhone,
@@ -497,7 +489,13 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.ContactPageMapEmbedUrl,
         settings.ContactPageMapIsVisible,
         DeserializePages(settings.PagesJson, DefaultPages()).OrderBy(x => x.SortOrder).ToList(),
-        onlinePaymentEnabled,
+        new PublicPaymentMethodsDto(
+            paymentMethods.OnlinePaymentEnabled && paymentMethods.CreditCardEnabled,
+            paymentMethods.OnlinePaymentEnabled && paymentMethods.DebitCardEnabled,
+            paymentMethods.UnpaidRequestEnabled,
+            false,
+            paymentMethods.AnyActionableEnabled),
+        paymentMethods.OnlinePaymentEnabled,
         settings.UpdatedAt);
 
     private static IReadOnlyList<PublicSiteLinkDto> DefaultHeaderLinks() =>

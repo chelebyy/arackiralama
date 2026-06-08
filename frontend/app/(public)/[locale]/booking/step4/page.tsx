@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,7 +15,6 @@ import {
   Check,
   AlertCircle,
   Banknote,
-  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -27,10 +26,28 @@ import { useValidateCampaign } from "@/hooks/usePricing";
 import { usePlaceHold } from "@/hooks/useReservations";
 import { createReservation, createUnpaidReservationRequest } from "@/lib/api/reservations";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
+import type { PublicPaymentMethods } from "@/lib/api/publicSiteSettings";
 import { createPaymentIntent } from "@/lib/api/payments";
 import type { PaymentIntentResponse } from "@/lib/api/payments";
 import type { CreateReservationData } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
+
+type PaymentMethodId = "credit_card" | "debit_card" | "unpaid";
+
+type PaymentMethodOption = {
+  id: PaymentMethodId;
+  name: string;
+  description: string;
+  icon: ReactNode;
+};
+
+const defaultPaymentMethods: PublicPaymentMethods = {
+  creditCardEnabled: true,
+  debitCardEnabled: true,
+  unpaidRequestEnabled: true,
+  paypalEnabled: false,
+  anyEnabled: true,
+};
 
 export default function BookingStep4Page() {
   const params = useParams();
@@ -43,8 +60,8 @@ export default function BookingStep4Page() {
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
-  const [onlinePaymentEnabled, setOnlinePaymentEnabled] = useState(false);
-  const submitModeRef = useRef<"payment" | "unpaid">("unpaid");
+  const [paymentMethodsAvailability, setPaymentMethodsAvailability] = useState(defaultPaymentMethods);
+  const submitModeRef = useRef<PaymentMethodId>("credit_card");
 
   useEffect(() => {
     let isMounted = true;
@@ -52,12 +69,16 @@ export default function BookingStep4Page() {
     getPublicSiteSettings()
       .then((settings) => {
         if (isMounted) {
-          setOnlinePaymentEnabled(Boolean(settings.onlinePaymentEnabled));
+          setPaymentMethodsAvailability(settings.paymentMethods ?? {
+            ...defaultPaymentMethods,
+            creditCardEnabled: Boolean(settings.onlinePaymentEnabled),
+            debitCardEnabled: Boolean(settings.onlinePaymentEnabled),
+          });
         }
       })
       .catch(() => {
         if (isMounted) {
-          setOnlinePaymentEnabled(false);
+          setPaymentMethodsAvailability(defaultPaymentMethods);
         }
       });
 
@@ -74,7 +95,7 @@ export default function BookingStep4Page() {
   ];
 
   const step4Schema = z.object({
-    paymentMethod: z.enum(["credit_card", "debit_card", "paypal"]).optional(),
+    paymentMethod: z.enum(["credit_card", "debit_card", "unpaid"]).optional(),
     cardNumber: z.string().optional(),
     cardHolder: z.string().optional(),
     expiryDate: z.string().optional(),
@@ -85,45 +106,21 @@ export default function BookingStep4Page() {
     }),
   })
     .refine((data) => {
-      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
-      if (data.paymentMethod === "paypal") return true;
+      if (submitModeRef.current === "unpaid" || data.paymentMethod === "unpaid") return true;
       if (!data.cardNumber) return false;
       return /^[\d\s]{16,19}$/.test(data.cardNumber.replace(/\s/g, ""));
     }, { message: t("validation.requiredCardNumber"), path: ["cardNumber"] })
     .refine((data) => {
-      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
-      if (data.paymentMethod === "paypal") return true;
+      if (submitModeRef.current === "unpaid" || data.paymentMethod === "unpaid") return true;
       if (!data.expiryDate) return false;
       return /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate);
     }, { message: t("validation.requiredExpiryDate"), path: ["expiryDate"] })
     .refine((data) => {
-      if (!onlinePaymentEnabled || submitModeRef.current === "unpaid") return true;
-      if (data.paymentMethod === "paypal") return true;
+      if (submitModeRef.current === "unpaid" || data.paymentMethod === "unpaid") return true;
       if (!data.cvv) return false;
       return /^\d{3,4}$/.test(data.cvv);
     }, { message: t("validation.requiredCvv"), path: ["cvv"] });
   type Step4FormData = z.infer<typeof step4Schema>;
-
-  const paymentMethods = [
-    {
-      id: "credit_card",
-      name: t("payment.creditCard"),
-      description: t("payment.creditCardDesc"),
-      icon: <CreditCard className="h-5 w-5" />,
-    },
-    {
-      id: "debit_card",
-      name: t("payment.debitCard"),
-      description: t("payment.debitCardDesc"),
-      icon: <Banknote className="h-5 w-5" />,
-    },
-    {
-      id: "paypal",
-      name: t("payment.paypal"),
-      description: t("payment.paypalDesc"),
-      icon: <Wallet className="h-5 w-5" />,
-    },
-  ];
 
   const {
     register,
@@ -139,7 +136,49 @@ export default function BookingStep4Page() {
     },
   });
 
-  const selectedPaymentMethod = watch("paymentMethod") ?? "credit_card";
+  const paymentMethods = useMemo<PaymentMethodOption[]>(() => {
+    const methods: Array<PaymentMethodOption | null> = [
+      paymentMethodsAvailability.creditCardEnabled
+        ? ({
+            id: "credit_card" as const,
+            name: t("payment.creditCard"),
+            description: t("payment.creditCardDesc"),
+            icon: <CreditCard className="h-5 w-5" />,
+          })
+        : null,
+      paymentMethodsAvailability.debitCardEnabled
+        ? ({
+            id: "debit_card" as const,
+            name: t("payment.debitCard"),
+            description: t("payment.debitCardDesc"),
+            icon: <Banknote className="h-5 w-5" />,
+          })
+        : null,
+      paymentMethodsAvailability.unpaidRequestEnabled
+        ? ({
+            id: "unpaid" as const,
+            name: t("unpaidRequest.title"),
+            description: t("unpaidRequest.description"),
+            icon: <Check className="h-5 w-5" />,
+          })
+        : null,
+    ];
+
+    return methods.filter((method): method is PaymentMethodOption => method !== null);
+  }, [paymentMethodsAvailability, t]);
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) return;
+    const selected = watch("paymentMethod");
+    if (!selected || !paymentMethods.some((method) => method.id === selected)) {
+      setValue("paymentMethod", paymentMethods[0].id);
+    }
+  }, [paymentMethods, setValue, watch]);
+
+  const watchedPaymentMethod = watch("paymentMethod");
+  const selectedPaymentMethod = paymentMethods.some((method) => method.id === watchedPaymentMethod)
+    ? watchedPaymentMethod
+    : paymentMethods[0]?.id;
   const isCreditCard = selectedPaymentMethod === "credit_card" || selectedPaymentMethod === "debit_card";
 
   const pickupDate = booking.dates?.pickupDate ?? searchParams.get("pickupDate") ?? "";
@@ -196,7 +235,7 @@ export default function BookingStep4Page() {
     setValue("campaignCode", normalizedCode);
   };
 
-  const onSubmit = async (data: Step4FormData, submitMode: "payment" | "unpaid") => {
+  const onSubmit = async (data: Step4FormData) => {
     if (!booking.customer || !booking.driver) {
       toast.error(t("missingBookingDetailsStep"));
       return;
@@ -218,7 +257,13 @@ export default function BookingStep4Page() {
     };
 
     try {
-      if (submitMode === "unpaid") {
+      const selectedMethod = data.paymentMethod ?? paymentMethods[0]?.id;
+      if (!selectedMethod) {
+        toast.error(t("paymentMethodsUnavailable"));
+        return;
+      }
+
+      if (selectedMethod === "unpaid") {
         const reservation = await createUnpaidReservationRequest(reservationData);
         const queryParams = new URLSearchParams(searchParams.toString());
         queryParams.set("code", reservation.publicCode);
@@ -235,11 +280,12 @@ export default function BookingStep4Page() {
         return;
       }
 
-      if (data.paymentMethod === "credit_card" || data.paymentMethod === "debit_card") {
+      if (selectedMethod === "credit_card" || selectedMethod === "debit_card") {
         const [expiryMonth, expiryYear] = data.expiryDate?.split("/") ?? ["", ""];
         const paymentResult: PaymentIntentResponse = await createPaymentIntent({
           reservationId: reservation.id,
           idempotencyKey: crypto.randomUUID(),
+          paymentMethod: selectedMethod,
           card: {
             holderName: data.cardHolder ?? "",
             number: data.cardNumber?.replace(/\s/g, "") ?? "",
@@ -292,7 +338,7 @@ export default function BookingStep4Page() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit((data) => onSubmit(data, onlinePaymentEnabled ? "payment" : "unpaid"))} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
@@ -337,52 +383,57 @@ export default function BookingStep4Page() {
               )}
             </div>
 
-            {onlinePaymentEnabled ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-sky-600" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                    {t("payment.title")}
-                  </h2>
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-sky-600" />
                 </div>
+                <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
+                  {t("payment.title")}
+                </h2>
+              </div>
 
-                <div className="space-y-3">
-                  {paymentMethods.map((method) => (
-                    <label
-                      key={method.id}
+              <div className="space-y-3">
+                {paymentMethods.map((method) => (
+                  <label
+                    key={method.id}
+                    className={cn(
+                      "flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all",
+                      selectedPaymentMethod === method.id
+                        ? "border-sky-600 bg-sky-50"
+                        : "border-slate-200 hover:border-sky-300"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      value={method.id}
+                      {...register("paymentMethod")}
+                      className="w-4 h-4 text-sky-600 border-slate-300 focus:ring-sky-500"
+                    />
+                    <div
                       className={cn(
-                        "flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all",
-                        selectedPaymentMethod === method.id
-                          ? "border-sky-600 bg-sky-50"
-                          : "border-slate-200 hover:border-sky-300"
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
                       )}
                     >
-                      <input
-                        type="radio"
-                        value={method.id}
-                        {...register("paymentMethod")}
-                        className="w-4 h-4 text-sky-600 border-slate-300 focus:ring-sky-500"
-                      />
-                      <div
-                        className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
-                        )}
-                      >
-                        {method.icon}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{method.name}</p>
-                        <p className="text-sm text-slate-500">{method.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                      {method.icon}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{method.name}</p>
+                      <p className="text-sm text-slate-500">{method.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
 
-                {isCreditCard && (
-                  <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
+              {paymentMethods.length === 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  {t("paymentMethodsUnavailable")}
+                </div>
+              )}
+
+              {isCreditCard && (
+                <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
                     <div>
                       <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700 mb-2">
                         {t("payment.cardNumber")}
@@ -452,24 +503,9 @@ export default function BookingStep4Page() {
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <Check className="h-5 w-5 text-emerald-700" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-900" style={{ fontFamily: "Lexend, sans-serif" }}>
-                      {t("unpaidRequest.title")}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-600">{t("unpaidRequest.description")}</p>
-                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -511,28 +547,19 @@ export default function BookingStep4Page() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || paymentMethods.length === 0}
             onClick={() => {
-              submitModeRef.current = onlinePaymentEnabled ? "payment" : "unpaid";
+              submitModeRef.current = selectedPaymentMethod ?? "credit_card";
             }}
             className="inline-flex items-center gap-2 px-8 py-4 bg-sky-700 text-white font-semibold rounded-lg hover:bg-sky-800 transition-colors"
           >
-            {isSubmitting ? t("completing") : onlinePaymentEnabled ? t("completeBooking") : t("completeRequest")}
+            {isSubmitting
+              ? t("completing")
+              : selectedPaymentMethod === "unpaid"
+                ? t("completeRequest")
+                : t("completeBooking")}
             <ArrowRight className="h-5 w-5" />
           </button>
-          {onlinePaymentEnabled && (
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => {
-                submitModeRef.current = "unpaid";
-                void handleSubmit((data) => onSubmit(data, "unpaid"))();
-              }}
-              className="inline-flex items-center gap-2 px-6 py-3 text-slate-700 hover:text-slate-950 transition-colors"
-            >
-              {t("sendUnpaidRequest")}
-            </button>
-          )}
             </div>
           </form>
         </div>

@@ -9,10 +9,13 @@ export interface PaymentCardRequest {
   cvv: string;
 }
 
+export type CardPaymentMethod = 'credit_card' | 'debit_card';
+
 export interface CreatePaymentIntentRequest {
   reservationId: string;
   idempotencyKey: string;
   installmentCount?: number;
+  paymentMethod?: CardPaymentMethod;
   card: PaymentCardRequest;
 }
 

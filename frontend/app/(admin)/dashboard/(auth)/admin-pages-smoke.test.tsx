@@ -292,9 +292,15 @@ function setupAdminDefaults() {
     flags: [
       {
         id: "flag-1",
-        name: "Online Payment",
-        description: "Enable payment capture",
+        name: "EnableCreditCardPayment",
+        description: "Enable credit card payment",
         enabled: false,
+      },
+      {
+        id: "flag-2",
+        name: "EnableUnpaidReservationRequest",
+        description: "Enable unpaid reservation request",
+        enabled: true,
       },
     ],
     isLoading: false,
@@ -462,7 +468,7 @@ describe("admin dashboard page surfaces", () => {
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith("Durum güncellenemedi"));
 
     rerender(<FeatureFlagsPage />);
-    await user.click(screen.getByRole("switch"));
+    await user.click(screen.getAllByRole("switch")[0]);
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith("Güncelleme başarısız"));
   });
 
@@ -472,10 +478,12 @@ describe("admin dashboard page surfaces", () => {
 
     render(<FeatureFlagsPage />);
 
-    expect(screen.getByText("Online Payment")).toBeInTheDocument();
-    await user.click(screen.getByRole("switch"));
+    expect(screen.getByText("Ödeme Yöntemleri")).toBeInTheDocument();
+    expect(screen.getByText("Kredi Kartı")).toBeInTheDocument();
+    expect(screen.getByText("Ödemeden Rezervasyon")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("switch")[0]);
     await waitFor(() =>
-      expect(mocks.mutateUpdateFeatureFlag).toHaveBeenCalledWith("flag-1", true),
+      expect(mocks.mutateUpdateFeatureFlag).toHaveBeenCalledWith("EnableCreditCardPayment", true),
     );
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Özellik bayrağı güncellendi");
     expect(mutate).toHaveBeenCalled();

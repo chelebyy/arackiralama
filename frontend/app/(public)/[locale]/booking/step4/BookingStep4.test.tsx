@@ -150,7 +150,16 @@ describe("BookingStep4Page", () => {
     createPaymentIntentMock.mockReset();
     createPaymentIntentMock.mockResolvedValue({ paymentIntentId: "pi-123" });
     getPublicSiteSettingsMock.mockReset();
-    getPublicSiteSettingsMock.mockResolvedValue({ onlinePaymentEnabled: true });
+    getPublicSiteSettingsMock.mockResolvedValue({
+      onlinePaymentEnabled: true,
+      paymentMethods: {
+        creditCardEnabled: true,
+        debitCardEnabled: true,
+        unpaidRequestEnabled: true,
+        paypalEnabled: false,
+        anyEnabled: true,
+      },
+    });
     placeHoldMock.mockReset();
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
@@ -237,7 +246,7 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await screen.findByRole("button", { name: /send request/i });
+    await screen.findByRole("button", { name: /complete booking/i });
 
     await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -262,19 +271,19 @@ describe("BookingStep4Page", () => {
     });
   });
 
-  it("allows PayPal checkout without card details and navigates to confirmation", async () => {
+  it("shows unpaid reservation as a payment method card and submits unpaid request", async () => {
     const user = userEvent.setup();
 
     render(<BookingStep4Page />);
 
-    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
+    await user.click(await screen.findByRole("radio", { name: /request without online payment/i }));
     expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await user.click(screen.getByRole("button", { name: /send request/i }));
 
     await waitFor(() => {
-      expect(createReservationMock).toHaveBeenCalledWith({
+      expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith({
         vehicleGroupId: "economy",
         pickupOfficeId: "ala",
         returnOfficeId: "gzp",
@@ -287,9 +296,11 @@ describe("BookingStep4Page", () => {
         campaignCode: undefined,
       });
       expect(pushMock).toHaveBeenCalledWith(
-        "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"
+        "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REQ-123&request=unpaid"
       );
     });
+    expect(createReservationMock).not.toHaveBeenCalled();
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
   });
 
   it("shows an error toast and does not redirect when reservation creation fails", async () => {
@@ -299,7 +310,10 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
@@ -316,7 +330,10 @@ describe("BookingStep4Page", () => {
 
     render(<BookingStep4Page />);
 
-    await user.click(await screen.findByRole("radio", { name: /paypal/i }));
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
@@ -347,6 +364,7 @@ describe("BookingStep4Page", () => {
       expect(createPaymentIntentMock).toHaveBeenCalledWith({
         reservationId: "res-123",
         idempotencyKey: "uuid-123",
+        paymentMethod: "credit_card",
         card: {
           holderName: "Jane Doe",
           number: "4111111111111111",
@@ -397,14 +415,42 @@ describe("BookingStep4Page", () => {
     );
   });
 
-  it("offers an unpaid request secondary action when online payment is enabled", async () => {
+  it("blocks submission when no payment methods are enabled", async () => {
+    getPublicSiteSettingsMock.mockResolvedValueOnce({
+      onlinePaymentEnabled: false,
+      paymentMethods: {
+        creditCardEnabled: false,
+        debitCardEnabled: false,
+        unpaidRequestEnabled: false,
+        paypalEnabled: false,
+        anyEnabled: false,
+      },
+    });
+
+    render(<BookingStep4Page />);
+
+    expect(await screen.findByText(/no active payment method/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /complete booking/i })).toBeDisabled();
+    expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
+  });
+
+  it("does not render PayPal as an actionable public payment method", async () => {
+    render(<BookingStep4Page />);
+
+    await screen.findByRole("button", { name: /complete booking/i });
+
+    expect(screen.queryByRole("radio", { name: /paypal/i })).not.toBeInTheDocument();
+  });
+
+  it("submits unpaid request through the payment method card when online payment is enabled", async () => {
     const user = userEvent.setup();
 
     render(<BookingStep4Page />);
 
     await screen.findByRole("button", { name: /complete booking/i });
+    await user.click(screen.getByRole("radio", { name: /request without online payment/i }));
     await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: /send request without payment/i }));
+    await user.click(screen.getByRole("button", { name: /send request/i }));
 
     await waitFor(() => {
       expect(createUnpaidReservationRequestMock).toHaveBeenCalled();

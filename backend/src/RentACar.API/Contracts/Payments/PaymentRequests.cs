@@ -5,6 +5,7 @@ public record CreatePaymentIntentApiRequest
     public Guid ReservationId { get; init; }
     public string IdempotencyKey { get; init; } = string.Empty;
     public int InstallmentCount { get; init; } = 1;
+    public string PaymentMethod { get; init; } = "credit_card";
     public PaymentCardApiRequest Card { get; init; } = new();
 }
 

@@ -75,6 +75,9 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock
             .Setup(x => x.Reservations)
             .Returns(new List<Reservation>().BuildMockDbSet().Object);
+        _applicationDbContextMock
+            .Setup(x => x.FeatureFlags)
+            .Returns(new List<FeatureFlag>().BuildMockDbSet().Object);
 
         _redisMock
             .Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
@@ -547,6 +550,28 @@ public sealed class ReservationServiceTests
                 null,
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CreateUnpaidRequestAsync_WhenUnpaidRequestFlagDisabled_ThrowsInvalidOperationException()
+    {
+        _applicationDbContextMock
+            .Setup(x => x.FeatureFlags)
+            .Returns(new List<FeatureFlag>
+            {
+                new()
+                {
+                    Name = "EnableUnpaidReservationRequest",
+                    Enabled = false,
+                    Description = "test"
+                }
+            }.BuildMockDbSet().Object);
+        var request = CreateValidReservationRequest();
+
+        var action = () => _sut.CreateUnpaidRequestAsync(request, CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Odeme yapmadan rezervasyon talebi su anda aktif degil.");
     }
 
     [Fact]

@@ -1,8 +1,11 @@
 import { get } from './client';
-import type { PublicSiteSettings } from './admin/types';
+import type { PublicPaymentMethods, PublicSiteSettings } from './admin/types';
+
+export type { PublicPaymentMethods };
 
 export type PublicRuntimeSiteSettings = PublicSiteSettings & {
   onlinePaymentEnabled: boolean;
+  paymentMethods: PublicPaymentMethods;
 };
 
 export async function getPublicSiteSettings() {

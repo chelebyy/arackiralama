@@ -332,6 +332,12 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default)
     {
+        var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(_applicationDbContext, cancellationToken);
+        if (!paymentMethods.UnpaidRequestEnabled)
+        {
+            throw new InvalidOperationException("Odeme yapmadan rezervasyon talebi su anda aktif degil.");
+        }
+
         var isAvailable = await IsVehicleGroupAvailableAsync(
             request.VehicleGroupId,
             request.PickupOfficeId,

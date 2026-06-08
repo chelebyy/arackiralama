@@ -40,7 +40,8 @@ public sealed class PaymentService(
             return null;
         }
 
-        EnsureOnlinePaymentEnabled();
+        var normalizedPaymentMethod = NormalizePaymentMethod(request.PaymentMethod);
+        await EnsurePaymentMethodEnabledAsync(normalizedPaymentMethod, cancellationToken);
 
         var conflictingIntent = await _dbContext.PaymentIntents
             .AsNoTracking()
@@ -690,16 +691,24 @@ public sealed class PaymentService(
         return await _dbContext.BackgroundJobs.FirstAsync(x => x.Id == jobId, cancellationToken);
     }
 
-    private void EnsureOnlinePaymentEnabled()
+    private async Task EnsurePaymentMethodEnabledAsync(string paymentMethod, CancellationToken cancellationToken)
     {
-        var paymentFeatureFlag = _dbContext.FeatureFlags
-            .AsNoTracking()
-            .FirstOrDefault(x => x.Name == "EnableOnlinePayment");
-
-        if (paymentFeatureFlag is not { Enabled: true })
+        var availability = await PaymentMethodFeatureFlags.GetAvailabilityAsync(_dbContext, cancellationToken);
+        if (!PaymentMethodFeatureFlags.IsCardMethodEnabled(availability, paymentMethod))
         {
-            throw new InvalidOperationException("Online ödeme şu anda aktif değil.");
+            throw new InvalidOperationException("Secilen odeme yontemi su anda aktif degil.");
         }
+    }
+
+    private static string NormalizePaymentMethod(string? paymentMethod)
+    {
+        var normalized = string.IsNullOrWhiteSpace(paymentMethod)
+            ? "credit_card"
+            : paymentMethod.Trim().ToLowerInvariant();
+
+        return normalized is "credit_card" or "debit_card"
+            ? normalized
+            : throw new InvalidOperationException("Desteklenmeyen odeme yontemi.");
     }
 
     private async Task EnsureRetryLimitAsync(Guid reservationId, CancellationToken cancellationToken)
