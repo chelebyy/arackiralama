@@ -41,13 +41,14 @@ type PaymentMethodOption = {
   icon: ReactNode;
 };
 
-const defaultPaymentMethods: PublicPaymentMethods = {
-  creditCardEnabled: true,
-  debitCardEnabled: true,
-  unpaidRequestEnabled: true,
+const noPaymentMethods: PublicPaymentMethods = {
+  creditCardEnabled: false,
+  debitCardEnabled: false,
+  unpaidRequestEnabled: false,
   paypalEnabled: false,
-  anyEnabled: true,
+  anyEnabled: false,
 };
+
 
 export default function BookingStep4Page() {
   const params = useParams();
@@ -60,7 +61,7 @@ export default function BookingStep4Page() {
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
-  const [paymentMethodsAvailability, setPaymentMethodsAvailability] = useState(defaultPaymentMethods);
+  const [paymentMethodsAvailability, setPaymentMethodsAvailability] = useState(noPaymentMethods);
   const submitModeRef = useRef<PaymentMethodId>("credit_card");
 
   useEffect(() => {
@@ -69,16 +70,12 @@ export default function BookingStep4Page() {
     getPublicSiteSettings()
       .then((settings) => {
         if (isMounted) {
-          setPaymentMethodsAvailability(settings.paymentMethods ?? {
-            ...defaultPaymentMethods,
-            creditCardEnabled: Boolean(settings.onlinePaymentEnabled),
-            debitCardEnabled: Boolean(settings.onlinePaymentEnabled),
-          });
+          setPaymentMethodsAvailability(settings.paymentMethods ?? noPaymentMethods);
         }
       })
       .catch(() => {
         if (isMounted) {
-          setPaymentMethodsAvailability(defaultPaymentMethods);
+          setPaymentMethodsAvailability(noPaymentMethods);
         }
       });
 
@@ -257,7 +254,10 @@ export default function BookingStep4Page() {
     };
 
     try {
-      const selectedMethod = data.paymentMethod ?? paymentMethods[0]?.id;
+      const submittedMethod = data.paymentMethod;
+      const selectedMethod = paymentMethods.some((method) => method.id === submittedMethod)
+        ? submittedMethod
+        : selectedPaymentMethod;
       if (!selectedMethod) {
         toast.error(t("paymentMethodsUnavailable"));
         return;

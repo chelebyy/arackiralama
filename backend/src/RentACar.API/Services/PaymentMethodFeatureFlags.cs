@@ -10,7 +10,7 @@ public sealed record PaymentMethodAvailability(
     bool UnpaidRequestEnabled,
     bool PaypalEnabled)
 {
-    public bool AnyActionableEnabled => CreditCardEnabled || DebitCardEnabled || UnpaidRequestEnabled;
+    public bool AnyActionableEnabled => AnyCardEnabled || UnpaidRequestEnabled;
     public bool AnyCardEnabled => OnlinePaymentEnabled && (CreditCardEnabled || DebitCardEnabled);
 }
 
@@ -24,7 +24,7 @@ public static class PaymentMethodFeatureFlags
 
     public static readonly IReadOnlyList<(string Name, bool Enabled, string Description)> Required =
     [
-        (OnlinePayment, true, "Online odeme altyapisini etkinlestirir. Kart yontemleri ayrica yonetilir."),
+        (OnlinePayment, false, "Online odeme altyapisini etkinlestirir. Kart yontemleri ayrica yonetilir."),
         (CreditCard, true, "Public rezervasyon akisi icin kredi karti odeme kartini gosterir."),
         (DebitCard, true, "Public rezervasyon akisi icin banka karti odeme kartini gosterir."),
         (UnpaidRequest, true, "Public rezervasyon akisi icin odeme yapmadan 24 saat blokeli talep secenegini gosterir."),
@@ -43,7 +43,7 @@ public static class PaymentMethodFeatureFlags
             .ToDictionaryAsync(x => x.Name, x => x.Enabled, cancellationToken);
 
         return new PaymentMethodAvailability(
-            Resolve(flags, OnlinePayment, true),
+            Resolve(flags, OnlinePayment, false),
             Resolve(flags, CreditCard, true),
             Resolve(flags, DebitCard, true),
             Resolve(flags, UnpaidRequest, true),
