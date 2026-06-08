@@ -39,8 +39,8 @@ public sealed class PublicSiteSettingsServiceTests
 
         var settings = await service.GetAsync(CancellationToken.None);
 
-        settings.PaymentMethods.CreditCardEnabled.Should().BeTrue();
-        settings.PaymentMethods.DebitCardEnabled.Should().BeTrue();
+        settings.PaymentMethods.CreditCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.DebitCardEnabled.Should().BeFalse();
         settings.PaymentMethods.UnpaidRequestEnabled.Should().BeTrue();
         settings.PaymentMethods.PaypalEnabled.Should().BeFalse();
         settings.PaymentMethods.AnyEnabled.Should().BeTrue();
@@ -64,6 +64,26 @@ public sealed class PublicSiteSettingsServiceTests
         settings.PaymentMethods.DebitCardEnabled.Should().BeFalse();
         settings.PaymentMethods.UnpaidRequestEnabled.Should().BeTrue();
         settings.PaymentMethods.AnyEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenOnlinePaymentAndUnpaidAreDisabled_ReportsNoActionableMethods()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.FeatureFlags.AddRange(
+            new FeatureFlag { Name = "EnableOnlinePayment", Enabled = false, Description = "test" },
+            new FeatureFlag { Name = "EnableCreditCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = false, Description = "test" });
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var settings = await service.GetAsync(CancellationToken.None);
+
+        settings.PaymentMethods.CreditCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.DebitCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.UnpaidRequestEnabled.Should().BeFalse();
+        settings.PaymentMethods.AnyEnabled.Should().BeFalse();
     }
 
     [Fact]

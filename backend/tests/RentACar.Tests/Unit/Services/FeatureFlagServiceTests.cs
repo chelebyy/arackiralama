@@ -38,7 +38,7 @@ public sealed class FeatureFlagServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_WhenRequiredFlagsAreMissing_CreatesOnlinePaymentFlagEnabled()
+    public async Task GetAllAsync_WhenRequiredFlagsAreMissing_CreatesOnlinePaymentFlagDisabled()
     {
         await using var dbContext = CreateDbContext();
         var service = new FeatureFlagService(dbContext);
@@ -47,7 +47,7 @@ public sealed class FeatureFlagServiceTests
 
         flags.Should().Contain(x =>
             x.Name == "EnableOnlinePayment" &&
-            x.Enabled &&
+            !x.Enabled &&
             x.Description == OnlinePaymentDescription);
     }
 

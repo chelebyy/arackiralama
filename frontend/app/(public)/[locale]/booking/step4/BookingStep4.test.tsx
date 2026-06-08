@@ -382,37 +382,55 @@ describe("BookingStep4Page", () => {
     );
   });
 
-  it("creates an unpaid request without card fields, hold, or payment intent when online payment is disabled", async () => {
-    const user = userEvent.setup();
+  it("falls back to no payment methods when public settings omit payment method details", async () => {
     getPublicSiteSettingsMock.mockResolvedValueOnce({ onlinePaymentEnabled: false });
 
     render(<BookingStep4Page />);
 
-    expect(await screen.findByText("Request without online payment")).toBeInTheDocument();
+    expect(await screen.findByText(/no active payment method/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /complete booking/i })).toBeDisabled();
     expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
+  });
 
+  it("keeps checkout disabled when public settings cannot be loaded", async () => {
+    getPublicSiteSettingsMock.mockRejectedValueOnce(new Error("settings unavailable"));
+
+    render(<BookingStep4Page />);
+
+    expect(await screen.findByText(/no active payment method/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /complete booking/i })).toBeDisabled();
+    expect(createReservationMock).not.toHaveBeenCalled();
+    expect(createUnpaidReservationRequestMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the rendered payment method when the form default is stale", async () => {
+    const user = userEvent.setup();
+    getPublicSiteSettingsMock.mockResolvedValueOnce({
+      onlinePaymentEnabled: true,
+      paymentMethods: {
+        creditCardEnabled: false,
+        debitCardEnabled: true,
+        unpaidRequestEnabled: false,
+        paypalEnabled: false,
+        anyEnabled: true,
+      },
+    });
+
+    render(<BookingStep4Page />);
+
+    await screen.findByRole("radio", { name: /debit card/i });
+    await user.type(screen.getByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
     await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: /send request/i }));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
     await waitFor(() => {
-      expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith({
-        vehicleGroupId: "economy",
-        pickupOfficeId: "ala",
-        returnOfficeId: "gzp",
-        pickupDateTimeUtc: "2026-05-10T10:00:00Z",
-        returnDateTimeUtc: "2026-05-13T09:00:00Z",
-        customer: bookingState.customer,
-        driver: bookingState.driver,
-        extraDriverCount: 1,
-        childSeatCount: 0,
-        campaignCode: undefined,
-      });
+      expect(createPaymentIntentMock).toHaveBeenCalledWith(expect.objectContaining({
+        paymentMethod: "debit_card",
+      }));
     });
-    expect(placeHoldMock).not.toHaveBeenCalled();
-    expect(createPaymentIntentMock).not.toHaveBeenCalled();
-    expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REQ-123&request=unpaid"
-    );
   });
 
   it("blocks submission when no payment methods are enabled", async () => {
