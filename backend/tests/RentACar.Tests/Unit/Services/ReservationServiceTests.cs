@@ -39,6 +39,7 @@ public sealed class ReservationServiceTests
     private readonly Mock<IPaymentService> _paymentServiceMock;
     private readonly Mock<INotificationQueueService> _notificationQueueServiceMock;
     private readonly IMemoryCache _memoryCache;
+    private readonly AvailabilityCacheInvalidationSignal _availabilityCacheInvalidationSignal;
     private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<ReservationService>> _loggerMock;
     private readonly ReservationService _sut;
@@ -59,6 +60,7 @@ public sealed class ReservationServiceTests
         _paymentServiceMock = new Mock<IPaymentService>();
         _notificationQueueServiceMock = new Mock<INotificationQueueService>();
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        _availabilityCacheInvalidationSignal = new AvailabilityCacheInvalidationSignal();
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -138,22 +140,7 @@ public sealed class ReservationServiceTests
             .Setup(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
-        _sut = new ReservationService(
-            _reservationRepositoryMock.Object,
-            _customerRepositoryMock.Object,
-            _vehicleRepositoryMock.Object,
-            _vehicleRepositorySpecificMock.Object,
-            _officeRepositoryMock.Object,
-            _holdServiceMock.Object,
-            _applicationDbContextMock.Object,
-            _fleetServiceMock.Object,
-            _pricingServiceMock.Object,
-            _paymentServiceMock.Object,
-            _notificationQueueServiceMock.Object,
-            _memoryCache,
-            _redisMock.Object,
-            _configuration,
-            _loggerMock.Object);
+        _sut = CreateReservationService();
     }
 
     [Fact]
@@ -438,7 +425,9 @@ public sealed class ReservationServiceTests
             20,
             CancellationToken.None);
 
-        await _sut.CreateUnpaidRequestAsync(request, CancellationToken.None);
+        var requestScopeService = CreateReservationService();
+
+        await requestScopeService.CreateUnpaidRequestAsync(request, CancellationToken.None);
 
         var afterRequest = await _sut.SearchAvailabilityAsync(
             request.PickupOfficeId,
@@ -2575,6 +2564,24 @@ public sealed class ReservationServiceTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Reservation was updated by another request. Please retry.");
     }
+
+    private ReservationService CreateReservationService() => new(
+        _reservationRepositoryMock.Object,
+        _customerRepositoryMock.Object,
+        _vehicleRepositoryMock.Object,
+        _vehicleRepositorySpecificMock.Object,
+        _officeRepositoryMock.Object,
+        _holdServiceMock.Object,
+        _applicationDbContextMock.Object,
+        _fleetServiceMock.Object,
+        _pricingServiceMock.Object,
+        _paymentServiceMock.Object,
+        _notificationQueueServiceMock.Object,
+        _memoryCache,
+        _availabilityCacheInvalidationSignal,
+        _redisMock.Object,
+        _configuration,
+        _loggerMock.Object);
 
     private void VerifyLogDoesNotContain(string forbiddenText, string requiredPrefix, string requiredMetadata)
     {

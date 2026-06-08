@@ -31,6 +31,7 @@ public sealed class ReservationService : IReservationService
     private readonly IPaymentService _paymentService;
     private readonly INotificationQueueService _notificationQueueService;
     private readonly IMemoryCache _memoryCache;
+    private readonly AvailabilityCacheInvalidationSignal _availabilityCacheInvalidationSignal;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<ReservationService> _logger;
     private readonly bool _allowLoadTestSessionPartition;
@@ -38,7 +39,6 @@ public sealed class ReservationService : IReservationService
     private readonly TimeSpan _maxHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _availabilityCacheTtl = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _holdCreationLockTtl = TimeSpan.FromSeconds(30);
-    private CancellationTokenSource _availabilityCacheInvalidationToken = new();
 
     public ReservationService(
         IReservationRepository reservationRepository,
@@ -53,6 +53,7 @@ public sealed class ReservationService : IReservationService
         IPaymentService paymentService,
         INotificationQueueService notificationQueueService,
         IMemoryCache memoryCache,
+        AvailabilityCacheInvalidationSignal availabilityCacheInvalidationSignal,
         IConnectionMultiplexer redis,
         IConfiguration configuration,
         ILogger<ReservationService> logger)
@@ -69,6 +70,7 @@ public sealed class ReservationService : IReservationService
         _paymentService = paymentService;
         _notificationQueueService = notificationQueueService;
         _memoryCache = memoryCache;
+        _availabilityCacheInvalidationSignal = availabilityCacheInvalidationSignal;
         _redis = redis;
         _allowLoadTestSessionPartition = configuration.GetValue<bool>("RateLimiting:LoadTestSessionPartition");
         _logger = logger;
@@ -195,7 +197,7 @@ public sealed class ReservationService : IReservationService
         _memoryCache.Set(cacheKey, result, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = _availabilityCacheTtl,
-            ExpirationTokens = { new CancellationChangeToken(_availabilityCacheInvalidationToken.Token) }
+            ExpirationTokens = { new CancellationChangeToken(_availabilityCacheInvalidationSignal.Token) }
         });
 
         return result;
@@ -2101,15 +2103,7 @@ public sealed class ReservationService : IReservationService
 
     private void InvalidateAvailabilityCache()
     {
-        var previousToken = Interlocked.Exchange(ref _availabilityCacheInvalidationToken, new CancellationTokenSource());
-        try
-        {
-            previousToken.Cancel();
-        }
-        finally
-        {
-            previousToken.Dispose();
-        }
+        _availabilityCacheInvalidationSignal.Invalidate();
     }
 
     private async Task SaveChangesWithConcurrencyHandlingAsync(CancellationToken cancellationToken)
