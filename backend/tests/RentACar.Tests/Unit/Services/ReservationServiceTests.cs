@@ -39,6 +39,7 @@ public sealed class ReservationServiceTests
     private readonly Mock<IPaymentService> _paymentServiceMock;
     private readonly Mock<INotificationQueueService> _notificationQueueServiceMock;
     private readonly IMemoryCache _memoryCache;
+    private readonly AvailabilityCacheInvalidationSignal _availabilityCacheInvalidationSignal;
     private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<ReservationService>> _loggerMock;
     private readonly ReservationService _sut;
@@ -59,6 +60,7 @@ public sealed class ReservationServiceTests
         _paymentServiceMock = new Mock<IPaymentService>();
         _notificationQueueServiceMock = new Mock<INotificationQueueService>();
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        _availabilityCacheInvalidationSignal = new AvailabilityCacheInvalidationSignal();
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -138,22 +140,7 @@ public sealed class ReservationServiceTests
             .Setup(x => x.EnqueueSmsAsync(It.IsAny<QueuedSmsNotificationRequest>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
-        _sut = new ReservationService(
-            _reservationRepositoryMock.Object,
-            _customerRepositoryMock.Object,
-            _vehicleRepositoryMock.Object,
-            _vehicleRepositorySpecificMock.Object,
-            _officeRepositoryMock.Object,
-            _holdServiceMock.Object,
-            _applicationDbContextMock.Object,
-            _fleetServiceMock.Object,
-            _pricingServiceMock.Object,
-            _paymentServiceMock.Object,
-            _notificationQueueServiceMock.Object,
-            _memoryCache,
-            _redisMock.Object,
-            _configuration,
-            _loggerMock.Object);
+        _sut = CreateReservationService();
     }
 
     [Fact]
@@ -329,6 +316,104 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task SearchAvailabilityAsync_WhenInvalidatedDuringComputation_DoesNotCacheStaleResult()
+    {
+        // Arrange
+        var pickupOfficeId = Guid.NewGuid();
+        var pickup = DateTime.UtcNow.AddDays(2);
+        var dropoff = pickup.AddDays(2);
+        var groupId = Guid.NewGuid();
+
+        var availableGroup = new FleetContracts.AvailableVehicleGroupDto(
+            groupId,
+            "SUV",
+            "SUV",
+            1,
+            1300,
+            "TRY",
+            3500,
+            25,
+            3,
+            ["Klima", "Otomatik"],
+            null);
+
+        _fleetServiceMock
+            .SetupSequence(x => x.SearchAvailableVehicleGroupsAsync(
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto> { availableGroup })
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>());
+
+        _pricingServiceMock
+            .Setup(x => x.CalculateBreakdownAsync(
+                groupId,
+                pickupOfficeId,
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                0,
+                0,
+                null,
+                false,
+                It.IsAny<CancellationToken>()))
+            .Callback(() => _availabilityCacheInvalidationSignal.Invalidate())
+            .ReturnsAsync(new PriceBreakdownDto(
+                DailyRate: 1300,
+                RentalDays: 2,
+                BaseTotal: 2600,
+                ExtrasTotal: 0,
+                CampaignDiscount: 0,
+                AirportFee: 0,
+                OneWayFee: 0,
+                ExtraDriverFee: 0,
+                ChildSeatFee: 0,
+                YoungDriverFee: 0,
+                FullCoverageWaiverFee: 0,
+                FinalTotal: 2600,
+                DepositAmount: 3500,
+                PreAuthorizationAmount: 3500,
+                Currency: "TRY",
+                AppliedCampaignCode: null));
+
+        // Act
+        var first = await _sut.SearchAvailabilityAsync(
+            pickupOfficeId,
+            null,
+            pickup,
+            dropoff,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        var second = await _sut.SearchAvailabilityAsync(
+            pickupOfficeId,
+            null,
+            pickup,
+            dropoff,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        // Assert
+        first.Should().ContainSingle();
+        second.Should().BeEmpty();
+
+        _fleetServiceMock.Verify(x => x.SearchAvailableVehicleGroupsAsync(
+                pickupOfficeId,
+                pickup,
+                dropoff,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task CreateUnpaidRequestAsync_WhenAvailabilityWasCached_InvalidatesSameDateSearch()
     {
         // Arrange
@@ -438,7 +523,9 @@ public sealed class ReservationServiceTests
             20,
             CancellationToken.None);
 
-        await _sut.CreateUnpaidRequestAsync(request, CancellationToken.None);
+        var requestScopeService = CreateReservationService();
+
+        await requestScopeService.CreateUnpaidRequestAsync(request, CancellationToken.None);
 
         var afterRequest = await _sut.SearchAvailabilityAsync(
             request.PickupOfficeId,
@@ -2575,6 +2662,24 @@ public sealed class ReservationServiceTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Reservation was updated by another request. Please retry.");
     }
+
+    private ReservationService CreateReservationService() => new(
+        _reservationRepositoryMock.Object,
+        _customerRepositoryMock.Object,
+        _vehicleRepositoryMock.Object,
+        _vehicleRepositorySpecificMock.Object,
+        _officeRepositoryMock.Object,
+        _holdServiceMock.Object,
+        _applicationDbContextMock.Object,
+        _fleetServiceMock.Object,
+        _pricingServiceMock.Object,
+        _paymentServiceMock.Object,
+        _notificationQueueServiceMock.Object,
+        _memoryCache,
+        _availabilityCacheInvalidationSignal,
+        _redisMock.Object,
+        _configuration,
+        _loggerMock.Object);
 
     private void VerifyLogDoesNotContain(string forbiddenText, string requiredPrefix, string requiredMetadata)
     {
