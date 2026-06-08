@@ -6,12 +6,9 @@ namespace RentACar.API.Services;
 
 public sealed class FeatureFlagService(IApplicationDbContext dbContext) : IFeatureFlagService
 {
-    private const string OnlinePaymentDescription =
-        "Online ödeme seçeneklerini public rezervasyon akışında gösterir. Kapalıyken müşteriler ödeme yapmadan 24 saat stok bloklu talep oluşturur.";
-
     private static readonly (string Name, bool Enabled, string Description)[] RequiredFlags =
     [
-        ("EnableOnlinePayment", false, OnlinePaymentDescription),
+        .. PaymentMethodFeatureFlags.Required,
         ("EnableSmsNotifications", true, "SMS bildirimlerinin gönderimini etkinleştirir"),
         ("EnableCampaigns", true, "Campaign and discount rules toggle"),
         ("EnableArabicLanguage", true, "Arabic (RTL) dil desteğini etkinleştirir"),

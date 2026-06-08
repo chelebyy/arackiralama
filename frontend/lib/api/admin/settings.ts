@@ -52,8 +52,11 @@ export async function getFeatureFlags() {
   return unwrapResponse(response);
 }
 
-export async function updateFeatureFlag(id: string, enabled: boolean) {
-  const response = await adminPatch<AdminResponse<FeatureFlag>>(`${FEATURE_FLAGS_ENDPOINT}/${id}`, { enabled });
+export async function updateFeatureFlag(name: string, enabled: boolean) {
+  const response = await adminPatch<AdminResponse<FeatureFlag>>(
+    `${FEATURE_FLAGS_ENDPOINT}/${encodeURIComponent(name)}`,
+    { enabled }
+  );
   return unwrapResponse(response);
 }
 

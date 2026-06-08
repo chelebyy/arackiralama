@@ -10,7 +10,7 @@ namespace RentACar.Tests.Unit.Services;
 public sealed class FeatureFlagServiceTests
 {
     private const string OnlinePaymentDescription =
-        "Online ödeme seçeneklerini public rezervasyon akışında gösterir. Kapalıyken müşteriler ödeme yapmadan 24 saat stok bloklu talep oluşturur.";
+        "Online odeme altyapisini etkinlestirir. Kart yontemleri ayrica yonetilir.";
 
     [Fact]
     public async Task GetAllAsync_WhenOnlinePaymentFlagHasOldDescription_UpdatesBusinessDescription()
@@ -38,7 +38,7 @@ public sealed class FeatureFlagServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_WhenRequiredFlagsAreMissing_CreatesOnlinePaymentFlagDisabled()
+    public async Task GetAllAsync_WhenRequiredFlagsAreMissing_CreatesOnlinePaymentFlagEnabled()
     {
         await using var dbContext = CreateDbContext();
         var service = new FeatureFlagService(dbContext);
@@ -47,8 +47,22 @@ public sealed class FeatureFlagServiceTests
 
         flags.Should().Contain(x =>
             x.Name == "EnableOnlinePayment" &&
-            !x.Enabled &&
+            x.Enabled &&
             x.Description == OnlinePaymentDescription);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WhenPaymentMethodFlagsAreMissing_CreatesExpectedDefaults()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new FeatureFlagService(dbContext);
+
+        var flags = await service.GetAllAsync(CancellationToken.None);
+
+        flags.Should().Contain(x => x.Name == "EnableCreditCardPayment" && x.Enabled);
+        flags.Should().Contain(x => x.Name == "EnableDebitCardPayment" && x.Enabled);
+        flags.Should().Contain(x => x.Name == "EnableUnpaidReservationRequest" && x.Enabled);
+        flags.Should().Contain(x => x.Name == "EnablePayPalPayment" && !x.Enabled);
     }
 
     private static RentACarDbContext CreateDbContext()

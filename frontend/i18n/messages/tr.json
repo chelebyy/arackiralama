@@ -237,6 +237,7 @@
     "termsAgreementEnd": "'nı kabul ediyorum. Geçerli bir sürücü belgem olduğunu ve minimum yaş şartını karşıladığımı onaylıyorum.",
     "processingPayment": "Ödeme işleniyor...",
     "failedToProcessPayment": "Ödeme işlenemedi. Lütfen tekrar deneyin.",
+    "paymentMethodsUnavailable": "Şu anda online rezervasyon için aktif ödeme yöntemi bulunmuyor. Lütfen bizimle iletişime geçin.",
     "unpaidRequest": {
       "title": "Online ödeme olmadan talep",
       "description": "Talebiniz ekibimize iletilir ve seçilen araç 24 saat boyunca bloke edilir."

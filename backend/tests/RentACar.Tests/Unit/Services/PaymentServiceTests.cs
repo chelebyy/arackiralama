@@ -52,20 +52,53 @@ public sealed class PaymentServiceTests : IDisposable
         var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "disabled-flag"), CancellationToken.None);
 
         await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Online ödeme şu anda aktif değil.");
+            .WithMessage("Secilen odeme yontemi su anda aktif degil.");
     }
 
     [Fact]
-    public async Task CreateIntentAsync_WhenFeatureFlagMissing_ThrowsInvalidOperationException()
+    public async Task CreateIntentAsync_WhenCreditCardFlagDisabled_ThrowsInvalidOperationException()
     {
         var reservation = await SeedReservationAsync();
-        _dbContext.FeatureFlags.RemoveRange(_dbContext.FeatureFlags);
+        _dbContext.FeatureFlags.Single(x => x.Name == "EnableCreditCardPayment").Enabled = false;
         await _dbContext.SaveChangesAsync();
 
-        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "missing-flag"), CancellationToken.None);
+        var action = () => _sut.CreateIntentAsync(CreatePaymentIntentRequest(reservation.Id, "disabled-credit"), CancellationToken.None);
 
         await action.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Online ödeme şu anda aktif değil.");
+            .WithMessage("Secilen odeme yontemi su anda aktif degil.");
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenDebitCardFlagDisabled_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        _dbContext.FeatureFlags.Single(x => x.Name == "EnableDebitCardPayment").Enabled = false;
+        await _dbContext.SaveChangesAsync();
+
+        var request = CreatePaymentIntentRequest(reservation.Id, "debit-disabled") with
+        {
+            PaymentMethod = "debit_card"
+        };
+
+        var action = () => _sut.CreateIntentAsync(request, CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Secilen odeme yontemi su anda aktif degil.");
+    }
+
+    [Fact]
+    public async Task CreateIntentAsync_WhenPaymentMethodIsPayPal_ThrowsInvalidOperationException()
+    {
+        var reservation = await SeedReservationAsync();
+        var request = CreatePaymentIntentRequest(reservation.Id, "paypal") with
+        {
+            PaymentMethod = "paypal"
+        };
+
+        var action = () => _sut.CreateIntentAsync(request, CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Desteklenmeyen odeme yontemi.");
     }
 
     [Fact]
@@ -1095,12 +1128,11 @@ public sealed class PaymentServiceTests : IDisposable
 
     private void SeedFeatureFlag()
     {
-        _dbContext.FeatureFlags.Add(new FeatureFlag
-        {
-            Name = "EnableOnlinePayment",
-            Enabled = true,
-            Description = "test"
-        });
+        _dbContext.FeatureFlags.AddRange(
+            new FeatureFlag { Name = "EnableOnlinePayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableCreditCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = true, Description = "test" });
         _dbContext.SaveChanges();
     }
 

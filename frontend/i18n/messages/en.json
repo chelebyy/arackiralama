@@ -237,6 +237,7 @@
     "termsAgreementEnd": ". I confirm that I have a valid driver's license and meet the minimum age requirements.",
     "processingPayment": "Processing payment...",
     "failedToProcessPayment": "Failed to process payment. Please try again.",
+    "paymentMethodsUnavailable": "There is no active payment method for online booking right now. Please contact us.",
     "unpaidRequest": {
       "title": "Request without online payment",
       "description": "Your request will be sent to our team and the selected vehicle will be blocked for 24 hours."

@@ -203,6 +203,14 @@ export interface PublicManagedPage {
   blocks: PublicPageBlock[];
 }
 
+export interface PublicPaymentMethods {
+  creditCardEnabled: boolean;
+  debitCardEnabled: boolean;
+  unpaidRequestEnabled: boolean;
+  paypalEnabled: boolean;
+  anyEnabled: boolean;
+}
+
 export interface PublicSiteSettings {
   companyName: string;
   companyAddress: string;
@@ -221,10 +229,15 @@ export interface PublicSiteSettings {
   contactPageMapEmbedUrl: string;
   contactPageMapIsVisible: boolean;
   pages: PublicManagedPage[];
+  paymentMethods: PublicPaymentMethods;
+  onlinePaymentEnabled: boolean;
   updatedAt: string;
 }
 
-export type UpdatePublicSiteSettingsData = Omit<PublicSiteSettings, 'updatedAt'>;
+export type UpdatePublicSiteSettingsData = Omit<
+  PublicSiteSettings,
+  'updatedAt' | 'paymentMethods' | 'onlinePaymentEnabled'
+>;
 
 export interface AuditLog {
   id: string;

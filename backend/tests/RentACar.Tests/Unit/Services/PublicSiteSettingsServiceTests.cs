@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using RentACar.API.Contracts.PublicSiteSettings;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
 using RentACar.Infrastructure.Data;
 using Xunit;
 
@@ -28,6 +29,41 @@ public sealed class PublicSiteSettingsServiceTests
         settings.ContactPageMapEmbedUrl.Should().Contain("google.com/maps/embed");
         settings.Pages.Should().Contain(x => x.Slug == "terms" && x.IsPublished);
         dbContext.PublicSiteSettings.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenPaymentMethodFlagsMissing_UsesSafeDefaults()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var settings = await service.GetAsync(CancellationToken.None);
+
+        settings.PaymentMethods.CreditCardEnabled.Should().BeTrue();
+        settings.PaymentMethods.DebitCardEnabled.Should().BeTrue();
+        settings.PaymentMethods.UnpaidRequestEnabled.Should().BeTrue();
+        settings.PaymentMethods.PaypalEnabled.Should().BeFalse();
+        settings.PaymentMethods.AnyEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenOnlinePaymentDisabled_HidesCardMethodsButKeepsUnpaidFlag()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.FeatureFlags.AddRange(
+            new FeatureFlag { Name = "EnableOnlinePayment", Enabled = false, Description = "test" },
+            new FeatureFlag { Name = "EnableCreditCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = true, Description = "test" });
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var settings = await service.GetAsync(CancellationToken.None);
+
+        settings.PaymentMethods.CreditCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.DebitCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.UnpaidRequestEnabled.Should().BeTrue();
+        settings.PaymentMethods.AnyEnabled.Should().BeTrue();
     }
 
     [Fact]

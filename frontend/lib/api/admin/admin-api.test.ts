@@ -380,7 +380,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     mockedPut.mockResolvedValueOnce({ data: publicSiteSettings } as never);
 
     await expect(getFeatureFlags()).resolves.toBe(mockFeatureFlags);
-    await updateFeatureFlag("flag-1", false);
+    await updateFeatureFlag("EnableCreditCardPayment", false);
     await getAuditLogs({ entityType: "Reservation", page: 1 });
     await expect(getPublicSiteSettings()).resolves.toBe(publicSiteSettings);
     await updatePublicSiteSettings(publicSiteSettings);
@@ -389,7 +389,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await expect(getPopularVehicles("year")).resolves.toBe(mockPopularVehicles);
 
     expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/feature-flags");
-    expect(mockedPatch).toHaveBeenCalledWith("/v1/feature-flags/flag-1", { enabled: false });
+    expect(mockedPatch).toHaveBeenCalledWith("/v1/feature-flags/EnableCreditCardPayment", { enabled: false });
     expect(mockedGet).toHaveBeenNthCalledWith(
       2,
       "/v1/audit-logs?entityType=Reservation&page=1"

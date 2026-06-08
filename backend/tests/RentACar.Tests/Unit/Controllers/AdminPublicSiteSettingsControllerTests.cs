@@ -104,6 +104,7 @@ public sealed class AdminPublicSiteSettingsControllerTests
         "https://www.google.com/maps/embed?pb=managed",
         true,
         [CreateManagedPage()],
+        new PublicPaymentMethodsDto(true, true, true, false, true),
         false,
         DateTime.UtcNow);
 

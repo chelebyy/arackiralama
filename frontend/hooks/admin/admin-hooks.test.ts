@@ -367,7 +367,7 @@ describe("admin hooks", () => {
         isLoading: false,
         mutate,
       });
-    settingsApi.updateFeatureFlag.mockResolvedValue({ id: "flag-1", enabled: true });
+    settingsApi.updateFeatureFlag.mockResolvedValue({ id: "flag-1", name: "EnableCreditCardPayment", enabled: true });
     settingsApi.updatePublicSiteSettings.mockResolvedValue(publicSiteSettings);
 
     expect(useFeatureFlags()).toEqual({
@@ -391,10 +391,12 @@ describe("admin hooks", () => {
     });
     await useSWRMock.mock.calls[1][1]();
     expect(settingsApi.getAuditLogs).toHaveBeenCalledWith({ page: 2 });
-    await expect(mutateUpdateFeatureFlag("flag-1", true)).resolves.toEqual({
+    await expect(mutateUpdateFeatureFlag("EnableCreditCardPayment", true)).resolves.toEqual({
       id: "flag-1",
+      name: "EnableCreditCardPayment",
       enabled: true,
     });
+    expect(settingsApi.updateFeatureFlag).toHaveBeenCalledWith("EnableCreditCardPayment", true);
     await expect(mutateUpdatePublicSiteSettings(publicSiteSettings as any)).resolves.toBe(publicSiteSettings);
   });
 

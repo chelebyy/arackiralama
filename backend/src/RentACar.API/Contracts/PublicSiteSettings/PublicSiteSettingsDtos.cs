@@ -60,6 +60,13 @@ public sealed record PublicManagedPageDto(
     int SortOrder,
     IReadOnlyList<PublicPageBlockDto> Blocks);
 
+public sealed record PublicPaymentMethodsDto(
+    bool CreditCardEnabled,
+    bool DebitCardEnabled,
+    bool UnpaidRequestEnabled,
+    bool PaypalEnabled,
+    bool AnyEnabled);
+
 public sealed record PublicSiteSettingsDto(
     string CompanyName,
     string CompanyAddress,
@@ -78,6 +85,7 @@ public sealed record PublicSiteSettingsDto(
     string ContactPageMapEmbedUrl,
     bool ContactPageMapIsVisible,
     IReadOnlyList<PublicManagedPageDto> Pages,
+    PublicPaymentMethodsDto PaymentMethods,
     bool OnlinePaymentEnabled,
     DateTime UpdatedAt);
 
