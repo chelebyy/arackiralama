@@ -17,10 +17,10 @@ describe("AboutPage", () => {
   it("renders the translated hero and story content", () => {
     renderAboutPage();
 
-    expect(screen.getByRole("heading", { name: "About Alanya Car Rental" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "About Dvn rent a car" })).toBeInTheDocument();
     expect(screen.getByText("Your trusted partner for car rentals in Alanya since 2008")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Our Story" })).toBeInTheDocument();
-    expect(screen.getByText(/Founded in 2008, Alanya Car Rental began with a simple mission/i)).toBeInTheDocument();
+    expect(screen.getByText(/Founded in 2008, Dvn rent a car began with a simple mission/i)).toBeInTheDocument();
     expect(screen.getByText(/Over the past 15 years, we have served over 50,000 customers/i)).toBeInTheDocument();
   });
 

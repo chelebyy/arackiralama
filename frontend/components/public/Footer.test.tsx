@@ -6,7 +6,7 @@ import Footer from "./Footer";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {
     if (key === "copyright") {
-      return `copyright-${values?.year}`;
+      return `copyright-${values?.year}-${values?.companyName}`;
     }
     return key;
   },
@@ -36,6 +36,7 @@ describe("Footer", () => {
     render(<Footer />);
 
     expect(screen.getByText("about.description")).toBeInTheDocument();
+    expect(screen.getByText("Dvn rent a car")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "quickLinks.links.vehicles" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "quickLinks.links.booking" })).toHaveAttribute("href", "/booking");
     expect(screen.getByRole("link", { name: "quickLinks.links.terms" })).toHaveAttribute("href", "/terms");
@@ -119,6 +120,8 @@ describe("Footer", () => {
 
     render(<Footer />);
 
+    expect(screen.getByText("Managed Rent")).toBeInTheDocument();
+    expect(screen.getByText(/copyright-.*-Managed Rent/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Managed Link" })).toHaveAttribute("href", "/managed");
     expect(screen.queryByText("Hidden Link")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "https://instagram.com/managed");

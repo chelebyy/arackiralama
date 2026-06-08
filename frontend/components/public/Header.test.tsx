@@ -70,6 +70,7 @@ describe("Header", () => {
   it("uses managed header links and hides disabled public actions", () => {
     useSWRMock.mockReturnValue({
       data: {
+        companyName: "Managed Rent",
         headerLinks: [
           { id: "home", label: "Start", href: "/", isVisible: true, sortOrder: 0 },
           { id: "vehicles", label: "Fleet", href: "/vehicles", isVisible: true, sortOrder: 1 },
@@ -82,6 +83,7 @@ describe("Header", () => {
 
     render(<Header />);
 
+    expect(screen.getByText("Managed Rent")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "Fleet" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "Staff" })).toHaveAttribute("href", "/dashboard/login/v2");

@@ -130,7 +130,7 @@ export default function PrivacyPage() {
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-sm text-white/60 mb-1">{privacy("addressLabel")}</p>
                   <p className="text-white/80 text-sm">
-                    Alanya Car Rental DPO<br />
+                    Dvn rent a car DPO<br />
                     Ataturk Boulevard No. 45<br />
                     Alanya 07400, Turkey
                   </p>

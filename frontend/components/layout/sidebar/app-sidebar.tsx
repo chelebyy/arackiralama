@@ -44,7 +44,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild>
               <Link href="/dashboard/default">
                 <Logo />
-                <span className="text-foreground font-semibold">AYRAC Admin</span>
+                <span className="text-foreground font-semibold">Dvn Admin</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

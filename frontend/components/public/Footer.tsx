@@ -40,6 +40,8 @@ const defaultFooterBottomLinks = [
   { id: "contact", label: "", href: "/contact", isVisible: true, sortOrder: 1 },
 ] satisfies PublicSiteLink[];
 
+const defaultCompanyName = "Dvn rent a car";
+
 function getSocialIcon(platform: string) {
   const normalized = platform.toLowerCase();
   if (normalized === "facebook") return Facebook;
@@ -68,6 +70,7 @@ export default function Footer() {
   const companyPhone = settings?.companyPhone || t("contact.phone");
   const companyEmail = settings?.companyEmail || t("contact.email");
   const workingHours = settings?.workingHours || t("contact.workingHours");
+  const companyName = settings?.companyName?.trim() || defaultCompanyName;
 
   return (
     <footer className="w-full bg-[#0F172A] text-white">
@@ -85,10 +88,7 @@ export default function Footer() {
               </div>
               <div>
                 <span className="text-lg font-bold text-white block leading-tight">
-                  Alanya
-                </span>
-                <span className="text-xs font-medium text-[#94A3B8] block leading-tight">
-                  Car Rental
+                  {companyName}
                 </span>
               </div>
             </Link>
@@ -228,7 +228,7 @@ export default function Footer() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-[#64748B]">
-              {t("copyright", { year })}
+              {t("copyright", { year, companyName })}
             </p>
             <div className="flex items-center gap-6">
               {footerBottomLinks.map((link) => (

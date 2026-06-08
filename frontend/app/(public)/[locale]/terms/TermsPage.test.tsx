@@ -20,7 +20,7 @@ describe("TermsPage", () => {
     expect(screen.getByRole("heading", { name: "Terms and Conditions" })).toBeInTheDocument();
     expect(screen.getByText("Please read these terms carefully before renting a vehicle")).toBeInTheDocument();
     expect(screen.getByText("Important Notice")).toBeInTheDocument();
-    expect(screen.getByText(/By making a reservation or renting a vehicle from Alanya Car Rental/i)).toBeInTheDocument();
+    expect(screen.getByText(/By making a reservation or renting a vehicle from Dvn rent a car/i)).toBeInTheDocument();
   });
 
   it("renders section cards and legal contact actions", () => {

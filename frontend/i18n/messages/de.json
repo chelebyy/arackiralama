@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Alanya Autovermietung - Zuverlässig und günstig",
+    "title": "Dvn rent a car - Zuverlässig und günstig",
     "description": "Zuverlässiger Autovermieter in Alanya. Große Fahrzeugflotte, wettbewerbsfähige Preise und 24/7 Kundensupport. Jetzt buchen!"
   },
   "navigation": {
@@ -473,7 +473,7 @@
       "placeholder": "Ihre E-Mail-Adresse",
       "button": "Abonnieren"
     },
-    "copyright": "© {year} Alanya Autovermietung. Alle Rechte vorbehalten."
+    "copyright": "© {year} {companyName}. Alle Rechte vorbehalten."
   },
   "common": {
     "buttons": {
@@ -549,11 +549,11 @@
     "logoSubtitle": "Autovermietung"
   },
   "aboutUs": {
-    "title": "Über Alanya Autovermietung",
+    "title": "Über Dvn rent a car",
     "subtitle": "Ihr vertrauenswürdiger Partner für Autovermietung in Alanya seit 2008",
     "ourStory": {
       "title": "Unsere Geschichte",
-      "p1": "Die Alanya Autovermietung wurde 2008 mit einer einfachen Mission gegründet: Besuchern der Türkischen Riviera zuverlässige, erschwingliche und problemlose Mobilität zu bieten. Was als kleines Familienunternehmen mit nur 5 Fahrzeugen begann, ist zu einem der vertrauenswürdigsten Autovermieter der Region geworden.",
+      "p1": "Dvn rent a car wurde 2008 mit einer einfachen Mission gegründet: Besuchern der Türkischen Riviera zuverlässige, erschwingliche und problemlose Mobilität zu bieten. Was als kleines Familienunternehmen mit nur 5 Fahrzeugen begann, ist zu einem der vertrauenswürdigsten Autovermieter der Region geworden.",
       "p2": "In den vergangenen 15 Jahren haben wir über 50.000 Kunden aus aller Welt bedient und ihnen geholfen, die wunderschöne Region Alanya und darüber hinaus zu erkunden. Unser Engagement für Transparenz, Qualitätsservice und Kundenzufriedenheit hat uns den Ruf eingebracht, der erste Anlaufpunkt für Touristen und Einheimische gleichermaßen zu sein.",
       "p3": "Heute verfügen wir über eine Flotte von über 500 Fahrzeugen und mehrere Standorte in ganz Alanya. Wir bleiben unseren Gründungswerten treu, während wir moderne Technologie nutzen, um den Mietprozess reibungsloser denn je zu gestalten."
     },
@@ -686,7 +686,7 @@
       "title": "Mietbedingungen",
       "subtitle": "Bitte lesen Sie diese Bedingungen vor der Fahrzeugmiete sorgfältig durch",
       "noticeTitle": "Wichtiger Hinweis",
-      "noticeBody": "Mit einer Reservierung oder Fahrzeugmiete bei Alanya Car Rental bestätigen Sie, dass Sie diese Bedingungen gelesen, verstanden und akzeptiert haben. Die Bedingungen können gelegentlich aktualisiert werden; die aktuelle Fassung ist stets auf unserer Website verfügbar.",
+      "noticeBody": "Mit einer Reservierung oder Fahrzeugmiete bei Dvn rent a car bestätigen Sie, dass Sie diese Bedingungen gelesen, verstanden und akzeptiert haben. Die Bedingungen können gelegentlich aktualisiert werden; die aktuelle Fassung ist stets auf unserer Website verfügbar.",
       "contactTitle": "Fragen zu unseren Bedingungen?",
       "contactBody": "Wenn Sie Fragen zu unseren Mietbedingungen haben, kontaktieren Sie bitte unser Kundenserviceteam. Wir helfen Ihnen, offene Punkte vor der Reservierung zu klären.",
       "legalEmail": "Rechtsteam kontaktieren",
@@ -697,8 +697,8 @@
           "id": "agreement",
           "title": "Mietvertrag",
           "content": [
-            "Mit der Fahrzeugmiete bei Alanya Car Rental akzeptieren Sie diese Bedingungen.",
-            "Der Mietvertrag ist ein rechtsverbindlicher Vertrag zwischen dem Mieter und Alanya Car Rental.",
+            "Mit der Fahrzeugmiete bei Dvn rent a car akzeptieren Sie diese Bedingungen.",
+            "Der Mietvertrag ist ein rechtsverbindlicher Vertrag zwischen dem Mieter und Dvn rent a car.",
             "Alle Mieten unterliegen Fahrzeugverfügbarkeit und Bestätigung.",
             "Wir behalten uns vor, die Leistung aus beliebigem Grund abzulehnen.",
             "Der Mieter ist dafür verantwortlich, alle Bedingungen vor der Unterzeichnung zu lesen und zu verstehen."
@@ -786,8 +786,8 @@
       "title": "Datenschutzrichtlinie",
       "subtitle": "Wie wir Ihre personenbezogenen Daten schützen und verarbeiten",
       "noticeTitle": "KVKK-Konformität",
-      "noticeBody": "Alanya Car Rental beachtet das türkische Datenschutzgesetz KVKK Nr. 6698 und die EU-Datenschutzgrundverordnung (DSGVO). Wir schützen Ihre Privatsphäre und sichern Ihre personenbezogenen Daten.",
-      "intro": "Diese Datenschutzrichtlinie erklärt, wie Alanya Car Rental personenbezogene Daten erhebt, nutzt, speichert und schützt, wenn Sie unsere Dienste verwenden. Durch die Nutzung unserer Website und Dienste stimmen Sie den beschriebenen Verfahren zu.",
+      "noticeBody": "Dvn rent a car beachtet das türkische Datenschutzgesetz KVKK Nr. 6698 und die EU-Datenschutzgrundverordnung (DSGVO). Wir schützen Ihre Privatsphäre und sichern Ihre personenbezogenen Daten.",
+      "intro": "Diese Datenschutzrichtlinie erklärt, wie Dvn rent a car personenbezogene Daten erhebt, nutzt, speichert und schützt, wenn Sie unsere Dienste verwenden. Durch die Nutzung unserer Website und Dienste stimmen Sie den beschriebenen Verfahren zu.",
       "contactTitle": "Datenschutzbeauftragten kontaktieren",
       "contactBody": "Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, Ihre Rechte ausüben möchten oder Bedenken zur Datenverarbeitung haben, kontaktieren Sie bitte unseren Datenschutzbeauftragten:",
       "emailLabel": "E-Mail",
