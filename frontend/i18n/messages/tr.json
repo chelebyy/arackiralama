@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Alanya Araç Kiralama - Güvenilir ve Uygun Fiyatlı",
+    "title": "Dvn rent a car - Güvenilir ve Uygun Fiyatlı",
     "description": "Alanya'da güvenilir araç kiralama hizmeti. Geniş araç filosu, uygun fiyatlar ve 7/24 müşteri desteği. Hemen rezervasyon yapın!"
   },
   "navigation": {
@@ -473,7 +473,7 @@
       "placeholder": "E-posta adresiniz",
       "button": "Abone Ol"
     },
-    "copyright": "© {year} Alanya Araç Kiralama. Tüm hakları saklıdır."
+    "copyright": "© {year} {companyName}. Tüm hakları saklıdır."
   },
   "common": {
     "buttons": {
@@ -556,11 +556,11 @@
     "logoSubtitle": "Araç Kiralama"
   },
   "aboutUs": {
-    "title": "Alanya Araç Kiralama Hakkında",
+    "title": "Dvn rent a car Hakkında",
     "subtitle": "2008'den beri Alanya'da araç kiralama konusunda güvenilir ortağınız",
     "ourStory": {
       "title": "Hikayemiz",
-      "p1": "2008 yılında kurulan Alanya Araç Kiralama, basit bir misyonla yola çıktı: Türk Rivierası'nı ziyaret edenlere güvenilir, uygun fiyatlı ve sorunsuz ulaşım sağlamak. Sadece 5 araçla küçük bir aile şirketi olarak başlayan serüvenimiz, bölgedeki en güvenilir araç kiralama şirketlerinden biri haline geldi.",
+      "p1": "2008 yılında kurulan Dvn rent a car, basit bir misyonla yola çıktı: Türk Rivierası'nı ziyaret edenlere güvenilir, uygun fiyatlı ve sorunsuz ulaşım sağlamak. Sadece 5 araçla küçük bir aile şirketi olarak başlayan serüvenimiz, bölgedeki en güvenilir araç kiralama şirketlerinden biri haline geldi.",
       "p2": "Son 15 yılda, dünyanın dört bir yanından 50.000'den fazla müşteriye hizmet verdik ve onların güzel Alanya bölgesini ve ötesini keşfetmelerine yardımcı olduk. Şeffaflığa, kaliteli hizmete ve müşteri memnuniyetine olan bağlılığımız, bize hem turistler hem de yerel halk için gidilecek ilk araç kiralama servisi olma ününü kazandırdı.",
       "p3": "Bugün, Alanya genelinde 500'den fazla araçlık filomuz ve çok sayıda lokasyonumuzla, kiralama sürecini her zamankinden daha sorunsuz hale getirmek için modern teknolojiyi kucaklarken kurucu değerlerimizi korumaya devam ediyoruz."
     },
@@ -779,7 +779,7 @@
       "title": "Kiralama Koşulları",
       "subtitle": "Araç kiralamadan önce lütfen bu koşulları dikkatlice okuyun",
       "noticeTitle": "Önemli Bilgilendirme",
-      "noticeBody": "Alanya Car Rental üzerinden rezervasyon yaparak veya araç kiralayarak bu kiralama koşullarını okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan edersiniz. Bu koşullar zaman zaman güncellenebilir ve güncel sürüm her zaman web sitemizde yayınlanır.",
+      "noticeBody": "Dvn rent a car üzerinden rezervasyon yaparak veya araç kiralayarak bu kiralama koşullarını okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan edersiniz. Bu koşullar zaman zaman güncellenebilir ve güncel sürüm her zaman web sitemizde yayınlanır.",
       "contactTitle": "Koşullar Hakkında Sorularınız mı Var?",
       "contactBody": "Kiralama koşullarımız hakkında sorularınız varsa müşteri hizmetleri ekibimizle iletişime geçin. Rezervasyon yapmadan önce tüm konuları netleştirmenize yardımcı oluruz.",
       "legalEmail": "Hukuk Ekibiyle İletişim",
@@ -790,8 +790,8 @@
           "id": "agreement",
           "title": "Kiralama Sözleşmesi",
           "content": [
-            "Alanya Car Rental üzerinden araç kiralayarak bu koşulları kabul edersiniz.",
-            "Kiralama sözleşmesi, kiracı ile Alanya Car Rental arasında hukuken bağlayıcı bir sözleşmedir.",
+            "Dvn rent a car üzerinden araç kiralayarak bu koşulları kabul edersiniz.",
+            "Kiralama sözleşmesi, kiracı ile Dvn rent a car arasında hukuken bağlayıcı bir sözleşmedir.",
             "Tüm kiralamalar araç müsaitliği ve onaya tabidir.",
             "Herhangi bir nedenle hizmet vermeyi reddetme hakkımız saklıdır.",
             "Kiracı, sözleşmeyi imzalamadan önce tüm koşulları okumak ve anlamakla sorumludur."
@@ -879,8 +879,8 @@
       "title": "Gizlilik Politikası",
       "subtitle": "Kişisel verilerinizi nasıl koruduğumuz ve işlediğimiz",
       "noticeTitle": "KVKK Uyumluluğu",
-      "noticeBody": "Alanya Car Rental, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) ve Avrupa Birliği Genel Veri Koruma Tüzüğü (GDPR) gerekliliklerine uyumlu hareket eder. Gizliliğinizi korumaya ve kişisel verilerinizin güvenliğini sağlamaya önem veririz.",
-      "intro": "Bu Gizlilik Politikası, hizmetlerimizi kullandığınızda Alanya Car Rental tarafından kişisel bilgilerinizin nasıl toplandığını, kullanıldığını, saklandığını ve korunduğunu açıklar. Web sitemizi ve hizmetlerimizi kullanarak bu politikada açıklanan uygulamaları kabul etmiş olursunuz.",
+      "noticeBody": "Dvn rent a car, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) ve Avrupa Birliği Genel Veri Koruma Tüzüğü (GDPR) gerekliliklerine uyumlu hareket eder. Gizliliğinizi korumaya ve kişisel verilerinizin güvenliğini sağlamaya önem veririz.",
+      "intro": "Bu Gizlilik Politikası, hizmetlerimizi kullandığınızda Dvn rent a car tarafından kişisel bilgilerinizin nasıl toplandığını, kullanıldığını, saklandığını ve korunduğunu açıklar. Web sitemizi ve hizmetlerimizi kullanarak bu politikada açıklanan uygulamaları kabul etmiş olursunuz.",
       "contactTitle": "Veri Koruma Sorumlumuzla İletişim",
       "contactBody": "Bu Gizlilik Politikası hakkında sorularınız varsa, haklarınızı kullanmak istiyorsanız veya verilerinizi nasıl işlediğimiz konusunda endişeleriniz varsa Veri Koruma Sorumlumuzla iletişime geçin:",
       "emailLabel": "E-posta",

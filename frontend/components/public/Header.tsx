@@ -31,6 +31,8 @@ const defaultHeaderLinks = [
   { id: "trackReservation", label: "", href: "/track-reservation", isVisible: true, sortOrder: 5 },
 ] satisfies PublicSiteLink[];
 
+const defaultCompanyName = "Dvn rent a car";
+
 function getHeaderIcon(id: string) {
   if (id === "vehicles") return Car;
   if (id === "about") return Info;
@@ -60,6 +62,7 @@ export default function Header() {
   const loginLink = headerLinks.find((link) => link.id === "login");
   const trackingLink = headerLinks.find((link) => link.id === "trackReservation");
   const getLabel = (link: PublicSiteLink) => link.label || t(link.id);
+  const companyName = settings?.companyName?.trim() || defaultCompanyName;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
@@ -75,10 +78,7 @@ export default function Header() {
             </div>
             <div className={cn("hidden sm:block", isRTL && "text-right")}>
               <span className="text-lg font-bold text-[#0F172A] block leading-tight">
-                Alanya
-              </span>
-              <span className="text-xs font-medium text-[#64748B] block leading-tight">
-                Car Rental
+                {companyName}
               </span>
             </div>
           </Link>

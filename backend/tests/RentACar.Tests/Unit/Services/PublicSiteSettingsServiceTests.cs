@@ -18,7 +18,7 @@ public sealed class PublicSiteSettingsServiceTests
 
         var settings = await service.GetAsync(CancellationToken.None);
 
-        settings.CompanyName.Should().Be("Alanya Car Rental");
+        settings.CompanyName.Should().Be("Dvn rent a car");
         settings.HeaderLinks.Should().Contain(x => x.Id == "trackReservation" && x.IsVisible);
         settings.HeroLinks.Should().Contain(x => x.Id == "ctaPrimary" && x.IsVisible);
         settings.QuickLinks.Should().Contain(x => x.Id == "vehicles" && x.IsVisible);
@@ -29,6 +29,40 @@ public sealed class PublicSiteSettingsServiceTests
         settings.ContactPageMapEmbedUrl.Should().Contain("google.com/maps/embed");
         settings.Pages.Should().Contain(x => x.Slug == "terms" && x.IsPublished);
         dbContext.PublicSiteSettings.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenExistingSettingsUseLegacyDefaultBrand_UpdatesCompanyName()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.PublicSiteSettings.Add(new PublicSiteSettings
+        {
+            Key = "public-site",
+            CompanyName = "Alanya Car Rental",
+            CompanyAddress = "Alanya",
+            CompanyPhone = "+90 555",
+            CompanyEmail = "legacy@example.test",
+            WorkingHours = "09:00 - 18:00",
+            HeaderLinksJson = "[]",
+            HeroLinksJson = "[]",
+            QuickLinksJson = "[]",
+            SocialLinksJson = "[]",
+            FooterBottomLinksJson = "[]",
+            ContactPageChannelsJson = "[]",
+            ContactPageOfficesJson = "[]",
+            ContactPageWorkingHoursJson = "[]",
+            PagesJson = "[]",
+            ContactPageMapTitle = "Map",
+            ContactPageMapEmbedUrl = "https://www.google.com/maps/embed?pb=managed",
+            ContactPageMapIsVisible = true
+        });
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var settings = await service.GetAsync(CancellationToken.None);
+
+        settings.CompanyName.Should().Be("Dvn rent a car");
+        dbContext.PublicSiteSettings.Single().CompanyName.Should().Be("Dvn rent a car");
     }
 
     [Fact]

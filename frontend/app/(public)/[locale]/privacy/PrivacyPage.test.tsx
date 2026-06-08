@@ -20,8 +20,8 @@ describe("PrivacyPage", () => {
     expect(screen.getByRole("heading", { name: "Privacy Policy" })).toBeInTheDocument();
     expect(screen.getByText("How we protect and handle your personal data")).toBeInTheDocument();
     expect(screen.getByText("KVKK Compliance")).toBeInTheDocument();
-    expect(screen.getByText(/Alanya Car Rental is fully compliant with the Turkish Personal Data Protection Law/i)).toBeInTheDocument();
-    expect(screen.getByText(/This Privacy Policy explains how Alanya Car Rental collects, uses, stores/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dvn rent a car is fully compliant with the Turkish Personal Data Protection Law/i)).toBeInTheDocument();
+    expect(screen.getByText(/This Privacy Policy explains how Dvn rent a car collects, uses, stores/i)).toBeInTheDocument();
   });
 
   it("renders privacy sections and data-protection contact details", () => {

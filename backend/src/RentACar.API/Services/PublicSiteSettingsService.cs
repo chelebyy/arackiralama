@@ -10,6 +10,8 @@ namespace RentACar.API.Services;
 public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) : IPublicSiteSettingsService
 {
     private const string SingletonKey = "public-site";
+    private const string DefaultCompanyName = "Dvn rent a car";
+    private const string LegacyCompanyName = "Alanya Car Rental";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly Regex SafeInternalPathRegex = new(@"^/[a-zA-Z0-9/_?=&.#-]*$", RegexOptions.Compiled);
     private static readonly Regex SafeSlugRegex = new(@"^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$", RegexOptions.Compiled);
@@ -109,6 +111,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
 
+            if (ApplyBrandDefaults(settings))
+            {
+                settings.UpdatedAt = DateTime.UtcNow;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             return settings;
         }
 
@@ -121,7 +129,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static PublicSiteSettings CreateDefaultSettings() => new()
     {
         Key = SingletonKey,
-        CompanyName = "Alanya Car Rental",
+        CompanyName = DefaultCompanyName,
         CompanyAddress = "Alanya, Antalya, Türkiye",
         CompanyPhone = "+90 555 555 01 00",
         CompanyEmail = "contact@alanyacarrental.com",
@@ -141,6 +149,26 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow
     };
+
+    private static bool ApplyBrandDefaults(PublicSiteSettings settings)
+    {
+        var changed = false;
+
+        if (settings.CompanyName == LegacyCompanyName)
+        {
+            settings.CompanyName = DefaultCompanyName;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.PagesJson) &&
+            settings.PagesJson.Contains(LegacyCompanyName, StringComparison.Ordinal))
+        {
+            settings.PagesJson = settings.PagesJson.Replace(LegacyCompanyName, DefaultCompanyName, StringComparison.Ordinal);
+            changed = true;
+        }
+
+        return changed;
+    }
 
     private static UpdatePublicSiteSettingsRequest Normalize(UpdatePublicSiteSettingsRequest request)
     {
@@ -570,12 +598,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             "tr",
             "Hakkımızda",
             "Alanya'da güvenilir araç kiralama deneyimi.",
-            "Hakkımızda | Alanya Car Rental",
-            "Alanya Car Rental hakkında bilgi alın.",
+            "Hakkımızda | Dvn rent a car",
+            "Dvn rent a car hakkında bilgi alın.",
             true,
             0,
             [
-                new("story", "Hikayemiz", "Alanya Car Rental, turistler ve yerel müşteriler için güvenilir, şeffaf ve hızlı araç kiralama deneyimi sunar.", true, 0),
+                new("story", "Hikayemiz", "Dvn rent a car, turistler ve yerel müşteriler için güvenilir, şeffaf ve hızlı araç kiralama deneyimi sunar.", true, 0),
                 new("service", "Hizmet Anlayışımız", "Havalimanı teslimatı, net fiyatlandırma ve hızlı destek süreçleriyle rezervasyondan teslimata kadar sade bir deneyim hedefleriz.", true, 1)
             ]),
         new(
@@ -584,7 +612,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             "tr",
             "Kullanım Koşulları",
             "Rezervasyon ve kiralama sürecine ilişkin temel koşullar.",
-            "Kullanım Koşulları | Alanya Car Rental",
+            "Kullanım Koşulları | Dvn rent a car",
             "Araç kiralama kullanım koşulları ve rezervasyon kuralları.",
             true,
             1,
@@ -598,7 +626,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             "tr",
             "Gizlilik Politikası",
             "Kişisel verilerin işlenmesi ve saklanmasına ilişkin bilgiler.",
-            "Gizlilik Politikası | Alanya Car Rental",
+            "Gizlilik Politikası | Dvn rent a car",
             "Kişisel veri ve gizlilik politikası.",
             true,
             2,

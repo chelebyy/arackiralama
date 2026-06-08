@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Alanya Car Rental - Reliable and Affordable",
+    "title": "Dvn rent a car - Reliable and Affordable",
     "description": "Reliable car rental service in Alanya. Wide vehicle fleet, competitive prices and 24/7 customer support. Book now!"
   },
   "navigation": {
@@ -473,7 +473,7 @@
       "placeholder": "Your email address",
       "button": "Subscribe"
     },
-    "copyright": "© {year} Alanya Car Rental. All rights reserved."
+    "copyright": "© {year} {companyName}. All rights reserved."
   },
   "common": {
     "buttons": {
@@ -556,11 +556,11 @@
     "logoSubtitle": "Car Rental"
   },
   "aboutUs": {
-    "title": "About Alanya Car Rental",
+    "title": "About Dvn rent a car",
     "subtitle": "Your trusted partner for car rentals in Alanya since 2008",
     "ourStory": {
       "title": "Our Story",
-      "p1": "Founded in 2008, Alanya Car Rental began with a simple mission: to provide visitors to the Turkish Riviera with reliable, affordable, and hassle-free transportation. What started as a small family business with just 5 vehicles has grown into one of the most trusted car rental companies in the region.",
+      "p1": "Founded in 2008, Dvn rent a car began with a simple mission: to provide visitors to the Turkish Riviera with reliable, affordable, and hassle-free transportation. What started as a small family business with just 5 vehicles has grown into one of the most trusted car rental companies in the region.",
       "p2": "Over the past 15 years, we have served over 50,000 customers from around the world, helping them explore the beautiful Alanya region and beyond. Our commitment to transparency, quality service, and customer satisfaction has earned us a reputation as the go-to car rental service for tourists and locals alike.",
       "p3": "Today, with a fleet of over 500 vehicles and multiple locations across Alanya, we continue to uphold our founding values while embracing modern technology to make the rental process smoother than ever."
     },
@@ -779,7 +779,7 @@
       "title": "Terms and Conditions",
       "subtitle": "Please read these terms carefully before renting a vehicle",
       "noticeTitle": "Important Notice",
-      "noticeBody": "By making a reservation or renting a vehicle from Alanya Car Rental, you acknowledge that you have read, understood, and agree to be bound by these terms and conditions. These terms may be updated from time to time, and the current version will always be available on our website.",
+      "noticeBody": "By making a reservation or renting a vehicle from Dvn rent a car, you acknowledge that you have read, understood, and agree to be bound by these terms and conditions. These terms may be updated from time to time, and the current version will always be available on our website.",
       "contactTitle": "Questions About Our Terms?",
       "contactBody": "If you have any questions about our terms and conditions, please contact our customer service team. We are here to clarify any concerns before you make a reservation.",
       "legalEmail": "Contact Legal Team",
@@ -790,8 +790,8 @@
           "id": "agreement",
           "title": "Rental Agreement",
           "content": [
-            "By renting a vehicle from Alanya Car Rental, you agree to these terms and conditions.",
-            "The rental agreement is a legally binding contract between the renter and Alanya Car Rental.",
+            "By renting a vehicle from Dvn rent a car, you agree to these terms and conditions.",
+            "The rental agreement is a legally binding contract between the renter and Dvn rent a car.",
             "All rentals are subject to vehicle availability and confirmation.",
             "We reserve the right to refuse service to anyone for any reason.",
             "The renter is responsible for reading and understanding all terms before signing the agreement."
@@ -879,8 +879,8 @@
       "title": "Privacy Policy",
       "subtitle": "How we protect and handle your personal data",
       "noticeTitle": "KVKK Compliance",
-      "noticeBody": "Alanya Car Rental is fully compliant with the Turkish Personal Data Protection Law (KVKK) No. 6698 and the EU General Data Protection Regulation (GDPR). We are committed to protecting your privacy and ensuring the security of your personal data.",
-      "intro": "This Privacy Policy explains how Alanya Car Rental collects, uses, stores, and protects your personal information when you use our services. By using our website and services, you consent to the practices described in this policy.",
+      "noticeBody": "Dvn rent a car is fully compliant with the Turkish Personal Data Protection Law (KVKK) No. 6698 and the EU General Data Protection Regulation (GDPR). We are committed to protecting your privacy and ensuring the security of your personal data.",
+      "intro": "This Privacy Policy explains how Dvn rent a car collects, uses, stores, and protects your personal information when you use our services. By using our website and services, you consent to the practices described in this policy.",
       "contactTitle": "Contact Our Data Protection Officer",
       "contactBody": "If you have questions about this Privacy Policy, want to exercise your rights, or have concerns about how we handle your data, please contact our Data Protection Officer:",
       "emailLabel": "Email",
