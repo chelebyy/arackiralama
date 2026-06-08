@@ -329,6 +329,140 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task CreateUnpaidRequestAsync_WhenAvailabilityWasCached_InvalidatesSameDateSearch()
+    {
+        // Arrange
+        var request = CreateValidReservationRequest();
+        var vehicle = new Vehicle
+        {
+            Id = Guid.NewGuid(),
+            GroupId = request.VehicleGroupId,
+            Status = VehicleStatus.Available,
+            OfficeId = request.PickupOfficeId,
+            Plate = "07REQ001",
+            Brand = "Fiat",
+            Model = "Egea"
+        };
+        var availableGroup = new FleetContracts.AvailableVehicleGroupDto(
+            request.VehicleGroupId,
+            "Ekonomi",
+            "Economy",
+            1,
+            500,
+            "TRY",
+            2000,
+            21,
+            2,
+            ["Klima"],
+            null);
+
+        _fleetServiceMock
+            .SetupSequence(x => x.SearchAvailableVehicleGroupsAsync(
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto> { availableGroup })
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>());
+
+        _fleetServiceMock
+            .Setup(x => x.SearchAvailableVehicleGroupsAsync(
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                request.VehicleGroupId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto> { availableGroup });
+
+        _pricingServiceMock
+            .Setup(x => x.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                It.IsAny<string?>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceBreakdownDto(
+                DailyRate: 500,
+                RentalDays: 3,
+                BaseTotal: 1500,
+                ExtrasTotal: 0,
+                CampaignDiscount: 0,
+                AirportFee: 0,
+                OneWayFee: 0,
+                ExtraDriverFee: 0,
+                ChildSeatFee: 0,
+                YoungDriverFee: 0,
+                FullCoverageWaiverFee: 0,
+                FinalTotal: 1500,
+                DepositAmount: 2000,
+                PreAuthorizationAmount: 2000,
+                Currency: "TRY",
+                AppliedCampaignCode: null));
+
+        _vehicleRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Vehicle> { vehicle }.BuildMockDbSet().Object);
+
+        _reservationRepositoryMock
+            .Setup(x => x.HasOverlappingReservationsAsync(
+                vehicle.Id,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _customerRepositoryMock
+            .Setup(x => x.GetQueryable())
+            .Returns(new List<Customer>().BuildMockDbSet().Object);
+
+        _officeRepositoryMock
+            .Setup(x => x.GetByIdAsync(request.PickupOfficeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Office { Id = request.PickupOfficeId, Name = "Alanya", Code = "ALA" });
+
+        // Act
+        var cachedBeforeRequest = await _sut.SearchAvailabilityAsync(
+            request.PickupOfficeId,
+            null,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        await _sut.CreateUnpaidRequestAsync(request, CancellationToken.None);
+
+        var afterRequest = await _sut.SearchAvailabilityAsync(
+            request.PickupOfficeId,
+            null,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            null,
+            1,
+            20,
+            CancellationToken.None);
+
+        // Assert
+        cachedBeforeRequest.Should().ContainSingle();
+        afterRequest.Should().BeEmpty();
+        _fleetServiceMock.Verify(x => x.SearchAvailableVehicleGroupsAsync(
+                request.PickupOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task CreateDraftReservationAsync_WhenVehicleGroupAvailable_CreatesReservation()
     {
         // Arrange

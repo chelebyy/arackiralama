@@ -87,6 +87,26 @@ describe("apiClient", () => {
     });
   });
 
+  it("uses backend API envelope messages for error responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: false, message: "Müşteri e-posta adresi gereklidir." }), {
+          status: 400,
+          statusText: "Bad Request",
+          headers: { "content-type": "application/json" },
+        })
+      )
+    );
+
+    await expect(apiClient("/reservations/unpaid-requests")).rejects.toMatchObject({
+      statusCode: 400,
+      code: "VALIDATION_ERROR",
+      message: "Müşteri e-posta adresi gereklidir.",
+      path: "/reservations/unpaid-requests",
+    });
+  });
+
   it("returns undefined for successful no-content responses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 

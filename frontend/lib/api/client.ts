@@ -67,6 +67,38 @@ interface RequestConfig extends RequestInit {
   retryDelay?: number;
 }
 
+function normalizeApiErrorResponse(
+  payload: unknown,
+  statusCode: number,
+  fallbackMessage: string,
+  path: string
+): ApiErrorResponse {
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    const message =
+      typeof record.message === 'string' && record.message.trim().length > 0
+        ? record.message
+        : fallbackMessage;
+
+    return {
+      statusCode: typeof record.statusCode === 'number' ? record.statusCode : statusCode,
+      message,
+      code: typeof record.code === 'string' ? record.code : 'UNKNOWN_ERROR',
+      details: record.details as Record<string, string[]> | undefined,
+      timestamp: typeof record.timestamp === 'string' ? record.timestamp : new Date().toISOString(),
+      path: typeof record.path === 'string' ? record.path : path,
+    };
+  }
+
+  return {
+    statusCode,
+    message: fallbackMessage,
+    code: 'UNKNOWN_ERROR',
+    timestamp: new Date().toISOString(),
+    path,
+  };
+}
+
 async function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -151,7 +183,12 @@ export async function apiClient<T>(
   if (!response.ok) {
     let errorData: ApiErrorResponse;
     try {
-      errorData = await response.json();
+      errorData = normalizeApiErrorResponse(
+        await response.json(),
+        response.status,
+        response.statusText || 'An error occurred',
+        endpoint
+      );
     } catch {
       errorData = {
         statusCode: response.status,
@@ -267,7 +304,12 @@ export async function adminApiClient<T>(
   if (!response.ok) {
     let errorData: ApiErrorResponse;
     try {
-      errorData = await response.json();
+      errorData = normalizeApiErrorResponse(
+        await response.json(),
+        response.status,
+        response.statusText || 'An error occurred',
+        endpoint
+      );
     } catch {
       errorData = {
         statusCode: response.status,
@@ -369,7 +411,12 @@ export async function adminPostFormData<T>(
   if (!response.ok) {
     let errorData: ApiErrorResponse;
     try {
-      errorData = await response.json();
+      errorData = normalizeApiErrorResponse(
+        await response.json(),
+        response.status,
+        response.statusText || 'An error occurred',
+        endpoint
+      );
     } catch {
       errorData = {
         statusCode: response.status,

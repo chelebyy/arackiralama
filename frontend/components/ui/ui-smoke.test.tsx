@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./accordion";
@@ -368,6 +368,16 @@ Object.defineProperty(window, "ResizeObserver", {
 });
 
 Element.prototype.scrollIntoView = vi.fn();
+
+let focusSpy: ReturnType<typeof vi.spyOn>;
+
+beforeAll(() => {
+  focusSpy = vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(() => undefined);
+});
+
+afterAll(() => {
+  focusSpy.mockRestore();
+});
 
 describe("shared UI primitives", () => {
   it("renders static layout primitives with accessible content", () => {
