@@ -4,11 +4,24 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import Footer from "./Footer";
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-    if (key === "copyright") {
-      return `copyright-${values?.year}-${values?.companyName}`;
-    }
-    return key;
+  useTranslations: () => {
+    const t = (key: string, values?: Record<string, unknown>) => {
+      if (key === "copyright") {
+        return `copyright-${values?.year}-${values?.companyName}`;
+      }
+      return key;
+    };
+    t.has = (key: string) =>
+      [
+        "quickLinks.links.vehicles",
+        "quickLinks.links.howItWorks",
+        "quickLinks.links.contact",
+        "quickLinks.links.track",
+        "quickLinks.links.booking",
+        "quickLinks.links.terms",
+        "quickLinks.links.privacy",
+      ].includes(key);
+    return t;
   },
 }));
 

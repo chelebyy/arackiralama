@@ -275,14 +275,14 @@ export default function VehiclesPage() {
             {isLoading && (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0369A1] mx-auto" />
-                <p className="mt-4 text-slate-600">Araçlar yükleniyor...</p>
+                <p className="mt-4 text-slate-600">{t("loading")}</p>
               </div>
             )}
 
             {isError && (
               <div className="text-center py-12">
                 <Car className="h-12 w-12 text-red-400 mx-auto" />
-                <p className="mt-4 text-slate-600">Araçlar yüklenemedi. Lütfen tekrar deneyin.</p>
+                <p className="mt-4 text-slate-600">{t("failed")}</p>
               </div>
             )}
 
@@ -371,7 +371,7 @@ export default function VehiclesPage() {
                       <div className="min-w-0 space-y-0.5">
                         <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
                           <span className="break-words text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
-                            {vehicle.dailyRate > 0 ? `₺ ${vehicle.dailyRate}` : "Fiyat al"}
+                            {vehicle.dailyRate > 0 ? `₺ ${vehicle.dailyRate}` : t("priceOnRequest")}
                           </span>
                           {vehicle.dailyRate > 0 && (
                             <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">

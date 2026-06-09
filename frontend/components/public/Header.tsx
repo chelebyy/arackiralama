@@ -42,6 +42,13 @@ function getHeaderIcon(id: string) {
   return Home;
 }
 
+function hasTranslation(
+  t: ReturnType<typeof useTranslations>,
+  key: string
+): boolean {
+  return typeof t.has === "function" && t.has(key);
+}
+
 export default function Header() {
   const t = useTranslations("navigation");
   const tc = useTranslations("common");
@@ -61,7 +68,8 @@ export default function Header() {
   const navLinks = headerLinks.filter((link) => link.id !== "login" && link.id !== "trackReservation");
   const loginLink = headerLinks.find((link) => link.id === "login");
   const trackingLink = headerLinks.find((link) => link.id === "trackReservation");
-  const getLabel = (link: PublicSiteLink) => link.label || t(link.id);
+  const getLabel = (link: PublicSiteLink) =>
+    hasTranslation(t, link.id) ? t(link.id) : link.label || link.id;
   const companyName = settings?.companyName?.trim() || defaultCompanyName;
 
   return (

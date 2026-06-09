@@ -84,6 +84,9 @@
     "freeCancellation": "Kostenlose Stornierung",
     "freeKm": "{km} km pro Tag inklusive",
     "priceOnRequest": "Preis anfragen",
+    "loading": "Fahrzeuge werden geladen...",
+    "failed": "Fahrzeuge konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "empty": "Derzeit sind keine Fahrzeuge zur Anzeige verfügbar.",
     "detail": {
       "backToSearch": "Zurück zur Suche",
       "loading": "Fahrzeugdetails werden geladen...",

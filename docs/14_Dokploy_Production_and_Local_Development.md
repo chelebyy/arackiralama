@@ -1,0 +1,166 @@
+# Dokploy Production and Local Development Runbook
+
+Date: 2026-06-09
+
+## What Happened in the Dokploy Demo
+
+The demo site is served from:
+
+- Web/domain: `https://arac.cheleby.qzz.io`
+- Internal Docker API target from the web container: `http://api:8080`
+- Public browser API path: `https://arac.cheleby.qzz.io/api/v1/...`
+- Public uploaded media path: `https://arac.cheleby.qzz.io/uploads/...`
+
+The important production lesson is that browser-facing URLs must not point to a Tailscale or Docker-internal address. The public frontend bundle previously contained:
+
+```text
+http://100.122.228.27:8080/api/v1
+```
+
+That worked only from a Tailscale-accessible environment and broke for normal visitors on the Cloudflare domain. The fix was to use same-origin public routes through the web service:
+
+- `frontend/app/api/v1/[...path]/route.ts`
+- `frontend/app/uploads/[...path]/route.ts`
+
+These routes proxy public API and uploaded media requests to `AUTH_BACKEND_URL`.
+
+## Production Settings
+
+For a real single-domain production deployment, keep this shape:
+
+```env
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+NEXT_PUBLIC_API_BASE_URL=https://your-domain.com
+NEXT_PUBLIC_API_URL=https://your-domain.com/api/v1
+NEXT_PUBLIC_ADMIN_API_URL=/api/admin
+AUTH_BACKEND_URL=http://api:8080
+```
+
+Rules:
+
+- `NEXT_PUBLIC_*` values are browser-facing and are baked into the Next.js client bundle at build time.
+- `AUTH_BACKEND_URL` is server-side only and should stay internal in Dokploy/Docker: `http://api:8080`.
+- After changing any `NEXT_PUBLIC_*` value in Dokploy, rebuild/redeploy the web service.
+- Do not use Tailscale IPs or Docker service names in browser-facing `NEXT_PUBLIC_*` values for production.
+- The root `docker-compose.yml` is the Dokploy/production compose file and expects Dokploy's external network.
+
+Production hardening before real launch:
+
+- Disable demo local admin seed:
+  - `LOCAL_ADMIN_SEED_ENABLED=false`
+  - `LOCAL_ADMIN_SEED_ALLOW_OUTSIDE_DEVELOPMENT=false`
+  - clear `LOCAL_ADMIN_SEED_PASSWORD`
+- Rotate any API keys or secrets that were shared during setup.
+- Replace all placeholder passwords and JWT secrets.
+- Confirm `ALLOWED_HOSTS` includes the public domain and expected internal names.
+- Set a real `GA_KEY` only if analytics is intentionally enabled.
+- Keep database backup/export procedures outside Git.
+
+## Dokploy Deployment Checklist
+
+1. Deploy from `main`.
+2. Use compose file path:
+
+   ```text
+   docker-compose.yml
+   ```
+
+3. Attach the public domain to the `web` service.
+4. Set env values using the production settings above.
+5. Trigger deploy and wait for status `done`.
+6. Verify:
+
+   ```text
+   https://your-domain.com
+   https://your-domain.com/api/v1/vehicles
+   https://your-domain.com/uploads/...
+   ```
+
+## Local Development: Recommended Daily Flow
+
+Use `backend/docker-compose.yml` for local development, not the root production compose.
+
+From the repository root:
+
+```powershell
+docker compose -f backend/docker-compose.yml up --build postgres redis api worker
+```
+
+Then run the frontend as a dev server on port `3001`:
+
+```powershell
+corepack pnpm -C frontend install
+corepack pnpm -C frontend dev -- -p 3001
+```
+
+Local URLs:
+
+- Frontend: `http://localhost:3001`
+- API: `http://localhost:5000`
+- API health: `http://localhost:5000/health`
+- PostgreSQL host port: `5433`
+- Redis host port: `6379`
+
+Admin seed for local development:
+
+```text
+Email: integration-admin@rentacar.test
+Password: IntegrationTestPassword123!
+```
+
+If frontend auth/API calls need explicit local env values, create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+NEXT_PUBLIC_ADMIN_API_URL=/api/admin
+AUTH_BACKEND_URL=http://localhost:5000
+```
+
+Do not commit `.env.local`.
+
+## Local Docker Full-Stack Demo Mode
+
+If you want a Docker-only local smoke test, run:
+
+```powershell
+docker compose -f backend/docker-compose.yml up --build
+```
+
+This starts PostgreSQL, Redis, API, Worker, and the production-built web container.
+
+Use this for Docker parity checks, not for fast frontend iteration.
+
+## Stop and Reset Local Stack
+
+Stop containers:
+
+```powershell
+docker compose -f backend/docker-compose.yml down
+```
+
+Stop and delete local database/uploads/cache volumes:
+
+```powershell
+docker compose -f backend/docker-compose.yml down -v
+```
+
+Use `down -v` only when you intentionally want a clean local database.
+
+## Quick Debug Guide
+
+If a vehicle appears in admin but not on the public site:
+
+1. Check public API:
+
+   ```powershell
+   Invoke-RestMethod http://localhost:5000/api/v1/vehicles
+   ```
+
+2. Confirm the vehicle status is `Available`.
+3. Confirm the vehicle group and office are active.
+4. Check the frontend API base URL:
+   - local dev should use `http://localhost:5000/api/v1`
+   - production should use `https://your-domain.com/api/v1`
+5. If production env changed, redeploy because `NEXT_PUBLIC_*` values are build-time values.
