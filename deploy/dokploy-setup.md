@@ -50,30 +50,35 @@ Add the variables from `.env.example` inside the Dokploy environment section.
 - `NEXT_PUBLIC_API_BASE_URL`
 - `AUTH_BACKEND_URL`
 
-### Recommended values
+### Recommended values for a single public domain
 
 - `AUTH_BACKEND_URL=http://api:8080`
-- `NEXT_PUBLIC_API_BASE_URL=https://api.your-domain.com`
-- `NEXT_PUBLIC_API_URL=https://api.your-domain.com/api/v1`
+- `NEXT_PUBLIC_API_BASE_URL=https://app.your-domain.com`
+- `NEXT_PUBLIC_API_URL=https://app.your-domain.com/api/v1`
 - `NEXT_PUBLIC_ADMIN_API_URL=/api/admin`
 - `NEXT_PUBLIC_APP_URL=https://app.your-domain.com`
 - `DATABASE_AUTO_MIGRATE_ON_STARTUP=true` for first deployment, then optionally switch to controlled migrations later
+
+The web app proxies `/api/v1/...` and `/uploads/...` to `AUTH_BACKEND_URL`, so browsers do not need direct access to the internal Docker or Tailscale API address.
 
 ## 5. Domain configuration
 
 Dokploy already provides Traefik, so no nginx service is needed in Compose.
 
-Typical setup:
+Typical single-domain setup:
 
 - `web` → `app.your-domain.com`
-- `api` → `api.your-domain.com`
+- public API browser traffic → `https://app.your-domain.com/api/v1/...`
+- uploaded media browser traffic → `https://app.your-domain.com/uploads/...`
+- server-side proxy target → `AUTH_BACKEND_URL=http://api:8080`
 
 In Dokploy:
 
 1. Open the deployed app services.
 2. Attach a domain to the `web` service.
-3. Attach a separate domain (or subdomain) to the `api` service.
-4. Ensure the public environment variables match those domains.
+3. Ensure the public environment variables match the web domain.
+
+If you prefer a separate public API domain, attach that domain to the `api` service and set `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_API_BASE_URL` to that API domain instead.
 
 ## 6. SSL/TLS
 
