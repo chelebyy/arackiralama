@@ -66,6 +66,9 @@ services:
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Jwt__Secret: ${JWT_SECRET}
+      LocalAdminSeed__Enabled: ${LOCAL_ADMIN_SEED_ENABLED:-false}
+      LocalAdminSeed__Password: ${LOCAL_ADMIN_SEED_PASSWORD:-}
+      LocalAdminSeed__AllowOutsideDevelopment: ${LOCAL_ADMIN_SEED_ALLOW_OUTSIDE_DEVELOPMENT:-false}
       Database__AutoMigrateOnStartup: ${DATABASE_AUTO_MIGRATE_ON_STARTUP:-true}
       Cors__AllowedOrigins__0: ${NEXT_PUBLIC_APP_URL}
     ports:
