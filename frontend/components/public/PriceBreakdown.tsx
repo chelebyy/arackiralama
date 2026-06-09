@@ -13,6 +13,9 @@ interface PriceBreakdownProps {
     price: number;
   }>;
   campaignDiscount?: number;
+  campaignDiscountAmount?: number;
+  totalAmount?: number;
+  campaignCode?: string;
   currency?: string;
 }
 
@@ -22,13 +25,17 @@ export function PriceBreakdown({
   vehicleGroup,
   extras = [],
   campaignDiscount = 0,
+  campaignDiscountAmount,
+  totalAmount,
+  campaignCode,
   currency = "TRY",
 }: PriceBreakdownProps) {
   const t = useTranslations("booking");
   const subtotal = dailyRate * days;
   const extrasTotal = extras.reduce((sum, extra) => sum + extra.price, 0);
-  const discountAmount = (subtotal + extrasTotal) * (campaignDiscount / 100);
-  const total = subtotal + extrasTotal - discountAmount;
+  const calculatedDiscountAmount = (subtotal + extrasTotal) * (campaignDiscount / 100);
+  const discountAmount = campaignDiscountAmount ?? calculatedDiscountAmount;
+  const total = totalAmount ?? subtotal + extrasTotal - discountAmount;
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -91,11 +98,11 @@ export function PriceBreakdown({
           </>
         )}
 
-        {campaignDiscount > 0 && (
+        {discountAmount > 0 && (
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <span className="text-green-700 font-medium flex items-center gap-2">
               <Percent className="h-4 w-4" />
-              {t("campaignDiscount", { discount: campaignDiscount })}
+              {campaignCode ? `${t("campaignCode")} ${campaignCode}` : t("campaignDiscount", { discount: campaignDiscount })}
             </span>
             <span className="text-green-700 font-semibold">-{formatPrice(discountAmount)}</span>
           </div>

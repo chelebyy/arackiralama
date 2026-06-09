@@ -240,7 +240,9 @@ export interface ReservationExtra {
 
 export interface PriceBreakdown {
   basePrice: number;
+  dailyRate?: number;
   rentalDays: number;
+  baseTotal?: number;
   extraFees: ExtraFee[];
   extrasTotal: number;
   insuranceTotal: number;
@@ -248,9 +250,12 @@ export interface PriceBreakdown {
   taxRate: number;
   taxAmount: number;
   discountAmount: number;
+  campaignDiscount?: number;
   totalAmount: number;
+  finalTotal?: number;
   currency: string;
   depositAmount: number;
+  appliedCampaignCode?: string | null;
 }
 
 export interface ExtraFee {

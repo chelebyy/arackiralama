@@ -23,13 +23,14 @@ import { PriceBreakdown } from "@/components/public/PriceBreakdown";
 import { differenceInCalendarDays } from "date-fns";
 import { useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
+import { getPriceBreakdown } from "@/lib/api/pricing";
 import { usePlaceHold } from "@/hooks/useReservations";
 import { createReservation, createUnpaidReservationRequest } from "@/lib/api/reservations";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicPaymentMethods } from "@/lib/api/publicSiteSettings";
 import { createPaymentIntent } from "@/lib/api/payments";
 import type { PaymentIntentResponse } from "@/lib/api/payments";
-import type { CreateReservationData } from "@/lib/api/types";
+import type { CreateReservationData, PriceBreakdown as ApiPriceBreakdown } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
 
 type PaymentMethodId = "credit_card" | "debit_card" | "unpaid";
@@ -60,6 +61,7 @@ export default function BookingStep4Page() {
   const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
+  const [campaignPriceBreakdown, setCampaignPriceBreakdown] = useState<ApiPriceBreakdown | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
   const [paymentMethodsAvailability, setPaymentMethodsAvailability] = useState(noPaymentMethods);
   const submitModeRef = useRef<PaymentMethodId>("credit_card");
@@ -190,6 +192,8 @@ export default function BookingStep4Page() {
 
   const vehicleParam = searchParams.get("vehicleGroupId") || searchParams.get("vehicle") || "";
   const selectedVehicleGroupId = booking.vehicle?.vehicleGroupId ?? vehicleParam;
+  const pickupOfficeId = booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "";
+  const returnOfficeId = booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "";
   const vehicle = booking.vehicle;
   const dailyPriceParam = Number(searchParams.get("dailyPrice") ?? 0);
   const dailyRate = vehicle?.dailyPrice ?? (Number.isFinite(dailyPriceParam) ? dailyPriceParam : 0);
@@ -202,7 +206,7 @@ export default function BookingStep4Page() {
       return;
     }
 
-    if (!selectedVehicleGroupId || !pickupDate) {
+    if (!selectedVehicleGroupId || !pickupOfficeId || !returnOfficeId || !pickupDate || !returnDate) {
       toast.error(t("missingBookingDetails"));
       return;
     }
@@ -216,6 +220,7 @@ export default function BookingStep4Page() {
 
     if (!validation) {
       setAppliedCampaign(null);
+      setCampaignPriceBreakdown(null);
       setValue("campaignCode", "");
       toast.error(t("failedToValidateCampaign"));
       return;
@@ -223,11 +228,26 @@ export default function BookingStep4Page() {
 
     if (!validation.valid) {
       setAppliedCampaign(null);
+      setCampaignPriceBreakdown(null);
       setValue("campaignCode", "");
       toast.error(t("invalidCampaign"));
       return;
     }
 
+    const selectedExtraIds = extrasParam ? extrasParam.split(",").filter(Boolean) : [];
+    const priceBreakdown = await getPriceBreakdown({
+      vehicle_group_id: selectedVehicleGroupId,
+      pickup_office_id: pickupOfficeId,
+      return_office_id: returnOfficeId,
+      pickup_datetime: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
+      return_datetime: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
+      campaign_code: normalizedCode,
+      extra_driver_count: selectedExtraIds.filter((id) => id.trim() === "additional_driver").length,
+      child_seat_count: selectedExtraIds.filter((id) => id.trim() === "child_seat").length,
+      full_coverage_waiver: false,
+    });
+
+    setCampaignPriceBreakdown(priceBreakdown);
     setAppliedCampaign({ code: normalizedCode });
     setValue("campaignCode", normalizedCode);
   };
@@ -242,8 +262,8 @@ export default function BookingStep4Page() {
 
     const reservationData: CreateReservationData = {
       vehicleGroupId: booking.vehicle?.vehicleGroupId ?? vehicleParam,
-      pickupOfficeId: booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "",
-      returnOfficeId: booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "",
+      pickupOfficeId,
+      returnOfficeId,
       pickupDateTimeUtc: `${booking.dates?.pickupDate ?? pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
       returnDateTimeUtc: `${booking.dates?.returnDate ?? returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
       customer: booking.customer,
@@ -567,12 +587,15 @@ export default function BookingStep4Page() {
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <PriceBreakdown
-              dailyRate={dailyRate}
-              days={rentalDays}
+              dailyRate={campaignPriceBreakdown?.dailyRate ?? dailyRate}
+              days={campaignPriceBreakdown?.rentalDays ?? rentalDays}
               vehicleGroup={vehicleGroupName}
               extras={selectedExtras}
               campaignDiscount={booking.campaignDiscount ?? 0}
-              currency="TRY"
+              campaignDiscountAmount={campaignPriceBreakdown?.campaignDiscount ?? campaignPriceBreakdown?.discountAmount}
+              totalAmount={campaignPriceBreakdown?.finalTotal ?? campaignPriceBreakdown?.totalAmount}
+              campaignCode={appliedCampaign?.code}
+              currency={campaignPriceBreakdown?.currency ?? "TRY"}
             />
           </div>
         </div>
