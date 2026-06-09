@@ -28,7 +28,7 @@ export default function LanguageSwitcher() {
         }}
         className={cn(
           "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
-          "text-[#334155] hover:text-[#0F172A] hover:bg-[#F1F5F9]",
+          "text-white/85 hover:text-white hover:bg-white/10 lg:text-[#334155] lg:hover:text-[#0F172A] lg:hover:bg-[#F1F5F9]",
           "transition-colors duration-200",
           "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1",
           "cursor-pointer"
