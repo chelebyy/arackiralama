@@ -58,6 +58,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      AllowedHosts: ${ALLOWED_HOSTS:-localhost;127.0.0.1;[::1];api}
       ConnectionStrings__DefaultConnection: ${DATABASE_URL}
       Redis__ConnectionString: ${REDIS_CONNECTION_STRING}
       Jwt__Issuer: ${JWT_ISSUER}
