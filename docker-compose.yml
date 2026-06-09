@@ -47,6 +47,8 @@ services:
     build:
       context: ./backend
       dockerfile: src/RentACar.API/Dockerfile
+      args:
+        DEPLOY_CACHE_BUST: ${DEPLOY_CACHE_BUST:-1}
     restart: unless-stopped
     depends_on:
       postgres:

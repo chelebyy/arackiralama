@@ -7,6 +7,7 @@ COPY ["src/RentACar.Infrastructure/RentACar.Infrastructure.csproj", "src/RentACa
 COPY ["src/RentACar.Core/RentACar.Core.csproj", "src/RentACar.Core/"]
 RUN dotnet restore "src/RentACar.API/RentACar.API.csproj"
 
+ARG DEPLOY_CACHE_BUST=1
 COPY . .
 RUN dotnet publish "src/RentACar.API/RentACar.API.csproj" -c Release -o /app/publish
 
