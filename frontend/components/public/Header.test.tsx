@@ -8,7 +8,12 @@ const useLocaleMock = vi.fn();
 const useSWRMock = vi.fn();
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => {
+    const t = (key: string) => key;
+    t.has = (key: string) =>
+      ["home", "vehicles", "about", "contact", "trackReservation", "login"].includes(key);
+    return t;
+  },
   useLocale: () => useLocaleMock(),
 }));
 
@@ -84,9 +89,9 @@ describe("Header", () => {
     render(<Header />);
 
     expect(screen.getByText("Managed Rent")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Start" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Fleet" })).toHaveAttribute("href", "/vehicles");
-    expect(screen.getByRole("link", { name: "Staff" })).toHaveAttribute("href", "/dashboard/login/v2");
+    expect(screen.getByRole("link", { name: "home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "vehicles" })).toHaveAttribute("href", "/vehicles");
+    expect(screen.getByRole("link", { name: "login" })).toHaveAttribute("href", "/dashboard/login/v2");
     expect(screen.queryByText("Hidden About")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden Track")).not.toBeInTheDocument();
   });

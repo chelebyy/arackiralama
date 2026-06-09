@@ -94,7 +94,7 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    expect(screen.getByText("Araçlar yükleniyor...")).toBeInTheDocument();
+    expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
   it("renders available fetched vehicles and resolved office label", () => {
@@ -136,7 +136,7 @@ describe("VehiclesPage", () => {
 
     render(<VehiclesPage />);
 
-    expect(screen.getByText("Araçlar yüklenemedi. Lütfen tekrar deneyin.")).toBeInTheDocument();
+    expect(screen.getByText("failed")).toBeInTheDocument();
   });
 
   it("filters vehicles by selected group and uses translated category labels when available", () => {

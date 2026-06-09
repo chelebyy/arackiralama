@@ -60,7 +60,7 @@ export default function FeaturedVehicles() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0369A1] mx-auto" />
-        <p className="mt-4 text-[#64748B]">Araçlar yükleniyor...</p>
+        <p className="mt-4 text-[#64748B]">{t("loading")}</p>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export default function FeaturedVehicles() {
   if (isError) {
     return (
       <div className="text-center py-12">
-        <p className="text-[#64748B]">Araçlar yüklenemedi. Lütfen tekrar deneyin.</p>
+        <p className="text-[#64748B]">{t("failed")}</p>
       </div>
     );
   }
@@ -76,7 +76,7 @@ export default function FeaturedVehicles() {
   if (featuredVehicles.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-[#64748B]">Şu anda gösterilecek araç bulunamadı.</p>
+        <p className="text-[#64748B]">{t("empty")}</p>
       </div>
     );
   }

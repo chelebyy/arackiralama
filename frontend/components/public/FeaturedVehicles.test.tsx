@@ -17,6 +17,7 @@ vi.mock("next-intl", () => ({
       if (key === "pricePerDay") return "Günlük";
       if (key === "bookNow") return "Hemen Rezerve Et";
       if (key === "freeCancellation") return "Ücretsiz iptal";
+      if (key === "empty") return "Şu anda gösterilecek araç bulunamadı.";
       if (key === "features.seats") return "Kişi";
       if (key === "features.automatic") return "Otomatik";
       if (key === "features.gasoline") return "Benzin";

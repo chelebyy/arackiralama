@@ -84,6 +84,9 @@
     "freeCancellation": "Free cancellation",
     "freeKm": "{km} km per day included",
     "priceOnRequest": "Request price",
+    "loading": "Vehicles are loading...",
+    "failed": "Vehicles could not be loaded. Please try again.",
+    "empty": "There are no vehicles to show right now.",
     "detail": {
       "backToSearch": "Back to search",
       "loading": "Loading vehicle details...",

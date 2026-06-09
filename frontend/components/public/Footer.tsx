@@ -49,6 +49,13 @@ function getSocialIcon(platform: string) {
   return Instagram;
 }
 
+function hasTranslation(
+  t: ReturnType<typeof useTranslations>,
+  key: string
+): boolean {
+  return typeof t.has === "function" && t.has(key);
+}
+
 export default function Footer() {
   const t = useTranslations("footer");
   const year = new Date().getFullYear();
@@ -71,6 +78,12 @@ export default function Footer() {
   const companyEmail = settings?.companyEmail || t("contact.email");
   const workingHours = settings?.workingHours || t("contact.workingHours");
   const companyName = settings?.companyName?.trim() || defaultCompanyName;
+  const getLinkLabel = (link: PublicSiteLink) => {
+    const translationKey = `quickLinks.links.${link.id}`;
+    return hasTranslation(t, translationKey)
+      ? t(translationKey)
+      : link.label || link.id;
+  };
 
   return (
     <footer className="w-full bg-[#0F172A] text-white">
@@ -138,7 +151,7 @@ export default function Footer() {
                     )}
                   >
                     <ChevronRight className="h-4 w-4 opacity-0 -ml-5 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
-                    {link.label || t(`quickLinks.links.${link.id}`)}
+                    {getLinkLabel(link)}
                   </Link>
                 </li>
               ))}
@@ -237,7 +250,7 @@ export default function Footer() {
                   href={link.href as never}
                   className="text-sm text-[#64748B] hover:text-white transition-colors duration-200 cursor-pointer"
                 >
-                  {link.label || t(`quickLinks.links.${link.id}`)}
+                  {getLinkLabel(link)}
                 </Link>
               ))}
             </div>

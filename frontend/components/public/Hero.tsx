@@ -21,6 +21,13 @@ const defaultHeroLinks = [
   { id: "ctaPrimary", label: "", href: "/vehicles", isVisible: true, sortOrder: 0 },
 ] satisfies PublicSiteLink[];
 
+function hasTranslation(
+  t: ReturnType<typeof useTranslations>,
+  key: string
+): boolean {
+  return typeof t.has === "function" && t.has(key);
+}
+
 export default function Hero() {
   const t = useTranslations("hero");
   const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
@@ -32,6 +39,11 @@ export default function Hero() {
     .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const primaryLink = heroLinks[0];
+  const primaryLinkLabel = primaryLink
+    ? hasTranslation(t, primaryLink.id)
+      ? t(primaryLink.id)
+      : primaryLink.label || primaryLink.id
+    : null;
 
   const trustBadges = [
     { icon: Shield, key: "insurance" },
@@ -94,7 +106,7 @@ export default function Hero() {
                     "shadow-lg hover:shadow-xl"
                   )}
                 >
-                  {primaryLink.label || t("ctaPrimary")}
+                  {primaryLinkLabel}
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               )}

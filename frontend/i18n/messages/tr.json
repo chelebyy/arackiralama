@@ -84,6 +84,9 @@
     "freeCancellation": "Ücretsiz iptal",
     "freeKm": "Günlük {km} km dahil",
     "priceOnRequest": "Fiyat al",
+    "loading": "Araçlar yükleniyor...",
+    "failed": "Araçlar yüklenemedi. Lütfen tekrar deneyin.",
+    "empty": "Şu anda gösterilecek araç bulunamadı.",
     "detail": {
       "backToSearch": "Aramaya dön",
       "loading": "Araç detayları yükleniyor...",

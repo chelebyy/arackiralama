@@ -6,7 +6,12 @@ import Hero from "./Hero";
 const useSWRMock = vi.fn();
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => {
+    const t = (key: string) => key;
+    t.has = (key: string) =>
+      ["trustBadge", "headline", "subtitle", "ctaPrimary", "features.insurance", "features.support", "features.price", "features.delivery"].includes(key);
+    return t;
+  },
 }));
 
 vi.mock("swr", () => ({
@@ -63,7 +68,7 @@ describe("Hero", () => {
 
     render(<Hero />);
 
-    expect(screen.getByRole("link", { name: "Managed Fleet" })).toHaveAttribute("href", "/managed-fleet");
+    expect(screen.getByRole("link", { name: "ctaPrimary" })).toHaveAttribute("href", "/managed-fleet");
     expect(screen.queryByText("Hidden Booking")).not.toBeInTheDocument();
   });
 });
