@@ -244,6 +244,8 @@ describe("BookingStep4Page", () => {
 
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
+    expect(screen.getByText("TRY 153.75")).toBeInTheDocument();
+    expect(screen.queryByText("TRY 114.75")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
   });
 
