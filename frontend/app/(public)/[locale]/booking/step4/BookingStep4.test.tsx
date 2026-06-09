@@ -169,7 +169,7 @@ describe("BookingStep4Page", () => {
     getPriceBreakdownMock.mockResolvedValue({
       dailyRate: 45,
       rentalDays: 3,
-      baseTotal: 135,
+      baseTotal: 150,
       extrasTotal: 0,
       campaignDiscount: 20.25,
       finalTotal: 114.75,
@@ -244,7 +244,9 @@ describe("BookingStep4Page", () => {
 
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
-    expect(screen.getByText("TRY 153.75")).toBeInTheDocument();
+    expect(screen.getByText("TRY 150.00")).toBeInTheDocument();
+    expect(screen.getByText("TRY 168.75")).toBeInTheDocument();
+    expect(screen.queryByText("TRY 153.75")).not.toBeInTheDocument();
     expect(screen.queryByText("TRY 114.75")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
   });

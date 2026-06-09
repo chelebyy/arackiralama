@@ -14,6 +14,7 @@ interface PriceBreakdownProps {
   }>;
   campaignDiscount?: number;
   campaignDiscountAmount?: number;
+  baseAmount?: number;
   totalAmount?: number;
   campaignCode?: string;
   currency?: string;
@@ -26,12 +27,13 @@ export function PriceBreakdown({
   extras = [],
   campaignDiscount = 0,
   campaignDiscountAmount,
+  baseAmount,
   totalAmount,
   campaignCode,
   currency = "TRY",
 }: PriceBreakdownProps) {
   const t = useTranslations("booking");
-  const subtotal = dailyRate * days;
+  const subtotal = baseAmount ?? dailyRate * days;
   const extrasTotal = extras.reduce((sum, extra) => sum + extra.price, 0);
   const calculatedDiscountAmount = (subtotal + extrasTotal) * (campaignDiscount / 100);
   const discountAmount = campaignDiscountAmount ?? calculatedDiscountAmount;

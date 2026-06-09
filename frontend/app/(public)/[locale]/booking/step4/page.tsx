@@ -593,6 +593,7 @@ export default function BookingStep4Page() {
               extras={selectedExtras}
               campaignDiscount={booking.campaignDiscount ?? 0}
               campaignDiscountAmount={campaignPriceBreakdown?.campaignDiscount ?? campaignPriceBreakdown?.discountAmount}
+              baseAmount={campaignPriceBreakdown?.baseTotal}
               campaignCode={appliedCampaign?.code}
               currency={campaignPriceBreakdown?.currency ?? "TRY"}
             />
