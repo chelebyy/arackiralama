@@ -95,9 +95,9 @@ services:
       - -c
       - |
         test -n "$$DEMO_ADMIN_SEED_PASSWORD_HASH" || exit 0
+        escaped_hash=$$(printf '%s' "$$DEMO_ADMIN_SEED_PASSWORD_HASH" | sed "s/'/''/g")
         psql -h postgres -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 \
-          -v password_hash="$$DEMO_ADMIN_SEED_PASSWORD_HASH" \
-          -c "insert into admin_users (id, created_at, updated_at, email, normalized_email, password_hash, full_name, role, is_active, failed_login_count, lockout_end_utc, last_login_at_utc, token_version) values ('cccccccc-cccc-cccc-cccc-ccccccccccc1', now(), now(), 'integration-admin@rentacar.test', 'INTEGRATION-ADMIN@RENTACAR.TEST', :'password_hash', 'Integration Test Admin', 'SuperAdmin', true, 0, null, null, 0) on conflict (normalized_email) do update set updated_at = now(), password_hash = excluded.password_hash, full_name = excluded.full_name, role = 'SuperAdmin', is_active = true, failed_login_count = 0, lockout_end_utc = null, token_version = admin_users.token_version + 1;"
+          -c "insert into admin_users (id, created_at, updated_at, email, normalized_email, password_hash, full_name, role, is_active, failed_login_count, lockout_end_utc, last_login_at_utc, token_version) values ('cccccccc-cccc-cccc-cccc-ccccccccccc1', now(), now(), 'integration-admin@rentacar.test', 'INTEGRATION-ADMIN@RENTACAR.TEST', '$$escaped_hash', 'Integration Test Admin', 'SuperAdmin', true, 0, null, null, 0) on conflict (normalized_email) do update set updated_at = now(), password_hash = excluded.password_hash, full_name = excluded.full_name, role = 'SuperAdmin', is_active = true, failed_login_count = 0, lockout_end_utc = null, token_version = admin_users.token_version + 1;"
     networks:
       - dokploy-network
 
