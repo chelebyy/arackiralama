@@ -3,7 +3,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate
+  && corepack prepare pnpm@9.15.9 --activate
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -13,7 +13,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate
+  && corepack prepare pnpm@9.15.9 --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -35,7 +35,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate \
+  && corepack prepare pnpm@9.15.9 --activate \
   && addgroup -S nextjs -g 10001 \
   && adduser -S nextjs -u 10001 -G nextjs
 
