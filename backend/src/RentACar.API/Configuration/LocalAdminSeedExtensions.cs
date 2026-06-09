@@ -27,7 +27,9 @@ public static class LocalAdminSeedExtensions
             return;
         }
 
-        if (!environment.IsDevelopment())
+        var allowOutsideDevelopment = configuration.GetValue<bool>("LocalAdminSeed:AllowOutsideDevelopment");
+
+        if (!environment.IsDevelopment() && !allowOutsideDevelopment)
         {
             logger.LogWarning("Local admin seed is enabled outside Development and was skipped.");
             return;
