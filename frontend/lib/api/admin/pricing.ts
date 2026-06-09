@@ -21,7 +21,7 @@ type CampaignApiPayload = Omit<CreateCampaignData, 'name' | 'description' | 'min
 };
 
 function toCampaignApiPayload(data: CreateCampaignData): CampaignApiPayload {
-  return {
+  const payload: CampaignApiPayload = {
     code: data.code,
     discountType: data.discountType,
     discountValue: data.discountValue,
@@ -29,8 +29,13 @@ function toCampaignApiPayload(data: CreateCampaignData): CampaignApiPayload {
     validFrom: data.validFrom,
     validUntil: data.validUntil,
     isActive: data.isActive,
-    allowedVehicleGroupIds: data.allowedVehicleGroupIds ?? [],
   };
+
+  if (data.allowedVehicleGroupIds !== undefined) {
+    payload.allowedVehicleGroupIds = data.allowedVehicleGroupIds;
+  }
+
+  return payload;
 }
 
 function normalizeCampaign(campaign: Campaign): Campaign {

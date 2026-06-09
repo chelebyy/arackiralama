@@ -333,7 +333,6 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       validFrom: "2026-12-01",
       validUntil: "2027-01-31",
       isActive: false,
-      allowedVehicleGroupIds: [],
     });
     expect(mockedDel).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1");
   });
