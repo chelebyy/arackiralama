@@ -54,7 +54,8 @@ Add the variables from `.env.example` inside the Dokploy environment section.
 
 - `AUTH_BACKEND_URL=http://api:8080`
 - `NEXT_PUBLIC_API_BASE_URL=https://api.your-domain.com`
-- `NEXT_PUBLIC_API_URL=https://api.your-domain.com/api`
+- `NEXT_PUBLIC_API_URL=https://api.your-domain.com/api/v1`
+- `NEXT_PUBLIC_ADMIN_API_URL=/api/admin`
 - `NEXT_PUBLIC_APP_URL=https://app.your-domain.com`
 - `DATABASE_AUTO_MIGRATE_ON_STARTUP=true` for first deployment, then optionally switch to controlled migrations later
 

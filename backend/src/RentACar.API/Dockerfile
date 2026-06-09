@@ -7,11 +7,16 @@ COPY ["src/RentACar.Infrastructure/RentACar.Infrastructure.csproj", "src/RentACa
 COPY ["src/RentACar.Core/RentACar.Core.csproj", "src/RentACar.Core/"]
 RUN dotnet restore "src/RentACar.API/RentACar.API.csproj"
 
+ARG DEPLOY_CACHE_BUST=1
 COPY . .
 RUN dotnet publish "src/RentACar.API/RentACar.API.csproj" -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security (Debian-based image)
 RUN groupadd --system --gid 10000 appgroup && \

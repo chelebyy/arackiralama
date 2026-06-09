@@ -3,7 +3,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate
+  && corepack prepare pnpm@9.15.9 --activate
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -13,7 +13,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate
+  && corepack prepare pnpm@9.15.9 --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -22,9 +22,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_ADMIN_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_ADMIN_API_URL=$NEXT_PUBLIC_ADMIN_API_URL
 
 RUN corepack pnpm build
 
@@ -33,7 +35,7 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat \
   && corepack enable \
-  && corepack prepare pnpm@latest --activate \
+  && corepack prepare pnpm@9.15.9 --activate \
   && addgroup -S nextjs -g 10001 \
   && adduser -S nextjs -u 10001 -G nextjs
 

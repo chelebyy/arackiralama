@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -13,13 +13,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 15s
+      start_period: 45s
     networks:
       - dokploy-network
 
   redis:
     image: redis:7.4
     restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
@@ -32,27 +34,47 @@ services:
     networks:
       - dokploy-network
 
+  api-upload-permissions:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    restart: "no"
+    command: sh -c "mkdir -p /uploads/vehicles && chown -R 10000:10000 /uploads"
+    volumes:
+      - api_uploads:/uploads
+    networks:
+      - dokploy-network
+
   api:
     build:
       context: ./backend
       dockerfile: src/RentACar.API/Dockerfile
+      args:
+        DEPLOY_CACHE_BUST: ${DEPLOY_CACHE_BUST:-1}
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api-upload-permissions:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      AllowedHosts: ${ALLOWED_HOSTS:-localhost;127.0.0.1;[::1];api}
       ConnectionStrings__DefaultConnection: ${DATABASE_URL}
       Redis__ConnectionString: ${REDIS_CONNECTION_STRING}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Jwt__Secret: ${JWT_SECRET}
+      LocalAdminSeed__Enabled: ${LOCAL_ADMIN_SEED_ENABLED:-false}
+      LocalAdminSeed__Password: ${LOCAL_ADMIN_SEED_PASSWORD:-}
+      LocalAdminSeed__AllowOutsideDevelopment: ${LOCAL_ADMIN_SEED_ALLOW_OUTSIDE_DEVELOPMENT:-false}
       Database__AutoMigrateOnStartup: ${DATABASE_AUTO_MIGRATE_ON_STARTUP:-true}
+      Cors__AllowedOrigins__0: ${NEXT_PUBLIC_APP_URL}
     ports:
       - "${API_PORT:-8080}:8080"
+    volumes:
+      - api_uploads:/app/wwwroot/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/health || exit 1"]
       interval: 15s
@@ -95,6 +117,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_ADMIN_API_URL: ${NEXT_PUBLIC_ADMIN_API_URL:-/api/admin}
     restart: unless-stopped
     depends_on:
       api:
@@ -106,6 +133,7 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_ADMIN_API_URL: ${NEXT_PUBLIC_ADMIN_API_URL:-/api/admin}
       AUTH_BACKEND_URL: ${AUTH_BACKEND_URL}
       AUTH_ACCESS_COOKIE_NAME: ${AUTH_ACCESS_COOKIE_NAME:-rac_access}
       AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-__Host-rac_refresh}
@@ -124,6 +152,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  api_uploads:
 
 networks:
   dokploy-network:
