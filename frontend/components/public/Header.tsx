@@ -73,7 +73,7 @@ export default function Header() {
   const companyName = settings?.companyName?.trim() || defaultCompanyName;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
+    <header className="sticky top-0 z-50 w-full bg-[#0F172A]/95 backdrop-blur-sm border-b border-white/10 lg:bg-white/95 lg:border-[#E2E8F0]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -81,11 +81,11 @@ export default function Header() {
             href="/"
             className="flex items-center gap-2 cursor-pointer group"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0369A1]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15 lg:bg-[#0369A1] lg:ring-0">
               <Car className="h-6 w-6 text-white" />
             </div>
-            <div className={cn("hidden sm:block", isRTL && "text-right")}>
-              <span className="text-lg font-bold text-[#0F172A] block leading-tight">
+            <div className={cn("min-w-0 max-w-[150px] sm:max-w-none", isRTL && "text-right")}>
+              <span className="block truncate text-sm font-bold leading-tight text-white sm:text-lg lg:text-[#0F172A]">
                 {companyName}
               </span>
             </div>
@@ -123,7 +123,7 @@ export default function Header() {
                 href={loginLink.href}
                 className={cn(
                   "hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg",
-                  "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
+                  "text-sm font-medium text-white/85 hover:text-white hover:bg-white/10 lg:text-[#334155] lg:hover:text-[#0F172A] lg:hover:bg-[#F8FAFC]",
                   "transition-colors duration-200 cursor-pointer",
                   "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
                 )}
@@ -157,7 +157,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
                 "lg:hidden p-2 rounded-lg",
-                "text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
+                "text-white/90 hover:text-white hover:bg-white/10",
                 "transition-colors duration-200 cursor-pointer",
                 "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
               )}
@@ -178,7 +178,7 @@ export default function Header() {
         <div
           className={cn(
             "lg:hidden absolute top-full left-0 right-0",
-            "bg-white border-b border-[#E2E8F0] shadow-lg",
+            "bg-[#0F172A]/98 border-b border-white/10 shadow-2xl shadow-[#0F172A]/30 backdrop-blur-md",
             "animate-in slide-in-from-top-2 duration-200"
           )}
         >
@@ -196,8 +196,8 @@ export default function Header() {
                     "transition-colors duration-200 cursor-pointer",
                     "focus:outline-none focus:ring-2 focus:ring-[#0369A1]",
                     isActive
-                      ? "bg-[#F0F9FF] text-[#0369A1]"
-                      : "text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                      ? "bg-white/12 text-white"
+                      : "text-white/78 hover:text-white hover:bg-white/10"
                   )}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
@@ -205,14 +205,14 @@ export default function Header() {
                 </Link>
               );
             })}
-            <div className="pt-4 border-t border-[#E2E8F0] space-y-2">
+            <div className="pt-4 border-t border-white/10 space-y-2">
               {loginLink && (
                 <NextLink
                   href={loginLink.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-lg",
-                    "text-sm font-medium text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC]",
+                    "text-sm font-medium text-white/78 hover:text-white hover:bg-white/10",
                     "transition-colors duration-200 cursor-pointer"
                   )}
                 >
