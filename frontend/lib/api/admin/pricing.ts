@@ -15,6 +15,49 @@ import type {
 const PRICING_RULES_ENDPOINT = '/v1/pricing-rules';
 const CAMPAIGNS_ENDPOINT = '/v1/campaigns';
 
+type CampaignApiPayload = Omit<CreateCampaignData, 'name' | 'description' | 'minRentalDays' | 'minDays'> & {
+  minDays: number;
+  allowedVehicleGroupIds?: string[];
+};
+
+function toCampaignApiPayload(data: CreateCampaignData): CampaignApiPayload {
+  const payload: CampaignApiPayload = {
+    code: data.code,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    minDays: data.minDays ?? data.minRentalDays,
+    validFrom: data.validFrom,
+    validUntil: data.validUntil,
+    isActive: data.isActive,
+  };
+
+  if (data.allowedVehicleGroupIds !== undefined) {
+    payload.allowedVehicleGroupIds = data.allowedVehicleGroupIds;
+  }
+
+  return payload;
+}
+
+function normalizeCampaign(campaign: Campaign): Campaign {
+  return {
+    ...campaign,
+    minRentalDays: campaign.minRentalDays ?? campaign.minDays,
+    name: campaign.name ?? campaign.code,
+    description: campaign.description ?? '',
+  };
+}
+
+function normalizeCampaignResponse(response: Campaign): Campaign {
+  return normalizeCampaign(response);
+}
+
+function normalizeCampaignPage(response: PaginatedResponse<Campaign>): PaginatedResponse<Campaign> {
+  return {
+    ...response,
+    items: response.items.map(normalizeCampaign),
+  };
+}
+
 function buildQueryString(params?: object): string {
   if (!params) return '';
   const searchParams = new URLSearchParams();
@@ -87,17 +130,17 @@ export async function deletePricingRule(id: string): Promise<void> {
 
 export async function getCampaigns() {
   const response = await adminGet<AdminPaginatedResponse<Campaign>>(CAMPAIGNS_ENDPOINT);
-  return unwrapPaginated(response);
+  return normalizeCampaignPage(unwrapPaginated(response));
 }
 
 export async function createCampaign(data: CreateCampaignData) {
-  const response = await adminPost<AdminResponse<Campaign>>(CAMPAIGNS_ENDPOINT, data);
-  return unwrapResponse(response);
+  const response = await adminPost<AdminResponse<Campaign>>(CAMPAIGNS_ENDPOINT, toCampaignApiPayload(data));
+  return normalizeCampaignResponse(unwrapResponse(response));
 }
 
 export async function updateCampaign(id: string, data: UpdateCampaignData) {
-  const response = await adminPut<AdminResponse<Campaign>>(`${CAMPAIGNS_ENDPOINT}/${id}`, data);
-  return unwrapResponse(response);
+  const response = await adminPut<AdminResponse<Campaign>>(`${CAMPAIGNS_ENDPOINT}/${id}`, toCampaignApiPayload(data));
+  return normalizeCampaignResponse(unwrapResponse(response));
 }
 
 export async function deleteCampaign(id: string): Promise<void> {

@@ -28,6 +28,27 @@ describe("PriceBreakdown", () => {
     expect(screen.getByText("TRY 166.50")).toBeInTheDocument();
   });
 
+  it("uses a backend base amount while keeping displayed extras in the total", () => {
+    render(
+      <PriceBreakdown
+        dailyRate={45}
+        days={3}
+        baseAmount={150}
+        vehicleGroup="Economy"
+        extras={[{ name: "GPS", price: 24 }]}
+        campaignDiscountAmount={20}
+        campaignCode="SUMMER15"
+        currency="TRY"
+      />
+    );
+
+    expect(screen.getByText("TRY 150.00")).toBeInTheDocument();
+    expect(screen.getAllByText("TRY 24.00")).toHaveLength(2);
+    expect(screen.getByText("-TRY 20.00")).toBeInTheDocument();
+    expect(screen.getByText("TRY 154.00")).toBeInTheDocument();
+    expect(screen.queryByText("TRY 139.00")).not.toBeInTheDocument();
+  });
+
   it("omits optional sections when extras and campaign discount are absent", () => {
     render(
       <PriceBreakdown

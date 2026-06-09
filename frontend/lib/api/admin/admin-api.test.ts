@@ -280,8 +280,27 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await updatePricingRule("rule-1", { dailyPrice: 80 } as never);
     await deletePricingRule("rule-1");
     await getCampaigns();
-    await createCampaign({ code: "SUMMER" } as never);
-    await updateCampaign("campaign-1", { isActive: false } as never);
+    await createCampaign({
+      code: "SUMMER",
+      name: "Summer Campaign",
+      description: "UI-only description",
+      discountType: "percentage",
+      discountValue: 10,
+      minRentalDays: 3,
+      validFrom: "2026-06-01",
+      validUntil: "2026-12-31",
+      isActive: true,
+      allowedVehicleGroupIds: ["group-1"],
+    });
+    await updateCampaign("campaign-1", {
+      code: "WINTER",
+      discountType: "fixed",
+      discountValue: 500,
+      minRentalDays: 2,
+      validFrom: "2026-12-01",
+      validUntil: "2027-01-31",
+      isActive: false,
+    });
     await deleteCampaign("campaign-1");
 
     expect(mockedGet).toHaveBeenNthCalledWith(
@@ -296,8 +315,23 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     });
     expect(mockedDel).toHaveBeenNthCalledWith(1, "/v1/pricing-rules/rule-1");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/campaigns");
-    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/campaigns", { code: "SUMMER" });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/campaigns", {
+      code: "SUMMER",
+      discountType: "percentage",
+      discountValue: 10,
+      minDays: 3,
+      validFrom: "2026-06-01",
+      validUntil: "2026-12-31",
+      isActive: true,
+      allowedVehicleGroupIds: ["group-1"],
+    });
     expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1", {
+      code: "WINTER",
+      discountType: "fixed",
+      discountValue: 500,
+      minDays: 2,
+      validFrom: "2026-12-01",
+      validUntil: "2027-01-31",
       isActive: false,
     });
     expect(mockedDel).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1");

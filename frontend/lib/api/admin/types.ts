@@ -125,6 +125,8 @@ export interface PricingRule {
 
 export interface Campaign extends Omit<PublicCampaign, 'discountType'> {
   discountType: PublicCampaign['discountType'] | 'percentage' | 'fixed';
+  minDays?: number;
+  allowedVehicleGroupIds?: string[];
   startDate?: string;
   endDate?: string;
 }
@@ -454,14 +456,16 @@ export type UpdatePricingRuleData = CreatePricingRuleData;
 
 export interface CreateCampaignData {
   code: string;
-  name: string;
-  description: string;
+  name?: string;
+  description?: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   minRentalDays: number;
+  minDays?: number;
   validFrom: string;
   validUntil: string;
   isActive: boolean;
+  allowedVehicleGroupIds?: string[];
 }
 
 export type UpdateCampaignData = CreateCampaignData;

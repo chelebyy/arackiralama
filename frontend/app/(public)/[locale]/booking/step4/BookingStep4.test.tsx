@@ -9,6 +9,7 @@ const createUnpaidReservationRequestMock = vi.fn();
 const createPaymentIntentMock = vi.fn();
 const getPublicSiteSettingsMock = vi.fn();
 const validateCampaignMock = vi.fn();
+const getPriceBreakdownMock = vi.fn();
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 let searchParams = new URLSearchParams();
@@ -122,6 +123,7 @@ vi.mock("@/lib/api/payments", () => ({
 
 vi.mock("@/lib/api/pricing", () => ({
   validateCampaign: (...args: unknown[]) => validateCampaignMock(...args),
+  getPriceBreakdown: (...args: unknown[]) => getPriceBreakdownMock(...args),
 }));
 
 const placeHoldMock = vi.fn();
@@ -163,6 +165,17 @@ describe("BookingStep4Page", () => {
     placeHoldMock.mockReset();
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
+    getPriceBreakdownMock.mockReset();
+    getPriceBreakdownMock.mockResolvedValue({
+      dailyRate: 45,
+      rentalDays: 3,
+      baseTotal: 150,
+      extrasTotal: 0,
+      campaignDiscount: 20.25,
+      finalTotal: 114.75,
+      currency: "TRY",
+      depositAmount: 0,
+    });
     toastErrorMock.mockReset();
     pushMock.mockReset();
     bookingState.vehicle = { ...baseVehicle };
@@ -215,8 +228,26 @@ describe("BookingStep4Page", () => {
         pickupDate: "2026-05-10",
       });
     });
+    await waitFor(() => {
+      expect(getPriceBreakdownMock).toHaveBeenCalledWith({
+        vehicle_group_id: "economy",
+        pickup_office_id: "ala",
+        return_office_id: "gzp",
+        pickup_datetime: "2026-05-10T10:00:00Z",
+        return_datetime: "2026-05-13T09:00:00Z",
+        campaign_code: "SUMMER15",
+        extra_driver_count: 1,
+        child_seat_count: 0,
+        full_coverage_waiver: false,
+      });
+    });
+
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
+    expect(screen.getByText("TRY 150.00")).toBeInTheDocument();
+    expect(screen.getByText("TRY 168.75")).toBeInTheDocument();
+    expect(screen.queryByText("TRY 153.75")).not.toBeInTheDocument();
+    expect(screen.queryByText("TRY 114.75")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
   });
 
