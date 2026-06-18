@@ -192,10 +192,39 @@ jobs:
           push: false
           tags: rentacar-worker:ci
 
+  aikido-release-gate:
+    name: Aikido Release Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      AIKIDO_REPOSITORY_NAME: arackiralama
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Aikido CI API Client
+        run: npm install --global @aikidosec/ci-api-client
+
+      - name: Run Aikido release scan
+        run: >
+          aikido-api-client scan-release
+          $AIKIDO_REPOSITORY_NAME
+          $GITHUB_SHA
+          --apikey ${{ secrets.AIKIDO_CLIENT_API_KEY }}
+          --fail-on-sast-scan
+          --fail-on-iac-scan
+          --fail-on-secrets-scan
+
   docker-push:
     name: Docker Push to GHCR
     runs-on: ubuntu-latest
-    needs: [backend-unit-tests, backend-integration-tests, frontend, docker-build]
+    needs: [backend-unit-tests, backend-integration-tests, frontend, docker-build, aikido-release-gate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     permissions:
