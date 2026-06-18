@@ -1,0 +1,39 @@
+name: Aikido Release Gate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aikido-release-gate:
+    name: Aikido Release Gate
+    runs-on: ubuntu-latest
+    env:
+      AIKIDO_REPOSITORY_NAME: arackiralama
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Aikido CI API Client
+        run: npm install --global @aikidosec/ci-api-client
+
+      - name: Run Aikido release scan
+        run: >
+          aikido-api-client scan-release
+          $AIKIDO_REPOSITORY_NAME
+          $GITHUB_SHA
+          --apikey ${{ secrets.AIKIDO_CLIENT_API_KEY }}
+          --fail-on-sast-scan
+          --fail-on-iac-scan
+          --fail-on-secrets-scan
