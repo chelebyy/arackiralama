@@ -30,20 +30,20 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.7)
       '@fullcalendar/core':
-        specifier: ^6.1.20
-        version: 6.1.20
+        specifier: ^6.1.21
+        version: 6.1.21
       '@fullcalendar/daygrid':
         specifier: ^6.1.20
-        version: 6.1.20(@fullcalendar/core@6.1.20)
+        version: 6.1.20(@fullcalendar/core@6.1.21)
       '@fullcalendar/interaction':
         specifier: ^6.1.20
-        version: 6.1.20(@fullcalendar/core@6.1.20)
+        version: 6.1.20(@fullcalendar/core@6.1.21)
       '@fullcalendar/react':
         specifier: ^6.1.20
-        version: 6.1.20(@fullcalendar/core@6.1.20)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 6.1.20(@fullcalendar/core@6.1.21)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@fullcalendar/timegrid':
         specifier: ^6.1.20
-        version: 6.1.20(@fullcalendar/core@6.1.20)
+        version: 6.1.20(@fullcalendar/core@6.1.21)
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -841,8 +841,8 @@ packages:
   '@formatjs/intl-localematcher@0.8.9':
     resolution: {integrity: sha512-GmB0F/gYh4Hdl4rLWjgDsgT+x4pB54fkJeRh8kAZ4XFzKeCK8dGs+SBJWXO42QZtOUni+IDWKNuCw6wiL4lTvw==}
 
-  '@fullcalendar/core@6.1.20':
-    resolution: {integrity: sha512-1cukXLlePFiJ8YKXn/4tMKsy0etxYLCkXk8nUCFi11nRONF2Ba2CD5b21/ovtOO2tL6afTJfwmc1ed3HG7eB1g==}
+  '@fullcalendar/core@6.1.21':
+    resolution: {integrity: sha512-t3u/+sqh3Iq7TWtUnVLcGDUE6OWZh0UD3c04bI/l7lSLAgAKr3kngBmhHiQD1QXpwC8ZN5iNqG7a7gOVixhSKQ==}
 
   '@fullcalendar/daygrid@6.1.20':
     resolution: {integrity: sha512-AO9vqhkLP77EesmJzuU+IGXgxNulsA8mgQHynclJ8U70vSwAVnbcLG9qftiTAFSlZjiY/NvhE7sflve6cJelyQ==}
@@ -6222,28 +6222,28 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.5
 
-  '@fullcalendar/core@6.1.20':
+  '@fullcalendar/core@6.1.21':
     dependencies:
       preact: 10.12.1
 
-  '@fullcalendar/daygrid@6.1.20(@fullcalendar/core@6.1.20)':
+  '@fullcalendar/daygrid@6.1.20(@fullcalendar/core@6.1.21)':
     dependencies:
-      '@fullcalendar/core': 6.1.20
+      '@fullcalendar/core': 6.1.21
 
-  '@fullcalendar/interaction@6.1.20(@fullcalendar/core@6.1.20)':
+  '@fullcalendar/interaction@6.1.20(@fullcalendar/core@6.1.21)':
     dependencies:
-      '@fullcalendar/core': 6.1.20
+      '@fullcalendar/core': 6.1.21
 
-  '@fullcalendar/react@6.1.20(@fullcalendar/core@6.1.20)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@fullcalendar/react@6.1.20(@fullcalendar/core@6.1.21)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@fullcalendar/core': 6.1.20
+      '@fullcalendar/core': 6.1.21
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@fullcalendar/timegrid@6.1.20(@fullcalendar/core@6.1.20)':
+  '@fullcalendar/timegrid@6.1.20(@fullcalendar/core@6.1.21)':
     dependencies:
-      '@fullcalendar/core': 6.1.20
-      '@fullcalendar/daygrid': 6.1.20(@fullcalendar/core@6.1.20)
+      '@fullcalendar/core': 6.1.21
+      '@fullcalendar/daygrid': 6.1.20(@fullcalendar/core@6.1.21)
 
   '@hello-pangea/dnd@18.0.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
