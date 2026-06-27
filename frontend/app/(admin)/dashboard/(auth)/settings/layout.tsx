@@ -21,6 +21,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <TabsTrigger value="system" asChild>
             <Link href="/dashboard/settings/system">Public Site & İletişim</Link>
           </TabsTrigger>
+          <TabsTrigger value="public-content" asChild>
+            <Link href="/dashboard/settings/public-content">İçerik Yönetimi</Link>
+          </TabsTrigger>
           <TabsTrigger value="audit-logs" asChild>
             <Link href="/dashboard/settings/audit-logs">Denetim Kayıtları</Link>
           </TabsTrigger>
