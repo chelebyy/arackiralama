@@ -89,10 +89,8 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     public async Task<AdminPublicContentDto> GetAdminContentAsync(CancellationToken cancellationToken = default)
     {
         var settings = await GetOrCreateAsync(cancellationToken);
-        var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
-        var dto = Map(settings, paymentMethods);
 
-        return ToAdminContentDto(settings, dto);
+        return ToAdminContentDto(settings);
     }
 
     public Task<AdminPublicContentDto> UpdatePageDraftAsync(
@@ -654,10 +652,11 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         paymentMethods.OnlinePaymentEnabled,
         settings.UpdatedAt);
 
-    private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings, PublicSiteSettingsDto dto)
+    private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings)
     {
         var version = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
-        var pages = dto.Pages
+        var pages = DeserializePages(settings.PagesJson, DefaultPages())
+            .OrderBy(x => x.SortOrder)
             .Select(page => new AdminPublicManagedPageDto(
                 page.Id,
                 page.Slug,
@@ -686,12 +685,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             version,
             settings.UpdatedAt,
             pages,
-            dto.ContactPageChannels,
-            dto.ContactPageOffices,
-            dto.ContactPageWorkingHours,
-            dto.ContactPageMapTitle,
-            dto.ContactPageMapEmbedUrl,
-            dto.ContactPageMapIsVisible);
+            DeserializeContactChannels(settings.ContactPageChannelsJson, DefaultContactPageChannels()).OrderBy(x => x.SortOrder).ToList(),
+            DeserializeContactOffices(settings.ContactPageOfficesJson, DefaultContactPageOffices()).OrderBy(x => x.SortOrder).ToList(),
+            DeserializeContactWorkingHours(settings.ContactPageWorkingHoursJson, DefaultContactPageWorkingHours()).OrderBy(x => x.SortOrder).ToList(),
+            settings.ContactPageMapTitle,
+            settings.ContactPageMapEmbedUrl,
+            settings.ContactPageMapIsVisible);
     }
 
     private static IReadOnlyList<PublicSiteLinkDto> DefaultHeaderLinks() =>
