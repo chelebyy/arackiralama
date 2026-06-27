@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   publishAdminPublicPage,
@@ -275,15 +274,11 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
                   onChange={(event) => updateDraft("seoDescription", event.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-2 md:col-span-2">
-                <Switch
-                  id="page-published"
-                  checked={draft.isPublished}
-                  onCheckedChange={(checked) => updateDraft("isPublished", checked)}
-                />
-                <Label htmlFor="page-published" className="text-sm font-normal">
-                  Yayında
-                </Label>
+              <div className="space-y-2 md:col-span-2">
+                <div className="text-sm font-medium">Yayın Durumu</div>
+                <div className="text-sm text-muted-foreground">
+                  {draft.isPublished ? "Yayında" : "Taslak"} · Yayın durumunu alttaki yayınla/yayından kaldır butonları değiştirir.
+                </div>
               </div>
             </div>
 

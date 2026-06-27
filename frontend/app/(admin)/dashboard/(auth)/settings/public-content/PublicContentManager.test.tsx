@@ -117,7 +117,30 @@ describe("PublicContentPage", () => {
     expect(updateAdminPublicPageDraftMock).toHaveBeenCalledWith(
       "privacy",
       "tr",
-      expect.objectContaining({ title: "Yeni Gizlilik", version: "1" }),
+      expect.objectContaining({
+        title: "Yeni Gizlilik",
+        version: "1",
+        isPublished: true,
+        blocks: [
+          expect.objectContaining({
+            id: "privacy-body",
+            bodyFormat: "html",
+            sortOrder: 0,
+          }),
+        ],
+      }),
     );
+  });
+
+  it("publishes and unpublishes the selected page", async () => {
+    const user = userEvent.setup();
+
+    renderPublicContentPage();
+
+    await user.click(await screen.findByRole("button", { name: "Yayınla" }));
+    expect(publishAdminPublicPageMock).toHaveBeenCalledWith("privacy", "tr", "1");
+
+    await user.click(screen.getByRole("button", { name: "Yayından Kaldır" }));
+    expect(unpublishAdminPublicPageMock).toHaveBeenCalledWith("privacy", "tr", "1");
   });
 });
