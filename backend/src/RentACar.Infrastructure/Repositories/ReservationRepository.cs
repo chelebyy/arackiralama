@@ -122,6 +122,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
         ReservationStatus? status = null,
         DateTime? fromDate = null,
         DateTime? toDate = null,
+        string? searchTerm = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -151,6 +152,21 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
         if (toDate.HasValue)
         {
             query = query.Where(r => r.ReturnDateTime <= toDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var normalizedSearchTerm = searchTerm.Trim().ToLower();
+            query = query.Where(r =>
+                r.PublicCode.ToLower().Contains(normalizedSearchTerm) ||
+                (r.Customer != null && (
+                    r.Customer.FullName.ToLower().Contains(normalizedSearchTerm) ||
+                    r.Customer.Email.ToLower().Contains(normalizedSearchTerm) ||
+                    r.Customer.Phone.ToLower().Contains(normalizedSearchTerm))) ||
+                (r.Vehicle != null && (
+                    r.Vehicle.Plate.ToLower().Contains(normalizedSearchTerm) ||
+                    r.Vehicle.Brand.ToLower().Contains(normalizedSearchTerm) ||
+                    r.Vehicle.Model.ToLower().Contains(normalizedSearchTerm))));
         }
 
         var results = await IncludeReservationDetails(query)

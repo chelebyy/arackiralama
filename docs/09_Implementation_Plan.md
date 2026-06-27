@@ -758,6 +758,7 @@ POST /api/admin/v1/auth/logout
 - [x] URL-based locale routing (`/tr/`, `/en/`, etc.)
 - [x] RTL support for Arabic
 - [x] Date/number localization
+- [x] Admin-managed public content translations — Public Site Settings now supports locale tabs and `translations` maps for managed pages, header/footer links, hero CTA, and contact-page rows across TR/EN/RU/AR/DE.
 
 #### 8.3 Public Website
 
@@ -767,6 +768,7 @@ POST /api/admin/v1/auth/logout
   - Featured vehicles
   - Why choose us
   - FAQ
+- [x] **Managed legal/contact content:** Privacy, terms, about, contact-page rows, and public navigation labels can be edited from the admin dashboard with five-language fallback behavior.
   - Contact info
 
 - [x] **Search Results Page:**

@@ -646,6 +646,83 @@ Admin top vehicle report for a requested period. Requires admin authorization an
 }
 ```
 
+## GET /api/v1/public-site-settings
+
+Public singleton site settings used by the public Next.js application. No authentication is required. The response contains company/contact data, public navigation links, managed legal/content pages, contact-page rows, map configuration, and payment method availability.
+
+### Response 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "companyName": "Dvn rent a car",
+    "headerLinks": [
+      {
+        "id": "vehicles",
+        "label": "Araçlar",
+        "href": "/vehicles",
+        "isVisible": true,
+        "sortOrder": 0,
+        "translations": {
+          "en": { "label": "Vehicles" },
+          "de": { "label": "Fahrzeuge" }
+        }
+      }
+    ],
+    "contactPageChannels": [
+      {
+        "id": "reservations",
+        "type": "phone",
+        "label": "Rezervasyon",
+        "value": "+90 242 555 10 00",
+        "href": "tel:+902425551000",
+        "description": "Rezervasyon hattı",
+        "isVisible": true,
+        "sortOrder": 0,
+        "translations": {
+          "en": {
+            "label": "Reservations",
+            "description": "Reservation line"
+          }
+        }
+      }
+    ],
+    "pages": [
+      {
+        "id": "tr-privacy",
+        "slug": "privacy",
+        "locale": "tr",
+        "title": "Gizlilik Politikası",
+        "isPublished": true,
+        "sortOrder": 0,
+        "blocks": []
+      }
+    ]
+  }
+}
+```
+
+## GET /api/admin/v1/public-site-settings
+
+Admin endpoint for loading the same singleton public-site settings object. Requires SuperAdmin authorization.
+
+## PUT /api/admin/v1/public-site-settings
+
+Persists the singleton public-site settings object. Requires SuperAdmin authorization. Link/contact `translations` are optional and keyed by supported locale (`tr`, `en`, `ru`, `ar`, `de`). Unsupported locale keys are rejected with validation error semantics.
+
+### Request Body Notes
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `headerLinks[].translations` | object | Optional map of locale to `{ label }` |
+| `heroLinks[].translations` | object | Optional map of locale to `{ label }` |
+| `quickLinks[].translations` | object | Optional map of locale to `{ label }` |
+| `footerBottomLinks[].translations` | object | Optional map of locale to `{ label }` |
+| `contactPageChannels[].translations` | object | Optional map of locale to `{ label, value, description }` |
+| `contactPageOffices[].translations` | object | Optional map of locale to `{ name, address, hours }` |
+| `contactPageWorkingHours[].translations` | object | Optional map of locale to `{ day, hours }` |
+
 ------------------------------------------------------------------------
 
 # 7. Error Codes Reference

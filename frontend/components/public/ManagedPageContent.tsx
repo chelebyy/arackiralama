@@ -10,11 +10,24 @@ type ManagedPageContentProps = {
   children?: ReactNode;
 };
 
-function findPage(pages: PublicManagedPage[] | undefined, slug: string, locale: string) {
+function findPage(
+  pages: PublicManagedPage[] | undefined,
+  slug: string,
+  locale: string,
+  allowLocaleFallback = false,
+) {
+  const slugPages = pages?.filter((page) => page.slug === slug);
+  const exactPage = slugPages?.find((page) => page.locale === locale);
+
+  if (!allowLocaleFallback || exactPage?.isPublished) {
+    return exactPage;
+  }
+
   return (
-    pages?.find((page) => page.slug === slug && page.locale === locale) ??
-    pages?.find((page) => page.slug === slug && page.locale === "tr") ??
-    pages?.find((page) => page.slug === slug)
+    slugPages?.find((page) => page.locale === "tr" && page.isPublished) ??
+    slugPages?.find((page) => page.isPublished) ??
+    exactPage ??
+    slugPages?.[0]
   );
 }
 
@@ -96,7 +109,7 @@ export default function ManagedPageContent({ slug, children }: ManagedPageConten
     shouldRetryOnError: false,
   });
 
-  const managedPage = findPage(settings?.pages, slug, locale);
+  const managedPage = findPage(settings?.pages, slug, locale, children === undefined);
 
   if (!settings) {
     return <>{children ?? <NotPublishedPage />}</>;
@@ -107,7 +120,7 @@ export default function ManagedPageContent({ slug, children }: ManagedPageConten
   }
 
   if (!managedPage.isPublished) {
-    return <NotPublishedPage />;
+    return <>{children ?? <NotPublishedPage />}</>;
   }
 
   return <ManagedPage page={managedPage} />;

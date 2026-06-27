@@ -78,7 +78,14 @@ describe("Header", () => {
         companyName: "Managed Rent",
         headerLinks: [
           { id: "home", label: "Start", href: "/", isVisible: true, sortOrder: 0 },
-          { id: "vehicles", label: "Fleet", href: "/vehicles", isVisible: true, sortOrder: 1 },
+          {
+            id: "vehicles",
+            label: "Fleet",
+            href: "/vehicles",
+            isVisible: true,
+            sortOrder: 1,
+            translations: { en: { label: "English Fleet" } },
+          },
           { id: "about", label: "Hidden About", href: "/about", isVisible: false, sortOrder: 2 },
           { id: "login", label: "Staff", href: "/dashboard/login/v2", isVisible: true, sortOrder: 3 },
           { id: "trackReservation", label: "Hidden Track", href: "/track-reservation", isVisible: false, sortOrder: 4 },
@@ -90,7 +97,7 @@ describe("Header", () => {
 
     expect(screen.getByText("Managed Rent")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "home" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "vehicles" })).toHaveAttribute("href", "/vehicles");
+    expect(screen.getByRole("link", { name: "English Fleet" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "login" })).toHaveAttribute("href", "/dashboard/login/v2");
     expect(screen.queryByText("Hidden About")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden Track")).not.toBeInTheDocument();

@@ -27,7 +27,7 @@ test.describe("Smoke", () => {
   test("admin login page loads", async ({ page }) => {
     await page.goto("/dashboard/login/v2");
 
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible();
+    await expect(page.locator("#password")).toBeVisible();
   });
 });

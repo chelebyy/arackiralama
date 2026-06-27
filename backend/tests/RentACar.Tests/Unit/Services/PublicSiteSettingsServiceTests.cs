@@ -131,7 +131,19 @@ public sealed class PublicSiteSettingsServiceTests
             "+90 555",
             "managed@example.test",
             "09:00 - 18:00",
-            [new PublicSiteLinkDto("home", "Ana Sayfa", "/", true, 99)],
+            [
+                new PublicSiteLinkDto(
+                    "home",
+                    "Ana Sayfa",
+                    "/",
+                    true,
+                    99,
+                    new Dictionary<string, PublicLocalizedTextDto>
+                    {
+                        ["en"] = new(Label: "Home"),
+                        ["de"] = new(Label: "  ")
+                    })
+            ],
             [new PublicSiteLinkDto("ctaSecondary", "Rezervasyon", "/booking", false, 50)],
             [
                 new PublicSiteLinkDto("contact", "İletişim", "/contact", true, 99),
@@ -139,9 +151,48 @@ public sealed class PublicSiteSettingsServiceTests
             ],
             [new PublicSocialLinkDto("instagram", "Instagram", "https://instagram.com/managed", true, 12)],
             [new PublicSiteLinkDto("bottom", "Alt", "/bottom", true, 20)],
-            [new PublicContactChannelDto("phone", "phone", "Managed Phone", "+90 555 000", "tel:+90555000", "Managed desc", true, 4)],
-            [new PublicContactOfficeDto("office", "Managed Office", "Managed address", "+90 555", "10:00 - 17:00", "branch", true, 5)],
-            [new PublicContactWorkingHourDto("hours", "Managed Day", "11:00 - 16:00", true, 6)],
+            [
+                new PublicContactChannelDto(
+                    "phone",
+                    "phone",
+                    "Managed Phone",
+                    "+90 555 000",
+                    "tel:+90555000",
+                    "Managed desc",
+                    true,
+                    4,
+                    new Dictionary<string, PublicLocalizedTextDto>
+                    {
+                        ["en"] = new(Label: "Phone", Value: "+90 555 111", Description: "English desc")
+                    })
+            ],
+            [
+                new PublicContactOfficeDto(
+                    "office",
+                    "Managed Office",
+                    "Managed address",
+                    "+90 555",
+                    "10:00 - 17:00",
+                    "branch",
+                    true,
+                    5,
+                    new Dictionary<string, PublicLocalizedTextDto>
+                    {
+                        ["en"] = new(Name: "Office", Address: "English address", Hours: "12:00 - 18:00")
+                    })
+            ],
+            [
+                new PublicContactWorkingHourDto(
+                    "hours",
+                    "Managed Day",
+                    "11:00 - 16:00",
+                    true,
+                    6,
+                    new Dictionary<string, PublicLocalizedTextDto>
+                    {
+                        ["en"] = new(Day: "Weekday", Hours: "13:00 - 17:00")
+                    })
+            ],
             "Managed Map",
             "https://www.google.com/maps/embed?pb=managed",
             false,
@@ -163,19 +214,66 @@ public sealed class PublicSiteSettingsServiceTests
         var reloaded = await service.GetAsync(CancellationToken.None);
 
         updated.CompanyName.Should().Be("Managed Rent");
-        reloaded.HeaderLinks.Should().ContainSingle(x => x.Href == "/");
+        var headerLink = reloaded.HeaderLinks.Should().ContainSingle(x => x.Href == "/").Subject;
+        headerLink.Translations.Should().NotBeNull();
+        headerLink.Translations!["en"].Label.Should().Be("Home");
+        headerLink.Translations.Should().NotContainKey("de");
         reloaded.HeroLinks.Should().ContainSingle(x => x.Id == "ctaSecondary" && !x.IsVisible);
         reloaded.QuickLinks.Select(x => x.SortOrder).Should().Equal(0, 1);
         reloaded.SocialLinks.Should().ContainSingle(x => x.Url == "https://instagram.com/managed");
         reloaded.FooterBottomLinks.Should().ContainSingle(x => x.Href == "/bottom");
-        reloaded.ContactPageChannels.Should().ContainSingle(x => x.Label == "Managed Phone" && x.SortOrder == 0);
-        reloaded.ContactPageOffices.Should().ContainSingle(x => x.Name == "Managed Office" && x.SortOrder == 0);
-        reloaded.ContactPageWorkingHours.Should().ContainSingle(x => x.Day == "Managed Day" && x.SortOrder == 0);
+        var contactChannel = reloaded.ContactPageChannels.Should().ContainSingle(x => x.Label == "Managed Phone" && x.SortOrder == 0).Subject;
+        contactChannel.Translations!["en"].Description.Should().Be("English desc");
+        var office = reloaded.ContactPageOffices.Should().ContainSingle(x => x.Name == "Managed Office" && x.SortOrder == 0).Subject;
+        office.Translations!["en"].Address.Should().Be("English address");
+        var workingHour = reloaded.ContactPageWorkingHours.Should().ContainSingle(x => x.Day == "Managed Day" && x.SortOrder == 0).Subject;
+        workingHour.Translations!["en"].Hours.Should().Be("13:00 - 17:00");
         reloaded.ContactPageMapTitle.Should().Be("Managed Map");
         reloaded.ContactPageMapEmbedUrl.Should().Be("https://www.google.com/maps/embed?pb=managed");
         reloaded.ContactPageMapIsVisible.Should().BeFalse();
         reloaded.Pages.Should().ContainSingle(x => x.Slug == "terms" && x.Locale == "tr" && !x.IsPublished);
         reloaded.Pages.Single().Blocks.Should().ContainSingle(x => x.SortOrder == 0);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RejectsUnsupportedPublicSettingTranslationLocale()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+        var request = new UpdatePublicSiteSettingsRequest(
+            "Managed Rent",
+            "Alanya",
+            "+90 555",
+            "managed@example.test",
+            "09:00 - 18:00",
+            [
+                new PublicSiteLinkDto(
+                    "home",
+                    "Ana Sayfa",
+                    "/",
+                    true,
+                    0,
+                    new Dictionary<string, PublicLocalizedTextDto>
+                    {
+                        ["es"] = new(Label: "Inicio")
+                    })
+            ],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            "Map",
+            "https://www.google.com/maps/embed?pb=managed",
+            true,
+            []);
+
+        await service.Invoking(s => s.UpdateAsync(request, CancellationToken.None))
+            .Should()
+            .ThrowAsync<ArgumentException>()
+            .WithMessage("*Desteklenmeyen public site dili*");
     }
 
     [Fact]

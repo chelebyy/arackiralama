@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { type Path, type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, Languages, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePublicSiteSettings, mutateUpdatePublicSiteSettings } from "@/hooks/admin";
 import { toast } from "sonner";
 
@@ -27,12 +28,25 @@ const internalHrefSchema = z
   .min(1, "Bağlantı zorunludur")
   .regex(/^\/(?!\/)[a-zA-Z0-9/_?=&.#-]*$/, "Site içi bağlantı / ile başlamalıdır");
 
+const localizedTextSchema = z.object({
+  label: z.string().max(80).nullable().optional(),
+  value: z.string().max(120).nullable().optional(),
+  description: z.string().max(180).nullable().optional(),
+  name: z.string().max(120).nullable().optional(),
+  address: z.string().max(240).nullable().optional(),
+  hours: z.string().max(80).nullable().optional(),
+  day: z.string().max(80).nullable().optional(),
+});
+
+const translationsSchema = z.record(z.string(), localizedTextSchema).nullable().optional();
+
 const siteLinkSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1, "Başlık zorunludur").max(80),
   href: internalHrefSchema,
   isVisible: z.boolean(),
   sortOrder: z.number(),
+  translations: translationsSchema,
 });
 
 const socialLinkSchema = z.object({
@@ -75,6 +89,7 @@ const contactChannelSchema = z.object({
   description: z.string().max(180),
   isVisible: z.boolean(),
   sortOrder: z.number(),
+  translations: translationsSchema,
 });
 
 const contactOfficeSchema = z.object({
@@ -86,6 +101,7 @@ const contactOfficeSchema = z.object({
   type: z.string().min(1, "Tip zorunludur").max(30),
   isVisible: z.boolean(),
   sortOrder: z.number(),
+  translations: translationsSchema,
 });
 
 const contactWorkingHourSchema = z.object({
@@ -94,6 +110,7 @@ const contactWorkingHourSchema = z.object({
   hours: z.string().min(1, "Saat zorunludur").max(80),
   isVisible: z.boolean(),
   sortOrder: z.number(),
+  translations: translationsSchema,
 });
 
 const pageBlockSchema = z.object({
@@ -157,6 +174,134 @@ const publicSiteSettingsSchema = z.object({
 });
 
 type PublicSiteSettingsFormData = z.infer<typeof publicSiteSettingsSchema>;
+type ManagedPageFormValue = PublicSiteSettingsFormData["pages"][number];
+type ManagedPageEntry = { page: ManagedPageFormValue; index: number };
+type FormTranslationMap = NonNullable<PublicSiteSettingsFormData["headerLinks"][number]["translations"]>;
+type TranslationFieldKey = keyof z.infer<typeof localizedTextSchema>;
+type TranslationBasePath =
+  | `headerLinks.${number}`
+  | `heroLinks.${number}`
+  | `quickLinks.${number}`
+  | `footerBottomLinks.${number}`
+  | `contactPageChannels.${number}`
+  | `contactPageOffices.${number}`
+  | `contactPageWorkingHours.${number}`;
+type TranslationFieldConfig = {
+  key: TranslationFieldKey;
+  label: string;
+  placeholder?: string;
+  control?: "input" | "textarea";
+};
+
+const managedPageLocales = [
+  { code: "tr", label: "TR", name: "Türkçe" },
+  { code: "en", label: "EN", name: "English" },
+  { code: "ru", label: "RU", name: "Русский" },
+  { code: "ar", label: "AR", name: "العربية" },
+  { code: "de", label: "DE", name: "Deutsch" },
+] as const;
+
+type ManagedPageLocale = (typeof managedPageLocales)[number]["code"];
+
+const builtInPageSlugs = new Set(["about", "terms", "privacy"]);
+
+const linkTranslationFields = [
+  { key: "label", label: "Başlık", placeholder: "Bu dilde bağlantı başlığı" },
+] satisfies TranslationFieldConfig[];
+
+const contactChannelTranslationFields = [
+  { key: "label", label: "Başlık", placeholder: "Bu dilde kanal başlığı" },
+  { key: "value", label: "Gösterilen Değer", placeholder: "Bu dilde görünen değer" },
+  { key: "description", label: "Açıklama", placeholder: "Bu dilde kısa açıklama" },
+] satisfies TranslationFieldConfig[];
+
+const contactOfficeTranslationFields = [
+  { key: "name", label: "Ofis Adı", placeholder: "Bu dilde ofis adı" },
+  { key: "address", label: "Adres", placeholder: "Bu dilde adres", control: "textarea" },
+  { key: "hours", label: "Saat", placeholder: "Bu dilde çalışma saati" },
+] satisfies TranslationFieldConfig[];
+
+const workingHourTranslationFields = [
+  { key: "day", label: "Gün", placeholder: "Bu dilde gün aralığı" },
+  { key: "hours", label: "Saat", placeholder: "Bu dilde saat aralığı" },
+] satisfies TranslationFieldConfig[];
+
+function isManagedPageLocale(value: string): value is ManagedPageLocale {
+  return managedPageLocales.some((locale) => locale.code === value);
+}
+
+function LocalizedTranslationTabs({
+  form,
+  baseName,
+  fields,
+}: {
+  form: UseFormReturn<PublicSiteSettingsFormData>;
+  baseName: TranslationBasePath;
+  fields: readonly TranslationFieldConfig[];
+}) {
+  return (
+    <div className="col-span-full rounded-lg border bg-muted/20 p-3">
+      <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Languages className="h-4 w-4" />
+        Dil bazlı içerik
+      </div>
+      <Tabs defaultValue="tr" className="space-y-3">
+        <TabsList className="grid w-full grid-cols-5">
+          {managedPageLocales.map((locale) => (
+            <TabsTrigger key={locale.code} value={locale.code}>
+              {locale.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {managedPageLocales.map((locale) => (
+          <TabsContent key={locale.code} value={locale.code} className="mt-0">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {fields.map((translationField) => (
+                <FormField
+                  key={translationField.key}
+                  control={form.control}
+                  name={`${baseName}.translations.${locale.code}.${translationField.key}` as Path<PublicSiteSettingsFormData>}
+                  render={({ field }) => (
+                    <FormItem className={translationField.control === "textarea" ? "md:col-span-3" : undefined}>
+                      <FormLabel>{translationField.label}</FormLabel>
+                      <FormControl>
+                        {translationField.control === "textarea" ? (
+                          <Textarea
+                            {...field}
+                            value={(field.value as string | undefined) ?? ""}
+                            placeholder={translationField.placeholder}
+                            className="resize-none"
+                            rows={2}
+                          />
+                        ) : (
+                          <Input
+                            {...field}
+                            value={(field.value as string | undefined) ?? ""}
+                            placeholder={translationField.placeholder}
+                          />
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+}
+
+function withEmptyTranslations<T extends { translations?: unknown }>(
+  items: T[] = []
+): Array<Omit<T, "translations"> & { translations: FormTranslationMap }> {
+  return items.map((item) => ({
+    ...item,
+    translations: (item.translations ?? {}) as FormTranslationMap,
+  }));
+}
 
 const emptyDefaults: PublicSiteSettingsFormData = {
   companyName: "",
@@ -178,12 +323,108 @@ const emptyDefaults: PublicSiteSettingsFormData = {
   pages: [],
 };
 
+let generatedIdCounter = 0;
+
 function createId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}`;
+  generatedIdCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${generatedIdCounter}`;
 }
 
 function reindexLinks<T extends { sortOrder: number }>(links: T[]) {
   return links.map((link, index) => ({ ...link, sortOrder: index }));
+}
+
+function createEmptyPageBlock(sortOrder = 0) {
+  return {
+    id: createId("block"),
+    heading: "Yeni Bölüm",
+    body: "",
+    isVisible: true,
+    sortOrder,
+  };
+}
+
+function clonePageBlocks(blocks: ManagedPageFormValue["blocks"]) {
+  if (!blocks.length) {
+    return [createEmptyPageBlock()];
+  }
+
+  return blocks.map((block, index) => ({
+    ...block,
+    id: createId("block"),
+    sortOrder: index,
+  }));
+}
+
+function createManagedPageDraft(
+  slug: string,
+  locale: ManagedPageLocale,
+  sortOrder: number,
+  source?: ManagedPageFormValue
+): ManagedPageFormValue {
+  return {
+    id: createId(`${locale}-${slug}`),
+    slug,
+    locale,
+    title: source?.title ?? "Yeni Sayfa",
+    subtitle: source?.subtitle ?? "",
+    seoTitle: source?.seoTitle ?? "",
+    seoDescription: source?.seoDescription ?? "",
+    isPublished: false,
+    sortOrder,
+    blocks: source ? clonePageBlocks(source.blocks) : [createEmptyPageBlock()],
+  };
+}
+
+function getNextCustomSlug(pages: ManagedPageFormValue[]) {
+  const slugs = new Set(pages.map((page) => page.slug));
+  let index = pages.length + 1;
+  let slug = `new-page-${index}`;
+
+  while (slugs.has(slug)) {
+    index += 1;
+    slug = `new-page-${index}`;
+  }
+
+  return slug;
+}
+
+function groupManagedPages(pages: ManagedPageFormValue[]) {
+  const groups = new Map<
+    string,
+    {
+      slug: string;
+      firstEntry: ManagedPageEntry;
+      pagesByLocale: Partial<Record<ManagedPageLocale, ManagedPageEntry>>;
+      extraEntries: ManagedPageEntry[];
+    }
+  >();
+
+  pages.forEach((page, index) => {
+    const slug = page.slug || `page-${index + 1}`;
+    const group =
+      groups.get(slug) ??
+      {
+        slug,
+        firstEntry: { page, index },
+        pagesByLocale: {},
+        extraEntries: [],
+      };
+
+    if (isManagedPageLocale(page.locale)) {
+      group.pagesByLocale[page.locale] = { page, index };
+    } else {
+      group.extraEntries.push({ page, index });
+    }
+
+    groups.set(slug, group);
+  });
+
+  return Array.from(groups.values()).sort((left, right) => {
+    const leftOrder = left.pagesByLocale.tr?.page.sortOrder ?? left.firstEntry.page.sortOrder;
+    const rightOrder = right.pagesByLocale.tr?.page.sortOrder ?? right.firstEntry.page.sortOrder;
+    return leftOrder - rightOrder || left.slug.localeCompare(right.slug);
+  });
 }
 
 export default function SystemSettingsPage() {
@@ -214,14 +455,14 @@ export default function SystemSettingsPage() {
         companyPhone: settings.companyPhone,
         companyEmail: settings.companyEmail,
         workingHours: settings.workingHours,
-        headerLinks: settings.headerLinks ?? [],
-        heroLinks: settings.heroLinks ?? [],
-        quickLinks: settings.quickLinks ?? [],
+        headerLinks: withEmptyTranslations(settings.headerLinks ?? []),
+        heroLinks: withEmptyTranslations(settings.heroLinks ?? []),
+        quickLinks: withEmptyTranslations(settings.quickLinks ?? []),
         socialLinks: settings.socialLinks ?? [],
-        footerBottomLinks: settings.footerBottomLinks ?? [],
-        contactPageChannels: settings.contactPageChannels ?? [],
-        contactPageOffices: settings.contactPageOffices ?? [],
-        contactPageWorkingHours: settings.contactPageWorkingHours ?? [],
+        footerBottomLinks: withEmptyTranslations(settings.footerBottomLinks ?? []),
+        contactPageChannels: withEmptyTranslations(settings.contactPageChannels ?? []),
+        contactPageOffices: withEmptyTranslations(settings.contactPageOffices ?? []),
+        contactPageWorkingHours: withEmptyTranslations(settings.contactPageWorkingHours ?? []),
         contactPageMapTitle: settings.contactPageMapTitle ?? "",
         contactPageMapEmbedUrl: settings.contactPageMapEmbedUrl ?? "",
         contactPageMapIsVisible: settings.contactPageMapIsVisible ?? true,
@@ -252,6 +493,44 @@ export default function SystemSettingsPage() {
   const unpublishPage = (pageIndex: number) => {
     form.setValue(`pages.${pageIndex}.isPublished`, false, { shouldDirty: true });
   };
+
+  const addCustomPage = () => {
+    const currentPages = form.getValues("pages") ?? [];
+    const slug = getNextCustomSlug(currentPages);
+    pages.append(createManagedPageDraft(slug, "tr", currentPages.length));
+  };
+
+  const addPageTranslation = (
+    slug: string,
+    locale: ManagedPageLocale,
+    source?: ManagedPageFormValue
+  ) => {
+    const currentPages = form.getValues("pages") ?? [];
+    const hasTranslation = currentPages.some(
+      (page) => page.slug === slug && page.locale === locale
+    );
+
+    if (hasTranslation) {
+      return;
+    }
+
+    pages.append(createManagedPageDraft(slug, locale, currentPages.length, source));
+  };
+
+  const syncCustomPageSlug = (currentSlug: string, nextSlug: string) => {
+    const currentPages = form.getValues("pages") ?? [];
+
+    currentPages.forEach((page, index) => {
+      if (page.slug === currentSlug) {
+        form.setValue(`pages.${index}.slug`, nextSlug, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+    });
+  };
+
+  const pageGroups = groupManagedPages(watchedPages ?? []);
 
   const onSubmit = async (data: PublicSiteSettingsFormData) => {
     setIsSaving(true);
@@ -372,6 +651,7 @@ export default function SystemSettingsPage() {
                     description: "",
                     isVisible: true,
                     sortOrder: contactPageChannels.fields.length,
+                    translations: {},
                   })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
@@ -424,6 +704,11 @@ export default function SystemSettingsPage() {
                         <FormMessage />
                       </FormItem>
                     )} />
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`contactPageChannels.${index}` as TranslationBasePath}
+                      fields={contactChannelTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -445,6 +730,7 @@ export default function SystemSettingsPage() {
                     type: "branch",
                     isVisible: true,
                     sortOrder: contactPageOffices.fields.length,
+                    translations: {},
                   })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
@@ -497,6 +783,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => contactPageOffices.remove(index)} aria-label="İletişim ofisini sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`contactPageOffices.${index}` as TranslationBasePath}
+                      fields={contactOfficeTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -515,6 +806,7 @@ export default function SystemSettingsPage() {
                     hours: "",
                     isVisible: true,
                     sortOrder: contactPageWorkingHours.fields.length,
+                    translations: {},
                   })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
@@ -546,6 +838,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => contactPageWorkingHours.remove(index)} aria-label="Çalışma saatini sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`contactPageWorkingHours.${index}` as TranslationBasePath}
+                      fields={workingHourTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -582,143 +879,244 @@ export default function SystemSettingsPage() {
                 <div>
                   <h2 className="text-sm font-semibold">Sayfalar</h2>
                   <p className="text-xs text-muted-foreground">
-                    Hakkımızda, kullanım koşulları, gizlilik ve yeni public sayfa içeriklerini buradan yönetin.
+                    Hakkımızda, kullanım koşulları, gizlilik ve yeni public sayfa içeriklerini 5 dil sekmesiyle yönetin.
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => pages.append({
-                    id: createId("page"),
-                    slug: `new-page-${pages.fields.length + 1}`,
-                    locale: "tr",
-                    title: "Yeni Sayfa",
-                    subtitle: "",
-                    seoTitle: "",
-                    seoDescription: "",
-                    isPublished: false,
-                    sortOrder: pages.fields.length,
-                    blocks: [
-                      {
-                        id: createId("block"),
-                        heading: "Yeni Bölüm",
-                        body: "",
-                        isVisible: true,
-                        sortOrder: 0,
-                      },
-                    ],
-                  })}
+                  onClick={addCustomPage}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Sayfa Ekle
                 </Button>
               </div>
               <div className="space-y-4">
-                {pages.fields.map((item, pageIndex) => {
-                  const pageBlocks = watchedPages?.[pageIndex]?.blocks ?? [];
-                  const slug = watchedPages?.[pageIndex]?.slug;
-                  const isBuiltInPage = ["about", "terms", "privacy"].includes(slug);
+                {pageGroups.length === 0 && (
+                  <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                    Henüz yönetilen public sayfa yok. İlk sayfayı eklemek için Sayfa Ekle butonunu kullanın.
+                  </div>
+                )}
+
+                {pageGroups.map((group) => {
+                  const baseEntry = group.pagesByLocale.tr ?? group.firstEntry;
+                  const defaultLocale =
+                    group.pagesByLocale.tr
+                      ? "tr"
+                      : managedPageLocales.find((locale) => group.pagesByLocale[locale.code])?.code ?? "tr";
+                  const completedLocales = managedPageLocales.filter((locale) => group.pagesByLocale[locale.code]);
+                  const publishedLocales = completedLocales.filter((locale) => group.pagesByLocale[locale.code]?.page.isPublished);
 
                   return (
-                    <div key={item.id} className="space-y-4 rounded-lg border p-4">
-                      <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_0.8fr_1.2fr_auto_auto]">
-                        <FormField control={form.control} name={`pages.${pageIndex}.title`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sayfa Başlığı</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name={`pages.${pageIndex}.locale`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Dil</FormLabel>
-                            <FormControl><Input placeholder="tr" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name={`pages.${pageIndex}.slug`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sayfa Yolu</FormLabel>
-                            <FormControl><Input placeholder="about" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name={`pages.${pageIndex}.isPublished`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Yayında</FormLabel>
-                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                          </FormItem>
-                        )} />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => (isBuiltInPage ? unpublishPage(pageIndex) : pages.remove(pageIndex))}
-                          aria-label={isBuiltInPage ? "Sayfayı yayından kaldır" : "Sayfayı sil"}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <FormField control={form.control} name={`pages.${pageIndex}.subtitle`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Alt Başlık</FormLabel>
-                            <FormControl><Textarea {...field} className="resize-none" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name={`pages.${pageIndex}.seoDescription`} render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>SEO Açıklaması</FormLabel>
-                            <FormControl><Textarea {...field} className="resize-none" /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name={`pages.${pageIndex}.seoTitle`} render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>SEO Başlığı</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">İçerik Blokları</h3>
-                          <Button type="button" variant="outline" size="sm" onClick={() => addPageBlock(pageIndex)}>
-                            <Plus className="mr-2 h-4 w-4" /> Blok Ekle
-                          </Button>
-                        </div>
-                        {pageBlocks.map((block, blockIndex) => (
-                          <div key={block.id} className="grid grid-cols-1 items-end gap-3 rounded-md border p-3 md:grid-cols-[1fr_auto_auto]">
-                            <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.heading`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Bölüm Başlığı</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.isVisible`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Görünsün</FormLabel>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              </FormItem>
-                            )} />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removePageBlock(pageIndex, blockIndex)} aria-label="İçerik bloğunu sil">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.body`} render={({ field }) => (
-                              <FormItem className="md:col-span-3">
-                                <FormLabel>İçerik</FormLabel>
-                                <FormControl><Textarea {...field} rows={5} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                    <div key={group.slug} className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-md border bg-background p-2 text-muted-foreground">
+                            <FileText className="h-4 w-4" />
                           </div>
-                        ))}
+                          <div>
+                            <h3 className="text-sm font-semibold">{baseEntry.page.title || group.slug}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              /{group.slug} · {completedLocales.length}/{managedPageLocales.length} dil hazır · {publishedLocales.length} dil yayında
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {builtInPageSlugs.has(group.slug) && (
+                            <span className="rounded-full border bg-background px-2 py-1 text-muted-foreground">
+                              Sabit sayfa
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-muted-foreground">
+                            <Languages className="h-3.5 w-3.5" />
+                            {managedPageLocales.length} dil
+                          </span>
+                        </div>
                       </div>
+
+                      <Tabs defaultValue={defaultLocale} className="space-y-4">
+                        <TabsList className="grid h-auto w-full grid-cols-2 md:grid-cols-5">
+                          {managedPageLocales.map((locale) => {
+                            const entry = group.pagesByLocale[locale.code];
+
+                            return (
+                              <TabsTrigger key={locale.code} value={locale.code} className="h-auto flex-col gap-0.5 py-2 text-xs">
+                                <span className="font-semibold">{locale.label}</span>
+                                <span className="text-[11px] font-normal text-muted-foreground">
+                                  {entry ? (entry.page.isPublished ? "Yayında" : "Taslak") : "Eksik"}
+                                </span>
+                              </TabsTrigger>
+                            );
+                          })}
+                        </TabsList>
+
+                        {managedPageLocales.map((locale) => {
+                          const entry = group.pagesByLocale[locale.code];
+
+                          if (!entry) {
+                            const sourceEntry = group.pagesByLocale.tr ?? group.firstEntry;
+                            const sourceLocaleLabel = sourceEntry.page.locale.toUpperCase();
+
+                            return (
+                              <TabsContent key={locale.code} value={locale.code} className="rounded-md border border-dashed bg-background p-4">
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                  <div>
+                                    <h4 className="text-sm font-medium">{locale.name} çevirisi eksik</h4>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Bu dil için ayrı içerik oluşturulmazsa public sayfa statik çeviri içeriğine düşer.
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => addPageTranslation(group.slug, locale.code, sourceEntry.page)}
+                                    >
+                                      <Copy className="mr-2 h-4 w-4" /> {sourceLocaleLabel}'den Kopyala
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => addPageTranslation(group.slug, locale.code)}
+                                    >
+                                      Boş Çeviri Oluştur
+                                    </Button>
+                                  </div>
+                                </div>
+                              </TabsContent>
+                            );
+                          }
+
+                          const pageIndex = entry.index;
+                          const pageBlocks = entry.page.blocks ?? [];
+                          const isBuiltInPage = builtInPageSlugs.has(group.slug);
+
+                          return (
+                            <TabsContent key={locale.code} value={locale.code} className="space-y-4 rounded-md border bg-background p-4">
+                              <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_0.8fr_1.2fr_auto_auto]">
+                                <FormField control={form.control} name={`pages.${pageIndex}.title`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Sayfa Başlığı</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name={`pages.${pageIndex}.locale`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Dil</FormLabel>
+                                    <FormControl><Input readOnly {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name={`pages.${pageIndex}.slug`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Sayfa Yolu</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        readOnly={isBuiltInPage}
+                                        placeholder="about"
+                                        {...field}
+                                        onChange={(event) => {
+                                          if (isBuiltInPage) {
+                                            field.onChange(event);
+                                            return;
+                                          }
+
+                                          syncCustomPageSlug(group.slug, event.target.value);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name={`pages.${pageIndex}.isPublished`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Yayında</FormLabel>
+                                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                  </FormItem>
+                                )} />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => (isBuiltInPage ? unpublishPage(pageIndex) : pages.remove(pageIndex))}
+                                  aria-label={isBuiltInPage ? "Sayfayı yayından kaldır" : "Çeviriyi sil"}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <FormField control={form.control} name={`pages.${pageIndex}.subtitle`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Alt Başlık</FormLabel>
+                                    <FormControl><Textarea {...field} className="resize-none" /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name={`pages.${pageIndex}.seoDescription`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SEO Açıklaması</FormLabel>
+                                    <FormControl><Textarea {...field} className="resize-none" /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name={`pages.${pageIndex}.seoTitle`} render={({ field }) => (
+                                  <FormItem className="md:col-span-2">
+                                    <FormLabel>SEO Başlığı</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">İçerik Blokları</h4>
+                                  <Button type="button" variant="outline" size="sm" onClick={() => addPageBlock(pageIndex)}>
+                                    <Plus className="mr-2 h-4 w-4" /> Blok Ekle
+                                  </Button>
+                                </div>
+                                {pageBlocks.map((block, blockIndex) => (
+                                  <div key={block.id} className="grid grid-cols-1 items-end gap-3 rounded-md border p-3 md:grid-cols-[1fr_auto_auto]">
+                                    <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.heading`} render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Bölüm Başlığı</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.isVisible`} render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Görünsün</FormLabel>
+                                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                      </FormItem>
+                                    )} />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removePageBlock(pageIndex, blockIndex)} aria-label="İçerik bloğunu sil">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                    <FormField control={form.control} name={`pages.${pageIndex}.blocks.${blockIndex}.body`} render={({ field }) => (
+                                      <FormItem className="md:col-span-3">
+                                        <FormLabel>İçerik</FormLabel>
+                                        <FormControl><Textarea {...field} rows={5} /></FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )} />
+                                  </div>
+                                ))}
+                              </div>
+                            </TabsContent>
+                          );
+                        })}
+
+                        {group.extraEntries.length > 0 && (
+                          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                            Destek dışı dil kodu olan {group.extraEntries.length} kayıt var. Bu kayıtlar kayıtta korunur ama 5 dil editöründe gösterilmez.
+                          </div>
+                        )}
+                      </Tabs>
                     </div>
                   );
                 })}
@@ -732,7 +1130,7 @@ export default function SystemSettingsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => headerLinks.append({ id: createId("header"), label: "", href: "/", isVisible: true, sortOrder: headerLinks.fields.length })}
+                  onClick={() => headerLinks.append({ id: createId("header"), label: "", href: "/", isVisible: true, sortOrder: headerLinks.fields.length, translations: {} })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
                 </Button>
@@ -763,6 +1161,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => headerLinks.remove(index)} aria-label="Header bağlantısını sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`headerLinks.${index}` as TranslationBasePath}
+                      fields={linkTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -775,7 +1178,7 @@ export default function SystemSettingsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => heroLinks.append({ id: createId("hero"), label: "", href: "/", isVisible: true, sortOrder: heroLinks.fields.length })}
+                  onClick={() => heroLinks.append({ id: createId("hero"), label: "", href: "/", isVisible: true, sortOrder: heroLinks.fields.length, translations: {} })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
                 </Button>
@@ -806,6 +1209,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => heroLinks.remove(index)} aria-label="Ana sayfa CTA bağlantısını sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`heroLinks.${index}` as TranslationBasePath}
+                      fields={linkTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -818,7 +1226,7 @@ export default function SystemSettingsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => quickLinks.append({ id: createId("quick"), label: "", href: "/", isVisible: true, sortOrder: quickLinks.fields.length })}
+                  onClick={() => quickLinks.append({ id: createId("quick"), label: "", href: "/", isVisible: true, sortOrder: quickLinks.fields.length, translations: {} })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
                 </Button>
@@ -849,6 +1257,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => quickLinks.remove(index)} aria-label="Hızlı bağlantıyı sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`quickLinks.${index}` as TranslationBasePath}
+                      fields={linkTranslationFields}
+                    />
                   </div>
                 ))}
               </div>
@@ -904,7 +1317,7 @@ export default function SystemSettingsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => footerBottomLinks.append({ id: createId("bottom"), label: "", href: "/", isVisible: true, sortOrder: footerBottomLinks.fields.length })}
+                  onClick={() => footerBottomLinks.append({ id: createId("bottom"), label: "", href: "/", isVisible: true, sortOrder: footerBottomLinks.fields.length, translations: {} })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Ekle
                 </Button>
@@ -935,6 +1348,11 @@ export default function SystemSettingsPage() {
                     <Button type="button" variant="ghost" size="icon" onClick={() => footerBottomLinks.remove(index)} aria-label="Alt bağlantıyı sil">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    <LocalizedTranslationTabs
+                      form={form}
+                      baseName={`footerBottomLinks.${index}` as TranslationBasePath}
+                      fields={linkTranslationFields}
+                    />
                   </div>
                 ))}
               </div>

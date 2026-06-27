@@ -23,6 +23,7 @@ vi.mock("next-intl", () => ({
       ].includes(key);
     return t;
   },
+  useLocale: () => "en",
 }));
 
 const useSWRMock = vi.fn();
@@ -72,7 +73,14 @@ describe("Footer", () => {
         headerLinks: [],
         heroLinks: [],
         quickLinks: [
-          { id: "visible", label: "Managed Link", href: "/managed", isVisible: true, sortOrder: 0 },
+          {
+            id: "visible",
+            label: "Managed Link",
+            href: "/managed",
+            isVisible: true,
+            sortOrder: 0,
+            translations: { en: { label: "English Managed Link" } },
+          },
           { id: "hidden", label: "Hidden Link", href: "/hidden", isVisible: false, sortOrder: 1 },
           { id: "terms", label: "Kullanım Koşulları", href: "/terms", isVisible: true, sortOrder: 2 },
         ],
@@ -135,7 +143,7 @@ describe("Footer", () => {
 
     expect(screen.getByText("Managed Rent")).toBeInTheDocument();
     expect(screen.getByText(/copyright-.*-Managed Rent/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Managed Link" })).toHaveAttribute("href", "/managed");
+    expect(screen.getByRole("link", { name: "English Managed Link" })).toHaveAttribute("href", "/managed");
     expect(screen.queryByText("Hidden Link")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "https://instagram.com/managed");
     expect(screen.queryByRole("link", { name: "Facebook" })).not.toBeInTheDocument();

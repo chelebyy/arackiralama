@@ -23,6 +23,10 @@ export function isPublicSiteLinkVisible(link: PublicSiteLink, pages?: PublicMana
     return true;
   }
 
-  const managedPage = pages?.find((page) => page.slug === slug);
-  return managedPage?.isPublished !== false;
+  const managedPages = pages?.filter((page) => page.slug === slug);
+  if (!managedPages?.length) {
+    return true;
+  }
+
+  return managedPages.some((page) => page.isPublished);
 }

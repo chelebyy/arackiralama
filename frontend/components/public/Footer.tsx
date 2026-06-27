@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import useSWR from "swr";
 import { Link } from "@/i18n/routing";
 import {
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicSiteLink, PublicSocialLink } from "@/lib/api/admin/types";
 import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
+import { getLocalizedPublicSettingText } from "@/lib/public-settings-localization";
 
 const defaultQuickLinks = [
   { id: "vehicles", label: "", href: "/vehicles", isVisible: true, sortOrder: 0 },
@@ -58,6 +59,7 @@ function hasTranslation(
 
 export default function Footer() {
   const t = useTranslations("footer");
+  const locale = useLocale();
   const year = new Date().getFullYear();
   const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
     revalidateOnFocus: false,
@@ -80,9 +82,11 @@ export default function Footer() {
   const companyName = settings?.companyName?.trim() || defaultCompanyName;
   const getLinkLabel = (link: PublicSiteLink) => {
     const translationKey = `quickLinks.links.${link.id}`;
-    return hasTranslation(t, translationKey)
+    const fallback = hasTranslation(t, translationKey)
       ? t(translationKey)
       : link.label || link.id;
+
+    return getLocalizedPublicSettingText(link.translations, locale, "label", fallback);
   };
 
   return (

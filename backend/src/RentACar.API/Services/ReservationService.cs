@@ -1270,6 +1270,7 @@ public sealed class ReservationService : IReservationService
             statusFilter,
             filter?.FromDate,
             filter?.ToDate,
+            filter?.SearchTerm,
             filter?.Page ?? 1,
             filter?.PageSize ?? 20,
             cancellationToken);

@@ -147,6 +147,45 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task GetAllReservationsAsync_WhenSearchTermProvided_ForwardsSearchTermToRepository()
+    {
+        _reservationRepositoryMock
+            .Setup(x => x.SearchReservationsAsync(
+                It.IsAny<Guid?>(),
+                It.IsAny<Guid?>(),
+                It.IsAny<ReservationStatus?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Reservation>());
+
+        var filter = new ReservationFilterRequest
+        {
+            Status = "Paid",
+            SearchTerm = "egea",
+            Page = 2,
+            PageSize = 25
+        };
+
+        var result = await _sut.GetAllReservationsAsync(filter, CancellationToken.None);
+
+        result.Should().BeEmpty();
+        _reservationRepositoryMock.Verify(x => x.SearchReservationsAsync(
+            null,
+            null,
+            ReservationStatus.Paid,
+            null,
+            null,
+            "egea",
+            2,
+            25,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SearchAvailabilityAsync_WhenInvoked_ReturnsUnder300Ms()
     {
         // Arrange

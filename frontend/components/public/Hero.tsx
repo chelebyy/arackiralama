@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import useSWR from "swr";
 import { Link } from "@/i18n/routing";
 import {
@@ -16,10 +16,11 @@ import SearchForm from "./SearchForm";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicSiteLink } from "@/lib/api/admin/types";
 import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
+import { getLocalizedPublicSettingText } from "@/lib/public-settings-localization";
 
-const defaultHeroLinks = [
+const defaultHeroLinks: PublicSiteLink[] = [
   { id: "ctaPrimary", label: "", href: "/vehicles", isVisible: true, sortOrder: 0 },
-] satisfies PublicSiteLink[];
+];
 
 function hasTranslation(
   t: ReturnType<typeof useTranslations>,
@@ -30,6 +31,7 @@ function hasTranslation(
 
 export default function Hero() {
   const t = useTranslations("hero");
+  const locale = useLocale();
   const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
@@ -39,10 +41,13 @@ export default function Hero() {
     .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const primaryLink = heroLinks[0];
-  const primaryLinkLabel = primaryLink
+  const primaryLinkFallback = primaryLink
     ? hasTranslation(t, primaryLink.id)
       ? t(primaryLink.id)
       : primaryLink.label || primaryLink.id
+    : null;
+  const primaryLinkLabel = primaryLink && primaryLinkFallback
+    ? getLocalizedPublicSettingText(primaryLink.translations, locale, "label", primaryLinkFallback)
     : null;
 
   const trustBadges = [

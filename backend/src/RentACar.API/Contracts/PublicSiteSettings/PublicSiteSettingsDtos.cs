@@ -1,11 +1,21 @@
 namespace RentACar.API.Contracts.PublicSiteSettings;
 
+public sealed record PublicLocalizedTextDto(
+    string? Label = null,
+    string? Value = null,
+    string? Description = null,
+    string? Name = null,
+    string? Address = null,
+    string? Hours = null,
+    string? Day = null);
+
 public sealed record PublicSiteLinkDto(
     string Id,
     string Label,
     string Href,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    IReadOnlyDictionary<string, PublicLocalizedTextDto>? Translations = null);
 
 public sealed record PublicSocialLinkDto(
     string Id,
@@ -22,7 +32,8 @@ public sealed record PublicContactChannelDto(
     string Href,
     string Description,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    IReadOnlyDictionary<string, PublicLocalizedTextDto>? Translations = null);
 
 public sealed record PublicContactOfficeDto(
     string Id,
@@ -32,14 +43,16 @@ public sealed record PublicContactOfficeDto(
     string Hours,
     string Type,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    IReadOnlyDictionary<string, PublicLocalizedTextDto>? Translations = null);
 
 public sealed record PublicContactWorkingHourDto(
     string Id,
     string Day,
     string Hours,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    IReadOnlyDictionary<string, PublicLocalizedTextDto>? Translations = null);
 
 public sealed record PublicPageBlockDto(
     string Id,

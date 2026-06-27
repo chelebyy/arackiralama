@@ -38,7 +38,7 @@ test.describe("Mobile Responsiveness", () => {
     await page.waitForLoadState("networkidle");
 
     // Search form elements should be accessible
-    const pickupSelect = page.getByLabel(/pickup|alış/i);
+    const pickupSelect = page.locator("#pickupLocation");
     await expect(pickupSelect).toBeVisible();
 
     const searchButton = page.getByRole("button", { name: /ara|search/i });
@@ -49,8 +49,8 @@ test.describe("Mobile Responsiveness", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/dashboard/login/v2");
 
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible();
+    await expect(page.locator("#password")).toBeVisible();
     await expect(page.getByRole("button", { name: /giriş|login/i })).toBeVisible();
   });
 });

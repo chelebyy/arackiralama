@@ -6,6 +6,14 @@ import messages from "@/i18n/messages/en.json";
 import ContactPage from "./page";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 
+vi.mock("next-intl", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next-intl")>();
+  return {
+    ...actual,
+    useLocale: () => "en",
+  };
+});
+
 vi.mock("@/lib/api/publicSiteSettings", () => ({
   getPublicSiteSettings: vi.fn(),
 }));
@@ -82,6 +90,13 @@ describe("ContactPage", () => {
           description: "Managed phone description",
           isVisible: true,
           sortOrder: 0,
+          translations: {
+            en: {
+              label: "English Reservations",
+              value: "+90 555 999 99 99",
+              description: "English phone description",
+            },
+          },
         },
         {
           id: "hidden-email",
@@ -104,6 +119,13 @@ describe("ContactPage", () => {
           type: "branch",
           isVisible: true,
           sortOrder: 0,
+          translations: {
+            en: {
+              name: "English Office",
+              address: "English office address",
+              hours: "12:00 - 18:00",
+            },
+          },
         },
       ],
       contactPageWorkingHours: [
@@ -113,6 +135,12 @@ describe("ContactPage", () => {
           hours: "11:00 - 16:00",
           isVisible: true,
           sortOrder: 0,
+          translations: {
+            en: {
+              day: "English Day",
+              hours: "13:00 - 17:00",
+            },
+          },
         },
       ],
       contactPageMapTitle: "Managed Map",
@@ -124,12 +152,15 @@ describe("ContactPage", () => {
 
     renderContactPage();
 
-    expect(screen.getByText("Managed Reservations")).toBeInTheDocument();
-    expect(screen.getByText("+90 555 000 00 00")).toBeInTheDocument();
+    expect(screen.getByText("English Reservations")).toBeInTheDocument();
+    expect(screen.getByText("+90 555 999 99 99")).toBeInTheDocument();
+    expect(screen.getByText("English phone description")).toBeInTheDocument();
     expect(screen.queryByText("Hidden Email")).not.toBeInTheDocument();
-    expect(screen.getByText("Managed Office")).toBeInTheDocument();
-    expect(screen.getByText("Managed Day")).toBeInTheDocument();
-    expect(screen.getByText("11:00 - 16:00")).toBeInTheDocument();
+    expect(screen.getByText("English Office")).toBeInTheDocument();
+    expect(screen.getByText("English office address")).toBeInTheDocument();
+    expect(screen.getByText("12:00 - 18:00")).toBeInTheDocument();
+    expect(screen.getByText("English Day")).toBeInTheDocument();
+    expect(screen.getByText("13:00 - 17:00")).toBeInTheDocument();
     expect(screen.getByTitle("Managed Map")).toHaveAttribute("src", "https://www.google.com/maps/embed?pb=managed");
   });
 
