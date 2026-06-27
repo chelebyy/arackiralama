@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import useSWR from "swr";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicManagedPage } from "@/lib/api/admin/types";
+import { sanitizeManagedHtml } from "@/lib/public-content/sanitize-managed-html";
 
 type ManagedPageContentProps = {
   slug: string;
@@ -60,6 +61,27 @@ function NotPublishedPage() {
   );
 }
 
+function ManagedBlockBody({ block }: { block: PublicManagedPage["blocks"][number] }) {
+  if (block.bodyFormat === "html") {
+    return (
+      <div
+        className="space-y-4 text-[#475569] [&_a]:font-semibold [&_a]:text-[#0369A1] [&_blockquote]:border-l-4 [&_blockquote]:border-[#CBD5E1] [&_blockquote]:pl-4"
+        dangerouslySetInnerHTML={{ __html: sanitizeManagedHtml(block.body) }}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4 text-[#475569]">
+      {splitParagraphs(block.body).map((paragraph) => (
+        <p key={paragraph.slice(0, 48)} className="leading-relaxed">
+          {paragraph}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function ManagedPage({ page }: { page: PublicManagedPage }) {
   const visibleBlocks = page.blocks
     .filter((block) => block.isVisible)
@@ -87,13 +109,7 @@ function ManagedPage({ page }: { page: PublicManagedPage }) {
           {visibleBlocks.map((block) => (
             <section key={block.id} className="rounded-2xl border border-[#E2E8F0] bg-white p-6 lg:p-8">
               <h2 className="mb-4 text-2xl font-bold text-[#0F172A]">{block.heading}</h2>
-              <div className="space-y-4 text-[#475569]">
-                {splitParagraphs(block.body).map((paragraph) => (
-                  <p key={paragraph.slice(0, 48)} className="leading-relaxed">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+              <ManagedBlockBody block={block} />
             </section>
           ))}
         </div>

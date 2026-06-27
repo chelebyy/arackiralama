@@ -114,4 +114,37 @@ describe("ManagedPageContent", () => {
     expect(await screen.findByRole("heading", { name: "Turkish Managed Guide" })).toBeInTheDocument();
     expect(screen.queryByText("Draft English Guide")).not.toBeInTheDocument();
   });
+
+  it("renders html page blocks after sanitizing unsafe content", async () => {
+    mockedGetPublicSiteSettings.mockResolvedValue({
+      pages: [
+        {
+          id: "en-privacy",
+          slug: "privacy",
+          locale: "en",
+          title: "Privacy",
+          subtitle: "",
+          seoTitle: "",
+          seoDescription: "",
+          isPublished: true,
+          sortOrder: 0,
+          blocks: [
+            {
+              id: "block-1",
+              heading: "Body",
+              body: '<p>Hello <strong>safe</strong></p><script>alert(1)</script>',
+              bodyFormat: "html",
+              isVisible: true,
+              sortOrder: 0,
+            },
+          ],
+        },
+      ],
+    } as any);
+
+    renderManagedPage();
+
+    expect(await screen.findByText("safe")).toBeInTheDocument();
+    expect(screen.queryByText("alert(1)")).not.toBeInTheDocument();
+  });
 });
