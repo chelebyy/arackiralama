@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using RentACar.API.Contracts.PublicSiteSettings;
@@ -53,6 +54,69 @@ public sealed class PublicSiteSettingsServiceTests
     }
 
     [Fact]
+    public async Task UpdatePageDraftAsync_WhenLegacyPublishedPageHasNoSnapshot_DoesNotLeakDraft()
+    {
+        await using var dbContext = CreateDbContext();
+        var publishedAt = new DateTime(2026, 1, 2, 9, 0, 0, DateTimeKind.Utc);
+        var pagesJson = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                id = "tr-privacy",
+                slug = "privacy",
+                locale = "tr",
+                title = "Legacy Privacy",
+                subtitle = "Legacy subtitle",
+                seoTitle = "Legacy SEO",
+                seoDescription = "Legacy description",
+                isPublished = true,
+                sortOrder = 0,
+                blocks = new[]
+                {
+                    new { id = "legacy", heading = "Legacy Heading", body = "Legacy body", isVisible = true, sortOrder = 0, bodyFormat = "plain" }
+                },
+                published = (object?)null,
+                draftUpdatedAtUtc = (DateTime?)null,
+                publishedAtUtc = (DateTime?)publishedAt
+            }
+        });
+        dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+        var version = (await service.GetAdminContentAsync()).Version;
+
+        var adminAfterDraft = await service.UpdatePageDraftAsync(
+            "privacy",
+            "tr",
+            new UpdateAdminPublicPageDraftRequest(
+                version,
+                "Draft Privacy",
+                "Draft subtitle",
+                "Draft SEO",
+                "Draft description",
+                true,
+                0,
+                [new PublicPageBlockDto("draft", "Draft Heading", "Draft body", true, 0, "plain")]),
+            CancellationToken.None);
+        var publicAfterDraft = await service.GetAsync();
+
+        var publicPage = publicAfterDraft.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
+        publicPage.Title.Should().Be("Legacy Privacy");
+        publicPage.Blocks.Single().Body.Should().Be("Legacy body");
+        var adminPage = adminAfterDraft.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
+        adminPage.Title.Should().Be("Draft Privacy");
+        adminPage.Published.Should().NotBeNull();
+        adminPage.Published!.Title.Should().Be("Legacy Privacy");
+        adminPage.PublishedAtUtc.Should().Be(publishedAt);
+
+        await service.PublishPageAsync("privacy", "tr", new PublishAdminPublicPageRequest(adminAfterDraft.Version), CancellationToken.None);
+        var publicAfterPublish = await service.GetAsync();
+
+        publicAfterPublish.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr")
+            .Title.Should().Be("Draft Privacy");
+    }
+
+    [Fact]
     public async Task PublishPageAsync_promotes_draft_to_public_page()
     {
         await using var dbContext = CreateDbContext();
@@ -82,6 +146,27 @@ public sealed class PublicSiteSettingsServiceTests
 
         page.Title.Should().Be("Yayınlanacak Gizlilik");
         page.Blocks.Single().BodyFormat.Should().Be("html");
+    }
+
+    [Fact]
+    public async Task UnpublishPageAsync_preserves_last_published_snapshot()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+        var publicBefore = await service.GetAsync();
+        var version = (await service.GetAdminContentAsync()).Version;
+
+        var adminAfterUnpublish = await service.UnpublishPageAsync(
+            "privacy",
+            "tr",
+            new PublishAdminPublicPageRequest(version),
+            CancellationToken.None);
+
+        var page = adminAfterUnpublish.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
+        page.IsPublished.Should().BeFalse();
+        page.Published.Should().NotBeNull();
+        page.Published!.Title.Should().Be(publicBefore.Pages.Single(publicPage => publicPage.Slug == "privacy" && publicPage.Locale == "tr").Title);
+        page.PublishedAtUtc.Should().NotBeNull();
     }
 
     [Fact]
@@ -334,6 +419,78 @@ public sealed class PublicSiteSettingsServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_PreservesExistingPagePublicationMetadata()
+    {
+        await using var dbContext = CreateDbContext();
+        var draftAt = new DateTime(2026, 1, 3, 10, 0, 0, DateTimeKind.Utc);
+        var publishedAt = new DateTime(2026, 1, 2, 9, 0, 0, DateTimeKind.Utc);
+        var pagesJson = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                id = "tr-terms",
+                slug = "terms",
+                locale = "tr",
+                title = "Stored Draft Terms",
+                subtitle = "Stored draft subtitle",
+                seoTitle = "Stored draft SEO",
+                seoDescription = "Stored draft description",
+                isPublished = false,
+                sortOrder = 0,
+                blocks = new[]
+                {
+                    new { id = "draft", heading = "Draft Heading", body = "Stored draft body", isVisible = true, sortOrder = 0, bodyFormat = "plain" }
+                },
+                published = new
+                {
+                    title = "Published Terms",
+                    subtitle = "Published subtitle",
+                    seoTitle = "Published SEO",
+                    seoDescription = "Published description",
+                    blocks = new[]
+                    {
+                        new { id = "published", heading = "Published Heading", body = "Published body", isVisible = true, sortOrder = 0, bodyFormat = "plain" }
+                    },
+                    publishedAtUtc = publishedAt
+                },
+                draftUpdatedAtUtc = (DateTime?)draftAt,
+                publishedAtUtc = (DateTime?)publishedAt
+            }
+        });
+        dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+        var request = CreateSettingsRequest(
+        [
+            new PublicManagedPageDto(
+                "tr-terms",
+                "terms",
+                "TR",
+                "Settings Draft Terms",
+                "Settings draft subtitle",
+                "Settings draft SEO",
+                "Settings draft description",
+                false,
+                0,
+                [new PublicPageBlockDto("settings-draft", "Settings Draft Heading", "Settings draft body", true, 0)])
+        ]);
+
+        await service.UpdateAsync(request, CancellationToken.None);
+
+        var adminAfterUpdate = await service.GetAdminContentAsync();
+        var adminPage = adminAfterUpdate.Pages.Single(page => page.Slug == "terms" && page.Locale == "tr");
+        adminPage.Title.Should().Be("Settings Draft Terms");
+        adminPage.Published.Should().NotBeNull();
+        adminPage.Published!.Title.Should().Be("Published Terms");
+        adminPage.Published.Blocks.Single().Body.Should().Be("Published body");
+        adminPage.DraftUpdatedAtUtc.Should().Be(draftAt);
+        adminPage.PublishedAtUtc.Should().Be(publishedAt);
+        var publicPage = (await service.GetAsync()).Pages.Single(page => page.Slug == "terms" && page.Locale == "tr");
+        publicPage.Title.Should().Be("Published Terms");
+        publicPage.IsPublished.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task UpdateAsync_RejectsUnsupportedPublicSettingTranslationLocale()
     {
         await using var dbContext = CreateDbContext();
@@ -442,4 +599,51 @@ public sealed class PublicSiteSettingsServiceTests
 
         return new RentACarDbContext(options);
     }
+
+    private static PublicSiteSettings CreateSettingsWithPages(string pagesJson)
+    {
+        var now = new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc);
+        return new PublicSiteSettings
+        {
+            Key = "public-site",
+            CompanyName = "Dvn rent a car",
+            CompanyAddress = "Alanya",
+            CompanyPhone = "+90 555",
+            CompanyEmail = "info@example.test",
+            WorkingHours = "09:00 - 18:00",
+            HeaderLinksJson = "[]",
+            HeroLinksJson = "[]",
+            QuickLinksJson = "[]",
+            SocialLinksJson = "[]",
+            FooterBottomLinksJson = "[]",
+            ContactPageChannelsJson = "[]",
+            ContactPageOfficesJson = "[]",
+            ContactPageWorkingHoursJson = "[]",
+            ContactPageMapTitle = "Map",
+            ContactPageMapEmbedUrl = "https://www.google.com/maps/embed?pb=managed",
+            ContactPageMapIsVisible = true,
+            PagesJson = pagesJson,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
+    private static UpdatePublicSiteSettingsRequest CreateSettingsRequest(IReadOnlyList<PublicManagedPageDto> pages) => new(
+        "Managed Rent",
+        "Alanya",
+        "+90 555",
+        "managed@example.test",
+        "09:00 - 18:00",
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        "Map",
+        "https://www.google.com/maps/embed?pb=managed",
+        true,
+        pages);
 }

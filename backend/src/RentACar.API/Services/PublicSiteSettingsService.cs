@@ -78,7 +78,10 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.ContactPageMapTitle = NormalizeText(normalized.ContactPageMapTitle, 160, "Office Locations Map");
         settings.ContactPageMapEmbedUrl = NormalizeMapEmbedUrl(normalized.ContactPageMapEmbedUrl);
         settings.ContactPageMapIsVisible = normalized.ContactPageMapIsVisible;
-        settings.PagesJson = SerializePages(normalized.Pages, updatedAt);
+        settings.PagesJson = SerializeStoredPages(MergeStoredPagesFromPublicRequest(
+            normalized.Pages,
+            DeserializeStoredPages(settings.PagesJson, DefaultStoredPages()),
+            updatedAt));
         settings.UpdatedAt = updatedAt;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -114,6 +117,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             string.Equals(page.Slug, normalizedSlug, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(page.Locale, normalizedLocale, StringComparison.OrdinalIgnoreCase));
 
+        var published = existing is null ? null : GetPublishedSnapshot(existing);
         var draft = new StoredPublicManagedPageDto
         {
             Id = NormalizeId(existing?.Id ?? string.Empty, $"{normalizedLocale}-{normalizedSlug}"),
@@ -126,9 +130,9 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             IsPublished = existing?.IsPublished ?? false,
             SortOrder = Math.Max(0, request.SortOrder),
             Blocks = NormalizePageBlocks(request.Blocks, maxCount: 24),
-            Published = existing?.Published,
+            Published = published,
             DraftUpdatedAtUtc = updatedAt,
-            PublishedAtUtc = existing?.PublishedAtUtc
+            PublishedAtUtc = existing?.PublishedAtUtc ?? published?.PublishedAtUtc
         };
 
         if (existing is null)
@@ -837,6 +841,65 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             })
             .ToList();
     }
+
+    private static IReadOnlyList<StoredPublicManagedPageDto> MergeStoredPagesFromPublicRequest(
+        IReadOnlyList<PublicManagedPageDto> pages,
+        IReadOnlyList<StoredPublicManagedPageDto> existingPages,
+        DateTime updatedAt)
+    {
+        var existingByKey = existingPages
+            .GroupBy(page => PageKey(page.Locale, page.Slug), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        return pages
+            .OrderBy(page => page.SortOrder)
+            .Select(page =>
+            {
+                existingByKey.TryGetValue(PageKey(page.Locale, page.Slug), out var existing);
+                var published = existing is null
+                    ? CreatePublishedSnapshot(page, updatedAt)
+                    : GetPublishedSnapshot(existing);
+
+                if (existing is not null && published is null && page.IsPublished)
+                {
+                    published = CreatePublishedSnapshot(page, updatedAt);
+                }
+
+                return new StoredPublicManagedPageDto
+                {
+                    Id = page.Id,
+                    Slug = page.Slug,
+                    Locale = page.Locale,
+                    Title = page.Title,
+                    Subtitle = page.Subtitle,
+                    SeoTitle = page.SeoTitle,
+                    SeoDescription = page.SeoDescription,
+                    IsPublished = page.IsPublished,
+                    SortOrder = page.SortOrder,
+                    Blocks = page.Blocks,
+                    Published = published,
+                    DraftUpdatedAtUtc = existing?.DraftUpdatedAtUtc ?? updatedAt,
+                    PublishedAtUtc = existing?.PublishedAtUtc ?? published?.PublishedAtUtc
+                };
+            })
+            .ToList();
+    }
+
+    private static PublicPagePublishedSnapshotDto? CreatePublishedSnapshot(PublicManagedPageDto page, DateTime updatedAt)
+    {
+        return page.IsPublished
+            ? new PublicPagePublishedSnapshotDto(
+                page.Title,
+                page.Subtitle,
+                page.SeoTitle,
+                page.SeoDescription,
+                page.Blocks,
+                updatedAt)
+            : null;
+    }
+
+    private static string PageKey(string locale, string slug) =>
+        $"{NormalizeLocale(locale)}:{NormalizeSlug(slug)}";
 
     private static IReadOnlyList<StoredPublicManagedPageDto> DefaultStoredPages()
     {
