@@ -269,6 +269,17 @@ describe("PublicContentPage", () => {
         contactPageMapTitle: "Kaydedilmemiş Başlık",
       }),
     );
+
+    await user.clear(screen.getByLabelText("Harita Başlığı"));
+    await user.type(screen.getByLabelText("Harita Başlığı"), "İkinci Kayıt");
+    await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
+
+    expect(updateAdminPublicContactMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        version: "2",
+        contactPageMapTitle: "İkinci Kayıt",
+      }),
+    );
   });
 
   it("publishes and unpublishes the selected page", async () => {
