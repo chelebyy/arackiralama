@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,41 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
         return Map(settings, paymentMethods);
     }
+
+    public async Task<AdminPublicContentDto> GetAdminContentAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await GetOrCreateAsync(cancellationToken);
+        var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
+        var dto = Map(settings, paymentMethods);
+
+        return ToAdminContentDto(settings, dto);
+    }
+
+    public Task<AdminPublicContentDto> UpdatePageDraftAsync(
+        string slug,
+        string locale,
+        UpdateAdminPublicPageDraftRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Task 2 draft behavior is not implemented yet.");
+
+    public Task<AdminPublicContentDto> PublishPageAsync(
+        string slug,
+        string locale,
+        PublishAdminPublicPageRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Task 2 publish behavior is not implemented yet.");
+
+    public Task<AdminPublicContentDto> UnpublishPageAsync(
+        string slug,
+        string locale,
+        PublishAdminPublicPageRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Task 2 unpublish behavior is not implemented yet.");
+
+    public Task<AdminPublicContentDto> UpdateContactContentAsync(
+        UpdateAdminPublicContactRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Task 2 contact update behavior is not implemented yet.");
 
     private async Task<PublicSiteSettings> GetOrCreateAsync(CancellationToken cancellationToken)
     {
@@ -617,6 +653,46 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             paymentMethods.AnyActionableEnabled),
         paymentMethods.OnlinePaymentEnabled,
         settings.UpdatedAt);
+
+    private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings, PublicSiteSettingsDto dto)
+    {
+        var version = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
+        var pages = dto.Pages
+            .Select(page => new AdminPublicManagedPageDto(
+                page.Id,
+                page.Slug,
+                page.Locale,
+                page.Title,
+                page.Subtitle,
+                page.SeoTitle,
+                page.SeoDescription,
+                page.IsPublished,
+                page.SortOrder,
+                page.Blocks,
+                page.IsPublished
+                    ? new PublicPagePublishedSnapshotDto(
+                        page.Title,
+                        page.Subtitle,
+                        page.SeoTitle,
+                        page.SeoDescription,
+                        page.Blocks,
+                        settings.UpdatedAt)
+                    : null,
+                settings.UpdatedAt,
+                page.IsPublished ? settings.UpdatedAt : null))
+            .ToList();
+
+        return new AdminPublicContentDto(
+            version,
+            settings.UpdatedAt,
+            pages,
+            dto.ContactPageChannels,
+            dto.ContactPageOffices,
+            dto.ContactPageWorkingHours,
+            dto.ContactPageMapTitle,
+            dto.ContactPageMapEmbedUrl,
+            dto.ContactPageMapIsVisible);
+    }
 
     private static IReadOnlyList<PublicSiteLinkDto> DefaultHeaderLinks() =>
     [

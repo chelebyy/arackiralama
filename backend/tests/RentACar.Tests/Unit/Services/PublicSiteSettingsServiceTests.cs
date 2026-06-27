@@ -11,6 +11,18 @@ namespace RentACar.Tests.Unit.Services;
 public sealed class PublicSiteSettingsServiceTests
 {
     [Fact]
+    public async Task GetAdminContentAsync_returns_versioned_page_content()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var content = await service.GetAdminContentAsync();
+
+        content.Version.Should().NotBeNullOrWhiteSpace();
+        content.Pages.Should().Contain(page => page.Slug == "privacy" && page.Locale == "tr");
+    }
+
+    [Fact]
     public async Task GetAsync_WhenMissing_CreatesDefaultSettings()
     {
         await using var dbContext = CreateDbContext();
