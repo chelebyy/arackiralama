@@ -147,4 +147,29 @@ describe("ManagedPageContent", () => {
     expect(await screen.findByText("safe")).toBeInTheDocument();
     expect(screen.queryByText("alert(1)")).not.toBeInTheDocument();
   });
+
+  it("keeps plain page blocks escaped instead of rendering html", async () => {
+    mockedGetPublicSiteSettings.mockResolvedValue({
+      pages: [
+        {
+          ...managedPage("en", "English Managed Privacy"),
+          blocks: [
+            {
+              id: "plain-block",
+              heading: "Plain",
+              body: "<strong>Plain safe text</strong>",
+              bodyFormat: "plain",
+              isVisible: true,
+              sortOrder: 0,
+            },
+          ],
+        },
+      ],
+    } as any);
+
+    renderManagedPage();
+
+    expect(await screen.findByText("<strong>Plain safe text</strong>")).toBeInTheDocument();
+    expect(screen.queryByText("Plain safe text")).not.toBeInTheDocument();
+  });
 });
