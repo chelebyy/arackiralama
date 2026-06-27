@@ -6,6 +6,7 @@ import {
   getAdminPublicContent,
   publishAdminPublicPage,
   unpublishAdminPublicPage,
+  updateAdminPublicContact,
   updateAdminPublicPageDraft,
 } from "@/lib/api/admin/publicContent";
 import type { AdminPublicContent } from "@/lib/api/admin/types";
@@ -39,11 +40,59 @@ const adminContentFixture: AdminPublicContent = {
       publishedAtUtc: null,
     },
   ],
-  contactPageChannels: [],
-  contactPageOffices: [],
-  contactPageWorkingHours: [],
-  contactPageMapTitle: "",
-  contactPageMapEmbedUrl: "",
+  contactPageChannels: [
+    {
+      id: "contact-whatsapp",
+      type: "whatsapp",
+      label: "WhatsApp",
+      value: "+90 555 000 00 00",
+      href: "https://wa.me/905550000000",
+      description: "Hızlı destek",
+      isVisible: true,
+      sortOrder: 2,
+      translations: {
+        en: {
+          label: "WhatsApp",
+          description: "Fast support",
+        },
+      },
+    },
+  ],
+  contactPageOffices: [
+    {
+      id: "office-alanya",
+      name: "Alanya Ofis",
+      address: "Saray Mahallesi",
+      phone: "+90 242 000 00 00",
+      hours: "09:00-18:00",
+      type: "main",
+      isVisible: true,
+      sortOrder: 1,
+      translations: {
+        en: {
+          name: "Alanya Office",
+          address: "Saray District",
+        },
+      },
+    },
+  ],
+  contactPageWorkingHours: [
+    {
+      id: "hours-weekday",
+      day: "Hafta içi",
+      hours: "09:00-18:00",
+      isVisible: true,
+      sortOrder: 1,
+      translations: {
+        en: {
+          day: "Weekdays",
+          hours: "09:00-18:00",
+        },
+      },
+    },
+  ],
+  contactPageMapTitle: "Alanya Merkez",
+  contactPageMapEmbedUrl: "https://maps.example/embed",
   contactPageMapIsVisible: true,
 };
 
@@ -51,12 +100,14 @@ vi.mock("@/lib/api/admin/publicContent", () => ({
   getAdminPublicContent: vi.fn(),
   publishAdminPublicPage: vi.fn(),
   unpublishAdminPublicPage: vi.fn(),
+  updateAdminPublicContact: vi.fn(),
   updateAdminPublicPageDraft: vi.fn(),
 }));
 
 const getAdminPublicContentMock = vi.mocked(getAdminPublicContent);
 const publishAdminPublicPageMock = vi.mocked(publishAdminPublicPage);
 const unpublishAdminPublicPageMock = vi.mocked(unpublishAdminPublicPage);
+const updateAdminPublicContactMock = vi.mocked(updateAdminPublicContact);
 const updateAdminPublicPageDraftMock = vi.mocked(updateAdminPublicPageDraft);
 
 function renderPublicContentPage(swrValue = {}) {
@@ -72,10 +123,12 @@ describe("PublicContentPage", () => {
     getAdminPublicContentMock.mockReset();
     publishAdminPublicPageMock.mockReset();
     unpublishAdminPublicPageMock.mockReset();
+    updateAdminPublicContactMock.mockReset();
     updateAdminPublicPageDraftMock.mockReset();
     getAdminPublicContentMock.mockResolvedValue(adminContentFixture);
     publishAdminPublicPageMock.mockResolvedValue(adminContentFixture);
     unpublishAdminPublicPageMock.mockResolvedValue(adminContentFixture);
+    updateAdminPublicContactMock.mockResolvedValue(adminContentFixture);
     updateAdminPublicPageDraftMock.mockResolvedValue(adminContentFixture);
   });
 
@@ -125,6 +178,41 @@ describe("PublicContentPage", () => {
             id: "privacy-body",
             bodyFormat: "html",
             sortOrder: 0,
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("saves contact map content", async () => {
+    const user = userEvent.setup();
+    updateAdminPublicContactMock.mockResolvedValue(adminContentFixture);
+    getAdminPublicContentMock.mockResolvedValue(adminContentFixture);
+
+    renderPublicContentPage();
+
+    await user.click(await screen.findByRole("tab", { name: "İletişim" }));
+    await user.clear(screen.getByLabelText("Harita Başlığı"));
+    await user.type(screen.getByLabelText("Harita Başlığı"), "Alanya Ofisleri");
+    await user.clear(screen.getByLabelText("Kanal 1 Etiket"));
+    await user.type(screen.getByLabelText("Kanal 1 Etiket"), "WhatsApp Destek");
+    await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
+
+    expect(updateAdminPublicContactMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: "1",
+        contactPageMapTitle: "Alanya Ofisleri",
+        contactPageChannels: [
+          expect.objectContaining({
+            id: "contact-whatsapp",
+            label: "WhatsApp Destek",
+            sortOrder: 2,
+            translations: {
+              en: {
+                label: "WhatsApp",
+                description: "Fast support",
+              },
+            },
           }),
         ],
       }),

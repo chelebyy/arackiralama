@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminPublicContent } from "@/lib/api/admin/publicContent";
 import type { AdminPublicContent } from "@/lib/api/admin/types";
+import ContactContentEditor from "./ContactContentEditor";
 import PageContentEditor from "./PageContentEditor";
 
 const PUBLIC_CONTENT_CACHE_KEY = "admin-public-content";
@@ -67,26 +68,20 @@ export default function PublicContentManager() {
           </TabsContent>
 
           <TabsContent value="contact">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">İletişim</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
-                {isLoading || !data ? (
-                  <>
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </>
-                ) : (
-                  <>
-                    <div>{data.contactPageChannels.length} kanal</div>
-                    <div>{data.contactPageOffices.length} ofis</div>
-                    <div>{data.contactPageWorkingHours.length} çalışma saati</div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            {isLoading || !data ? (
+              <div className="space-y-3 rounded-md border p-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : (
+              <ContactContentEditor
+                content={data}
+                onContentChange={(nextContent) => {
+                  void mutate(nextContent, false);
+                }}
+              />
+            )}
           </TabsContent>
         </Tabs>
       )}
