@@ -10,6 +10,7 @@ import {
   updateAdminPublicPageDraft,
 } from "@/lib/api/admin/publicContent";
 import type { AdminPublicContent } from "@/lib/api/admin/types";
+import ContactContentEditor from "@/components/admin/public-content/ContactContentEditor";
 import PublicContentPage from "./page";
 
 const adminContentFixture: AdminPublicContent = {
@@ -194,14 +195,23 @@ describe("PublicContentPage", () => {
     await user.click(await screen.findByRole("tab", { name: "İletişim" }));
     await user.clear(screen.getByLabelText("Harita Başlığı"));
     await user.type(screen.getByLabelText("Harita Başlığı"), "Alanya Ofisleri");
+    await user.clear(screen.getByLabelText("Google Maps Embed URL"));
+    await user.type(screen.getByLabelText("Google Maps Embed URL"), "https://maps.example/new");
+    await user.click(screen.getByLabelText("Harita görünür"));
     await user.clear(screen.getByLabelText("Kanal 1 Etiket"));
     await user.type(screen.getByLabelText("Kanal 1 Etiket"), "WhatsApp Destek");
+    await user.clear(screen.getByLabelText("Ofis 1 Ad"));
+    await user.type(screen.getByLabelText("Ofis 1 Ad"), "Damlataş Ofis");
+    await user.clear(screen.getByLabelText("Saat 1"));
+    await user.type(screen.getByLabelText("Saat 1"), "10:00-19:00");
     await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
 
     expect(updateAdminPublicContactMock).toHaveBeenCalledWith(
       expect.objectContaining({
         version: "1",
         contactPageMapTitle: "Alanya Ofisleri",
+        contactPageMapEmbedUrl: "https://maps.example/new",
+        contactPageMapIsVisible: false,
         contactPageChannels: [
           expect.objectContaining({
             id: "contact-whatsapp",
@@ -215,8 +225,41 @@ describe("PublicContentPage", () => {
             },
           }),
         ],
+        contactPageOffices: [
+          expect.objectContaining({
+            id: "office-alanya",
+            name: "Damlataş Ofis",
+            sortOrder: 1,
+          }),
+        ],
+        contactPageWorkingHours: [
+          expect.objectContaining({
+            id: "hours-weekday",
+            hours: "10:00-19:00",
+            sortOrder: 1,
+          }),
+        ],
       }),
     );
+  });
+
+  it("keeps unsaved contact edits when refreshed content arrives", async () => {
+    const user = userEvent.setup();
+    const refreshedContent = {
+      ...adminContentFixture,
+      version: "2",
+      contactPageMapTitle: "Sunucu Yenilemesi",
+    };
+    const onContentChange = vi.fn();
+    const { rerender } = render(
+      <ContactContentEditor content={adminContentFixture} onContentChange={onContentChange} />,
+    );
+
+    await user.clear(screen.getByLabelText("Harita Başlığı"));
+    await user.type(screen.getByLabelText("Harita Başlığı"), "Kaydedilmemiş Başlık");
+    rerender(<ContactContentEditor content={refreshedContent} onContentChange={onContentChange} />);
+
+    expect(screen.getByLabelText("Harita Başlığı")).toHaveValue("Kaydedilmemiş Başlık");
   });
 
   it("publishes and unpublishes the selected page", async () => {

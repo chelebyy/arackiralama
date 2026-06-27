@@ -33,20 +33,26 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
   const [offices, setOffices] = useState(() => cloneOffices(content.contactPageOffices));
   const [workingHours, setWorkingHours] = useState(() => cloneWorkingHours(content.contactPageWorkingHours));
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    if (isDirty) {
+      return;
+    }
+
     setMapTitle(content.contactPageMapTitle);
     setMapEmbedUrl(content.contactPageMapEmbedUrl);
     setMapIsVisible(content.contactPageMapIsVisible);
     setChannels(cloneChannels(content.contactPageChannels));
     setOffices(cloneOffices(content.contactPageOffices));
     setWorkingHours(cloneWorkingHours(content.contactPageWorkingHours));
-  }, [content]);
+  }, [content, isDirty]);
 
   const updateChannel = (
     channelIndex: number,
     patch: Partial<Pick<PublicContactChannel, "label" | "value" | "href" | "description" | "type" | "isVisible">>,
   ) => {
+    setIsDirty(true);
     setChannels((currentChannels) =>
       currentChannels.map((channel, index) => (index === channelIndex ? { ...channel, ...patch } : channel)),
     );
@@ -56,6 +62,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     officeIndex: number,
     patch: Partial<Pick<PublicContactOffice, "name" | "address" | "phone" | "hours" | "type" | "isVisible">>,
   ) => {
+    setIsDirty(true);
     setOffices((currentOffices) =>
       currentOffices.map((office, index) => (index === officeIndex ? { ...office, ...patch } : office)),
     );
@@ -65,6 +72,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     workingHourIndex: number,
     patch: Partial<Pick<PublicContactWorkingHour, "day" | "hours" | "isVisible">>,
   ) => {
+    setIsDirty(true);
     setWorkingHours((currentWorkingHours) =>
       currentWorkingHours.map((workingHour, index) =>
         index === workingHourIndex ? { ...workingHour, ...patch } : workingHour,
@@ -86,6 +94,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
         contactPageMapIsVisible: mapIsVisible,
       });
 
+      setIsDirty(false);
       onContentChange(nextContent);
       toast.success("İletişim içeriği kaydedildi.");
     } catch (error) {
@@ -116,7 +125,10 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
             <Input
               id="contact-map-title"
               value={mapTitle}
-              onChange={(event) => setMapTitle(event.target.value)}
+              onChange={(event) => {
+                setIsDirty(true);
+                setMapTitle(event.target.value);
+              }}
             />
           </div>
           <div className="space-y-2">
@@ -124,12 +136,22 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
             <Input
               id="contact-map-embed-url"
               value={mapEmbedUrl}
-              onChange={(event) => setMapEmbedUrl(event.target.value)}
+              onChange={(event) => {
+                setIsDirty(true);
+                setMapEmbedUrl(event.target.value);
+              }}
             />
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Switch id="contact-map-visible" checked={mapIsVisible} onCheckedChange={setMapIsVisible} />
+          <Switch
+            id="contact-map-visible"
+            checked={mapIsVisible}
+            onCheckedChange={(isVisible) => {
+              setIsDirty(true);
+              setMapIsVisible(isVisible);
+            }}
+          />
           <Label htmlFor="contact-map-visible">Harita görünür</Label>
         </div>
       </section>
