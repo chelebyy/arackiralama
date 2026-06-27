@@ -18,6 +18,6 @@ test.describe("Admin Public Site Settings", () => {
 
     await expect(page.getByRole("heading", { name: "İçerik Yönetimi" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Sayfalar" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "İletişim" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "İletişim", exact: true })).toBeVisible();
   });
 });
