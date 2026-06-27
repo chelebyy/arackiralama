@@ -202,12 +202,15 @@ export interface PublicContactWorkingHour {
   translations?: PublicLocalizedTextMap | null;
 }
 
+export type PublicPageBlockBodyFormat = 'plain' | 'html';
+
 export interface PublicPageBlock {
   id: string;
   heading: string;
   body: string;
   isVisible: boolean;
   sortOrder: number;
+  bodyFormat?: PublicPageBlockBodyFormat;
 }
 
 export interface PublicManagedPage {
@@ -221,6 +224,54 @@ export interface PublicManagedPage {
   isPublished: boolean;
   sortOrder: number;
   blocks: PublicPageBlock[];
+}
+
+export interface PublicPagePublishedSnapshot {
+  title: string;
+  subtitle: string;
+  seoTitle: string;
+  seoDescription: string;
+  blocks: PublicPageBlock[];
+  publishedAtUtc: string | null;
+}
+
+export interface AdminPublicManagedPage extends PublicManagedPage {
+  published: PublicPagePublishedSnapshot | null;
+  draftUpdatedAtUtc: string | null;
+  publishedAtUtc: string | null;
+}
+
+export interface AdminPublicContent {
+  version: string;
+  updatedAt: string;
+  pages: AdminPublicManagedPage[];
+  contactPageChannels: PublicContactChannel[];
+  contactPageOffices: PublicContactOffice[];
+  contactPageWorkingHours: PublicContactWorkingHour[];
+  contactPageMapTitle: string;
+  contactPageMapEmbedUrl: string;
+  contactPageMapIsVisible: boolean;
+}
+
+export interface UpdateAdminPublicPageDraftData {
+  version: string;
+  title: string;
+  subtitle: string;
+  seoTitle: string;
+  seoDescription: string;
+  isPublished: boolean;
+  sortOrder: number;
+  blocks: PublicPageBlock[];
+}
+
+export interface UpdateAdminPublicContactData {
+  version: string;
+  contactPageChannels: PublicContactChannel[];
+  contactPageOffices: PublicContactOffice[];
+  contactPageWorkingHours: PublicContactWorkingHour[];
+  contactPageMapTitle: string;
+  contactPageMapEmbedUrl: string;
+  contactPageMapIsVisible: boolean;
 }
 
 export interface PublicPaymentMethods {

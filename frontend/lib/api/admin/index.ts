@@ -5,4 +5,5 @@ export * from './pricing';
 export * from './users';
 export * from './reports';
 export * from './settings';
+export * from './publicContent';
 export type { PaginatedResponse } from '../types';

@@ -438,3 +438,121 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     );
   });
 });
+
+describe("admin public content API", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("gets admin public content", async () => {
+    const publicContent = {
+      version: "1",
+      updatedAt: "2026-06-27T00:00:00Z",
+      pages: [],
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "Map",
+      contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
+      contactPageMapIsVisible: true,
+    };
+    mockedGet.mockResolvedValueOnce({ data: publicContent } as never);
+
+    const { getAdminPublicContent } = await import("./publicContent");
+
+    await expect(getAdminPublicContent()).resolves.toBe(publicContent);
+
+    expect(mockedGet).toHaveBeenCalledWith("/v1/public-content");
+  });
+
+  it("updates an admin public page draft through the public-content endpoint", async () => {
+    mockedPut.mockResolvedValueOnce({
+      data: { version: "2", updatedAt: "2026-06-27T00:00:00Z", pages: [] },
+    } as never);
+
+    const { updateAdminPublicPageDraft } = await import("./publicContent");
+
+    await updateAdminPublicPageDraft("privacy", "tr", {
+      version: "1",
+      title: "Title",
+      subtitle: "",
+      seoTitle: "",
+      seoDescription: "",
+      isPublished: true,
+      sortOrder: 0,
+      blocks: [],
+    });
+
+    expect(mockedPut).toHaveBeenCalledWith("/v1/public-content/pages/privacy/tr/draft", {
+      version: "1",
+      title: "Title",
+      subtitle: "",
+      seoTitle: "",
+      seoDescription: "",
+      isPublished: true,
+      sortOrder: 0,
+      blocks: [],
+    });
+  });
+
+  it("publishes and unpublishes public pages through encoded page endpoints", async () => {
+    const publicContent = {
+      version: "4",
+      updatedAt: "2026-06-27T00:00:00Z",
+      pages: [],
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "",
+      contactPageMapEmbedUrl: "",
+      contactPageMapIsVisible: false,
+    };
+    mockedPost.mockResolvedValue({ data: publicContent } as never);
+
+    const { publishAdminPublicPage, unpublishAdminPublicPage } = await import("./publicContent");
+
+    await expect(publishAdminPublicPage("terms & fees", "en", "2")).resolves.toBe(publicContent);
+    await expect(unpublishAdminPublicPage("terms & fees", "en", "3")).resolves.toBe(publicContent);
+
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      1,
+      "/v1/public-content/pages/terms%20%26%20fees/en/publish",
+      { version: "2" }
+    );
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      2,
+      "/v1/public-content/pages/terms%20%26%20fees/en/unpublish",
+      { version: "3" }
+    );
+  });
+
+  it("updates admin public contact content", async () => {
+    const publicContent = {
+      version: "6",
+      updatedAt: "2026-06-27T00:00:00Z",
+      pages: [],
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "Map",
+      contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
+      contactPageMapIsVisible: true,
+    };
+    const updateData = {
+      version: "5",
+      contactPageChannels: [],
+      contactPageOffices: [],
+      contactPageWorkingHours: [],
+      contactPageMapTitle: "Map",
+      contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
+      contactPageMapIsVisible: true,
+    };
+    mockedPut.mockResolvedValueOnce({ data: publicContent } as never);
+
+    const { updateAdminPublicContact } = await import("./publicContent");
+
+    await expect(updateAdminPublicContact(updateData)).resolves.toBe(publicContent);
+
+    expect(mockedPut).toHaveBeenCalledWith("/v1/public-content/contact", updateData);
+  });
+});
