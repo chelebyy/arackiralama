@@ -232,7 +232,7 @@ export interface PublicPagePublishedSnapshot {
   seoTitle: string;
   seoDescription: string;
   blocks: PublicPageBlock[];
-  publishedAtUtc: string | null;
+  publishedAtUtc: string;
 }
 
 export interface AdminPublicManagedPage extends PublicManagedPage {

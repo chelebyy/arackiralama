@@ -466,13 +466,12 @@ describe("admin public content API", () => {
   });
 
   it("updates an admin public page draft through the public-content endpoint", async () => {
-    mockedPut.mockResolvedValueOnce({
-      data: { version: "2", updatedAt: "2026-06-27T00:00:00Z", pages: [] },
-    } as never);
+    const content = { version: "2", updatedAt: "2026-06-27T00:00:00Z", pages: [] };
+    mockedPut.mockResolvedValueOnce({ data: content } as never);
 
     const { updateAdminPublicPageDraft } = await import("./publicContent");
 
-    await updateAdminPublicPageDraft("privacy", "tr", {
+    const result = await updateAdminPublicPageDraft("privacy", "tr", {
       version: "1",
       title: "Title",
       subtitle: "",
@@ -483,6 +482,7 @@ describe("admin public content API", () => {
       blocks: [],
     });
 
+    expect(result).toEqual(content);
     expect(mockedPut).toHaveBeenCalledWith("/v1/public-content/pages/privacy/tr/draft", {
       version: "1",
       title: "Title",
