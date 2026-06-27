@@ -27,6 +27,7 @@ public interface IReservationRepository : IRepository<Reservation>
         ReservationStatus? status = null,
         DateTime? fromDate = null,
         DateTime? toDate = null,
+        string? searchTerm = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);

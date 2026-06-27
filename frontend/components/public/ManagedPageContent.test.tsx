@@ -11,20 +11,20 @@ vi.mock("@/lib/api/publicSiteSettings", () => ({
 
 const mockedGetPublicSiteSettings = vi.mocked(getPublicSiteSettings);
 
-function renderManagedPage(slug = "privacy") {
+function renderManagedPage(slug = "privacy", withChildren = true) {
   return render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
       <ManagedPageContent slug={slug}>
-        <div>Static English Privacy</div>
+        {withChildren ? <div>Static English Privacy</div> : undefined}
       </ManagedPageContent>
     </SWRConfig>
   );
 }
 
-function managedPage(locale: string, title: string) {
+function managedPage(locale: string, title: string, slug = "privacy") {
   return {
-    id: `${locale}-privacy`,
-    slug: "privacy",
+    id: `${locale}-${slug}`,
+    slug,
     locale,
     title,
     subtitle: "Managed subtitle",
@@ -73,6 +73,18 @@ describe("ManagedPageContent", () => {
     renderManagedPage();
 
     expect(await screen.findByRole("heading", { name: "English Managed Privacy" })).toBeInTheDocument();
+    expect(screen.queryByText("Static English Privacy")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the published source page for custom routes without locale content", async () => {
+    window.history.pushState({}, "", "/en/useful-guide");
+    mockedGetPublicSiteSettings.mockResolvedValue({
+      pages: [managedPage("tr", "Turkish Managed Guide", "useful-guide")],
+    } as any);
+
+    renderManagedPage("useful-guide", false);
+
+    expect(await screen.findByRole("heading", { name: "Turkish Managed Guide" })).toBeInTheDocument();
     expect(screen.queryByText("Static English Privacy")).not.toBeInTheDocument();
   });
 });

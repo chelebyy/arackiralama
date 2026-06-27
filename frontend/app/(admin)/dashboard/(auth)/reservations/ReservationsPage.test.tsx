@@ -197,7 +197,7 @@ describe("ReservationsPage", () => {
       expect(useAdminReservationsMock).toHaveBeenLastCalledWith({
         page: 1,
         pageSize: 10,
-        search: "egea",
+        searchTerm: "egea",
       });
     });
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();

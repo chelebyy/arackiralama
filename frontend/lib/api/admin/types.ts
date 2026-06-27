@@ -329,6 +329,7 @@ export interface VehicleListParams extends AdminListParams {
 }
 
 export interface ReservationListParams extends AdminListParams {
+  searchTerm?: string;
   status?: Reservation['status'];
   pickupOfficeId?: string;
   returnOfficeId?: string;

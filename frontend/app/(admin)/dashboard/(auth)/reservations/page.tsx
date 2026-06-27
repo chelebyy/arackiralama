@@ -109,7 +109,7 @@ export default function ReservationsPage() {
 
   const params: Record<string, unknown> = { page, pageSize: 10 };
   if (statusFilter !== "ALL") params.status = statusFilter;
-  if (search.trim()) params.search = search.trim();
+  if (search.trim()) params.searchTerm = search.trim();
 
   const { reservations, pagination, isLoading, isError, mutate } =
     useAdminReservations(params);

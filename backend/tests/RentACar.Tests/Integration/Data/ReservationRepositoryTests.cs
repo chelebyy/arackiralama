@@ -523,6 +523,52 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
     }
 
     [Fact]
+    public async Task SearchReservationsAsync_WithSearchTerm_MatchesCustomerCodeAndVehicleFields()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var repository = new ReservationRepository(dbContext);
+
+        var customerByName = new Customer { FullName = "Leyla Demir", Email = "leyla@test.com", Phone = "+90 555 000 0101" };
+        var customerByCode = new Customer { FullName = "Code Customer", Email = "code@test.com", Phone = "+90 555 000 0102" };
+        var customerByVehicle = new Customer { FullName = "Vehicle Customer", Email = "vehicle@test.com", Phone = "+90 555 000 0103" };
+        var office = new Office { Name = "Office", Code = "office-search-term", Address = "Addr", Phone = "+90 555 000 0000" };
+        var group = new VehicleGroup
+        {
+            NameTr = "Test",
+            NameEn = "Test",
+            NameRu = "Test",
+            NameAr = "Test",
+            NameDe = "Test",
+            DepositAmount = 1000,
+            MinAge = 21,
+            MinLicenseYears = 2
+        };
+        var clio = new Vehicle { Plate = "07LYL101", Brand = "Renault", Model = "Clio", Group = group, Office = office, Status = VehicleStatus.Available };
+        var corsa = new Vehicle { Plate = "07COD102", Brand = "Opel", Model = "Corsa", Group = group, Office = office, Status = VehicleStatus.Available };
+        var egea = new Vehicle { Plate = "07VHC103", Brand = "Fiat", Model = "Egea", Group = group, Office = office, Status = VehicleStatus.Available };
+        var baseDate = new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc);
+
+        dbContext.Customers.AddRange(customerByName, customerByCode, customerByVehicle);
+        dbContext.Offices.Add(office);
+        dbContext.VehicleGroups.Add(group);
+        dbContext.Vehicles.AddRange(clio, corsa, egea);
+        dbContext.Reservations.AddRange(
+            new Reservation { PublicCode = "NAME-MATCH", Customer = customerByName, Vehicle = clio, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(1), ReturnDateTime = baseDate.AddDays(2), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseDate.AddMinutes(1) },
+            new Reservation { PublicCode = "CODE-SEVEN", Customer = customerByCode, Vehicle = corsa, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(3), ReturnDateTime = baseDate.AddDays(4), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseDate.AddMinutes(2) },
+            new Reservation { PublicCode = "VEHICLE-MATCH", Customer = customerByVehicle, Vehicle = egea, PickupOffice = office, ReturnOffice = office, PickupDateTime = baseDate.AddDays(5), ReturnDateTime = baseDate.AddDays(6), Status = ReservationStatus.Paid, TotalAmount = 1000, CreatedAt = baseDate.AddMinutes(3) });
+
+        await dbContext.SaveChangesAsync();
+
+        var customerResults = await repository.SearchReservationsAsync(searchTerm: "leyla");
+        var codeResults = await repository.SearchReservationsAsync(searchTerm: "code-seven");
+        var vehicleResults = await repository.SearchReservationsAsync(searchTerm: "egea");
+
+        customerResults.Select(r => r.PublicCode).Should().ContainSingle().Which.Should().Be("NAME-MATCH");
+        codeResults.Select(r => r.PublicCode).Should().ContainSingle().Which.Should().Be("CODE-SEVEN");
+        vehicleResults.Select(r => r.PublicCode).Should().ContainSingle().Which.Should().Be("VEHICLE-MATCH");
+    }
+
+    [Fact]
     public async Task GetByVehicleIdAsync_ReturnsVehicleReservationsOrderedByPickupDate()
     {
         using var dbContext = _dbContextFactory.CreateContext();

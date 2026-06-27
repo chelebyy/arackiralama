@@ -10,8 +10,24 @@ type ManagedPageContentProps = {
   children?: ReactNode;
 };
 
-function findPage(pages: PublicManagedPage[] | undefined, slug: string, locale: string) {
-  return pages?.find((page) => page.slug === slug && page.locale === locale);
+function findPage(
+  pages: PublicManagedPage[] | undefined,
+  slug: string,
+  locale: string,
+  allowLocaleFallback = false,
+) {
+  const slugPages = pages?.filter((page) => page.slug === slug);
+  const exactPage = slugPages?.find((page) => page.locale === locale);
+
+  if (exactPage || !allowLocaleFallback) {
+    return exactPage;
+  }
+
+  return (
+    slugPages?.find((page) => page.locale === "tr" && page.isPublished) ??
+    slugPages?.find((page) => page.isPublished) ??
+    slugPages?.[0]
+  );
 }
 
 function splitParagraphs(value: string) {
@@ -92,7 +108,7 @@ export default function ManagedPageContent({ slug, children }: ManagedPageConten
     shouldRetryOnError: false,
   });
 
-  const managedPage = findPage(settings?.pages, slug, locale);
+  const managedPage = findPage(settings?.pages, slug, locale, children === undefined);
 
   if (!settings) {
     return <>{children ?? <NotPublishedPage />}</>;
