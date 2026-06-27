@@ -517,6 +517,19 @@ export default function SystemSettingsPage() {
     pages.append(createManagedPageDraft(slug, locale, currentPages.length, source));
   };
 
+  const syncCustomPageSlug = (currentSlug: string, nextSlug: string) => {
+    const currentPages = form.getValues("pages") ?? [];
+
+    currentPages.forEach((page, index) => {
+      if (page.slug === currentSlug) {
+        form.setValue(`pages.${index}.slug`, nextSlug, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+    });
+  };
+
   const pageGroups = groupManagedPages(watchedPages ?? []);
 
   const onSubmit = async (data: PublicSiteSettingsFormData) => {
@@ -1000,7 +1013,21 @@ export default function SystemSettingsPage() {
                                 <FormField control={form.control} name={`pages.${pageIndex}.slug`} render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Sayfa Yolu</FormLabel>
-                                    <FormControl><Input readOnly={isBuiltInPage} placeholder="about" {...field} /></FormControl>
+                                    <FormControl>
+                                      <Input
+                                        readOnly={isBuiltInPage}
+                                        placeholder="about"
+                                        {...field}
+                                        onChange={(event) => {
+                                          if (isBuiltInPage) {
+                                            field.onChange(event);
+                                            return;
+                                          }
+
+                                          syncCustomPageSlug(group.slug, event.target.value);
+                                        }}
+                                      />
+                                    </FormControl>
                                     <FormMessage />
                                   </FormItem>
                                 )} />

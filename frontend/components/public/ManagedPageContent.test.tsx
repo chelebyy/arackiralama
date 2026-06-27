@@ -21,7 +21,7 @@ function renderManagedPage(slug = "privacy", withChildren = true) {
   );
 }
 
-function managedPage(locale: string, title: string, slug = "privacy") {
+function managedPage(locale: string, title: string, slug = "privacy", isPublished = true) {
   return {
     id: `${locale}-${slug}`,
     slug,
@@ -30,7 +30,7 @@ function managedPage(locale: string, title: string, slug = "privacy") {
     subtitle: "Managed subtitle",
     seoTitle: title,
     seoDescription: "Managed description",
-    isPublished: true,
+    isPublished,
     sortOrder: 0,
     blocks: [
       {
@@ -74,6 +74,18 @@ describe("ManagedPageContent", () => {
 
     expect(await screen.findByRole("heading", { name: "English Managed Privacy" })).toBeInTheDocument();
     expect(screen.queryByText("Static English Privacy")).not.toBeInTheDocument();
+  });
+
+  it("keeps static page content when the exact locale managed page is a draft", async () => {
+    mockedGetPublicSiteSettings.mockResolvedValue({
+      pages: [managedPage("en", "Draft English Privacy", "privacy", false)],
+    } as any);
+
+    renderManagedPage();
+
+    await waitFor(() => expect(mockedGetPublicSiteSettings).toHaveBeenCalled());
+    expect(screen.getByText("Static English Privacy")).toBeInTheDocument();
+    expect(screen.queryByText("Draft English Privacy")).not.toBeInTheDocument();
   });
 
   it("falls back to the published source page for custom routes without locale content", async () => {

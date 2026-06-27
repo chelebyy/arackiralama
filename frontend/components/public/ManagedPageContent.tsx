@@ -119,7 +119,7 @@ export default function ManagedPageContent({ slug, children }: ManagedPageConten
   }
 
   if (!managedPage.isPublished) {
-    return <NotPublishedPage />;
+    return <>{children ?? <NotPublishedPage />}</>;
   }
 
   return <ManagedPage page={managedPage} />;

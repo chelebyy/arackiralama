@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SystemSettingsPage from "./page";
@@ -141,6 +141,48 @@ describe("SystemSettingsPage", () => {
         }),
       ],
     });
+  });
+
+  it("syncs custom page slug changes across locale translations", async () => {
+    const user = userEvent.setup();
+    mocks.usePublicSiteSettings.mockReturnValue({
+      settings: {
+        ...baseSettings,
+        pages: [
+          {
+            ...baseSettings.pages[0],
+            id: "tr-guide",
+            slug: "alanya-guide",
+            locale: "tr",
+            title: "Alanya Rehberi",
+          },
+          {
+            ...baseSettings.pages[0],
+            id: "en-guide",
+            slug: "alanya-guide",
+            locale: "en",
+            title: "Alanya Guide",
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      mutate: mocks.mutate,
+    });
+
+    render(<SystemSettingsPage />);
+
+    const slugInput = (await screen.findAllByDisplayValue("alanya-guide"))[0];
+    fireEvent.change(slugInput, { target: { value: "airport-guide" } });
+    await user.click(screen.getByRole("button", { name: "Kaydet" }));
+
+    await waitFor(() => expect(mocks.mutateUpdatePublicSiteSettings).toHaveBeenCalled());
+    const payload = mocks.mutateUpdatePublicSiteSettings.mock.calls[0][0] as typeof baseSettings;
+    const customPageSlugs = payload.pages
+      .filter((page) => page.locale === "tr" || page.locale === "en")
+      .map((page) => page.slug);
+
+    expect(customPageSlugs).toEqual(["airport-guide", "airport-guide"]);
   });
 
   it("saves locale-specific labels for public navigation links", async () => {
