@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   MapPin,
   Phone,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import ContactForm from "@/components/public/ContactForm";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicContactChannel, PublicContactOffice, PublicContactWorkingHour } from "@/lib/api/admin/types";
+import { getLocalizedPublicSettingText } from "@/lib/public-settings-localization";
 
 function getChannelIcon(type: string) {
   if (type === "whatsapp") return MessageCircle;
@@ -51,6 +52,7 @@ const defaultMapEmbedUrl =
 
 export default function ContactPage() {
   const t = useTranslations("contactUs");
+  const locale = useLocale();
   const { data: settings } = useSWR("public-site-settings", getPublicSiteSettings, {
     revalidateOnFocus: false,
   });
@@ -148,9 +150,28 @@ export default function ContactPage() {
     { id: "holidays", day: t("days.holidays"), hours: "10:00 - 16:00", isVisible: true, sortOrder: 3 },
   ];
 
-  const channels = sortedVisible(settings?.contactPageChannels ?? defaultChannels);
-  const offices = sortedVisible(settings?.contactPageOffices ?? defaultOffices);
-  const workingHours = sortedVisible(settings?.contactPageWorkingHours ?? defaultWorkingHours);
+  const channels = sortedVisible(settings?.contactPageChannels ?? defaultChannels).map((channel) => ({
+    ...channel,
+    label: getLocalizedPublicSettingText(channel.translations, locale, "label", channel.label),
+    value: getLocalizedPublicSettingText(channel.translations, locale, "value", channel.value),
+    description: getLocalizedPublicSettingText(
+      channel.translations,
+      locale,
+      "description",
+      channel.description
+    ),
+  }));
+  const offices = sortedVisible(settings?.contactPageOffices ?? defaultOffices).map((office) => ({
+    ...office,
+    name: getLocalizedPublicSettingText(office.translations, locale, "name", office.name),
+    address: getLocalizedPublicSettingText(office.translations, locale, "address", office.address),
+    hours: getLocalizedPublicSettingText(office.translations, locale, "hours", office.hours),
+  }));
+  const workingHours = sortedVisible(settings?.contactPageWorkingHours ?? defaultWorkingHours).map((item) => ({
+    ...item,
+    day: getLocalizedPublicSettingText(item.translations, locale, "day", item.day),
+    hours: getLocalizedPublicSettingText(item.translations, locale, "hours", item.hours),
+  }));
   const mapTitle = settings?.contactPageMapTitle ?? "Office Locations Map";
   const mapEmbedUrl = settings?.contactPageMapEmbedUrl ?? defaultMapEmbedUrl;
   const isMapVisible = settings?.contactPageMapIsVisible ?? true;

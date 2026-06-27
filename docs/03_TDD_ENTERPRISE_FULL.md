@@ -1231,6 +1231,36 @@ else
 }
 ```
 
+## 10.8 Admin-Managed Public Content Localization
+
+Public legal/contact/navigation content can be managed from the admin dashboard without redeploying message files.
+
+- `PublicSiteSettings` remains a singleton JSON-backed configuration entity. The JSON columns keep the schema migration-free for managed content additions.
+- Base fields (`label`, `value`, `description`, `name`, `address`, `hours`, `day`) remain the Turkish/default fallback for older records and for incomplete translations.
+- Optional `translations` maps are supported on:
+  - `PublicSiteLinkDto` for header, hero CTA, quick links, and footer bottom links.
+  - `PublicContactChannelDto` for contact label/value/description.
+  - `PublicContactOfficeDto` for office name/address/hours.
+  - `PublicContactWorkingHourDto` for day/hours rows.
+- Supported managed-content locale keys are limited to `tr`, `en`, `ru`, `ar`, and `de`. Unsupported keys are rejected during `PublicSiteSettingsService.UpdateAsync`.
+- Public consumers resolve content with locale-specific override first, then base field fallback. This keeps existing records backward-compatible while allowing complete five-language content entry.
+
+Example link payload:
+
+```json
+{
+  "id": "vehicles",
+  "label": "Araçlar",
+  "href": "/vehicles",
+  "isVisible": true,
+  "sortOrder": 0,
+  "translations": {
+    "en": { "label": "Vehicles" },
+    "de": { "label": "Fahrzeuge" }
+  }
+}
+```
+
 
 ------------------------------------------------------------------------
 

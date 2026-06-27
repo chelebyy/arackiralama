@@ -180,6 +180,7 @@ Multi-language support with 5 languages:
 - **Locale path routing**: `/tr/`, `/en/`, `/ru/`, `/ar/`, `/de/`
 - **RTL support**: Conditional CSS direction for Arabic
 - **Admin panel**: Single language (Turkish only)
+- **Admin-managed public content**: Public legal/contact/navigation content is stored in `PublicSiteSettings` JSON sections with base fields as the fallback and optional `translations.{locale}.{field}` overrides for `tr`, `en`, `ru`, `ar`, and `de`. The admin UI remains Turkish, but public content editors expose five locale tabs for managed pages, header/footer links, hero CTA, and contact-page rows.
 
 ## 10. URL Structure & Routing
 

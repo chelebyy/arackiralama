@@ -12,6 +12,7 @@ vi.mock("next-intl", () => ({
       ["trustBadge", "headline", "subtitle", "ctaPrimary", "features.insurance", "features.support", "features.price", "features.delivery"].includes(key);
     return t;
   },
+  useLocale: () => "en",
 }));
 
 vi.mock("swr", () => ({
@@ -60,7 +61,14 @@ describe("Hero", () => {
     useSWRMock.mockReturnValue({
       data: {
         heroLinks: [
-          { id: "ctaPrimary", label: "Managed Fleet", href: "/managed-fleet", isVisible: true, sortOrder: 0 },
+          {
+            id: "ctaPrimary",
+            label: "Managed Fleet",
+            href: "/managed-fleet",
+            isVisible: true,
+            sortOrder: 0,
+            translations: { en: { label: "English Fleet CTA" } },
+          },
           { id: "ctaSecondary", label: "Hidden Booking", href: "/booking", isVisible: true, sortOrder: 1 },
         ],
       },
@@ -68,7 +76,7 @@ describe("Hero", () => {
 
     render(<Hero />);
 
-    expect(screen.getByRole("link", { name: "ctaPrimary" })).toHaveAttribute("href", "/managed-fleet");
+    expect(screen.getByRole("link", { name: "English Fleet CTA" })).toHaveAttribute("href", "/managed-fleet");
     expect(screen.queryByText("Hidden Booking")).not.toBeInTheDocument();
   });
 });

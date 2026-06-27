@@ -171,7 +171,7 @@ describe("ReservationsPage", () => {
     );
   });
 
-  it("filters the rendered rows by search text without hiding matching vehicle fallback values", async () => {
+  it("sends search text to the reservations hook and resets pagination without locally hiding rows", async () => {
     const user = userEvent.setup();
     useAdminReservationsMock.mockReturnValue({
       reservations,
@@ -183,9 +183,24 @@ describe("ReservationsPage", () => {
 
     render(<ReservationsPage />);
 
+    await user.click(screen.getAllByRole("button", { name: "" }).at(-1)!);
+    await waitFor(() => {
+      expect(useAdminReservationsMock).toHaveBeenLastCalledWith({
+        page: 2,
+        pageSize: 10,
+      });
+    });
+
     await user.type(screen.getByPlaceholderText("Ara..."), "egea");
 
-    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(useAdminReservationsMock).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 10,
+        search: "egea",
+      });
+    });
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("Fiat Egea")).toBeInTheDocument();
   });
@@ -317,19 +332,16 @@ describe("ReservationsPage", () => {
     });
   });
 
-  it("shows the empty state when no reservations match", async () => {
-    const user = userEvent.setup();
+  it("shows the empty state when the API returns no reservations", () => {
     useAdminReservationsMock.mockReturnValue({
-      reservations,
-      pagination: basePagination,
+      reservations: [],
+      pagination: null,
       isLoading: false,
       isError: false,
       mutate: vi.fn(),
     });
 
     render(<ReservationsPage />);
-
-    await user.type(screen.getByPlaceholderText("Ara..."), "missing");
 
     expect(screen.getByText("Rezervasyon bulunamadı")).toBeInTheDocument();
   });

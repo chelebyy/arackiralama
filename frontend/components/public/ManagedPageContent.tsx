@@ -11,11 +11,7 @@ type ManagedPageContentProps = {
 };
 
 function findPage(pages: PublicManagedPage[] | undefined, slug: string, locale: string) {
-  return (
-    pages?.find((page) => page.slug === slug && page.locale === locale) ??
-    pages?.find((page) => page.slug === slug && page.locale === "tr") ??
-    pages?.find((page) => page.slug === slug)
-  );
+  return pages?.find((page) => page.slug === slug && page.locale === locale);
 }
 
 function splitParagraphs(value: string) {

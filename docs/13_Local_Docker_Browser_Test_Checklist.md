@@ -3,6 +3,8 @@
 Date: 2026-06-03
 Scope: Production release rehearsal on local Docker before live deployment
 
+Latest delta evidence: 2026-06-27 admin public-site localization smoke rerun on local Docker. `rentacar-web` was rebuilt from current frontend code; `rentacar-api`, `rentacar-postgres`, and `rentacar-redis` stayed on the local compose stack. Playwright selected Docker suite passed **17/17** against `http://localhost:3001`, including the new admin public settings smoke for five-language managed-content controls.
+
 ------------------------------------------------------------------------
 
 ## 1. Goal

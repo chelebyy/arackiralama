@@ -138,12 +138,27 @@ export interface FeatureFlag {
   description: string;
 }
 
+export type PublicSettingsLocale = 'tr' | 'en' | 'ru' | 'ar' | 'de';
+
+export interface PublicLocalizedText {
+  label?: string | null;
+  value?: string | null;
+  description?: string | null;
+  name?: string | null;
+  address?: string | null;
+  hours?: string | null;
+  day?: string | null;
+}
+
+export type PublicLocalizedTextMap = Partial<Record<PublicSettingsLocale | string, PublicLocalizedText>>;
+
 export interface PublicSiteLink {
   id: string;
   label: string;
   href: string;
   isVisible: boolean;
   sortOrder: number;
+  translations?: PublicLocalizedTextMap | null;
 }
 
 export interface PublicSocialLink {
@@ -163,6 +178,7 @@ export interface PublicContactChannel {
   description: string;
   isVisible: boolean;
   sortOrder: number;
+  translations?: PublicLocalizedTextMap | null;
 }
 
 export interface PublicContactOffice {
@@ -174,6 +190,7 @@ export interface PublicContactOffice {
   type: 'main' | 'airport' | 'branch' | string;
   isVisible: boolean;
   sortOrder: number;
+  translations?: PublicLocalizedTextMap | null;
 }
 
 export interface PublicContactWorkingHour {
@@ -182,6 +199,7 @@ export interface PublicContactWorkingHour {
   hours: string;
   isVisible: boolean;
   sortOrder: number;
+  translations?: PublicLocalizedTextMap | null;
 }
 
 export interface PublicPageBlock {

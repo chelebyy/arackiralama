@@ -1,4 +1,4 @@
-import nextPlugin from "@next/eslint-plugin-next";
+import nextPlugin from "@next/eslint-plugin-next/dist/index.js";
 import reactPlugin from "eslint-plugin-react";
 import hooksPlugin from "eslint-plugin-react-hooks";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";

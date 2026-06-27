@@ -38,6 +38,14 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         "airport",
         "branch"
     };
+    private static readonly HashSet<string> SupportedPublicLocales = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "tr",
+        "en",
+        "ru",
+        "ar",
+        "de"
+    };
 
     public async Task<PublicSiteSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -207,7 +215,14 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                 var id = NormalizeId(link.Id, $"link-{index + 1}");
                 var label = NormalizeText(link.Label, 80, "Bağlantı");
                 var href = NormalizeInternalHref(link.Href);
-                return link with { Id = id, Label = label, Href = href, SortOrder = index };
+                return link with
+                {
+                    Id = id,
+                    Label = label,
+                    Href = href,
+                    SortOrder = index,
+                    Translations = NormalizeTranslations(link.Translations, labelMax: 80)
+                };
             })
             .ToList();
     }
@@ -255,7 +270,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                     Value = NormalizeText(channel.Value, 120, "-"),
                     Href = NormalizeContactHref(channel.Href, type),
                     Description = NormalizeText(channel.Description, 180, string.Empty),
-                    SortOrder = index
+                    SortOrder = index,
+                    Translations = NormalizeTranslations(
+                        channel.Translations,
+                        labelMax: 80,
+                        valueMax: 120,
+                        descriptionMax: 180)
                 };
             })
             .ToList();
@@ -281,7 +301,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                     Phone = NormalizeText(office.Phone, 80, "-"),
                     Hours = NormalizeText(office.Hours, 80, "-"),
                     Type = type,
-                    SortOrder = index
+                    SortOrder = index,
+                    Translations = NormalizeTranslations(
+                        office.Translations,
+                        nameMax: 120,
+                        addressMax: 240,
+                        hoursMax: 80)
                 };
             })
             .ToList();
@@ -296,7 +321,8 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                 Id = NormalizeId(row.Id, $"hours-{index + 1}"),
                 Day = NormalizeText(row.Day, 80, "Gün"),
                 Hours = NormalizeText(row.Hours, 80, "-"),
-                SortOrder = index
+                SortOrder = index,
+                Translations = NormalizeTranslations(row.Translations, dayMax: 80, hoursMax: 80)
             })
             .ToList();
     }
@@ -433,6 +459,72 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         }
 
         return normalized;
+    }
+
+    private static string? NormalizeOptionalText(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var normalized = value.Trim();
+        return normalized.Length > maxLength ? normalized[..maxLength] : normalized;
+    }
+
+    private static IReadOnlyDictionary<string, PublicLocalizedTextDto>? NormalizeTranslations(
+        IReadOnlyDictionary<string, PublicLocalizedTextDto>? translations,
+        int labelMax = 0,
+        int valueMax = 0,
+        int descriptionMax = 0,
+        int nameMax = 0,
+        int addressMax = 0,
+        int hoursMax = 0,
+        int dayMax = 0)
+    {
+        if (translations is null || translations.Count == 0)
+        {
+            return null;
+        }
+
+        var normalized = new SortedDictionary<string, PublicLocalizedTextDto>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (localeKey, text) in translations)
+        {
+            if (text is null)
+            {
+                continue;
+            }
+
+            var locale = NormalizeText(localeKey, 12, string.Empty).ToLowerInvariant();
+            if (!SupportedPublicLocales.Contains(locale))
+            {
+                throw new ArgumentException($"Desteklenmeyen public site dili: {locale}");
+            }
+
+            var localized = new PublicLocalizedTextDto(
+                Label: labelMax > 0 ? NormalizeOptionalText(text.Label, labelMax) : null,
+                Value: valueMax > 0 ? NormalizeOptionalText(text.Value, valueMax) : null,
+                Description: descriptionMax > 0 ? NormalizeOptionalText(text.Description, descriptionMax) : null,
+                Name: nameMax > 0 ? NormalizeOptionalText(text.Name, nameMax) : null,
+                Address: addressMax > 0 ? NormalizeOptionalText(text.Address, addressMax) : null,
+                Hours: hoursMax > 0 ? NormalizeOptionalText(text.Hours, hoursMax) : null,
+                Day: dayMax > 0 ? NormalizeOptionalText(text.Day, dayMax) : null);
+
+            if (
+                localized.Label is not null ||
+                localized.Value is not null ||
+                localized.Description is not null ||
+                localized.Name is not null ||
+                localized.Address is not null ||
+                localized.Hours is not null ||
+                localized.Day is not null)
+            {
+                normalized[locale] = localized;
+            }
+        }
+
+        return normalized.Count == 0 ? null : normalized;
     }
 
     private static string SerializeLinks(IReadOnlyList<PublicSiteLinkDto> links) =>

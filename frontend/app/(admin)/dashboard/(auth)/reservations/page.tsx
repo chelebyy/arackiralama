@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -116,6 +116,10 @@ export default function ReservationsPage() {
   const { vehicles } = useAdminVehicles({ page: 1, pageSize: 100 });
   const { offices } = useAdminOffices();
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
   const handleCancel = async (id: string) => {
     try {
       await mutateCancelReservation(id, "Admin tarafından iptal");
@@ -155,15 +159,6 @@ export default function ReservationsPage() {
       setIsCreatingManual(false);
     }
   };
-
-  const filtered = reservations.filter((r) => {
-    const q = search.toLowerCase();
-    if (!q) return true;
-    const name = (r.customerName || r.customer?.name || "").toLowerCase();
-    const code = (r.reservationCode || "").toLowerCase();
-    const vehicle = (r.vehicleName || r.vehicle?.name || "").toLowerCase();
-    return name.includes(q) || code.includes(q) || vehicle.includes(q);
-  });
 
   return (
     <Card>
@@ -225,7 +220,7 @@ export default function ReservationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {reservations.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.reservationCode}</TableCell>
                       <TableCell>{r.customerName || r.customer?.name || "—"}</TableCell>
@@ -261,7 +256,7 @@ export default function ReservationsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filtered.length === 0 && (
+                  {reservations.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={8}

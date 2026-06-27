@@ -21,6 +21,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicSiteLink } from "@/lib/api/admin/types";
 import { isPublicSiteLinkVisible } from "@/lib/public-page-visibility";
+import { getLocalizedPublicSettingText } from "@/lib/public-settings-localization";
 
 const defaultHeaderLinks = [
   { id: "home", label: "", href: "/", isVisible: true, sortOrder: 0 },
@@ -68,8 +69,10 @@ export default function Header() {
   const navLinks = headerLinks.filter((link) => link.id !== "login" && link.id !== "trackReservation");
   const loginLink = headerLinks.find((link) => link.id === "login");
   const trackingLink = headerLinks.find((link) => link.id === "trackReservation");
-  const getLabel = (link: PublicSiteLink) =>
-    hasTranslation(t, link.id) ? t(link.id) : link.label || link.id;
+  const getLabel = (link: PublicSiteLink) => {
+    const fallback = hasTranslation(t, link.id) ? t(link.id) : link.label || link.id;
+    return getLocalizedPublicSettingText(link.translations, locale, "label", fallback);
+  };
   const companyName = settings?.companyName?.trim() || defaultCompanyName;
 
   return (
