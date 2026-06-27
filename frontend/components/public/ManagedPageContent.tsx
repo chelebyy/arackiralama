@@ -19,13 +19,14 @@ function findPage(
   const slugPages = pages?.filter((page) => page.slug === slug);
   const exactPage = slugPages?.find((page) => page.locale === locale);
 
-  if (exactPage || !allowLocaleFallback) {
+  if (!allowLocaleFallback || exactPage?.isPublished) {
     return exactPage;
   }
 
   return (
     slugPages?.find((page) => page.locale === "tr" && page.isPublished) ??
     slugPages?.find((page) => page.isPublished) ??
+    exactPage ??
     slugPages?.[0]
   );
 }

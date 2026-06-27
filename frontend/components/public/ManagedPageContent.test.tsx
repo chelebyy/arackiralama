@@ -99,4 +99,19 @@ describe("ManagedPageContent", () => {
     expect(await screen.findByRole("heading", { name: "Turkish Managed Guide" })).toBeInTheDocument();
     expect(screen.queryByText("Static English Privacy")).not.toBeInTheDocument();
   });
+
+  it("falls back to the published source page when the custom locale copy is still a draft", async () => {
+    window.history.pushState({}, "", "/en/useful-guide");
+    mockedGetPublicSiteSettings.mockResolvedValue({
+      pages: [
+        managedPage("tr", "Turkish Managed Guide", "useful-guide"),
+        managedPage("en", "Draft English Guide", "useful-guide", false),
+      ],
+    } as any);
+
+    renderManagedPage("useful-guide", false);
+
+    expect(await screen.findByRole("heading", { name: "Turkish Managed Guide" })).toBeInTheDocument();
+    expect(screen.queryByText("Draft English Guide")).not.toBeInTheDocument();
+  });
 });
