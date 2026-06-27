@@ -7,11 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminPublicContent } from "@/lib/api/admin/publicContent";
 import type { AdminPublicContent } from "@/lib/api/admin/types";
+import PageContentEditor from "./PageContentEditor";
 
 const PUBLIC_CONTENT_CACHE_KEY = "admin-public-content";
 
 export default function PublicContentManager() {
-  const { data, error, isLoading } = useSWR<AdminPublicContent>(
+  const { data, error, isLoading, mutate } = useSWR<AdminPublicContent>(
     PUBLIC_CONTENT_CACHE_KEY,
     () => getAdminPublicContent(),
   );
@@ -50,21 +51,19 @@ export default function PublicContentManager() {
           </TabsList>
 
           <TabsContent value="pages">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Sayfalar</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {isLoading || !data ? (
-                  <>
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                  </>
-                ) : (
-                  <div className="text-sm text-muted-foreground">{data.pages.length} sayfa</div>
-                )}
-              </CardContent>
-            </Card>
+            {isLoading || !data ? (
+              <div className="space-y-3 rounded-md border p-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : (
+              <PageContentEditor
+                content={data}
+                onContentChange={(nextContent) => {
+                  void mutate(nextContent, false);
+                }}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="contact">
