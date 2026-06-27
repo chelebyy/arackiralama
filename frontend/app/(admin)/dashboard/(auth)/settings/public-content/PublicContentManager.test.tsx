@@ -243,7 +243,7 @@ describe("PublicContentPage", () => {
     );
   });
 
-  it("keeps unsaved contact edits when refreshed content arrives", async () => {
+  it("keeps unsaved contact edits and base version when refreshed content arrives", async () => {
     const user = userEvent.setup();
     const refreshedContent = {
       ...adminContentFixture,
@@ -251,6 +251,7 @@ describe("PublicContentPage", () => {
       contactPageMapTitle: "Sunucu Yenilemesi",
     };
     const onContentChange = vi.fn();
+    updateAdminPublicContactMock.mockResolvedValue(refreshedContent);
     const { rerender } = render(
       <ContactContentEditor content={adminContentFixture} onContentChange={onContentChange} />,
     );
@@ -260,6 +261,14 @@ describe("PublicContentPage", () => {
     rerender(<ContactContentEditor content={refreshedContent} onContentChange={onContentChange} />);
 
     expect(screen.getByLabelText("Harita Başlığı")).toHaveValue("Kaydedilmemiş Başlık");
+
+    await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
+    expect(updateAdminPublicContactMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: "1",
+        contactPageMapTitle: "Kaydedilmemiş Başlık",
+      }),
+    );
   });
 
   it("publishes and unpublishes the selected page", async () => {

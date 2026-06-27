@@ -34,6 +34,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
   const [workingHours, setWorkingHours] = useState(() => cloneWorkingHours(content.contactPageWorkingHours));
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [draftVersion, setDraftVersion] = useState(content.version);
 
   useEffect(() => {
     if (isDirty) {
@@ -46,6 +47,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     setChannels(cloneChannels(content.contactPageChannels));
     setOffices(cloneOffices(content.contactPageOffices));
     setWorkingHours(cloneWorkingHours(content.contactPageWorkingHours));
+    setDraftVersion(content.version);
   }, [content, isDirty]);
 
   const updateChannel = (
@@ -85,7 +87,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
 
     try {
       const nextContent = await updateAdminPublicContact({
-        version: content.version,
+        version: draftVersion,
         contactPageChannels: channels,
         contactPageOffices: offices,
         contactPageWorkingHours: workingHours,
@@ -95,6 +97,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
       });
 
       setIsDirty(false);
+      setDraftVersion(nextContent.version);
       onContentChange(nextContent);
       toast.success("İletişim içeriği kaydedildi.");
     } catch (error) {
