@@ -14,16 +14,10 @@ test.describe("Admin Public Site Settings", () => {
     await loginPage.login(ADMIN_USER.email, ADMIN_USER.password);
     await loginPage.expectLoginSuccess();
 
-    await page.goto("/dashboard/settings/system");
+    await page.goto("/dashboard/settings/public-content");
 
-    await expect(page.getByText("Public Site Ayarları")).toBeVisible();
-    await expect(page.getByText("Sayfalar")).toBeVisible();
-    await expect(page.getByText(/5 dil/).first()).toBeVisible();
-    await expect(page.getByText("Dil bazlı içerik").first()).toBeVisible();
-
-    await page.getByRole("tab", { name: "EN" }).first().click();
-
-    await expect(page.getByPlaceholder("Bu dilde bağlantı başlığı").first()).toBeVisible();
-    await expect(page.getByPlaceholder("Bu dilde kanal başlığı").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "İçerik Yönetimi" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Sayfalar" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "İletişim" })).toBeVisible();
   });
 });
