@@ -59,7 +59,8 @@ public sealed record PublicPageBlockDto(
     string Heading,
     string Body,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    string BodyFormat = "plain");
 
 public sealed record PublicManagedPageDto(
     string Id,

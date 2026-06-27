@@ -23,6 +23,92 @@ public sealed class PublicSiteSettingsServiceTests
     }
 
     [Fact]
+    public async Task UpdatePageDraftAsync_does_not_change_public_page_until_publish()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+        var before = await service.GetAsync();
+        var version = (await service.GetAdminContentAsync()).Version;
+
+        await service.UpdatePageDraftAsync(
+            "privacy",
+            "tr",
+            new UpdateAdminPublicPageDraftRequest(
+                version,
+                "Taslak Gizlilik",
+                "Taslak alt başlık",
+                "Taslak SEO",
+                "Taslak SEO açıklaması",
+                true,
+                0,
+                [
+                    new PublicPageBlockDto("block-1", "Taslak Bölüm", "<p>Taslak içerik</p>", true, 0, "html")
+                ]),
+            CancellationToken.None);
+
+        var publicAfterDraft = await service.GetAsync();
+
+        publicAfterDraft.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr")
+            .Title.Should().Be(before.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr").Title);
+    }
+
+    [Fact]
+    public async Task PublishPageAsync_promotes_draft_to_public_page()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+        var version = (await service.GetAdminContentAsync()).Version;
+
+        var afterDraft = await service.UpdatePageDraftAsync(
+            "privacy",
+            "tr",
+            new UpdateAdminPublicPageDraftRequest(
+                version,
+                "Yayınlanacak Gizlilik",
+                "Yeni alt başlık",
+                "Yeni SEO",
+                "Yeni SEO açıklaması",
+                true,
+                0,
+                [
+                    new PublicPageBlockDto("block-1", "Yeni Bölüm", "<p>Yeni içerik</p>", true, 0, "html")
+                ]),
+            CancellationToken.None);
+
+        await service.PublishPageAsync("privacy", "tr", new PublishAdminPublicPageRequest(afterDraft.Version), CancellationToken.None);
+
+        var publicAfterPublish = await service.GetAsync();
+        var page = publicAfterPublish.Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
+
+        page.Title.Should().Be("Yayınlanacak Gizlilik");
+        page.Blocks.Single().BodyFormat.Should().Be("html");
+    }
+
+    [Fact]
+    public async Task UpdatePageDraftAsync_rejects_stale_version()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var act = () => service.UpdatePageDraftAsync(
+            "privacy",
+            "tr",
+            new UpdateAdminPublicPageDraftRequest(
+                "1",
+                "Stale",
+                "",
+                "",
+                "",
+                true,
+                0,
+                [new PublicPageBlockDto("block-1", "Bölüm", "İçerik", true, 0, "plain")]),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Public content was updated by another session. Reload before saving.");
+    }
+
+    [Fact]
     public async Task GetAsync_WhenMissing_CreatesDefaultSettings()
     {
         await using var dbContext = CreateDbContext();

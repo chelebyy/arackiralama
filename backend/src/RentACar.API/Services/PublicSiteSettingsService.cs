@@ -60,6 +60,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     {
         var normalized = Normalize(request);
         var settings = await GetOrCreateAsync(cancellationToken);
+        var updatedAt = DateTime.UtcNow;
 
         settings.CompanyName = normalized.CompanyName.Trim();
         settings.CompanyAddress = normalized.CompanyAddress.Trim();
@@ -77,8 +78,8 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.ContactPageMapTitle = NormalizeText(normalized.ContactPageMapTitle, 160, "Office Locations Map");
         settings.ContactPageMapEmbedUrl = NormalizeMapEmbedUrl(normalized.ContactPageMapEmbedUrl);
         settings.ContactPageMapIsVisible = normalized.ContactPageMapIsVisible;
-        settings.PagesJson = SerializePages(normalized.Pages);
-        settings.UpdatedAt = DateTime.UtcNow;
+        settings.PagesJson = SerializePages(normalized.Pages, updatedAt);
+        settings.UpdatedAt = updatedAt;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
@@ -93,31 +94,135 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         return ToAdminContentDto(settings);
     }
 
-    public Task<AdminPublicContentDto> UpdatePageDraftAsync(
+    public async Task<AdminPublicContentDto> UpdatePageDraftAsync(
         string slug,
         string locale,
         UpdateAdminPublicPageDraftRequest request,
-        CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("Task 2 draft behavior is not implemented yet.");
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await GetOrCreateAsync(cancellationToken);
+        EnsureVersion(settings, request.Version);
 
-    public Task<AdminPublicContentDto> PublishPageAsync(
+        var normalizedSlug = NormalizeSlug(slug);
+        var normalizedLocale = NormalizeLocale(locale);
+        var updatedAt = DateTime.UtcNow;
+        var pages = DeserializeStoredPages(settings.PagesJson, DefaultStoredPages())
+            .OrderBy(page => page.SortOrder)
+            .ToList();
+
+        var existing = pages.FirstOrDefault(page =>
+            string.Equals(page.Slug, normalizedSlug, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(page.Locale, normalizedLocale, StringComparison.OrdinalIgnoreCase));
+
+        var draft = new StoredPublicManagedPageDto
+        {
+            Id = NormalizeId(existing?.Id ?? string.Empty, $"{normalizedLocale}-{normalizedSlug}"),
+            Slug = normalizedSlug,
+            Locale = normalizedLocale,
+            Title = NormalizeText(request.Title, 160, "Sayfa"),
+            Subtitle = NormalizeText(request.Subtitle, 300, string.Empty),
+            SeoTitle = NormalizeText(request.SeoTitle, 160, request.Title),
+            SeoDescription = NormalizeText(request.SeoDescription, 300, request.Subtitle),
+            IsPublished = existing?.IsPublished ?? false,
+            SortOrder = Math.Max(0, request.SortOrder),
+            Blocks = NormalizePageBlocks(request.Blocks, maxCount: 24),
+            Published = existing?.Published,
+            DraftUpdatedAtUtc = updatedAt,
+            PublishedAtUtc = existing?.PublishedAtUtc
+        };
+
+        if (existing is null)
+        {
+            pages.Add(draft);
+        }
+        else
+        {
+            var index = pages.IndexOf(existing);
+            pages[index] = draft;
+        }
+
+        settings.PagesJson = SerializeStoredPages(pages);
+        settings.UpdatedAt = updatedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return ToAdminContentDto(settings);
+    }
+
+    public async Task<AdminPublicContentDto> PublishPageAsync(
         string slug,
         string locale,
         PublishAdminPublicPageRequest request,
-        CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("Task 2 publish behavior is not implemented yet.");
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await GetOrCreateAsync(cancellationToken);
+        EnsureVersion(settings, request.Version);
 
-    public Task<AdminPublicContentDto> UnpublishPageAsync(
+        var pages = DeserializeStoredPages(settings.PagesJson, DefaultStoredPages()).ToList();
+        var page = GetStoredPage(pages, slug, locale);
+        var updatedAt = DateTime.UtcNow;
+
+        page.Published = new PublicPagePublishedSnapshotDto(
+            page.Title,
+            page.Subtitle,
+            page.SeoTitle,
+            page.SeoDescription,
+            page.Blocks,
+            updatedAt);
+        page.IsPublished = true;
+        page.PublishedAtUtc = updatedAt;
+        page.DraftUpdatedAtUtc ??= updatedAt;
+        settings.PagesJson = SerializeStoredPages(pages);
+        settings.UpdatedAt = updatedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return ToAdminContentDto(settings);
+    }
+
+    public async Task<AdminPublicContentDto> UnpublishPageAsync(
         string slug,
         string locale,
         PublishAdminPublicPageRequest request,
-        CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("Task 2 unpublish behavior is not implemented yet.");
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await GetOrCreateAsync(cancellationToken);
+        EnsureVersion(settings, request.Version);
 
-    public Task<AdminPublicContentDto> UpdateContactContentAsync(
+        var pages = DeserializeStoredPages(settings.PagesJson, DefaultStoredPages()).ToList();
+        var page = GetStoredPage(pages, slug, locale);
+        var updatedAt = DateTime.UtcNow;
+
+        page.IsPublished = false;
+        if (IsBuiltInPage(page.Slug) && page.DraftUpdatedAtUtc is null)
+        {
+            page.DraftUpdatedAtUtc = updatedAt;
+        }
+
+        settings.PagesJson = SerializeStoredPages(pages);
+        settings.UpdatedAt = updatedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return ToAdminContentDto(settings);
+    }
+
+    public async Task<AdminPublicContentDto> UpdateContactContentAsync(
         UpdateAdminPublicContactRequest request,
-        CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("Task 2 contact update behavior is not implemented yet.");
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await GetOrCreateAsync(cancellationToken);
+        EnsureVersion(settings, request.Version);
+        var updatedAt = DateTime.UtcNow;
+
+        settings.ContactPageChannelsJson = SerializeContactChannels(NormalizeContactChannels(request.ContactPageChannels, maxCount: 8));
+        settings.ContactPageOfficesJson = SerializeContactOffices(NormalizeContactOffices(request.ContactPageOffices, maxCount: 8));
+        settings.ContactPageWorkingHoursJson = SerializeContactWorkingHours(NormalizeContactWorkingHours(request.ContactPageWorkingHours, maxCount: 8));
+        settings.ContactPageMapTitle = NormalizeText(request.ContactPageMapTitle, 160, "Office Locations Map");
+        settings.ContactPageMapEmbedUrl = NormalizeMapEmbedUrl(request.ContactPageMapEmbedUrl);
+        settings.ContactPageMapIsVisible = request.ContactPageMapIsVisible;
+        settings.UpdatedAt = updatedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return ToAdminContentDto(settings);
+    }
 
     private async Task<PublicSiteSettings> GetOrCreateAsync(CancellationToken cancellationToken)
     {
@@ -148,7 +253,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
             if (ShouldSeedPages(settings))
             {
-                settings.PagesJson = SerializePages(DefaultPages());
+                settings.PagesJson = SerializePages(DefaultPages(), DateTime.UtcNow);
                 settings.UpdatedAt = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
@@ -168,29 +273,34 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         return settings;
     }
 
-    private static PublicSiteSettings CreateDefaultSettings() => new()
+    private static PublicSiteSettings CreateDefaultSettings()
     {
-        Key = SingletonKey,
-        CompanyName = DefaultCompanyName,
-        CompanyAddress = "Alanya, Antalya, Türkiye",
-        CompanyPhone = "+90 555 555 01 00",
-        CompanyEmail = "contact@alanyacarrental.com",
-        WorkingHours = "08:00 - 22:00",
-        HeaderLinksJson = SerializeLinks(DefaultHeaderLinks()),
-        HeroLinksJson = SerializeLinks(DefaultHeroLinks()),
-        QuickLinksJson = SerializeLinks(DefaultQuickLinks()),
-        SocialLinksJson = SerializeSocialLinks(DefaultSocialLinks()),
-        FooterBottomLinksJson = SerializeLinks(DefaultFooterBottomLinks()),
-        ContactPageChannelsJson = SerializeContactChannels(DefaultContactPageChannels()),
-        ContactPageOfficesJson = SerializeContactOffices(DefaultContactPageOffices()),
-        ContactPageWorkingHoursJson = SerializeContactWorkingHours(DefaultContactPageWorkingHours()),
-        ContactPageMapTitle = "Office Locations Map",
-        ContactPageMapEmbedUrl = DefaultContactPageMapEmbedUrl(),
-        ContactPageMapIsVisible = true,
-        PagesJson = SerializePages(DefaultPages()),
-        CreatedAt = DateTime.UtcNow,
-        UpdatedAt = DateTime.UtcNow
-    };
+        var now = DateTime.UtcNow;
+
+        return new PublicSiteSettings
+        {
+            Key = SingletonKey,
+            CompanyName = DefaultCompanyName,
+            CompanyAddress = "Alanya, Antalya, Türkiye",
+            CompanyPhone = "+90 555 555 01 00",
+            CompanyEmail = "contact@alanyacarrental.com",
+            WorkingHours = "08:00 - 22:00",
+            HeaderLinksJson = SerializeLinks(DefaultHeaderLinks()),
+            HeroLinksJson = SerializeLinks(DefaultHeroLinks()),
+            QuickLinksJson = SerializeLinks(DefaultQuickLinks()),
+            SocialLinksJson = SerializeSocialLinks(DefaultSocialLinks()),
+            FooterBottomLinksJson = SerializeLinks(DefaultFooterBottomLinks()),
+            ContactPageChannelsJson = SerializeContactChannels(DefaultContactPageChannels()),
+            ContactPageOfficesJson = SerializeContactOffices(DefaultContactPageOffices()),
+            ContactPageWorkingHoursJson = SerializeContactWorkingHours(DefaultContactPageWorkingHours()),
+            ContactPageMapTitle = "Office Locations Map",
+            ContactPageMapEmbedUrl = DefaultContactPageMapEmbedUrl(),
+            ContactPageMapIsVisible = true,
+            PagesJson = SerializePages(DefaultPages(), now),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
 
     private static bool ApplyBrandDefaults(PublicSiteSettings settings)
     {
@@ -396,7 +506,8 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
                 Id = NormalizeId(block.Id, $"block-{index + 1}"),
                 Heading = NormalizeText(block.Heading, 160, "Bölüm"),
                 Body = NormalizeText(block.Body, 5000, string.Empty),
-                SortOrder = index
+                SortOrder = index,
+                BodyFormat = NormalizeBodyFormat(block.BodyFormat)
             })
             .ToList();
     }
@@ -472,6 +583,23 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         }
 
         return uri.ToString();
+    }
+
+    private static string NormalizeLocale(string locale)
+    {
+        var normalized = NormalizeText(locale, 12, "tr").ToLowerInvariant();
+        if (!SupportedPublicLocales.Contains(normalized))
+        {
+            throw new ArgumentException($"Desteklenmeyen public site dili: {normalized}");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeBodyFormat(string bodyFormat)
+    {
+        var normalized = NormalizeText(bodyFormat, 16, "plain").ToLowerInvariant();
+        return normalized is "html" or "plain" ? normalized : "plain";
     }
 
     private static bool IsGoogleHost(string host) =>
@@ -576,7 +704,10 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static string SerializeContactWorkingHours(IReadOnlyList<PublicContactWorkingHourDto> rows) =>
         JsonSerializer.Serialize(rows.OrderBy(x => x.SortOrder), JsonOptions);
 
-    private static string SerializePages(IReadOnlyList<PublicManagedPageDto> pages) =>
+    private static string SerializePages(IReadOnlyList<PublicManagedPageDto> pages, DateTime updatedAt) =>
+        SerializeStoredPages(ToStoredPages(pages, updatedAt));
+
+    private static string SerializeStoredPages(IReadOnlyList<StoredPublicManagedPageDto> pages) =>
         JsonSerializer.Serialize(pages.OrderBy(x => x.SortOrder), JsonOptions);
 
     private static IReadOnlyList<PublicSiteLinkDto> DeserializeLinks(string json, IReadOnlyList<PublicSiteLinkDto> fallback)
@@ -604,9 +735,10 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         return JsonSerializer.Deserialize<IReadOnlyList<PublicContactWorkingHourDto>>(json, JsonOptions) ?? fallback;
     }
 
-    private static IReadOnlyList<PublicManagedPageDto> DeserializePages(string json, IReadOnlyList<PublicManagedPageDto> fallback)
+    private static IReadOnlyList<StoredPublicManagedPageDto> DeserializeStoredPages(string json, IReadOnlyList<StoredPublicManagedPageDto> fallback)
     {
-        return JsonSerializer.Deserialize<IReadOnlyList<PublicManagedPageDto>>(json, JsonOptions) ?? fallback;
+        var pages = JsonSerializer.Deserialize<List<StoredPublicManagedPageDto>>(json, JsonOptions);
+        return pages is { Count: > 0 } ? pages : fallback;
     }
 
     private static bool ShouldSeedNewLinkSections(PublicSiteSettings settings) =>
@@ -642,7 +774,10 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         settings.ContactPageMapTitle,
         settings.ContactPageMapEmbedUrl,
         settings.ContactPageMapIsVisible,
-        DeserializePages(settings.PagesJson, DefaultPages()).OrderBy(x => x.SortOrder).ToList(),
+        DeserializeStoredPages(settings.PagesJson, DefaultStoredPages())
+            .OrderBy(x => x.SortOrder)
+            .Select(ToPublicPageDto)
+            .ToList(),
         new PublicPaymentMethodsDto(
             paymentMethods.OnlinePaymentEnabled && paymentMethods.CreditCardEnabled,
             paymentMethods.OnlinePaymentEnabled && paymentMethods.DebitCardEnabled,
@@ -655,30 +790,9 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings)
     {
         var version = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
-        var pages = DeserializePages(settings.PagesJson, DefaultPages())
+        var pages = DeserializeStoredPages(settings.PagesJson, DefaultStoredPages())
             .OrderBy(x => x.SortOrder)
-            .Select(page => new AdminPublicManagedPageDto(
-                page.Id,
-                page.Slug,
-                page.Locale,
-                page.Title,
-                page.Subtitle,
-                page.SeoTitle,
-                page.SeoDescription,
-                page.IsPublished,
-                page.SortOrder,
-                page.Blocks,
-                page.IsPublished
-                    ? new PublicPagePublishedSnapshotDto(
-                        page.Title,
-                        page.Subtitle,
-                        page.SeoTitle,
-                        page.SeoDescription,
-                        page.Blocks,
-                        settings.UpdatedAt)
-                    : null,
-                settings.UpdatedAt,
-                page.IsPublished ? settings.UpdatedAt : null))
+            .Select(page => ToAdminPageDto(page, settings.UpdatedAt))
             .ToList();
 
         return new AdminPublicContentDto(
@@ -692,6 +806,130 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             settings.ContactPageMapEmbedUrl,
             settings.ContactPageMapIsVisible);
     }
+
+    private static IReadOnlyList<StoredPublicManagedPageDto> ToStoredPages(IReadOnlyList<PublicManagedPageDto> pages, DateTime updatedAt)
+    {
+        return pages
+            .OrderBy(page => page.SortOrder)
+            .Select(page => new StoredPublicManagedPageDto
+            {
+                Id = page.Id,
+                Slug = page.Slug,
+                Locale = page.Locale,
+                Title = page.Title,
+                Subtitle = page.Subtitle,
+                SeoTitle = page.SeoTitle,
+                SeoDescription = page.SeoDescription,
+                IsPublished = page.IsPublished,
+                SortOrder = page.SortOrder,
+                Blocks = page.Blocks,
+                Published = page.IsPublished
+                    ? new PublicPagePublishedSnapshotDto(
+                        page.Title,
+                        page.Subtitle,
+                        page.SeoTitle,
+                        page.SeoDescription,
+                        page.Blocks,
+                        updatedAt)
+                    : null,
+                DraftUpdatedAtUtc = updatedAt,
+                PublishedAtUtc = page.IsPublished ? updatedAt : null
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<StoredPublicManagedPageDto> DefaultStoredPages()
+    {
+        var now = DateTime.UtcNow;
+        return ToStoredPages(DefaultPages(), now);
+    }
+
+    private static PublicManagedPageDto ToPublicPageDto(StoredPublicManagedPageDto page)
+    {
+        var published = GetPublishedSnapshot(page);
+        var title = published?.Title ?? page.Title;
+        var subtitle = published?.Subtitle ?? page.Subtitle;
+        var seoTitle = published?.SeoTitle ?? page.SeoTitle;
+        var seoDescription = published?.SeoDescription ?? page.SeoDescription;
+        var blocks = published?.Blocks ?? page.Blocks;
+
+        return new PublicManagedPageDto(
+            page.Id,
+            page.Slug,
+            page.Locale,
+            title,
+            subtitle,
+            seoTitle,
+            seoDescription,
+            page.IsPublished,
+            page.SortOrder,
+            blocks);
+    }
+
+    private static AdminPublicManagedPageDto ToAdminPageDto(StoredPublicManagedPageDto page, DateTime fallbackTimestamp)
+    {
+        var published = GetPublishedSnapshot(page);
+        return new AdminPublicManagedPageDto(
+            page.Id,
+            page.Slug,
+            page.Locale,
+            page.Title,
+            page.Subtitle,
+            page.SeoTitle,
+            page.SeoDescription,
+            page.IsPublished,
+            page.SortOrder,
+            page.Blocks,
+            published,
+            page.DraftUpdatedAtUtc ?? fallbackTimestamp,
+            published is null ? page.PublishedAtUtc : page.PublishedAtUtc ?? fallbackTimestamp);
+    }
+
+    private static PublicPagePublishedSnapshotDto? GetPublishedSnapshot(StoredPublicManagedPageDto page)
+    {
+        if (page.Published is not null)
+        {
+            return page.Published with
+            {
+                Blocks = NormalizePageBlocks(page.Published.Blocks, maxCount: 24)
+            };
+        }
+
+        return page.IsPublished
+            ? new PublicPagePublishedSnapshotDto(
+                page.Title,
+                page.Subtitle,
+                page.SeoTitle,
+                page.SeoDescription,
+                NormalizePageBlocks(page.Blocks, maxCount: 24),
+                page.PublishedAtUtc ?? page.DraftUpdatedAtUtc ?? DateTime.UtcNow)
+            : null;
+    }
+
+    private static StoredPublicManagedPageDto GetStoredPage(IReadOnlyList<StoredPublicManagedPageDto> pages, string slug, string locale)
+    {
+        var normalizedSlug = NormalizeSlug(slug);
+        var normalizedLocale = NormalizeLocale(locale);
+
+        return pages.FirstOrDefault(page =>
+                   string.Equals(page.Slug, normalizedSlug, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(page.Locale, normalizedLocale, StringComparison.OrdinalIgnoreCase))
+               ?? throw new InvalidOperationException($"Public page '{normalizedLocale}/{normalizedSlug}' was not found.");
+    }
+
+    private static void EnsureVersion(PublicSiteSettings settings, string version)
+    {
+        var current = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
+        if (!string.Equals(current, version, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Public content was updated by another session. Reload before saving.");
+        }
+    }
+
+    private static bool IsBuiltInPage(string slug) =>
+        string.Equals(slug, "about", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(slug, "terms", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(slug, "privacy", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<PublicSiteLinkDto> DefaultHeaderLinks() =>
     [
@@ -805,4 +1043,21 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
     private static string DefaultContactPageMapEmbedUrl() =>
         "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d128084.037171682!2d31.95928245!3d36.54115!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14dca27b8223b0b7%3A0x403b37d0ec0cb80!2sAlanya%2C%20Antalya%2C%20Turkey!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus";
+
+    private sealed class StoredPublicManagedPageDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Slug { get; set; } = string.Empty;
+        public string Locale { get; set; } = "tr";
+        public string Title { get; set; } = string.Empty;
+        public string Subtitle { get; set; } = string.Empty;
+        public string SeoTitle { get; set; } = string.Empty;
+        public string SeoDescription { get; set; } = string.Empty;
+        public bool IsPublished { get; set; }
+        public int SortOrder { get; set; }
+        public IReadOnlyList<PublicPageBlockDto> Blocks { get; set; } = [];
+        public PublicPagePublishedSnapshotDto? Published { get; set; }
+        public DateTime? DraftUpdatedAtUtc { get; set; }
+        public DateTime? PublishedAtUtc { get; set; }
+    }
 }
