@@ -15,7 +15,7 @@ export default function PublicContentManager() {
     PUBLIC_CONTENT_CACHE_KEY,
     () => getAdminPublicContent(),
   );
-  const hasLoadError = error || (!isLoading && !data);
+  const hasLoadError = !data && (error || !isLoading);
 
   return (
     <div className="space-y-4">
@@ -32,6 +32,12 @@ export default function PublicContentManager() {
         </Card>
       ) : (
         <Tabs defaultValue="pages" className="space-y-4">
+          {error ? (
+            <div role="status" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              İçerik yenilenemedi. Son kayıtlar gösteriliyor.
+            </div>
+          ) : null}
+
           <TabsList>
             <TabsTrigger value="pages">
               <FileText className="mr-2 h-4 w-4" />
