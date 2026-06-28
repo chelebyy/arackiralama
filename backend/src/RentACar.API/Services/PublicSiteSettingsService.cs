@@ -13,6 +13,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private const string SingletonKey = "public-site";
     private const string DefaultCompanyName = "Dvn rent a car";
     private const string LegacyCompanyName = "Alanya Car Rental";
+    private const long TicksPerMicrosecond = 10;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly Regex SafeInternalPathRegex = new(@"^/[a-zA-Z0-9/_?=&.#-]*$", RegexOptions.Compiled);
     private static readonly Regex SafeSlugRegex = new(@"^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$", RegexOptions.Compiled);
@@ -793,7 +794,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
     private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings)
     {
-        var version = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
+        var version = ToVersionToken(settings.UpdatedAt);
         var pages = DeserializeStoredPages(settings.PagesJson, DefaultStoredPages())
             .OrderBy(x => x.SortOrder)
             .Select(page => ToAdminPageDto(page, settings.UpdatedAt))
@@ -982,11 +983,17 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
     private static void EnsureVersion(PublicSiteSettings settings, string version)
     {
-        var current = settings.UpdatedAt.Ticks.ToString(CultureInfo.InvariantCulture);
+        var current = ToVersionToken(settings.UpdatedAt);
         if (!string.Equals(current, version, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Public content was updated by another session. Reload before saving.");
         }
+    }
+
+    private static string ToVersionToken(DateTime updatedAt)
+    {
+        var ticks = updatedAt.Ticks - updatedAt.Ticks % TicksPerMicrosecond;
+        return ticks.ToString(CultureInfo.InvariantCulture);
     }
 
     private static bool IsBuiltInPage(string slug) =>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/admin/publicContent";
 import type { AdminPublicContent } from "@/lib/api/admin/types";
 import ContactContentEditor from "@/components/admin/public-content/ContactContentEditor";
+import PageContentEditor from "@/components/admin/public-content/PageContentEditor";
 import PublicContentPage from "./page";
 
 const adminContentFixture: AdminPublicContent = {
@@ -278,6 +279,41 @@ describe("PublicContentPage", () => {
       expect.objectContaining({
         version: "2",
         contactPageMapTitle: "İkinci Kayıt",
+      }),
+    );
+  });
+
+  it("keeps unsaved page edits and base version when refreshed content arrives", async () => {
+    const user = userEvent.setup();
+    const refreshedContent: AdminPublicContent = {
+      ...adminContentFixture,
+      version: "2",
+      pages: [
+        {
+          ...adminContentFixture.pages[0],
+          title: "Sunucu Yenilemesi",
+        },
+      ],
+    };
+    const onContentChange = vi.fn();
+    updateAdminPublicPageDraftMock.mockResolvedValue(refreshedContent);
+    const { rerender } = render(
+      <PageContentEditor content={adminContentFixture} onContentChange={onContentChange} />,
+    );
+
+    await user.clear(screen.getByLabelText("Sayfa Başlığı"));
+    await user.type(screen.getByLabelText("Sayfa Başlığı"), "Kaydedilmemiş Sayfa");
+    rerender(<PageContentEditor content={refreshedContent} onContentChange={onContentChange} />);
+
+    expect(screen.getByLabelText("Sayfa Başlığı")).toHaveValue("Kaydedilmemiş Sayfa");
+
+    await user.click(screen.getByRole("button", { name: "Taslağı Kaydet" }));
+    expect(updateAdminPublicPageDraftMock).toHaveBeenCalledWith(
+      "privacy",
+      "tr",
+      expect.objectContaining({
+        version: "1",
+        title: "Kaydedilmemiş Sayfa",
       }),
     );
   });

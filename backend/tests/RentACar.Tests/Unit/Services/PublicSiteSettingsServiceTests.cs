@@ -24,6 +24,36 @@ public sealed class PublicSiteSettingsServiceTests
     }
 
     [Fact]
+    public async Task AdminContentVersion_UsesMicrosecondPrecisionForPostgresRoundTripStability()
+    {
+        await using var dbContext = CreateDbContext();
+        var storedAt = new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc).AddTicks(1234567);
+        var settings = CreateSettingsWithPages("[]");
+        dbContext.PublicSiteSettings.Add(settings);
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+        await service.GetAdminContentAsync();
+        settings.UpdatedAt = storedAt;
+        await dbContext.SaveChangesAsync();
+        var expectedVersion = (storedAt.Ticks - storedAt.Ticks % 10).ToString();
+
+        var content = await service.GetAdminContentAsync();
+        var act = () => service.UpdateContactContentAsync(
+            new UpdateAdminPublicContactRequest(
+                expectedVersion,
+                [],
+                [],
+                [],
+                "Map",
+                "https://www.google.com/maps/embed?pb=managed",
+                true),
+            CancellationToken.None);
+
+        content.Version.Should().Be(expectedVersion);
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
     public async Task UpdatePageDraftAsync_does_not_change_public_page_until_publish()
     {
         await using var dbContext = CreateDbContext();

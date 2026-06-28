@@ -49,6 +49,10 @@ function getPageLocale(page: AdminPublicManagedPage | undefined): PublicSettings
   return "tr";
 }
 
+function getPageKey(page: AdminPublicManagedPage | null) {
+  return page ? `${page.slug}:${page.locale}` : null;
+}
+
 export default function PageContentEditor({ content, onContentChange }: PageContentEditorProps) {
   const sortedPages = useMemo(
     () =>
@@ -88,10 +92,20 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
   const [draft, setDraft] = useState<AdminPublicManagedPage | null>(() =>
     selectedPage ? clonePage(selectedPage) : null,
   );
+  const [draftKey, setDraftKey] = useState(() => getPageKey(selectedPage));
+  const [draftVersion, setDraftVersion] = useState(content.version);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    setDraft(selectedPage ? clonePage(selectedPage) : null);
-  }, [selectedPage]);
+    const selectedPageKey = getPageKey(selectedPage);
+
+    if (selectedPageKey !== draftKey || !isDirty) {
+      setDraft(selectedPage ? clonePage(selectedPage) : null);
+      setDraftKey(selectedPageKey);
+      setDraftVersion(content.version);
+      setIsDirty(false);
+    }
+  }, [content.version, draftKey, isDirty, selectedPage]);
 
   const isMutating = isSaving || isPublishing || isUnpublishing;
 
@@ -106,10 +120,12 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
   };
 
   const updateDraft = <Key extends keyof AdminPublicManagedPage>(key: Key, value: AdminPublicManagedPage[Key]) => {
+    setIsDirty(true);
     setDraft((currentDraft) => (currentDraft ? { ...currentDraft, [key]: value } : currentDraft));
   };
 
   const updateBlock = (blockIndex: number, patch: Partial<AdminPublicManagedPage["blocks"][number]>) => {
+    setIsDirty(true);
     setDraft((currentDraft) =>
       currentDraft
         ? {
@@ -129,7 +145,7 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
 
     try {
       const nextContent = await updateAdminPublicPageDraft(draft.slug, draft.locale as PublicSettingsLocale, {
-        version: content.version,
+        version: draftVersion,
         title: draft.title,
         subtitle: draft.subtitle,
         seoTitle: draft.seoTitle,
@@ -143,6 +159,8 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
         })),
       });
 
+      setIsDirty(false);
+      setDraftVersion(nextContent.version);
       onContentChange(nextContent);
       toast.success("Sayfa taslağı kaydedildi.");
     } catch (error) {
@@ -160,7 +178,9 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
     setIsPublishing(true);
 
     try {
-      const nextContent = await publishAdminPublicPage(draft.slug, draft.locale as PublicSettingsLocale, content.version);
+      const nextContent = await publishAdminPublicPage(draft.slug, draft.locale as PublicSettingsLocale, draftVersion);
+      setIsDirty(false);
+      setDraftVersion(nextContent.version);
       onContentChange(nextContent);
       toast.success("Sayfa yayınlandı.");
     } catch (error) {
@@ -178,7 +198,9 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
     setIsUnpublishing(true);
 
     try {
-      const nextContent = await unpublishAdminPublicPage(draft.slug, draft.locale as PublicSettingsLocale, content.version);
+      const nextContent = await unpublishAdminPublicPage(draft.slug, draft.locale as PublicSettingsLocale, draftVersion);
+      setIsDirty(false);
+      setDraftVersion(nextContent.version);
       onContentChange(nextContent);
       toast.success("Sayfa yayından kaldırıldı.");
     } catch (error) {
