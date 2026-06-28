@@ -353,6 +353,8 @@ describe("PublicContentPage", () => {
     await user.click(screen.getByRole("button", { name: "EN" }));
 
     expect(screen.getByLabelText("Sayfa Başlığı")).toHaveValue("Gizlilik");
+    expect(screen.getByRole("button", { name: "Yayınla" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Yayından Kaldır" })).toBeDisabled();
 
     await user.clear(screen.getByLabelText("Sayfa Başlığı"));
     await user.type(screen.getByLabelText("Sayfa Başlığı"), "English Privacy");

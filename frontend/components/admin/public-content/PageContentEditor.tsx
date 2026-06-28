@@ -134,6 +134,7 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
   }, [content.version, draftKey, editablePage, isDirty]);
 
   const isMutating = isSaving || isPublishing || isUnpublishing;
+  const isUnsavedLocaleDraft = Boolean(draft && !selectedPage);
 
   const selectSlug = (slug: string) => {
     setSelectedSlug(slug);
@@ -374,11 +375,21 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Taslağı Kaydet
               </Button>
-              <Button type="button" variant="outline" onClick={publishDraft} disabled={isMutating || isDirty}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={publishDraft}
+                disabled={isMutating || isDirty || isUnsavedLocaleDraft}
+              >
                 {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                 Yayınla
               </Button>
-              <Button type="button" variant="outline" onClick={unpublishDraft} disabled={isMutating || isDirty}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={unpublishDraft}
+                disabled={isMutating || isDirty || isUnsavedLocaleDraft}
+              >
                 {isUnpublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <EyeOff className="h-4 w-4" />}
                 Yayından Kaldır
               </Button>
