@@ -24,6 +24,11 @@ const SAFE_CONTACT_LINK = /^(mailto|tel):/i;
 const HAS_PROTOCOL = /^[a-z][a-z0-9+.-]*:/i;
 
 type ManagedDOMPurify = {
+  addHook: (
+    hookName: "afterSanitizeAttributes",
+    hook: (currentNode: Element) => void
+  ) => void;
+  removeHook: (hookName: "afterSanitizeAttributes") => void;
   sanitize: (
     value: string,
     config: {
@@ -69,6 +74,29 @@ function getSafeHrefType(href: string) {
   return null;
 }
 
+function normalizeLinkAttributes(node: Element) {
+  if (node.nodeName !== "A") {
+    return;
+  }
+
+  const hrefType = getSafeHrefType(node.getAttribute("href") ?? "");
+
+  if (!hrefType) {
+    node.removeAttribute("href");
+    node.removeAttribute("target");
+    node.removeAttribute("rel");
+    return;
+  }
+
+  node.setAttribute("rel", "noopener noreferrer");
+
+  if (hrefType === "http") {
+    node.setAttribute("target", "_blank");
+  } else {
+    node.removeAttribute("target");
+  }
+}
+
 export function sanitizeManagedHtml(value: string): string {
   const purifier = getDOMPurify();
 
@@ -76,34 +104,16 @@ export function sanitizeManagedHtml(value: string): string {
     return "";
   }
 
-  const clean = purifier.sanitize(value, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    FORBID_TAGS,
-    FORBID_ATTR,
-  });
+  purifier.addHook("afterSanitizeAttributes", normalizeLinkAttributes);
 
-  const template = document.createElement("template");
-  template.innerHTML = clean;
-
-  template.content.querySelectorAll("a").forEach((link) => {
-    const hrefType = getSafeHrefType(link.getAttribute("href") ?? "");
-
-    if (!hrefType) {
-      link.removeAttribute("href");
-      link.removeAttribute("target");
-      link.removeAttribute("rel");
-      return;
-    }
-
-    link.setAttribute("rel", "noopener noreferrer");
-
-    if (hrefType === "http") {
-      link.setAttribute("target", "_blank");
-    } else {
-      link.removeAttribute("target");
-    }
-  });
-
-  return template.innerHTML;
+  try {
+    return purifier.sanitize(value, {
+      ALLOWED_TAGS,
+      ALLOWED_ATTR,
+      FORBID_TAGS,
+      FORBID_ATTR,
+    });
+  } finally {
+    purifier.removeHook("afterSanitizeAttributes");
+  }
 }
