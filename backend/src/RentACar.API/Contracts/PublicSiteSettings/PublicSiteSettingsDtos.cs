@@ -59,7 +59,8 @@ public sealed record PublicPageBlockDto(
     string Heading,
     string Body,
     bool IsVisible,
-    int SortOrder);
+    int SortOrder,
+    string BodyFormat = "plain");
 
 public sealed record PublicManagedPageDto(
     string Id,
@@ -72,6 +73,61 @@ public sealed record PublicManagedPageDto(
     bool IsPublished,
     int SortOrder,
     IReadOnlyList<PublicPageBlockDto> Blocks);
+
+public sealed record PublicPagePublishedSnapshotDto(
+    string Title,
+    string Subtitle,
+    string SeoTitle,
+    string SeoDescription,
+    IReadOnlyList<PublicPageBlockDto> Blocks,
+    DateTime PublishedAtUtc);
+
+public sealed record AdminPublicManagedPageDto(
+    string Id,
+    string Slug,
+    string Locale,
+    string Title,
+    string Subtitle,
+    string SeoTitle,
+    string SeoDescription,
+    bool IsPublished,
+    int SortOrder,
+    IReadOnlyList<PublicPageBlockDto> Blocks,
+    PublicPagePublishedSnapshotDto? Published,
+    DateTime? DraftUpdatedAtUtc,
+    DateTime? PublishedAtUtc);
+
+public sealed record AdminPublicContentDto(
+    string Version,
+    DateTime UpdatedAt,
+    IReadOnlyList<AdminPublicManagedPageDto> Pages,
+    IReadOnlyList<PublicContactChannelDto> ContactPageChannels,
+    IReadOnlyList<PublicContactOfficeDto> ContactPageOffices,
+    IReadOnlyList<PublicContactWorkingHourDto> ContactPageWorkingHours,
+    string ContactPageMapTitle,
+    string ContactPageMapEmbedUrl,
+    bool ContactPageMapIsVisible);
+
+public sealed record UpdateAdminPublicPageDraftRequest(
+    string Version,
+    string Title,
+    string Subtitle,
+    string SeoTitle,
+    string SeoDescription,
+    bool IsPublished,
+    int SortOrder,
+    IReadOnlyList<PublicPageBlockDto> Blocks);
+
+public sealed record PublishAdminPublicPageRequest(string Version);
+
+public sealed record UpdateAdminPublicContactRequest(
+    string Version,
+    IReadOnlyList<PublicContactChannelDto> ContactPageChannels,
+    IReadOnlyList<PublicContactOfficeDto> ContactPageOffices,
+    IReadOnlyList<PublicContactWorkingHourDto> ContactPageWorkingHours,
+    string ContactPageMapTitle,
+    string ContactPageMapEmbedUrl,
+    bool ContactPageMapIsVisible);
 
 public sealed record PublicPaymentMethodsDto(
     bool CreditCardEnabled,

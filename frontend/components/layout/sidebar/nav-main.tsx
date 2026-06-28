@@ -144,6 +144,7 @@ export const navItems: NavGroup[] = [
         icon: Settings,
         items: [
           { title: "Public Site & İletişim", href: "/dashboard/settings/system" },
+          { title: "İçerik Yönetimi", href: "/dashboard/settings/public-content" },
           { title: "Ozellik Bayraklari", href: "/dashboard/settings/feature-flags" },
           { title: "Denetim Kayitlari", href: "/dashboard/settings/audit-logs" },
         ],
