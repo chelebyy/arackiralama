@@ -181,6 +181,7 @@ Multi-language support with 5 languages:
 - **RTL support**: Conditional CSS direction for Arabic
 - **Admin panel**: Single language (Turkish only)
 - **Admin-managed public content**: Public legal/contact/navigation content is stored in `PublicSiteSettings` JSON sections with base fields as the fallback and optional `translations.{locale}.{field}` overrides for `tr`, `en`, `ru`, `ar`, and `de`. The admin UI remains Turkish, but public content editors expose five locale tabs for managed pages, header/footer links, hero CTA, and contact-page rows.
+- **Admin settings boundary**: Operational/system settings and public-site content are separated in the dashboard. `/dashboard/settings/system` owns technical settings, while `/dashboard/settings/public-content` owns customer-facing managed content for `contact`/`iletisim`, `privacy`, `terms`, navigation links, contact rows, and map/payment public display settings. Public routes read through the unauthenticated public settings endpoint and keep message-file fallbacks for incomplete managed records.
 
 ## 10. URL Structure & Routing
 

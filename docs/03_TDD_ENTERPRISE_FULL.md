@@ -1244,6 +1244,11 @@ Public legal/contact/navigation content can be managed from the admin dashboard 
   - `PublicContactWorkingHourDto` for day/hours rows.
 - Supported managed-content locale keys are limited to `tr`, `en`, `ru`, `ar`, and `de`. Unsupported keys are rejected during `PublicSiteSettingsService.UpdateAsync`.
 - Public consumers resolve content with locale-specific override first, then base field fallback. This keeps existing records backward-compatible while allowing complete five-language content entry.
+- Dashboard editing is split by ownership:
+  - `/dashboard/settings/system` keeps operational and technical settings.
+  - `/dashboard/settings/public-content` provides a dedicated authoring surface for managed pages, contact information, navigation links, hero CTA, map embed, and public payment-method display.
+- `privacy`, `terms`, and contact/`iletisim` routes remain normal public Next.js routes. They consume `GET /api/v1/public-site-settings`, render managed records when published, and fall back to bundled locale messages when a managed block is missing or unpublished.
+- Browser smoke coverage is expected for the dedicated admin authoring route and the public managed-content routes after Docker rebuilds.
 
 Example link payload:
 

@@ -648,7 +648,7 @@ Admin top vehicle report for a requested period. Requires admin authorization an
 
 ## GET /api/v1/public-site-settings
 
-Public singleton site settings used by the public Next.js application. No authentication is required. The response contains company/contact data, public navigation links, managed legal/content pages, contact-page rows, map configuration, and payment method availability.
+Public singleton site settings used by the public Next.js application. No authentication is required. The response contains company/contact data, public navigation links, managed legal/content pages, contact-page rows, map configuration, and payment method availability. Public `contact`/`iletisim`, `privacy`, and `terms` routes consume this endpoint and retain bundled locale-message fallbacks when managed page records are absent or unpublished.
 
 ### Response 200 OK
 
@@ -705,11 +705,11 @@ Public singleton site settings used by the public Next.js application. No authen
 
 ## GET /api/admin/v1/public-site-settings
 
-Admin endpoint for loading the same singleton public-site settings object. Requires SuperAdmin authorization.
+Admin endpoint for loading the same singleton public-site settings object. Requires SuperAdmin authorization. The dashboard authoring surface is `/dashboard/settings/public-content`; system/technical settings stay under `/dashboard/settings/system`.
 
 ## PUT /api/admin/v1/public-site-settings
 
-Persists the singleton public-site settings object. Requires SuperAdmin authorization. Link/contact `translations` are optional and keyed by supported locale (`tr`, `en`, `ru`, `ar`, `de`). Unsupported locale keys are rejected with validation error semantics.
+Persists the singleton public-site settings object. Requires SuperAdmin authorization. Link/contact `translations` are optional and keyed by supported locale (`tr`, `en`, `ru`, `ar`, `de`). Unsupported locale keys are rejected with validation error semantics. The endpoint is the write boundary for admin-managed public content; public routes must not mutate these settings directly.
 
 ### Request Body Notes
 
