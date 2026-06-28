@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import type {
   PublicContactChannel,
   PublicContactOffice,
   PublicContactWorkingHour,
+  PublicLocalizedText,
+  PublicSettingsLocale,
 } from "@/lib/api/admin/types";
 
 type ContactContentEditorProps = {
@@ -24,6 +26,7 @@ const cloneChannels = (channels: PublicContactChannel[]) => channels.map((channe
 const cloneOffices = (offices: PublicContactOffice[]) => offices.map((office) => ({ ...office }));
 const cloneWorkingHours = (workingHours: PublicContactWorkingHour[]) =>
   workingHours.map((workingHour) => ({ ...workingHour }));
+const translationLocales = ["en", "ru", "ar", "de"] satisfies PublicSettingsLocale[];
 
 export default function ContactContentEditor({ content, onContentChange }: ContactContentEditorProps) {
   const [mapTitle, setMapTitle] = useState(content.contactPageMapTitle);
@@ -34,10 +37,11 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
   const [workingHours, setWorkingHours] = useState(() => cloneWorkingHours(content.contactPageWorkingHours));
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const isDirtyRef = useRef(false);
   const [draftVersion, setDraftVersion] = useState(content.version);
 
   useEffect(() => {
-    if (isDirty) {
+    if (isDirtyRef.current) {
       return;
     }
 
@@ -48,15 +52,44 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     setOffices(cloneOffices(content.contactPageOffices));
     setWorkingHours(cloneWorkingHours(content.contactPageWorkingHours));
     setDraftVersion(content.version);
-  }, [content, isDirty]);
+  }, [content]);
+
+  const markDirty = () => {
+    isDirtyRef.current = true;
+    setIsDirty(true);
+  };
 
   const updateChannel = (
     channelIndex: number,
     patch: Partial<Pick<PublicContactChannel, "label" | "value" | "href" | "description" | "type" | "isVisible">>,
   ) => {
-    setIsDirty(true);
+    markDirty();
     setChannels((currentChannels) =>
       currentChannels.map((channel, index) => (index === channelIndex ? { ...channel, ...patch } : channel)),
+    );
+  };
+
+  const updateChannelTranslation = (
+    channelIndex: number,
+    locale: PublicSettingsLocale,
+    patch: Partial<Pick<PublicLocalizedText, "label" | "value" | "description">>,
+  ) => {
+    markDirty();
+    setChannels((currentChannels) =>
+      currentChannels.map((channel, index) =>
+        index === channelIndex
+          ? {
+              ...channel,
+              translations: {
+                ...(channel.translations ?? {}),
+                [locale]: {
+                  ...(channel.translations?.[locale] ?? {}),
+                  ...patch,
+                },
+              },
+            }
+          : channel,
+      ),
     );
   };
 
@@ -64,9 +97,33 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     officeIndex: number,
     patch: Partial<Pick<PublicContactOffice, "name" | "address" | "phone" | "hours" | "type" | "isVisible">>,
   ) => {
-    setIsDirty(true);
+    markDirty();
     setOffices((currentOffices) =>
       currentOffices.map((office, index) => (index === officeIndex ? { ...office, ...patch } : office)),
+    );
+  };
+
+  const updateOfficeTranslation = (
+    officeIndex: number,
+    locale: PublicSettingsLocale,
+    patch: Partial<Pick<PublicLocalizedText, "name" | "address" | "hours">>,
+  ) => {
+    markDirty();
+    setOffices((currentOffices) =>
+      currentOffices.map((office, index) =>
+        index === officeIndex
+          ? {
+              ...office,
+              translations: {
+                ...(office.translations ?? {}),
+                [locale]: {
+                  ...(office.translations?.[locale] ?? {}),
+                  ...patch,
+                },
+              },
+            }
+          : office,
+      ),
     );
   };
 
@@ -74,10 +131,34 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
     workingHourIndex: number,
     patch: Partial<Pick<PublicContactWorkingHour, "day" | "hours" | "isVisible">>,
   ) => {
-    setIsDirty(true);
+    markDirty();
     setWorkingHours((currentWorkingHours) =>
       currentWorkingHours.map((workingHour, index) =>
         index === workingHourIndex ? { ...workingHour, ...patch } : workingHour,
+      ),
+    );
+  };
+
+  const updateWorkingHourTranslation = (
+    workingHourIndex: number,
+    locale: PublicSettingsLocale,
+    patch: Partial<Pick<PublicLocalizedText, "day" | "hours">>,
+  ) => {
+    markDirty();
+    setWorkingHours((currentWorkingHours) =>
+      currentWorkingHours.map((workingHour, index) =>
+        index === workingHourIndex
+          ? {
+              ...workingHour,
+              translations: {
+                ...(workingHour.translations ?? {}),
+                [locale]: {
+                  ...(workingHour.translations?.[locale] ?? {}),
+                  ...patch,
+                },
+              },
+            }
+          : workingHour,
       ),
     );
   };
@@ -96,6 +177,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
         contactPageMapIsVisible: mapIsVisible,
       });
 
+      isDirtyRef.current = false;
       setIsDirty(false);
       setDraftVersion(nextContent.version);
       onContentChange(nextContent);
@@ -129,7 +211,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
               id="contact-map-title"
               value={mapTitle}
               onChange={(event) => {
-                setIsDirty(true);
+                markDirty();
                 setMapTitle(event.target.value);
               }}
             />
@@ -140,7 +222,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
               id="contact-map-embed-url"
               value={mapEmbedUrl}
               onChange={(event) => {
-                setIsDirty(true);
+                markDirty();
                 setMapEmbedUrl(event.target.value);
               }}
             />
@@ -151,7 +233,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
             id="contact-map-visible"
             checked={mapIsVisible}
             onCheckedChange={(isVisible) => {
-              setIsDirty(true);
+              markDirty();
               setMapIsVisible(isVisible);
             }}
           />
@@ -219,6 +301,28 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
                   />
                 </div>
               </div>
+              <div className="grid gap-3 rounded-md bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-4">
+                {translationLocales.map((locale) => (
+                  <div key={locale} className="space-y-2">
+                    <Label htmlFor={`contact-channel-${locale}-label-${index}`}>
+                      Kanal {index + 1} {locale.toUpperCase()} Etiket
+                    </Label>
+                    <Input
+                      id={`contact-channel-${locale}-label-${index}`}
+                      value={channel.translations?.[locale]?.label ?? ""}
+                      onChange={(event) => updateChannelTranslation(index, locale, { label: event.target.value })}
+                    />
+                    <Label htmlFor={`contact-channel-${locale}-description-${index}`}>
+                      Kanal {index + 1} {locale.toUpperCase()} Açıklama
+                    </Label>
+                    <Input
+                      id={`contact-channel-${locale}-description-${index}`}
+                      value={channel.translations?.[locale]?.description ?? ""}
+                      onChange={(event) => updateChannelTranslation(index, locale, { description: event.target.value })}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}
@@ -284,6 +388,36 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
                   />
                 </div>
               </div>
+              <div className="grid gap-3 rounded-md bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-4">
+                {translationLocales.map((locale) => (
+                  <div key={locale} className="space-y-2">
+                    <Label htmlFor={`contact-office-${locale}-name-${index}`}>
+                      Ofis {index + 1} {locale.toUpperCase()} Ad
+                    </Label>
+                    <Input
+                      id={`contact-office-${locale}-name-${index}`}
+                      value={office.translations?.[locale]?.name ?? ""}
+                      onChange={(event) => updateOfficeTranslation(index, locale, { name: event.target.value })}
+                    />
+                    <Label htmlFor={`contact-office-${locale}-address-${index}`}>
+                      Ofis {index + 1} {locale.toUpperCase()} Adres
+                    </Label>
+                    <Input
+                      id={`contact-office-${locale}-address-${index}`}
+                      value={office.translations?.[locale]?.address ?? ""}
+                      onChange={(event) => updateOfficeTranslation(index, locale, { address: event.target.value })}
+                    />
+                    <Label htmlFor={`contact-office-${locale}-hours-${index}`}>
+                      Ofis {index + 1} {locale.toUpperCase()} Saat
+                    </Label>
+                    <Input
+                      id={`contact-office-${locale}-hours-${index}`}
+                      value={office.translations?.[locale]?.hours ?? ""}
+                      onChange={(event) => updateOfficeTranslation(index, locale, { hours: event.target.value })}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}
@@ -321,6 +455,28 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
                   onCheckedChange={(isVisible) => updateWorkingHour(index, { isVisible })}
                 />
                 <Label htmlFor={`contact-working-hour-visible-${index}`}>Görünür</Label>
+              </div>
+              <div className="grid gap-3 md:col-span-3 md:grid-cols-2 xl:grid-cols-4">
+                {translationLocales.map((locale) => (
+                  <div key={locale} className="space-y-2 rounded-md bg-muted/20 p-3">
+                    <Label htmlFor={`contact-working-hour-${locale}-day-${index}`}>
+                      Gün {index + 1} {locale.toUpperCase()}
+                    </Label>
+                    <Input
+                      id={`contact-working-hour-${locale}-day-${index}`}
+                      value={workingHour.translations?.[locale]?.day ?? ""}
+                      onChange={(event) => updateWorkingHourTranslation(index, locale, { day: event.target.value })}
+                    />
+                    <Label htmlFor={`contact-working-hour-${locale}-hours-${index}`}>
+                      Saat {index + 1} {locale.toUpperCase()}
+                    </Label>
+                    <Input
+                      id={`contact-working-hour-${locale}-hours-${index}`}
+                      value={workingHour.translations?.[locale]?.hours ?? ""}
+                      onChange={(event) => updateWorkingHourTranslation(index, locale, { hours: event.target.value })}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           ))

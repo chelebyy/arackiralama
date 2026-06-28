@@ -201,6 +201,8 @@ describe("PublicContentPage", () => {
     await user.click(screen.getByLabelText("Harita görünür"));
     await user.clear(screen.getByLabelText("Kanal 1 Etiket"));
     await user.type(screen.getByLabelText("Kanal 1 Etiket"), "WhatsApp Destek");
+    await user.clear(screen.getByLabelText("Kanal 1 EN Etiket"));
+    await user.type(screen.getByLabelText("Kanal 1 EN Etiket"), "WhatsApp Support");
     await user.clear(screen.getByLabelText("Ofis 1 Ad"));
     await user.type(screen.getByLabelText("Ofis 1 Ad"), "Damlataş Ofis");
     await user.clear(screen.getByLabelText("Saat 1"));
@@ -220,7 +222,7 @@ describe("PublicContentPage", () => {
             sortOrder: 2,
             translations: {
               en: {
-                label: "WhatsApp",
+                label: "WhatsApp Support",
                 description: "Fast support",
               },
             },
@@ -316,6 +318,17 @@ describe("PublicContentPage", () => {
         title: "Kaydedilmemiş Sayfa",
       }),
     );
+  });
+
+  it("prevents publishing dirty page edits before saving the draft", async () => {
+    const user = userEvent.setup();
+    render(<PageContentEditor content={adminContentFixture} onContentChange={vi.fn()} />);
+
+    await user.clear(screen.getByLabelText("Sayfa Başlığı"));
+    await user.type(screen.getByLabelText("Sayfa Başlığı"), "Kirli Taslak");
+
+    expect(screen.getByRole("button", { name: "Yayınla" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Yayından Kaldır" })).toBeDisabled();
   });
 
   it("creates a missing locale page draft from the selected source page", async () => {

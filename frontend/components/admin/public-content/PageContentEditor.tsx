@@ -374,11 +374,11 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Taslağı Kaydet
               </Button>
-              <Button type="button" variant="outline" onClick={publishDraft} disabled={isMutating}>
+              <Button type="button" variant="outline" onClick={publishDraft} disabled={isMutating || isDirty}>
                 {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                 Yayınla
               </Button>
-              <Button type="button" variant="outline" onClick={unpublishDraft} disabled={isMutating}>
+              <Button type="button" variant="outline" onClick={unpublishDraft} disabled={isMutating || isDirty}>
                 {isUnpublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <EyeOff className="h-4 w-4" />}
                 Yayından Kaldır
               </Button>
