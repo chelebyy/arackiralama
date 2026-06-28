@@ -53,6 +53,28 @@ function getPageKey(page: AdminPublicManagedPage | null) {
   return page ? `${page.slug}:${page.locale}` : null;
 }
 
+function createMissingLocaleDraft(
+  pages: AdminPublicManagedPage[],
+  slug: string,
+  locale: PublicSettingsLocale,
+): AdminPublicManagedPage | null {
+  const sourcePage = pages.find((page) => page.slug === slug && page.locale === "tr") ??
+    pages.find((page) => page.slug === slug);
+
+  if (!sourcePage) {
+    return null;
+  }
+
+  return {
+    ...clonePage(sourcePage),
+    id: `${locale}-${slug}`,
+    locale,
+    isPublished: false,
+    published: null,
+    publishedAtUtc: null,
+  };
+}
+
 export default function PageContentEditor({ content, onContentChange }: PageContentEditorProps) {
   const sortedPages = useMemo(
     () =>
@@ -89,23 +111,27 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
     () => content.pages.find((page) => page.slug === selectedSlug && page.locale === selectedLocale) ?? null,
     [content.pages, selectedLocale, selectedSlug],
   );
-  const [draft, setDraft] = useState<AdminPublicManagedPage | null>(() =>
-    selectedPage ? clonePage(selectedPage) : null,
+  const editablePage = useMemo(
+    () => selectedPage ?? createMissingLocaleDraft(content.pages, selectedSlug, selectedLocale),
+    [content.pages, selectedLocale, selectedPage, selectedSlug],
   );
-  const [draftKey, setDraftKey] = useState(() => getPageKey(selectedPage));
+  const [draft, setDraft] = useState<AdminPublicManagedPage | null>(() =>
+    editablePage ? clonePage(editablePage) : null,
+  );
+  const [draftKey, setDraftKey] = useState(() => getPageKey(editablePage));
   const [draftVersion, setDraftVersion] = useState(content.version);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    const selectedPageKey = getPageKey(selectedPage);
+    const selectedPageKey = getPageKey(editablePage);
 
     if (selectedPageKey !== draftKey || !isDirty) {
-      setDraft(selectedPage ? clonePage(selectedPage) : null);
+      setDraft(editablePage ? clonePage(editablePage) : null);
       setDraftKey(selectedPageKey);
       setDraftVersion(content.version);
       setIsDirty(false);
     }
-  }, [content.version, draftKey, isDirty, selectedPage]);
+  }, [content.version, draftKey, editablePage, isDirty]);
 
   const isMutating = isSaving || isPublishing || isUnpublishing;
 
@@ -250,11 +276,9 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
               </Button>
             ))}
           </div>
-          {selectedPage ? (
-            <div className="text-sm text-muted-foreground">
-              Sürüm {content.version} · {selectedPage.isPublished ? "Yayında" : "Taslak"}
-            </div>
-          ) : null}
+          <div className="text-sm text-muted-foreground">
+            Sürüm {content.version} · {selectedPage ? (selectedPage.isPublished ? "Yayında" : "Taslak") : "Yeni çeviri taslağı"}
+          </div>
         </div>
 
         {!draft ? (

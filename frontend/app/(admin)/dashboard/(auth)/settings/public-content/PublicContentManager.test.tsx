@@ -318,6 +318,43 @@ describe("PublicContentPage", () => {
     );
   });
 
+  it("creates a missing locale page draft from the selected source page", async () => {
+    const user = userEvent.setup();
+    const onContentChange = vi.fn();
+    updateAdminPublicPageDraftMock.mockResolvedValue({
+      ...adminContentFixture,
+      version: "2",
+      pages: [
+        ...adminContentFixture.pages,
+        {
+          ...adminContentFixture.pages[0],
+          id: "page-privacy-en",
+          locale: "en",
+          title: "English Privacy",
+          isPublished: false,
+        },
+      ],
+    });
+    render(<PageContentEditor content={adminContentFixture} onContentChange={onContentChange} />);
+
+    await user.click(screen.getByRole("button", { name: "EN" }));
+
+    expect(screen.getByLabelText("Sayfa Başlığı")).toHaveValue("Gizlilik");
+
+    await user.clear(screen.getByLabelText("Sayfa Başlığı"));
+    await user.type(screen.getByLabelText("Sayfa Başlığı"), "English Privacy");
+    await user.click(screen.getByRole("button", { name: "Taslağı Kaydet" }));
+
+    expect(updateAdminPublicPageDraftMock).toHaveBeenCalledWith(
+      "privacy",
+      "en",
+      expect.objectContaining({
+        title: "English Privacy",
+        version: "1",
+      }),
+    );
+  });
+
   it("publishes and unpublishes the selected page", async () => {
     const user = userEvent.setup();
 

@@ -159,6 +159,17 @@ describe("SystemSettingsPage", () => {
 
   it("saves locale-specific labels for public navigation links", async () => {
     const user = userEvent.setup();
+    const refreshedSettings = {
+      ...baseSettings,
+      contactPageMapTitle: "Updated by content workspace",
+      pages: [
+        {
+          ...baseSettings.pages[0],
+          title: "Updated Privacy Draft"
+        }
+      ]
+    };
+    mocks.mutate.mockResolvedValue(refreshedSettings);
     render(<SystemSettingsPage />);
 
     expect(await screen.findByText("Public Site Ayarları")).toBeInTheDocument();
@@ -183,11 +194,11 @@ describe("SystemSettingsPage", () => {
         }
       }
     });
-    expect(payload.pages).toEqual(baseSettings.pages);
-    expect(payload.contactPageChannels).toEqual(baseSettings.contactPageChannels);
-    expect(payload.contactPageOffices).toEqual(baseSettings.contactPageOffices);
-    expect(payload.contactPageWorkingHours).toEqual(baseSettings.contactPageWorkingHours);
-    expect(payload.contactPageMapTitle).toBe(baseSettings.contactPageMapTitle);
+    expect(payload.pages).toEqual(refreshedSettings.pages);
+    expect(payload.contactPageChannels).toEqual(refreshedSettings.contactPageChannels);
+    expect(payload.contactPageOffices).toEqual(refreshedSettings.contactPageOffices);
+    expect(payload.contactPageWorkingHours).toEqual(refreshedSettings.contactPageWorkingHours);
+    expect(payload.contactPageMapTitle).toBe(refreshedSettings.contactPageMapTitle);
     expect(payload.contactPageMapEmbedUrl).toBe(baseSettings.contactPageMapEmbedUrl);
     expect(payload.contactPageMapIsVisible).toBe(baseSettings.contactPageMapIsVisible);
   });

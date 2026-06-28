@@ -265,6 +265,9 @@ export default function SystemSettingsPage() {
   const onSubmit = async (data: PublicSiteSettingsFormData) => {
     setIsSaving(true);
     try {
+      const latestSettings = await mutate();
+      const contentSource = latestSettings ?? settings;
+
       const payload: UpdatePublicSiteSettingsData = {
         ...data,
         headerLinks: reindexLinks(data.headerLinks),
@@ -272,10 +275,13 @@ export default function SystemSettingsPage() {
         quickLinks: reindexLinks(data.quickLinks),
         socialLinks: reindexLinks(data.socialLinks),
         footerBottomLinks: reindexLinks(data.footerBottomLinks),
-        contactPageChannels: data.contactPageChannels,
-        contactPageOffices: data.contactPageOffices,
-        contactPageWorkingHours: data.contactPageWorkingHours,
-        pages: data.pages
+        contactPageChannels: contentSource?.contactPageChannels ?? [],
+        contactPageOffices: contentSource?.contactPageOffices ?? [],
+        contactPageWorkingHours: contentSource?.contactPageWorkingHours ?? [],
+        contactPageMapTitle: contentSource?.contactPageMapTitle ?? "",
+        contactPageMapEmbedUrl: contentSource?.contactPageMapEmbedUrl ?? "",
+        contactPageMapIsVisible: contentSource?.contactPageMapIsVisible ?? true,
+        pages: contentSource?.pages ?? []
       };
 
       await mutateUpdatePublicSiteSettings(payload);
