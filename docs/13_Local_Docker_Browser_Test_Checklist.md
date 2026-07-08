@@ -624,8 +624,55 @@ Admin data operations evidence captured on 2026-06-04:
 - `frontend/lib/api/client.ts` still reads `auth_token` from
   `localStorage` even though the codebase does not write to that key
   (auth lives in the `rac_access` httpOnly cookie now). The dead
-  branch should be removed or replaced with a `rac_access` cookie
-  reader in a follow-up PR.
+  compatibility read should be removed in a future auth cleanup if no
+  old local sessions still depend on it; otherwise the branch should
+  be removed or replaced with a `rac_access` cookie reader in a
+  follow-up PR.
+
+### 6.5 Admin Public Site & Contact UX Validation Gate
+
+Planned on 2026-07-08 for the focused admin Public Site & Contact UX refresh
+documented in `docs/15_Admin_UX_Refresh_Implementation.md`. This gate is not
+complete until the targeted admin authoring UI has been rebuilt in Docker
+Desktop and checked in a real browser after admin login.
+
+Required admin pages:
+
+- [ ] `/dashboard/settings/public-content`
+- [ ] `/dashboard/settings/system` if Public Site & Contact controls remain there
+
+Required public sanity pages, when edited content/contact output changes:
+
+- [ ] `/tr/iletisim`
+- [ ] `/tr/privacy`
+- [ ] `/tr/terms`
+
+Required viewports:
+
+- [ ] Desktop `1440x900`
+- [ ] Tablet `768x1024`
+- [ ] Mobile `375x812`
+
+Design acceptance for every tested page:
+
+- [ ] No horizontal page overflow.
+- [ ] Forms, repeated contact rows, dialogs, and preview/readability areas do not break or overlap.
+- [ ] Header and sidebar do not collide with page content.
+- [ ] Locale-specific and global settings are visually distinct.
+- [ ] Save, publish, unpublish, and visibility actions show clear feedback.
+- [ ] Primary actions are reachable without visual clutter.
+- [ ] Empty, error, and loading states are visible where applicable.
+- [ ] Browser console has no material runtime error.
+- [ ] Network panel has no unexpected application `4xx` or `5xx`.
+
+Evidence to capture after implementation:
+
+- Docker Desktop status and compose startup command/result.
+- Authenticated admin user used, without writing secrets into this file.
+- Browser viewport notes for the targeted admin routes and any affected public sanity routes.
+- Notes on whether unrelated operation-page changes were parked, reverted, or moved to a separate PR.
+- Console/network summary and any accepted non-application extension noise.
+- Link to screenshots or evidence folder if screenshots are captured.
 
 ------------------------------------------------------------------------
 
