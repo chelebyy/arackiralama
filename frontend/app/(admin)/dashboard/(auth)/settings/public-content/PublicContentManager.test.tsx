@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "swr";
@@ -198,20 +198,14 @@ describe("PublicContentPage", () => {
     await user.click(await screen.findByRole("tab", { name: "İletişim" }));
     expect(screen.getByText("Global iletişim")).toBeInTheDocument();
     expect(screen.getByText(/Son kaydedilen global iletişim bilgileri gösteriliyor/)).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Harita Başlığı"));
-    await user.type(screen.getByLabelText("Harita Başlığı"), "Alanya Ofisleri");
+    fireEvent.change(screen.getByLabelText("Harita Başlığı"), { target: { value: "Alanya Ofisleri" } });
     expect(screen.getByText(/İletişim alanlarında kaydedilmemiş değişiklik var/)).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Google Maps Embed URL"));
-    await user.type(screen.getByLabelText("Google Maps Embed URL"), "https://maps.example/new");
+    fireEvent.change(screen.getByLabelText("Google Maps Embed URL"), { target: { value: "https://maps.example/new" } });
     await user.click(screen.getByLabelText("Harita görünür"));
-    await user.clear(screen.getByLabelText("Kanal 1 Etiket"));
-    await user.type(screen.getByLabelText("Kanal 1 Etiket"), "WhatsApp Destek");
-    await user.clear(screen.getByLabelText("Kanal 1 EN Etiket"));
-    await user.type(screen.getByLabelText("Kanal 1 EN Etiket"), "WhatsApp Support");
-    await user.clear(screen.getByLabelText("Ofis 1 Ad"));
-    await user.type(screen.getByLabelText("Ofis 1 Ad"), "Damlataş Ofis");
-    await user.clear(screen.getByLabelText("Saat 1"));
-    await user.type(screen.getByLabelText("Saat 1"), "10:00-19:00");
+    fireEvent.change(screen.getByLabelText("Kanal 1 Etiket"), { target: { value: "WhatsApp Destek" } });
+    fireEvent.change(screen.getByLabelText("Kanal 1 EN Etiket"), { target: { value: "WhatsApp Support" } });
+    fireEvent.change(screen.getByLabelText("Ofis 1 Ad"), { target: { value: "Damlataş Ofis" } });
+    fireEvent.change(screen.getByLabelText("Saat 1"), { target: { value: "10:00-19:00" } });
     await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
 
     expect(updateAdminPublicContactMock).toHaveBeenCalledWith(
@@ -264,8 +258,7 @@ describe("PublicContentPage", () => {
       <ContactContentEditor content={adminContentFixture} onContentChange={onContentChange} />,
     );
 
-    await user.clear(screen.getByLabelText("Harita Başlığı"));
-    await user.type(screen.getByLabelText("Harita Başlığı"), "Kaydedilmemiş Başlık");
+    fireEvent.change(screen.getByLabelText("Harita Başlığı"), { target: { value: "Kaydedilmemiş Başlık" } });
     rerender(<ContactContentEditor content={refreshedContent} onContentChange={onContentChange} />);
 
     expect(screen.getByLabelText("Harita Başlığı")).toHaveValue("Kaydedilmemiş Başlık");
@@ -278,8 +271,7 @@ describe("PublicContentPage", () => {
       }),
     );
 
-    await user.clear(screen.getByLabelText("Harita Başlığı"));
-    await user.type(screen.getByLabelText("Harita Başlığı"), "İkinci Kayıt");
+    fireEvent.change(screen.getByLabelText("Harita Başlığı"), { target: { value: "İkinci Kayıt" } });
     await user.click(screen.getByRole("button", { name: "İletişimi Kaydet" }));
 
     expect(updateAdminPublicContactMock).toHaveBeenLastCalledWith(
