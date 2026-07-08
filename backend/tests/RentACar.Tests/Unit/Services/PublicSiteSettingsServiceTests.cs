@@ -147,6 +147,47 @@ public sealed class PublicSiteSettingsServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_WhenDraftOnlyPageHasNoPublishedSnapshot_DoesNotExposeDraftContent()
+    {
+        await using var dbContext = CreateDbContext();
+        var draftAt = new DateTime(2026, 1, 3, 10, 0, 0, DateTimeKind.Utc);
+        var pagesJson = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                id = "tr-privacy",
+                slug = "privacy",
+                locale = "tr",
+                title = "Secret Draft Privacy",
+                subtitle = "Secret draft subtitle",
+                seoTitle = "Secret draft SEO",
+                seoDescription = "Secret draft description",
+                isPublished = false,
+                sortOrder = 0,
+                blocks = new[]
+                {
+                    new { id = "secret", heading = "Secret Heading", body = "Secret draft body", isVisible = true, sortOrder = 0, bodyFormat = "plain" }
+                },
+                published = (object?)null,
+                draftUpdatedAtUtc = (DateTime?)draftAt,
+                publishedAtUtc = (DateTime?)null
+            }
+        });
+        dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
+        await dbContext.SaveChangesAsync();
+        var service = new PublicSiteSettingsService(dbContext);
+
+        var publicPage = (await service.GetAsync()).Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
+
+        publicPage.IsPublished.Should().BeFalse();
+        publicPage.Title.Should().BeEmpty();
+        publicPage.Subtitle.Should().BeEmpty();
+        publicPage.SeoTitle.Should().BeEmpty();
+        publicPage.SeoDescription.Should().BeEmpty();
+        publicPage.Blocks.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task PublishPageAsync_promotes_draft_to_public_page()
     {
         await using var dbContext = CreateDbContext();
@@ -509,7 +550,8 @@ public sealed class PublicSiteSettingsServiceTests
 
         var adminAfterUpdate = await service.GetAdminContentAsync();
         var adminPage = adminAfterUpdate.Pages.Single(page => page.Slug == "terms" && page.Locale == "tr");
-        adminPage.Title.Should().Be("Settings Draft Terms");
+        adminPage.Title.Should().Be("Stored Draft Terms");
+        adminPage.Blocks.Single().Body.Should().Be("Stored draft body");
         adminPage.Published.Should().NotBeNull();
         adminPage.Published!.Title.Should().Be("Published Terms");
         adminPage.Published.Blocks.Single().Body.Should().Be("Published body");
