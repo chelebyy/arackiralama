@@ -689,6 +689,20 @@ Evidence captured on 2026-07-08:
   Aikido MCP/tool was unavailable in the session; release security gating must
   install/start Aikido MCP and run the required scan separately.
 
+Dependency-security follow-up captured on 2026-07-08:
+
+- The Docker rebuild surfaced an existing `Microsoft.OpenApi` 2.0.0 NU1903 /
+  GHSA-v5pm-xwqc-g5wc advisory outside the browser UX scope.
+- Follow-up commit `2ff2edf` added an explicit `Microsoft.OpenApi` 2.7.5
+  package reference in `backend/src/RentACar.API/RentACar.API.csproj`.
+- Verification after the follow-up: `dotnet list backend\RentACar.sln package
+  --include-transitive --vulnerable` reported no vulnerable backend packages,
+  `dotnet build backend\RentACar.sln --no-restore` passed with 0 warnings /
+  0 errors, and `dotnet test backend\RentACar.sln --no-build` passed outside
+  the sandbox with 682/682 unit tests and 34/34 integration tests.
+- This closes the OpenAPI dependency warning noted during the Docker build, but
+  it does not replace the separate Aikido MCP release-security gate above.
+
 ------------------------------------------------------------------------
 
 ## 7. API and Network Verification

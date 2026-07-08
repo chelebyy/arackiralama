@@ -35,6 +35,10 @@ contact information.
   `docs/13_Local_Docker_Browser_Test_Checklist.md#65-admin-public-site--contact-ux-validation-gate`.
 - Saved supporting browser evidence under
   `docs/test-evidence/local-docker-2026-07-08-admin-ux/`.
+- Closed the `Microsoft.OpenApi` NU1903 / GHSA-v5pm-xwqc-g5wc dependency
+  follow-up discovered during Docker rebuild by pinning patched
+  `Microsoft.OpenApi` 2.7.5 in the API project and re-running backend
+  vulnerability/build/test verification.
 - Aikido MCP/tool was unavailable, so `aikido_full_scan` could not run; this is
   explicitly tracked as the remaining security-tooling blocker for release
   gating.
@@ -286,5 +290,6 @@ This UX refresh is complete only when all are true:
   MCP blocker is explicitly reported.
 
 Current status on 2026-07-08: complete for the focused admin Public Site &
-Contact UX slice, with the Aikido MCP availability blocker explicitly reported
-for release/security gating.
+Contact UX slice. The OpenAPI dependency warning found during Docker rebuild is
+closed and verified; the Aikido MCP availability blocker remains explicitly
+reported for release/security gating.
