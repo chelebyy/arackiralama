@@ -362,3 +362,19 @@ OS: Ubuntu 22.04 LTS
 - The reports API contract is now tracked in `docs/07_API_Contract_ENTERPRISE_FULL.md`.
 - Richer analytics, export workflows, and accounting-grade ledgers remain post-launch scope.
 - Frontend report screens should consume these endpoints through the existing admin API client/hook patterns when that integration is scheduled.
+
+### 12.7 OpenAPI Dependency Security Override
+
+**Context:** The backend API uses `Microsoft.AspNetCore.OpenApi` for development-only OpenAPI generation. On 8 July 2026, NuGet vulnerability scanning reported GHSA-v5pm-xwqc-g5wc / CVE-2026-49451 through the transitive `Microsoft.OpenApi` 2.0.0 package.
+
+**Decision:** Keep the existing ASP.NET Core OpenAPI integration and add an explicit `Microsoft.OpenApi` 2.7.5 package reference in `backend/src/RentACar.API/RentACar.API.csproj` to force the patched 2.x line without changing runtime API behavior.
+
+**Rationale:**
+- Preserves the current `Microsoft.AspNetCore.OpenApi` 10.0.9 integration and generated OpenAPI behavior.
+- Avoids a broader framework/package upgrade in a focused dependency-security slice.
+- Uses the patched version identified by the GitHub advisory for the consumed 2.x package line.
+
+**Consequences:**
+- Backend dependency vulnerability checks must include transitive packages with `dotnet list backend\RentACar.sln package --include-transitive --vulnerable`.
+- Future ASP.NET Core package upgrades should verify whether the explicit `Microsoft.OpenApi` override is still needed or can be removed after the upstream transitive dependency advances.
+- As of 8 July 2026, backend restore/build/test passed after the override, and `dotnet list ... --vulnerable` reported no vulnerable backend packages.

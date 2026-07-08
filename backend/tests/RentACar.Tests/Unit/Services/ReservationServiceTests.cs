@@ -2075,6 +2075,10 @@ public sealed class ReservationServiceTests
         var newReturnOfficeId = Guid.NewGuid();
         var vehicleGroupId = Guid.NewGuid();
         var originalCustomer = new Customer { FullName = "Original Customer", Email = "original@example.com", Phone = "+90 555 000 0000" };
+        var originalPickupDateTime = DateTime.UtcNow.Date.AddDays(7).AddHours(10);
+        var originalReturnDateTime = originalPickupDateTime.AddDays(2);
+        var updatedPickupDateTime = originalPickupDateTime.AddDays(1).AddHours(-1);
+        var updatedReturnDateTime = originalPickupDateTime.AddDays(4).AddHours(-1);
         var reservation = new Reservation
         {
             Id = reservationId,
@@ -2090,16 +2094,16 @@ public sealed class ReservationServiceTests
             },
             PickupOfficeId = pickupOfficeId,
             ReturnOfficeId = returnOfficeId,
-            PickupDateTime = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc),
-            ReturnDateTime = new DateTime(2026, 7, 3, 10, 0, 0, DateTimeKind.Utc),
+            PickupDateTime = originalPickupDateTime,
+            ReturnDateTime = originalReturnDateTime,
             Status = ReservationStatus.Confirmed,
             TotalAmount = 1500m
         };
 
         var request = new UpdateReservationRequest
         {
-            PickupDateTimeUtc = new DateTime(2026, 7, 2, 9, 0, 0, DateTimeKind.Utc),
-            ReturnDateTimeUtc = new DateTime(2026, 7, 5, 9, 0, 0, DateTimeKind.Utc),
+            PickupDateTimeUtc = updatedPickupDateTime,
+            ReturnDateTimeUtc = updatedReturnDateTime,
             PickupOfficeId = newPickupOfficeId,
             ReturnOfficeId = newReturnOfficeId,
             Customer = new CustomerInfoRequest

@@ -1759,6 +1759,30 @@ builder.Services.AddCors(options =>
 });
 ```
 
+## 14.4 Dependency Vulnerability Verification
+
+Backend dependency-security work must verify both direct and transitive NuGet packages:
+
+```bash
+dotnet list backend\RentACar.sln package --include-transitive --vulnerable
+```
+
+When a vulnerable transitive package is pulled by a framework integration package, prefer the narrowest compatible override before making broad framework upgrades. The 8 July 2026 `Microsoft.OpenApi` fix follows this pattern: `Microsoft.AspNetCore.OpenApi` stays on the current .NET 10 line, while `RentACar.API.csproj` explicitly references patched `Microsoft.OpenApi` 2.7.5.
+
+Verification expectations for dependency-security slices:
+
+- Restore the solution with the repo NuGet config.
+- Re-run transitive vulnerability scanning and require 0 critical/high vulnerable backend packages.
+- Build the backend solution with 0 warnings/errors.
+- Run the backend unit and integration tests.
+- If the repo-required Aikido MCP scanner is unavailable, record the scanner availability blocker separately from NuGet vulnerability status.
+
+## 14.5 Time-Stable Test Data
+
+Tests that exercise reservation editability rules must avoid fixed calendar dates for future reservations. A date that was safely in the future when the test was written can become historical and trigger the production rule that blocks updates after pickup has started.
+
+Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern for future reservation fixtures. Keep assertions focused on behavior, not on a hardcoded calendar day.
+
 
 ------------------------------------------------------------------------
 
