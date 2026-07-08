@@ -1247,8 +1247,12 @@ Public legal/contact/navigation content can be managed from the admin dashboard 
 - Dashboard editing is split by ownership:
   - `/dashboard/settings/system` keeps operational and technical settings.
   - `/dashboard/settings/public-content` provides a dedicated authoring surface for managed pages, contact information, navigation links, hero CTA, map embed, and public payment-method display.
+- The admin authoring UI must expose state close to the content it affects:
+  - managed page editors show the active locale, saved/dirty/draft/published state, and publish/unpublish availability near the editing controls;
+  - contact editors separate global contact/map fields from locale override fields and keep hidden rows visible to admins with explicit public visibility labels;
+  - settings navigation is overflow-contained on narrow mobile viewports so tab labels can scroll without widening the page.
 - `privacy`, `terms`, and contact/`iletisim` routes remain normal public Next.js routes. They consume `GET /api/v1/public-site-settings`, render managed records when published, and fall back to bundled locale messages when a managed block is missing or unpublished.
-- Browser smoke coverage is expected for the dedicated admin authoring route and the public managed-content routes after Docker rebuilds.
+- Browser smoke coverage is expected for the dedicated admin authoring route and the public managed-content routes after Docker rebuilds. The 2026-07-08 Admin Public Site & Contact UX pass is recorded in `docs/13_Local_Docker_Browser_Test_Checklist.md` and `docs/test-evidence/local-docker-2026-07-08-admin-ux/`.
 
 Example link payload:
 

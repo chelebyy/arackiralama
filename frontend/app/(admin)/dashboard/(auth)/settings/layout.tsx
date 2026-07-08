@@ -14,20 +14,22 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <h1 className="text-2xl font-bold tracking-tight">Ayarlar</h1>
       </div>
       <Tabs value={segment} className="w-full">
-        <TabsList>
-          <TabsTrigger value="feature-flags" asChild>
-            <Link href="/dashboard/settings/feature-flags">Özellik Bayrakları</Link>
-          </TabsTrigger>
-          <TabsTrigger value="system" asChild>
-            <Link href="/dashboard/settings/system">Public Site & İletişim</Link>
-          </TabsTrigger>
-          <TabsTrigger value="public-content" asChild>
-            <Link href="/dashboard/settings/public-content">İçerik Yönetimi</Link>
-          </TabsTrigger>
-          <TabsTrigger value="audit-logs" asChild>
-            <Link href="/dashboard/settings/audit-logs">Denetim Kayıtları</Link>
-          </TabsTrigger>
-        </TabsList>
+        <div className="max-w-full overflow-x-auto pb-1">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="feature-flags" asChild>
+              <Link href="/dashboard/settings/feature-flags">Özellik Bayrakları</Link>
+            </TabsTrigger>
+            <TabsTrigger value="system" asChild>
+              <Link href="/dashboard/settings/system">Public Site & İletişim</Link>
+            </TabsTrigger>
+            <TabsTrigger value="public-content" asChild>
+              <Link href="/dashboard/settings/public-content">İçerik Yönetimi</Link>
+            </TabsTrigger>
+            <TabsTrigger value="audit-logs" asChild>
+              <Link href="/dashboard/settings/audit-logs">Denetim Kayıtları</Link>
+            </TabsTrigger>
+          </TabsList>
+        </div>
       </Tabs>
       <div className="mt-4">{children}</div>
     </div>

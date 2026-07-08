@@ -638,32 +638,32 @@ Desktop and checked in a real browser after admin login.
 
 Required admin pages:
 
-- [ ] `/dashboard/settings/public-content`
-- [ ] `/dashboard/settings/system` if Public Site & Contact controls remain there
+- [x] `/dashboard/settings/public-content`
+- [x] `/dashboard/settings/system` if Public Site & Contact controls remain there
 
 Required public sanity pages, when edited content/contact output changes:
 
-- [ ] `/tr/iletisim`
-- [ ] `/tr/privacy`
-- [ ] `/tr/terms`
+- [x] `/tr/iletisim`
+- [x] `/tr/privacy`
+- [x] `/tr/terms`
 
 Required viewports:
 
-- [ ] Desktop `1440x900`
-- [ ] Tablet `768x1024`
-- [ ] Mobile `375x812`
+- [x] Desktop `1440x900`
+- [x] Tablet `768x1024`
+- [x] Mobile `375x812`
 
 Design acceptance for every tested page:
 
-- [ ] No horizontal page overflow.
-- [ ] Forms, repeated contact rows, dialogs, and preview/readability areas do not break or overlap.
-- [ ] Header and sidebar do not collide with page content.
-- [ ] Locale-specific and global settings are visually distinct.
-- [ ] Save, publish, unpublish, and visibility actions show clear feedback.
-- [ ] Primary actions are reachable without visual clutter.
-- [ ] Empty, error, and loading states are visible where applicable.
-- [ ] Browser console has no material runtime error.
-- [ ] Network panel has no unexpected application `4xx` or `5xx`.
+- [x] No horizontal page overflow.
+- [x] Forms, repeated contact rows, dialogs, and preview/readability areas do not break or overlap.
+- [x] Header and sidebar do not collide with page content.
+- [x] Locale-specific and global settings are visually distinct.
+- [x] Save, publish, unpublish, and visibility actions show clear feedback.
+- [x] Primary actions are reachable without visual clutter.
+- [x] Empty, error, and loading states are visible where applicable.
+- [x] Browser console has no material runtime error.
+- [x] Network panel has no unexpected application `4xx` or `5xx`.
 
 Evidence to capture after implementation:
 
@@ -673,6 +673,21 @@ Evidence to capture after implementation:
 - Notes on whether unrelated operation-page changes were parked, reverted, or moved to a separate PR.
 - Console/network summary and any accepted non-application extension noise.
 - Link to screenshots or evidence folder if screenshots are captured.
+
+Evidence captured on 2026-07-08:
+
+- Gate decision: **PASS** for the focused Admin Public Site & Contact UX slice
+  documented in `docs/15_Admin_UX_Refresh_Implementation.md`.
+- Docker Desktop stack was rebuilt with `docker compose -f backend\docker-compose.yml up -d --build` after the admin UX changes. The web image completed `next build`, and the compose stack started `postgres`, `redis`, `api`, `worker`, and `web`.
+- Stack health checks passed: `curl.exe -i http://localhost:5000/health` returned `HTTP/1.1 200 OK` with body `Healthy`; `curl.exe -I http://localhost:3001` returned `HTTP/1.1 307 Temporary Redirect` with `location: /tr`.
+- Browser validation used the local test admin from `frontend/e2e/fixtures/test-data.ts`; the secret was not copied into this checklist.
+- Playwright Chromium checked 18 page/viewport combinations across `/dashboard/settings/public-content` pages tab, `/dashboard/settings/public-content` contact tab, `/dashboard/settings/system`, `/tr/iletisim`, `/tr/privacy`, and `/tr/terms` at `1440x900`, `768x1024`, and `375x812`.
+- Browser summary: `0` horizontal overflow failures, `0` unexpected application `4xx`/`5xx`, and `0` material console errors. The only console noise was the known local config message `Google Analytics key not provided.`
+- Evidence folder: `docs/test-evidence/local-docker-2026-07-08-admin-ux/` with `browser-summary.json`, `evidence.md`, and screenshots for each checked route/viewport.
+- Unrelated operation-page changes remain out of this implementation slice; the current code changes are limited to Public Site & Contact authoring surfaces, settings navigation overflow handling, tests, and evidence docs.
+- `aikido_full_scan` is not part of this Docker/browser gate result because the
+  Aikido MCP/tool was unavailable in the session; release security gating must
+  install/start Aikido MCP and run the required scan separately.
 
 ------------------------------------------------------------------------
 

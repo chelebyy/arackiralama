@@ -4,6 +4,7 @@
 **Scope:** Admin usability refresh for Public Site & Contact authoring  
 **Primary user:** Site owner/admin editing customer-facing content  
 **Verification gate:** Focused admin browser smoke in Docker Desktop
+**Implementation status:** Completed for the focused slice on 2026-07-08
 
 ## 1. Summary
 
@@ -22,6 +23,21 @@ The admin UI should keep the current shadcn/Radix/Lucide dashboard foundation.
 The customer-facing public site design is not being redesigned in this work;
 the focus is the admin authoring surface that controls public content and
 contact information.
+
+2026-07-08 implementation closeout:
+
+- Refreshed the managed page and contact authoring surfaces with explicit
+  active-locale, saved/dirty, draft/published, global/local, and hidden-row
+  state signals.
+- Contained settings navigation overflow for narrow mobile admin viewports.
+- Updated focused Public Content manager tests for the new authoring signals.
+- Completed the Docker Desktop browser design validation gate documented in
+  `docs/13_Local_Docker_Browser_Test_Checklist.md#65-admin-public-site--contact-ux-validation-gate`.
+- Saved supporting browser evidence under
+  `docs/test-evidence/local-docker-2026-07-08-admin-ux/`.
+- Aikido MCP/tool was unavailable, so `aikido_full_scan` could not run; this is
+  explicitly tracked as the remaining security-tooling blocker for release
+  gating.
 
 ## 2. Goals
 
@@ -196,6 +212,8 @@ Manual/Browser checks:
 - Tests must run through a real browser session after admin login.
 - Evidence must be recorded in `docs/13_Local_Docker_Browser_Test_Checklist.md`
   after the pass.
+- 2026-07-08 result: completed against the local Docker stack with 18
+  page/viewport browser checks and recorded evidence.
 
 ## 9. Docker Desktop Design Validation
 
@@ -234,6 +252,8 @@ Evidence rules:
   success.
 - If browser extensions create external network noise, identify it separately
   from application traffic.
+- 2026-07-08 result: gate passed for the focused Public Site & Contact UX
+  slice; see `docs/test-evidence/local-docker-2026-07-08-admin-ux/evidence.md`.
 
 ## 10. Security Requirements
 
@@ -264,3 +284,7 @@ This UX refresh is complete only when all are true:
   targeted admin/public pages.
 - Aikido scan is completed for changed first-party code, or the missing Aikido
   MCP blocker is explicitly reported.
+
+Current status on 2026-07-08: complete for the focused admin Public Site &
+Contact UX slice, with the Aikido MCP availability blocker explicitly reported
+for release/security gating.
