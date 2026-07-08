@@ -624,8 +624,84 @@ Admin data operations evidence captured on 2026-06-04:
 - `frontend/lib/api/client.ts` still reads `auth_token` from
   `localStorage` even though the codebase does not write to that key
   (auth lives in the `rac_access` httpOnly cookie now). The dead
-  branch should be removed or replaced with a `rac_access` cookie
-  reader in a follow-up PR.
+  compatibility read should be removed in a future auth cleanup if no
+  old local sessions still depend on it; otherwise the branch should
+  be removed or replaced with a `rac_access` cookie reader in a
+  follow-up PR.
+
+### 6.5 Admin Public Site & Contact UX Validation Gate
+
+Planned on 2026-07-08 for the focused admin Public Site & Contact UX refresh
+documented in `docs/15_Admin_UX_Refresh_Implementation.md`. This gate is not
+complete until the targeted admin authoring UI has been rebuilt in Docker
+Desktop and checked in a real browser after admin login.
+
+Required admin pages:
+
+- [x] `/dashboard/settings/public-content`
+- [x] `/dashboard/settings/system` if Public Site & Contact controls remain there
+
+Required public sanity pages, when edited content/contact output changes:
+
+- [x] `/tr/iletisim`
+- [x] `/tr/privacy`
+- [x] `/tr/terms`
+
+Required viewports:
+
+- [x] Desktop `1440x900`
+- [x] Tablet `768x1024`
+- [x] Mobile `375x812`
+
+Design acceptance for every tested page:
+
+- [x] No horizontal page overflow.
+- [x] Forms, repeated contact rows, dialogs, and preview/readability areas do not break or overlap.
+- [x] Header and sidebar do not collide with page content.
+- [x] Locale-specific and global settings are visually distinct.
+- [x] Save, publish, unpublish, and visibility actions show clear feedback.
+- [x] Primary actions are reachable without visual clutter.
+- [x] Empty, error, and loading states are visible where applicable.
+- [x] Browser console has no material runtime error.
+- [x] Network panel has no unexpected application `4xx` or `5xx`.
+
+Evidence to capture after implementation:
+
+- Docker Desktop status and compose startup command/result.
+- Authenticated admin user used, without writing secrets into this file.
+- Browser viewport notes for the targeted admin routes and any affected public sanity routes.
+- Notes on whether unrelated operation-page changes were parked, reverted, or moved to a separate PR.
+- Console/network summary and any accepted non-application extension noise.
+- Link to screenshots or evidence folder if screenshots are captured.
+
+Evidence captured on 2026-07-08:
+
+- Gate decision: **PASS** for the focused Admin Public Site & Contact UX slice
+  documented in `docs/15_Admin_UX_Refresh_Implementation.md`.
+- Docker Desktop stack was rebuilt with `docker compose -f backend\docker-compose.yml up -d --build` after the admin UX changes. The web image completed `next build`, and the compose stack started `postgres`, `redis`, `api`, `worker`, and `web`.
+- Stack health checks passed: `curl.exe -i http://localhost:5000/health` returned `HTTP/1.1 200 OK` with body `Healthy`; `curl.exe -I http://localhost:3001` returned `HTTP/1.1 307 Temporary Redirect` with `location: /tr`.
+- Browser validation used the local test admin from `frontend/e2e/fixtures/test-data.ts`; the secret was not copied into this checklist.
+- Playwright Chromium checked 18 page/viewport combinations across `/dashboard/settings/public-content` pages tab, `/dashboard/settings/public-content` contact tab, `/dashboard/settings/system`, `/tr/iletisim`, `/tr/privacy`, and `/tr/terms` at `1440x900`, `768x1024`, and `375x812`.
+- Browser summary: `0` horizontal overflow failures, `0` unexpected application `4xx`/`5xx`, and `0` material console errors. The only console noise was the known local config message `Google Analytics key not provided.`
+- Evidence folder: `docs/test-evidence/local-docker-2026-07-08-admin-ux/` with `browser-summary.json`, `evidence.md`, and screenshots for each checked route/viewport.
+- Unrelated operation-page changes remain out of this implementation slice; the current code changes are limited to Public Site & Contact authoring surfaces, settings navigation overflow handling, tests, and evidence docs.
+- `aikido_full_scan` is not part of this Docker/browser gate result because the
+  Aikido MCP/tool was unavailable in the session; release security gating must
+  install/start Aikido MCP and run the required scan separately.
+
+Dependency-security follow-up captured on 2026-07-08:
+
+- The Docker rebuild surfaced an existing `Microsoft.OpenApi` 2.0.0 NU1903 /
+  GHSA-v5pm-xwqc-g5wc advisory outside the browser UX scope.
+- Follow-up commit `2ff2edf` added an explicit `Microsoft.OpenApi` 2.7.5
+  package reference in `backend/src/RentACar.API/RentACar.API.csproj`.
+- Verification after the follow-up: `dotnet list backend\RentACar.sln package
+  --include-transitive --vulnerable` reported no vulnerable backend packages,
+  `dotnet build backend\RentACar.sln --no-restore` passed with 0 warnings /
+  0 errors, and `dotnet test backend\RentACar.sln --no-build` passed outside
+  the sandbox with 682/682 unit tests and 34/34 integration tests.
+- This closes the OpenAPI dependency warning noted during the Docker build, but
+  it does not replace the separate Aikido MCP release-security gate above.
 
 ------------------------------------------------------------------------
 

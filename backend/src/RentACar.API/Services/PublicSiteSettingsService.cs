@@ -868,16 +868,16 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
                 return new StoredPublicManagedPageDto
                 {
-                    Id = page.Id,
-                    Slug = page.Slug,
-                    Locale = page.Locale,
-                    Title = page.Title,
-                    Subtitle = page.Subtitle,
-                    SeoTitle = page.SeoTitle,
-                    SeoDescription = page.SeoDescription,
+                    Id = existing?.Id ?? page.Id,
+                    Slug = existing?.Slug ?? page.Slug,
+                    Locale = existing?.Locale ?? page.Locale,
+                    Title = existing?.Title ?? page.Title,
+                    Subtitle = existing?.Subtitle ?? page.Subtitle,
+                    SeoTitle = existing?.SeoTitle ?? page.SeoTitle,
+                    SeoDescription = existing?.SeoDescription ?? page.SeoDescription,
                     IsPublished = page.IsPublished,
                     SortOrder = page.SortOrder,
-                    Blocks = page.Blocks,
+                    Blocks = existing?.Blocks ?? page.Blocks,
                     Published = published,
                     DraftUpdatedAtUtc = existing?.DraftUpdatedAtUtc ?? updatedAt,
                     PublishedAtUtc = existing?.PublishedAtUtc ?? published?.PublishedAtUtc
@@ -911,11 +911,11 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static PublicManagedPageDto ToPublicPageDto(StoredPublicManagedPageDto page)
     {
         var published = GetPublishedSnapshot(page);
-        var title = published?.Title ?? page.Title;
-        var subtitle = published?.Subtitle ?? page.Subtitle;
-        var seoTitle = published?.SeoTitle ?? page.SeoTitle;
-        var seoDescription = published?.SeoDescription ?? page.SeoDescription;
-        var blocks = published?.Blocks ?? page.Blocks;
+        var title = published?.Title ?? (page.IsPublished ? page.Title : string.Empty);
+        var subtitle = published?.Subtitle ?? (page.IsPublished ? page.Subtitle : string.Empty);
+        var seoTitle = published?.SeoTitle ?? (page.IsPublished ? page.SeoTitle : string.Empty);
+        var seoDescription = published?.SeoDescription ?? (page.IsPublished ? page.SeoDescription : string.Empty);
+        var blocks = published?.Blocks ?? (page.IsPublished ? page.Blocks : []);
 
         return new PublicManagedPageDto(
             page.Id,

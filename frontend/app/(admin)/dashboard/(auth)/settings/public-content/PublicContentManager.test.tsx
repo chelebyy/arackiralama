@@ -140,6 +140,8 @@ describe("PublicContentPage", () => {
     expect(await screen.findByRole("heading", { name: "İçerik Yönetimi" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Sayfalar" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "İletişim" })).toBeInTheDocument();
+    expect(screen.getByText("Dil: TR")).toBeInTheDocument();
+    expect(screen.getByText(/Son kaydedilen içerik gösteriliyor/)).toBeInTheDocument();
   });
 
   it("keeps loaded content visible when revalidation fails", async () => {
@@ -194,7 +196,10 @@ describe("PublicContentPage", () => {
     renderPublicContentPage();
 
     await user.click(await screen.findByRole("tab", { name: "İletişim" }));
+    expect(screen.getByText("Global iletişim")).toBeInTheDocument();
+    expect(screen.getByText(/Son kaydedilen global iletişim bilgileri gösteriliyor/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Harita Başlığı"), { target: { value: "Alanya Ofisleri" } });
+    expect(screen.getByText(/İletişim alanlarında kaydedilmemiş değişiklik var/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Google Maps Embed URL"), { target: { value: "https://maps.example/new" } });
     await user.click(screen.getByLabelText("Harita görünür"));
     fireEvent.change(screen.getByLabelText("Kanal 1 Etiket"), { target: { value: "WhatsApp Destek" } });
@@ -319,6 +324,7 @@ describe("PublicContentPage", () => {
     await user.clear(screen.getByLabelText("Sayfa Başlığı"));
     await user.type(screen.getByLabelText("Sayfa Başlığı"), "Kirli Taslak");
 
+    expect(screen.getByText(/Bu dilde kaydedilmemiş değişiklik var/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Yayınla" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Yayından Kaldır" })).toBeDisabled();
   });
@@ -344,6 +350,7 @@ describe("PublicContentPage", () => {
 
     await user.click(screen.getByRole("button", { name: "EN" }));
 
+    expect(screen.getByText(/Bu dil için yeni bir taslak hazırlanıyor/)).toBeInTheDocument();
     expect(screen.getByLabelText("Sayfa Başlığı")).toHaveValue("Gizlilik");
     expect(screen.getByRole("button", { name: "Yayınla" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Yayından Kaldır" })).toBeDisabled();
