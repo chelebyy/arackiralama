@@ -13,6 +13,7 @@ public static class ApplicationBuilderExtensions
         await app.Services.ApplyDatabaseMigrationsAsync(cancellationToken);
         await app.Services.ApplyLocalAdminSeedAsync(cancellationToken);
         await app.Services.ApplyConcurrentBookingInventorySeedAsync(cancellationToken);
+        await app.Services.ApplyReservationExtraOptionsBackfillAsync(cancellationToken);
 
         if (app.Environment.IsDevelopment())
         {

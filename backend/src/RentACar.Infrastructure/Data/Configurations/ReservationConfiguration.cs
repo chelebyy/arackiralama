@@ -1,12 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
+using System.Text.Json;
 
 namespace RentACar.Infrastructure.Data.Configurations;
 
 public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 {
+    private static readonly JsonSerializerOptions SnapshotSerializerOptions = new(JsonSerializerDefaults.Web);
+
     public void Configure(EntityTypeBuilder<Reservation> builder)
     {
         builder.ToTable("reservations");
@@ -36,11 +40,25 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.Property(x => x.DriverLicenseCountry).HasColumnName("driver_license_country").HasMaxLength(100);
         builder.Property(x => x.DriverLicenseIssueDate).HasColumnName("driver_license_issue_date");
         builder.Property(x => x.DriverLicenseExpiryDate).HasColumnName("driver_license_expiry_date");
+        builder.Property(x => x.QuoteId).HasColumnName("quote_id");
+        var pricingSnapshotProperty = builder.Property(x => x.PricingSnapshot)
+            .HasColumnName("pricing_snapshot")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                snapshot => SerializeSnapshot(snapshot),
+                json => DeserializeSnapshot(json));
+        pricingSnapshotProperty.Metadata.SetValueComparer(new ValueComparer<ReservationPricingSnapshotV1?>(
+            (left, right) => SerializeSnapshot(left) == SerializeSnapshot(right),
+            snapshot => snapshot == null ? 0 : SerializeSnapshot(snapshot)!.GetHashCode(StringComparison.Ordinal),
+            snapshot => DeserializeSnapshot(SerializeSnapshot(snapshot))));
         builder.Property(x => x.Version)
             .HasColumnName("xmin")
             .IsRowVersion();
 
         builder.HasIndex(x => x.PublicCode).IsUnique();
+        builder.HasIndex(x => x.QuoteId)
+            .IsUnique()
+            .HasFilter("quote_id IS NOT NULL");
         builder.HasIndex(x => new { x.VehicleId, x.PickupDateTime, x.ReturnDateTime })
             .HasDatabaseName("idx_reservations_vehicle_dates");
         builder.HasIndex(x => new { x.VehicleId, x.PickupDateTime, x.ReturnDateTime })
@@ -72,4 +90,12 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
             .HasForeignKey(x => x.ReturnOfficeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
+
+    private static string? SerializeSnapshot(ReservationPricingSnapshotV1? snapshot) =>
+        snapshot == null ? null : JsonSerializer.Serialize(snapshot, SnapshotSerializerOptions);
+
+    private static ReservationPricingSnapshotV1? DeserializeSnapshot(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<ReservationPricingSnapshotV1>(json, SnapshotSerializerOptions);
 }

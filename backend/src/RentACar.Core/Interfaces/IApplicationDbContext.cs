@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RentACar.Core.Entities;
 
 namespace RentACar.Core.Interfaces;
@@ -10,6 +10,10 @@ public interface IApplicationDbContext
     DbSet<Office> Offices { get; }
     DbSet<Customer> Customers { get; }
     DbSet<Reservation> Reservations { get; }
+    DbSet<ReservationExtraOption> ReservationExtraOptions { get; }
+    DbSet<ReservationExtraOptionTranslation> ReservationExtraOptionTranslations { get; }
+    DbSet<ReservationExtraOptionVehicleGroup> ReservationExtraOptionVehicleGroups { get; }
+    DbSet<ReservationSelectedExtra> ReservationSelectedExtras { get; }
     DbSet<PaymentIntent> PaymentIntents { get; }
     DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; }
     DbSet<PricingRule> PricingRules { get; }

@@ -378,3 +378,26 @@ OS: Ubuntu 22.04 LTS
 - Backend dependency vulnerability checks must include transitive packages with `dotnet list backend\RentACar.sln package --include-transitive --vulnerable`.
 - Future ASP.NET Core package upgrades should verify whether the explicit `Microsoft.OpenApi` override is still needed or can be removed after the upstream transitive dependency advances.
 - As of 8 July 2026, backend restore/build/test passed after the override, and `dotnet list ... --vulnerable` reported no vulnerable backend packages.
+
+### 12.8 Reservation Extra Options Persistence Boundary
+
+**Context:** The public booking flow currently owns a hard-coded list of reservation extras and passes legacy extra counts into pricing. The approved replacement needs an admin-managed, five-locale catalog while preserving historical reservation pricing, legacy clients, and server authority over all monetary values.
+
+**Decision:** Keep the feature inside the existing Core/API/Infrastructure monolith and introduce a normalized reservation-extra catalog with immutable reservation snapshots. Persist catalog options, translations, vehicle-group assignments, and selected reservation extras in four relational tables. Store the complete versioned pricing snapshot as `jsonb` on `reservations`, add nullable unique `quote_id` as the replay barrier, and use PostgreSQL `xmin` for catalog write concurrency.
+
+Built-in option identifiers are deterministic. The additive migration assigns built-ins to vehicle groups present at migration time. A bounded startup backfill may assign them only when none of the built-ins has any assignment; ordinary vehicle-group creation does not silently expand option availability. Used options are protected from hard deletion by the selected-extra foreign key, while reservation deletion cascades its immutable snapshots.
+
+**Rationale:**
+- Keeps catalog querying relational and indexable without reconstructing historical prices from mutable option rows.
+- Preserves a truthful total-only fallback for pre-migration reservations and an exact snapshot source for new-format reservations.
+- Makes duplicate quote consumption and duplicate reservation-option snapshots database-enforced invariants.
+- Keeps migration and rollback additive until new-format data exists, after which forward-fix or verified restore is safer than schema removal.
+- Avoids a new service or dependency before the existing booking, pricing, admin, and observability boundaries are proven.
+
+**Consequences:**
+- Phase 1 is implemented by migration `20260709204616_AddReservationExtraOptions`; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 3.5.
+- Phase 2 admin writes must update the parent catalog row when translations or assignments change so `xmin` advances.
+- Phase 3 quote and reservation creation must never accept client prices, totals, pricing modes, localized text, or snapshot payloads.
+- Public/admin API contracts remain planned until their implementing phase closes; `docs/16_Reservation_Extra_Options_Plan.md` is the decision source meanwhile.
+- Full Docker browser evidence remains open until the admin and public UI phases are implemented.
+- The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.

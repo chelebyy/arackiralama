@@ -1402,6 +1402,21 @@ ORDER BY idx_scan DESC;
 REINDEX INDEX CONCURRENTLY idx_reservations_vehicle_dates;
 ```
 
+## 11.5 Reservation Extra Options Persistence
+
+The reservation-extra catalog uses explicit EF Core configurations and PostgreSQL constraints rather than convention-only mapping. The Phase 1 schema is introduced by `20260709204616_AddReservationExtraOptions` and consists of:
+
+- `reservation_extra_options` with unique immutable code, price/quantity/order checks, catalog ordering index, and `xmin` row version;
+- `reservation_extra_option_translations` with `option_id + locale` composite key and the supported five-locale constraint;
+- `reservation_extra_option_vehicle_groups` with a composite assignment key and vehicle-group lookup index;
+- `reservation_selected_extras` with immutable localized/monetary snapshots, unique `reservation_id + extra_option_id`, cascading reservation delete, and restricted option delete;
+- nullable unique `reservations.quote_id` for replay protection;
+- nullable `reservations.pricing_snapshot` stored as versioned `jsonb` for exact new-format pricing history.
+
+The built-in seed and assignment backfill are deliberately bounded. Migration-time SQL assigns every built-in to groups already present. Startup backfill runs only while all four built-ins have zero assignments, and a second run must not change `UpdatedAt` or `xmin`. Groups created by normal admin workflows are not auto-assigned.
+
+Database-focused verification uses both EF metadata tests and the real PostgreSQL integration fixture. Tests cover keys, precision, indexes, delete behavior, seed/translation/assignment shape, late backfill idempotence, hard-delete restriction, duplicate selected snapshots, and duplicate quote IDs. Detailed product rules and phase gates remain in `docs/16_Reservation_Extra_Options_Plan.md` and `docs/17_Reservation_Extra_Options_Implementation.md`.
+
 
 ------------------------------------------------------------------------
 
