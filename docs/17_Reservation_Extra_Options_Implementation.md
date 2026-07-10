@@ -4,7 +4,7 @@
 **Scope:** Implementation sequence for admin-managed reservation extra options
 **Decision source:** [16_Reservation_Extra_Options_Plan.md](16_Reservation_Extra_Options_Plan.md)
 **Verification gate:** Automated test suite plus Docker Desktop browser validation
-**Implementation status:** In progress; Phase 1 completed and Phase 2 is next
+**Implementation status:** In progress; Phases 1 and 2 completed and Phase 3 is next
 
 ## 1. Objective
 
@@ -195,6 +195,21 @@ Record option ID/code and changed field names, not customer data or full localiz
 - Public query tests cover locale, group, status, archive, order, and empty results.
 - Audit tests cover every mutation action.
 - Focused tests and backend build pass before pricing integration starts.
+
+### 4.6 Phase 2 Completion Evidence - 2026-07-10
+
+- Added dedicated admin/public reservation-extra contracts with server-generated immutable codes, PostgreSQL `xmin` versions, and `PER_DAY` / `PER_RENTAL` JSON serialization.
+- Added the catalog service through `IApplicationDbContext` with bounded validation, five-locale activation completeness, vehicle-group replacement, archive/restore, conditional hard delete, and parent-row version bumps for child mutations.
+- Added `AdminOnly` admin endpoints and anonymous public catalog reads under the standard rate-limit policy; both catalog surfaces return `Cache-Control: no-store`.
+- Added PII-free audit events for create, update, activation, deactivation, assignment changes, delete, archive, and restore. Audit payloads contain option ID/code and changed field names, not localized bodies.
+- Added focused service/controller coverage for every validation boundary, immutable code generation, lifecycle behavior, all audit actions, status/filter/order/empty public results, and `400` / `404` / `409` controller mappings.
+- Added real API authorization tests proving Admin and SuperAdmin access while rejecting unauthenticated and customer principals.
+- Added real PostgreSQL tests proving two-context stale writes fail, child mutations advance the parent `xmin`, and a reference inserted during hard delete converts the outcome to archive without losing the snapshot.
+- Focused `ReservationExtraOption` suites passed: 27 `RentACar.Tests` and 14 `RentACar.ApiIntegrationTests`.
+- Full backend validation passed after the final changes: build with 0 warnings/0 errors, 710 `RentACar.Tests`, and 48 `RentACar.ApiIntegrationTests`.
+- Docker PostgreSQL and Redis were used for integration tests. Browser validation remains open because Phase 2 adds API surfaces but no admin/customer UI.
+- CI has not run for this local branch.
+- Aikido MCP is not available in the active tool set, so the required full-content scan remains an open release/security blocker. Setup guide: https://help.aikido.dev/ide-plugins/aikido-mcp
 
 ## 5. Phase 3 - Generic Quote and Reservation Persistence
 
@@ -500,21 +515,21 @@ After implementation and evidence collection:
 ## 13. Final Completion Checklist
 
 - [x] Domain model, configuration, migration, and seed implemented.
-- [ ] Admin catalog service/API implemented with authorization, audit, and concurrency.
+- [x] Admin catalog service/API implemented with authorization, audit, and concurrency.
 - [ ] Public catalog and generic quote endpoint implemented.
 - [ ] Redis quote lifecycle, session binding, expiry, and replay protection implemented.
 - [ ] Selected-extra and complete pricing snapshots implemented without double counting.
 - [ ] Legacy adapter, usage events, and 14-day cleanup gate implemented and documented.
 - [ ] Admin settings page and editor implemented.
-- [ ] Archive restore and concurrent hard-delete behavior implemented.
+- [x] Archive restore and concurrent hard-delete behavior implemented.
 - [ ] Public Step 3/Step 4 moved off hard-coded and URL-based extras.
 - [ ] Admin/customer reservation responses expose snapshots.
 - [ ] Focused and full backend/frontend validation passed or blockers recorded precisely.
 - [ ] Docker Desktop browser scenario completed with evidence.
 - [ ] Backend-first deployment and frontend rollback smoke completed.
 - [ ] Aikido full-content scan passed with zero unresolved findings, or release blocker recorded.
-- [ ] Checklist and execution tracking synchronized.
-- [ ] `git diff --check` passed.
-- [ ] Final diff contains no unrelated user changes.
+- [x] Checklist and execution tracking synchronized through the completed Phase 2 boundary.
+- [x] `git diff --check` passed for the Phase 2 closeout diff.
+- [x] Final Phase 2 commit scope contains no unrelated user changes.
 
 Implementation is complete only when every applicable item above is closed. A green build without Docker/browser evidence, historical snapshot proof, and the required security gate is not sufficient.

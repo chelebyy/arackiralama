@@ -1,5 +1,8 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using RentACar.API.Contracts.ReservationExtraOptions;
+using RentACar.API.Services;
 using RentACar.ApiIntegrationTests.Infrastructure;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
@@ -124,6 +127,136 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
         });
     }
 
+    [Fact]
+    public async Task CatalogService_TwoContextsRejectStaleWrite()
+    {
+        using var firstScope = Services.CreateScope();
+        using var secondScope = Services.CreateScope();
+        var firstDbContext = firstScope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        var secondDbContext = secondScope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        var firstService = firstScope.ServiceProvider.GetRequiredService<IReservationExtraOptionCatalogService>();
+        var secondService = secondScope.ServiceProvider.GetRequiredService<IReservationExtraOptionCatalogService>();
+        var optionId = await firstDbContext.ReservationExtraOptions.Select(option => option.Id).FirstAsync();
+
+        var firstOption = await firstDbContext.ReservationExtraOptions
+            .Include(option => option.Translations)
+            .Include(option => option.VehicleGroups)
+            .SingleAsync(option => option.Id == optionId);
+        var staleOption = await secondDbContext.ReservationExtraOptions
+            .Include(option => option.Translations)
+            .Include(option => option.VehicleGroups)
+            .SingleAsync(option => option.Id == optionId);
+
+        await firstService.UpdateAsync(
+            optionId,
+            UpdateRequest(firstOption, firstOption.UnitPrice + 1),
+            AuditContext(),
+            CancellationToken.None);
+
+        var staleWrite = () => secondService.UpdateAsync(
+            optionId,
+            UpdateRequest(staleOption, staleOption.UnitPrice + 2),
+            AuditContext(),
+            CancellationToken.None);
+
+        await staleWrite.Should().ThrowAsync<ReservationExtraOptionConcurrencyException>();
+    }
+
+    [Fact]
+    public async Task CatalogService_ChildMutationAdvancesParentVersion()
+    {
+        using var scope = Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        var service = scope.ServiceProvider.GetRequiredService<IReservationExtraOptionCatalogService>();
+        var option = await dbContext.ReservationExtraOptions
+            .Include(item => item.Translations)
+            .Include(item => item.VehicleGroups)
+            .OrderBy(item => item.SortOrder)
+            .FirstAsync();
+        var originalVersion = option.Version;
+        var translations = option.Translations
+            .Select(item => new ReservationExtraOptionTranslationDto(
+                item.Locale,
+                item.Name,
+                item.Locale == "en" ? $"{item.Description} updated" : item.Description))
+            .ToList();
+
+        await service.UpdateAsync(
+            option.Id,
+            new UpdateReservationExtraOptionRequest(
+                option.Version,
+                option.UnitPrice,
+                option.PricingMode,
+                option.MaxQuantity,
+                option.IconKey,
+                option.SortOrder,
+                option.VehicleGroups.Select(item => item.VehicleGroupId).ToList(),
+                translations),
+            AuditContext(),
+            CancellationToken.None);
+
+        dbContext.ChangeTracker.Clear();
+        var updatedVersion = await dbContext.ReservationExtraOptions
+            .Where(item => item.Id == option.Id)
+            .Select(item => item.Version)
+            .SingleAsync();
+        updatedVersion.Should().NotBe(originalVersion);
+    }
+
+    [Fact]
+    public async Task CatalogService_ConcurrentReferenceDuringHardDeleteArchivesOption()
+    {
+        var reservationId = await CreateReservationAsync();
+        var setup = await WithDbContextAsync(async dbContext =>
+        {
+            var option = new ReservationExtraOption
+            {
+                Code = $"race-{Guid.NewGuid():N}",
+                UnitPrice = 10m,
+                PricingMode = ReservationExtraPricingMode.PerRental,
+                MaxQuantity = 1,
+                IconKey = "users",
+                SortOrder = 100,
+                IsActive = false,
+                IsArchived = false
+            };
+            dbContext.ReservationExtraOptions.Add(option);
+            await dbContext.SaveChangesAsync();
+            return new
+            {
+                option.Id,
+                option.Version,
+                ConnectionString = dbContext.Database.GetConnectionString()!
+            };
+        });
+
+        var options = new DbContextOptionsBuilder<RentACarDbContext>()
+            .UseNpgsql(setup.ConnectionString)
+            .Options;
+        await using var raceContext = new HardDeleteRaceDbContext(options, async () =>
+        {
+            await WithDbContextAsync(async dbContext =>
+            {
+                dbContext.ReservationSelectedExtras.Add(CreateSelectedExtra(reservationId, setup.Id));
+                await dbContext.SaveChangesAsync();
+                return true;
+            });
+        });
+        var service = new ReservationExtraOptionCatalogService(raceContext);
+
+        var result = await service.DeleteAsync(
+            setup.Id,
+            setup.Version,
+            AuditContext(),
+            CancellationToken.None);
+
+        result.Disposition.Should().Be("archived");
+        var archived = await WithDbContextAsync(dbContext =>
+            dbContext.ReservationExtraOptions.AsNoTracking().SingleAsync(option => option.Id == setup.Id));
+        archived.IsArchived.Should().BeTrue();
+        archived.IsActive.Should().BeFalse();
+    }
+
     private async Task<(Guid ReservationId, Guid OptionId)> CreateReservationWithSelectedExtraAsync()
     {
         var reservationId = await CreateReservationAsync();
@@ -197,6 +330,22 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
         Currency = "TRY"
     };
 
+    private static UpdateReservationExtraOptionRequest UpdateRequest(
+        ReservationExtraOption option,
+        decimal unitPrice) => new(
+        option.Version,
+        unitPrice,
+        option.PricingMode,
+        option.MaxQuantity,
+        option.IconKey,
+        option.SortOrder,
+        option.VehicleGroups.Select(item => item.VehicleGroupId).ToList(),
+        option.Translations
+            .Select(item => new ReservationExtraOptionTranslationDto(item.Locale, item.Name, item.Description))
+            .ToList());
+
+    private static ReservationExtraOptionAuditContext AuditContext() => new("integration-admin", "127.0.0.1");
+
     private static VehicleGroup CreateVehicleGroup() => new()
     {
         NameTr = "Geç Grup",
@@ -209,4 +358,23 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
         MinLicenseYears = 2,
         IsActive = true
     };
+
+    private sealed class HardDeleteRaceDbContext(
+        DbContextOptions<RentACarDbContext> options,
+        Func<Task> beforeFirstSave) : RentACarDbContext(options)
+    {
+        private Func<Task>? _beforeFirstSave = beforeFirstSave;
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (_beforeFirstSave is not null)
+            {
+                var callback = _beforeFirstSave;
+                _beforeFirstSave = null;
+                await callback();
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+    }
 }

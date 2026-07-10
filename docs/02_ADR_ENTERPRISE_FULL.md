@@ -387,6 +387,10 @@ OS: Ubuntu 22.04 LTS
 
 Built-in option identifiers are deterministic. The additive migration assigns built-ins to vehicle groups present at migration time. A bounded startup backfill may assign them only when none of the built-ins has any assignment; ordinary vehicle-group creation does not silently expand option availability. Used options are protected from hard deletion by the selected-extra foreign key, while reservation deletion cascades its immutable snapshots.
 
+The catalog application boundary remains in `RentACar.API/Services`, following the repository's established application-service placement. `IReservationExtraOptionCatalogService` is the single write/read boundary over `IApplicationDbContext`. Admin mutations are exposed only under `api/admin/v1/reservation-extra-options` with `AdminOnly`; localized public reads are exposed under `api/v1/reservation-extra-options`. Both surfaces use the standard rate-limit policy and disable response caching. The client never supplies code, activation state, archive state, localized snapshot payloads, or authoritative monetary values outside the dedicated server-owned catalog fields.
+
+Catalog lifecycle is explicit: create produces an inactive draft, activation requires five complete translations plus at least one existing vehicle-group assignment, archived rows cannot be edited, and restore always returns to inactive draft. Unused rows may be deleted; used rows archive. A reference that races the hard-delete attempt is treated as archive after the PostgreSQL restrict violation, preserving the immutable reservation snapshot. Mutation audit rows share the catalog save boundary and contain stable action names, option identity, and changed field names without localized bodies or customer data.
+
 **Rationale:**
 - Keeps catalog querying relational and indexable without reconstructing historical prices from mutable option rows.
 - Preserves a truthful total-only fallback for pre-migration reservations and an exact snapshot source for new-format reservations.
@@ -396,8 +400,9 @@ Built-in option identifiers are deterministic. The additive migration assigns bu
 
 **Consequences:**
 - Phase 1 is implemented by migration `20260709204616_AddReservationExtraOptions`; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 3.5.
-- Phase 2 admin writes must update the parent catalog row when translations or assignments change so `xmin` advances.
+- Phase 2 is implemented by the dedicated catalog service and admin/public controllers; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 4.6.
+- Admin writes update the parent catalog row when translations or assignments change so `xmin` advances; stale writes map to `409`, invalid input to `400`, and missing admin records to `404`.
 - Phase 3 quote and reservation creation must never accept client prices, totals, pricing modes, localized text, or snapshot payloads.
-- Public/admin API contracts remain planned until their implementing phase closes; `docs/16_Reservation_Extra_Options_Plan.md` is the decision source meanwhile.
+- Public/admin catalog contracts are implemented. The generic quote and reservation contracts remain governed by `docs/16_Reservation_Extra_Options_Plan.md` until Phase 3 closes.
 - Full Docker browser evidence remains open until the admin and public UI phases are implemented.
 - The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.

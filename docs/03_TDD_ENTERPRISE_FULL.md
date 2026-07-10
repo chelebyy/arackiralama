@@ -1417,6 +1417,23 @@ The built-in seed and assignment backfill are deliberately bounded. Migration-ti
 
 Database-focused verification uses both EF metadata tests and the real PostgreSQL integration fixture. Tests cover keys, precision, indexes, delete behavior, seed/translation/assignment shape, late backfill idempotence, hard-delete restriction, duplicate selected snapshots, and duplicate quote IDs. Detailed product rules and phase gates remain in `docs/16_Reservation_Extra_Options_Plan.md` and `docs/17_Reservation_Extra_Options_Implementation.md`.
 
+### Phase 2 Catalog Service and API Boundary
+
+`IReservationExtraOptionCatalogService` and `ReservationExtraOptionCatalogService` live in the API application-service layer and operate through `IApplicationDbContext`. The service owns normalization, validation, code generation, paginated admin queries, localized public group queries, full replacement of translation/group children, lifecycle transitions, audit events, and optimistic concurrency. Controllers translate domain outcomes to the existing `ApiResponse<T>` envelope without exposing EF exceptions.
+
+The implemented HTTP surface is:
+
+- `GET /api/v1/reservation-extra-options?vehicleGroupId={guid}&locale={locale}` for active, non-archived, group-assigned localized items;
+- admin list/create/full-update/status/restore/delete operations under `/api/admin/v1/reservation-extra-options`.
+
+Admin routes require `AuthPolicyNames.AdminOnly`; public reads are anonymous. Both controller types use `RateLimitPolicyNames.Standard` and `ResponseCache(NoStore = true)`. Public ordering is `SortOrder`, then localized name. Enum values cross the wire as `PER_DAY` and `PER_RENTAL`. Admin DTOs expose `Version` from PostgreSQL `xmin` separately from display-only `UpdatedAt`.
+
+Write validation enforces price `0..1,000,000`, quantity `1..20`, sort order `0..9,999`, the server icon allowlist, distinct existing group IDs, supported unique locales, and translation storage limits. Incomplete inactive drafts are valid; activation requires non-empty name/description values for `tr`, `en`, `de`, `ru`, and `ar`, plus at least one assignment. Codes use `extra-{guid:N}` and are omitted from update contracts so they remain immutable.
+
+Translation and assignment replacement occurs in one `SaveChangesAsync` boundary with an explicit parent `UpdatedAt` mutation, ensuring PostgreSQL advances the parent `xmin`. The loaded `Version` is checked before mutation and EF concurrency exceptions map to `409`. Used options archive; unused options are deleted. If a concurrent selected-extra reference causes PostgreSQL foreign-key/restrict failure during delete, the tracker is cleared, the option is reloaded, and the operation completes as archive. Real two-context and delete-race tests cover both paths.
+
+Audit entries are added to `AuditLogs` in the same save boundary as each catalog mutation. Stable actions cover create, update, activation, deactivation, assignment changes, delete, archive, and restore. `NewValue` contains only option code and changed field names; localized bodies and customer data are excluded.
+
 
 ------------------------------------------------------------------------
 

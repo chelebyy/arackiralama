@@ -16,14 +16,17 @@
 
 ## Fresh Feature Update — 10 Temmuz 2026
 
-**Reservation Extra Options:** 🟨 In Progress — Phase 1 persistence foundation completed; Phase 2 catalog service and Admin API are next.
+**Reservation Extra Options:** 🟨 In Progress — Phase 1 persistence foundation and Phase 2 catalog service/API completed; Phase 3 generic quote and reservation persistence are next.
 
 - Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
 - Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
 - Added four deterministic built-ins, 20 locale rows, migration-time group assignment, and zero-assignment-only idempotent startup backfill.
+- Added admin/public catalog contracts and endpoints, `AdminOnly` authorization, standard rate limiting, `Cache-Control: no-store`, bounded validation, five-locale activation checks, archive/restore, conditional hard delete, and stable PII-free audit actions.
+- Real API authorization tests prove Admin/SuperAdmin access and unauthenticated/customer rejection. Real PostgreSQL tests prove stale `xmin` rejection, parent-version advancement after child mutation, and archive fallback when a reservation reference races hard delete.
 - Backend build passed with 0 warnings / 0 errors.
-- Backend validation passed: `RentACar.Tests` 685/685 and `RentACar.ApiIntegrationTests` 39/39.
+- Latest backend validation passed: `RentACar.Tests` 710/710 and `RentACar.ApiIntegrationTests` 48/48. Focused reservation-extra filters passed 27/27 and 14/14 respectively.
 - Docker Desktop full compose build passed; API and web returned HTTP 200. Running PostgreSQL confirmed 4 active built-ins, 20 translations, 8 migration-time assignments, and the expected latest migration. API restart preserved built-in `xmin`/`UpdatedAt` state.
+- Phase 2 integration validation reused healthy Docker PostgreSQL and Redis services; CI has not run for the local feature branch.
 - Full admin/public browser workflow remains open because the UI phases are not implemented.
 - Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
 - Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.

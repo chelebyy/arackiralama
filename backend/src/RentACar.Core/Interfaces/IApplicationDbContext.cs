@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RentACar.Core.Entities;
 
 namespace RentACar.Core.Interfaces;
 
 public interface IApplicationDbContext
 {
+    ChangeTracker ChangeTracker { get; }
     DbSet<Vehicle> Vehicles { get; }
     DbSet<VehicleGroup> VehicleGroups { get; }
     DbSet<Office> Offices { get; }
