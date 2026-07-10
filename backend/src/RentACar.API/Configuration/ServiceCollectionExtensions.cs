@@ -45,6 +45,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IReservationExtraPricingService, ReservationExtraPricingService>();
+        services.AddScoped<IReservationQuoteService, ReservationQuoteService>();
         services.AddSingleton<AvailabilityCacheInvalidationSignal>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();

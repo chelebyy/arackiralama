@@ -16,17 +16,19 @@
 
 ## Fresh Feature Update — 10 Temmuz 2026
 
-**Reservation Extra Options:** 🟨 In Progress — Phase 1 persistence foundation and Phase 2 catalog service/API completed; Phase 3 generic quote and reservation persistence are next.
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-3 completed; Phase 4 admin frontend is next.
 
 - Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
 - Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
 - Added four deterministic built-ins, 20 locale rows, migration-time group assignment, and zero-assignment-only idempotent startup backfill.
 - Added admin/public catalog contracts and endpoints, `AdminOnly` authorization, standard rate limiting, `Cache-Control: no-store`, bounded validation, five-locale activation checks, archive/restore, conditional hard delete, and stable PII-free audit actions.
 - Real API authorization tests prove Admin/SuperAdmin access and unauthenticated/customer rejection. Real PostgreSQL tests prove stale `xmin` rejection, parent-version advancement after child mutation, and archive fallback when a reservation reference races hard delete.
+- Added server-authoritative generic extra calculation, flat `POST /api/v1/pricing/quote`, 15-minute session-hashed Redis quotes, atomic owner-bound claim/release/finalization, database `QuoteId` replay reconciliation, immutable selected-extra rows, and complete versioned price snapshots.
+- Draft and unpaid creation now reject mixed quote/legacy inputs, revalidate quote expiry/session/booking inputs/current option structure, preserve valid quote prices across price-only changes, and return snapshot-backed reservation reads with explicit `SNAPSHOT` / `LEGACY_TOTAL_ONLY` sources.
 - Backend build passed with 0 warnings / 0 errors.
-- Latest backend validation passed: `RentACar.Tests` 710/710 and `RentACar.ApiIntegrationTests` 48/48. Focused reservation-extra filters passed 27/27 and 14/14 respectively.
+- Latest backend validation passed: `RentACar.Tests` 730/730 and `RentACar.ApiIntegrationTests` 51/51. Focused Phase 3 filters passed 20/20 and 3/3 respectively.
 - Docker Desktop full compose build passed; API and web returned HTTP 200. Running PostgreSQL confirmed 4 active built-ins, 20 translations, 8 migration-time assignments, and the expected latest migration. API restart preserved built-in `xmin`/`UpdatedAt` state.
-- Phase 2 integration validation reused healthy Docker PostgreSQL and Redis services; CI has not run for the local feature branch.
+- Phase 3 integration validation reused healthy Docker PostgreSQL and Redis services and proved the real quote-to-reservation/replay path; CI has not run for the local feature branch.
 - Full admin/public browser workflow remains open because the UI phases are not implemented.
 - Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
 - Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.

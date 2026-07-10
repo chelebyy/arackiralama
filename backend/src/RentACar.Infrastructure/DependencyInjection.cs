@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IRepository<Customer>, CustomerRepository>();
         services.AddScoped<IReservationHoldService, RedisReservationHoldService>();
+        services.AddScoped<IReservationQuoteStore, RedisReservationQuoteStore>();
         services.AddHttpClient<NetgsmSmsProvider>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(30);

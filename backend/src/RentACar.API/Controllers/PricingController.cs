@@ -1,14 +1,44 @@
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using RentACar.API.Configuration;
+using RentACar.API.Contracts.Pricing;
 using RentACar.API.Services;
 
 namespace RentACar.API.Controllers;
 
 [Route("api/v1/pricing")]
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
-public sealed class PricingController(IPricingService pricingService) : BaseApiController
+public sealed class PricingController(
+    IPricingService pricingService,
+    IReservationQuoteService? reservationQuoteService = null) : BaseApiController
 {
+    [HttpPost("quote")]
+    public async Task<IActionResult> CreateQuote(
+        [FromBody] CreateReservationQuoteRequest request,
+        [FromHeader(Name = "X-Session-Id")] string sessionId,
+        CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        if (reservationQuoteService is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var quote = await reservationQuoteService.CreateAsync(request, sessionId, cancellationToken);
+            return OkResponse(quote);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequestResponse(exception.Message);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequestResponse(exception.Message);
+        }
+    }
+
     [HttpGet("breakdown")]
     public async Task<IActionResult> GetBreakdown(
         [FromQuery(Name = "vehicle_group_id")] Guid vehicleGroupId,

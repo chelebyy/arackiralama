@@ -4,7 +4,7 @@
 **Scope:** Implementation sequence for admin-managed reservation extra options
 **Decision source:** [16_Reservation_Extra_Options_Plan.md](16_Reservation_Extra_Options_Plan.md)
 **Verification gate:** Automated test suite plus Docker Desktop browser validation
-**Implementation status:** In progress; Phases 1 and 2 completed and Phase 3 is next
+**Implementation status:** In progress; Phases 1-3 completed and Phase 4 is next
 
 ## 1. Objective
 
@@ -296,6 +296,23 @@ Extend admin/customer reservation DTOs with snapshot-based selected extras, a sn
 - Redis quote tests cover atomic claim ownership, claim expiry/release, two concurrent requests with different idempotency keys, and post-commit finalization failure; none may create a duplicate reservation.
 - Legacy-only requests map correctly, mixed requests fail, and structured usage events are emitted.
 - Existing reservation, pricing, payment, and idempotency regression tests pass.
+
+### 5.8 Phase 3 Completion Evidence - 2026-07-10
+
+- Added the shared server-owned selected-extra input contract (`optionId`, `quantity`, and `optionVersion`) and a focused generic calculator that loads requested options, localized text, and group assignments without per-selection queries.
+- Added per-day, per-rental, free, multi-quantity, duplicate, missing, stale, inactive, archived, wrong-group, maximum-quantity, and structural revalidation behavior. Price and `xmin` changes alone preserve the issued quote price; pricing-mode, activation, archive, assignment, and reduced-maximum changes invalidate submission.
+- Added flat `POST /api/v1/pricing/quote` responses with the existing monetary fields plus authoritative `extraItems`, `quoteId`, and `expiresAtUtc`. The endpoint validates vehicle groups, offices, campaigns, dates, driver age, locale, and selected extras server side and returns `Cache-Control: no-store`.
+- Added `ReservationQuoteV1` and `IReservationQuoteStore` in Core plus a StackExchange.Redis implementation. Quote payloads contain normalized price-driving inputs, selected snapshots, the complete pricing snapshot, timestamps, and a SHA-256 session hash; customer, driver, card, cookie, and authentication values are excluded.
+- Added atomic Redis claim acquisition, owner-only release/finalization, bounded claim expiry, consumed-state replay blocking, and database reconciliation. Two concurrent claim owners cannot both win.
+- Extended draft and unpaid reservation creation with `Locale` and `QuoteId`. Quote/session/input/expiry/current-option checks run before persistence; the reservation, unique `QuoteId`, selected-extra snapshots, and `ReservationPricingSnapshotV1` commit in the same relational transaction.
+- Database replay resolution now revalidates the retained quote session hash and normalized booking inputs before returning an existing reservation. This closes the cross-session DTO disclosure risk that an unconditional `QuoteId` lookup would create.
+- Added the legacy adapter for child-seat and additional-driver counts. Mixed `QuoteId` plus non-zero legacy counts fail; legacy-only inputs use current catalog records and emit a structured adapter-use event without removing the legacy fields.
+- Reservation reads now return `selectedExtras`, snapshot-backed complete price breakdowns, and `breakdownSource: SNAPSHOT`; pre-Phase-3 rows remain explicit `LEGACY_TOTAL_ONLY` with no reconstructed historical extras.
+- Focused Phase 3 validation passed: 20 `RentACar.Tests` and 3 real Redis/PostgreSQL `RentACar.ApiIntegrationTests`, including the full quote-to-reservation endpoint, selected-extra/snapshot persistence, different-idempotency-key replay, claim ownership, claim expiry, and cross-session rejection.
+- Final full backend evidence for this slice: build 0 warnings/0 errors, 730 `RentACar.Tests`, and 51 `RentACar.ApiIntegrationTests` after the final rerun.
+- `dotnet format --verify-no-changes` passed for all 25 Phase 3 changed C# files. The repository-wide format command still reports pre-existing out-of-scope line-ending/charset findings in `BcryptPasswordHasherTests.cs` and `StatusEnumTests.cs`; those files were not modified.
+- Docker PostgreSQL and Redis backed the API integration suite. Phase 3 adds no frontend route, so browser workflow evidence remains open for Phases 4-5.
+- CI has not run for this local branch. Aikido MCP remains unavailable in the active tool set, so the required full-content scan remains an open release/security blocker. Setup guide: https://help.aikido.dev/ide-plugins/aikido-mcp
 
 ## 6. Phase 4 - Admin Frontend
 

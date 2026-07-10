@@ -1434,6 +1434,14 @@ Translation and assignment replacement occurs in one `SaveChangesAsync` boundary
 
 Audit entries are added to `AuditLogs` in the same save boundary as each catalog mutation. Stable actions cover create, update, activation, deactivation, assignment changes, delete, archive, and restore. `NewValue` contains only option code and changed field names; localized bodies and customer data are excluded.
 
+### Phase 3 Generic Quote and Reservation Boundary
+
+`ReservationExtraPricingService` owns authoritative generic-extra validation and calculation. Quote issuance loads selected options with their requested locale and vehicle-group assignment, rejects duplicate/stale/inactive/archived/unassigned/over-limit inputs, and snapshots localized text, pricing mode, unit price, quantity, rental days, and total. Submission revalidates structural availability while deliberately honoring the issued price when only price or `xmin` changed.
+
+`ReservationQuoteService` combines the existing base/campaign/fee engine with generic extras and stores `ReservationQuoteV1` through `IReservationQuoteStore`. The Redis implementation keeps the quote for 15 minutes, stores only normalized price-driving data and a one-way session hash, acquires claims atomically, releases/finalizes only the owning claim token, and records consumed state separately so the retained quote can authenticate a database replay.
+
+Draft and unpaid reservation creation first validate quote/session/input equality and current option structure, then persist the reservation, nullable unique `QuoteId`, `ReservationSelectedExtra` rows, and `ReservationPricingSnapshotV1` in one relational transaction. A retry that finds the unique database `QuoteId` must still validate the retained quote session and booking inputs before returning the existing DTO; it then reconciles Redis consumed state. Snapshot-backed reads never reconstruct current catalog prices, while pre-migration rows remain explicit total-only fallbacks.
+
 
 ------------------------------------------------------------------------
 

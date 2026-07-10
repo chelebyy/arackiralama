@@ -401,8 +401,9 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 **Consequences:**
 - Phase 1 is implemented by migration `20260709204616_AddReservationExtraOptions`; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 3.5.
 - Phase 2 is implemented by the dedicated catalog service and admin/public controllers; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 4.6.
+- Phase 3 is implemented by the generic calculator, session-bound Redis quote store, flat quote endpoint, quote-aware reservation transaction, legacy adapter, and snapshot-backed reads; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 5.8.
 - Admin writes update the parent catalog row when translations or assignments change so `xmin` advances; stale writes map to `409`, invalid input to `400`, and missing admin records to `404`.
-- Phase 3 quote and reservation creation must never accept client prices, totals, pricing modes, localized text, or snapshot payloads.
-- Public/admin catalog contracts are implemented. The generic quote and reservation contracts remain governed by `docs/16_Reservation_Extra_Options_Plan.md` until Phase 3 closes.
+- Phase 3 quote and reservation creation never accept client prices, totals, pricing modes, localized text, or snapshot payloads. Redis claims are owner-bound, and database replay requires retained quote/session/input validation before an existing reservation DTO is returned.
+- Public/admin catalog and generic quote/reservation contracts are implemented. Admin and public frontend phases remain governed by `docs/16_Reservation_Extra_Options_Plan.md`.
 - Full Docker browser evidence remains open until the admin and public UI phases are implemented.
 - The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.
