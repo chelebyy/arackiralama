@@ -102,6 +102,21 @@ function toSelection(option: PublicReservationExtraOption, quantity: number): Se
   };
 }
 
+function selectionsMatch(left: SelectedBookingExtra[], right: SelectedBookingExtra[]): boolean {
+  return left.length === right.length && left.every((selection, index) => {
+    const other = right[index];
+    return other !== undefined &&
+      selection.optionId === other.optionId &&
+      selection.optionVersion === other.optionVersion &&
+      selection.quantity === other.quantity &&
+      selection.code === other.code &&
+      selection.name === other.name &&
+      selection.description === other.description &&
+      selection.unitPrice === other.unitPrice &&
+      selection.pricingMode === other.pricingMode;
+  });
+}
+
 export default function BookingStep3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -156,7 +171,21 @@ export default function BookingStep3Page() {
   type Step3FormData = z.infer<typeof step3Schema>;
 
   useEffect(() => {
-    if (legacyExtrasApplied.current || booking.selectedExtras.length > 0 || extraOptions.length === 0) return;
+    if (extraOptionsLoading || extraOptionsError || !vehicleGroupId) return;
+
+    if (booking.selectedExtras.length > 0) {
+      const optionsById = new Map(extraOptions.map((option) => [option.id, option]));
+      const reconciledSelections = booking.selectedExtras.flatMap((selection) => {
+        const option = optionsById.get(selection.optionId);
+        return option ? [toSelection(option, Math.max(1, Math.min(selection.quantity, option.maxQuantity)))] : [];
+      });
+      if (!selectionsMatch(reconciledSelections, booking.selectedExtras)) {
+        updateExtras(reconciledSelections);
+      }
+      return;
+    }
+
+    if (legacyExtrasApplied.current) return;
 
     const legacyCodes = (searchParams.get("extras") || "").split(",").flatMap((code) => {
       const trimmedCode = code.trim();
@@ -167,16 +196,21 @@ export default function BookingStep3Page() {
     legacyExtrasApplied.current = true;
     const supportedCodes = new Set(["child_seat", "additional_driver", "gps", "wifi"]);
     const optionsByCode = new Map(extraOptions.map((option) => [option.code, option]));
-    const restoredSelections = legacyCodes.flatMap((code) => {
+    const quantitiesByCode = legacyCodes.reduce((quantities, code) => {
+      quantities.set(code, (quantities.get(code) ?? 0) + 1);
+      return quantities;
+    }, new Map<string, number>());
+    const restoredSelections = Array.from(quantitiesByCode.entries()).flatMap(([code, quantity]) => {
       const option = supportedCodes.has(code) ? optionsByCode.get(code) : undefined;
-      return option ? [toSelection(option, 1)] : [];
+      return option ? [toSelection(option, Math.min(quantity, option.maxQuantity))] : [];
     });
 
     if (restoredSelections.length > 0) {
       updateExtras(restoredSelections);
     }
-    setLegacyWarning(restoredSelections.length !== legacyCodes.length);
-  }, [booking.selectedExtras.length, extraOptions, searchParams, updateExtras]);
+    const restoredQuantity = restoredSelections.reduce((total, selection) => total + selection.quantity, 0);
+    setLegacyWarning(restoredQuantity !== legacyCodes.length);
+  }, [booking.selectedExtras, extraOptions, extraOptionsError, extraOptionsLoading, searchParams, updateExtras, vehicleGroupId]);
 
   const {
     register,

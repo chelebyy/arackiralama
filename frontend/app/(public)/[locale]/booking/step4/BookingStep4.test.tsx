@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ApiError } from "@/lib/api/client";
 
 import BookingStep4Page from "./page";
 
@@ -376,6 +377,39 @@ describe("BookingStep4Page", () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith("Reservation service unavailable");
     });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit quote confirmation when a 409 refresh changes option terms", async () => {
+    const user = userEvent.setup();
+    createReservationMock.mockRejectedValueOnce(new ApiError({
+      statusCode: 409,
+      message: "Quote is stale",
+      code: "CONFLICT",
+      timestamp: "2026-07-11T18:00:00Z",
+      path: "/api/reservations",
+    }));
+    getPublicReservationExtraOptionsMock.mockResolvedValueOnce([
+      { id: "gps", code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_RENTAL", maxQuantity: 1, iconKey: "SHIELD", sortOrder: 1, version: 3 },
+      { id: "additional-driver", code: "additional_driver", name: "Additional Driver", description: "Second driver", unitPrice: 15, pricingMode: "PER_RENTAL", maxQuantity: 1, iconKey: "USERS", sortOrder: 2, version: 1 },
+    ]);
+
+    render(<BookingStep4Page />);
+
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+
+    await waitFor(() => expect(updateExtrasMock).toHaveBeenCalled());
+    expect(createReservationMock).toHaveBeenCalledTimes(1);
+    expect(updateExtrasMock).toHaveBeenCalledWith([
+      expect.objectContaining({ optionId: "gps", optionVersion: 3, pricingMode: "PER_RENTAL" }),
+      expect.objectContaining({ optionId: "additional-driver", optionVersion: 1 }),
+    ]);
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
 

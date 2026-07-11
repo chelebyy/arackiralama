@@ -62,6 +62,54 @@ public sealed class ReservationQuoteServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_AppliesPercentageCampaignToGenericExtras()
+    {
+        var request = ValidRequest();
+        SetupValidReferences(request);
+        _pricingService
+            .Setup(service => service.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.ReturnOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                "SAVE10",
+                0,
+                0,
+                request.DriverAge,
+                request.FullCoverageWaiver,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BaseBreakdown() with
+            {
+                CampaignDiscount = 150m,
+                FinalTotal = 1350m,
+                AppliedCampaignDiscountType = "percentage",
+                AppliedCampaignDiscountValue = 10m
+            });
+        _extraPricingService
+            .Setup(service => service.CalculateAsync(
+                request.VehicleGroupId,
+                request.Locale,
+                3,
+                request.SelectedExtras,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([QuotedExtra(total: 50m)]);
+        ReservationQuoteV1? stored = null;
+        _quoteStore
+            .Setup(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>()))
+            .Callback<ReservationQuoteV1, CancellationToken>((quote, _) => stored = quote)
+            .Returns(Task.CompletedTask);
+
+        var result = await CreateService().CreateAsync(request, "public-session-123");
+
+        result.CampaignDiscount.Should().Be(155m);
+        result.FinalTotal.Should().Be(1395m);
+        stored.Should().NotBeNull();
+        stored!.PricingSnapshot.DiscountTotal.Should().Be(155m);
+        stored.PricingSnapshot.FinalTotal.Should().Be(1395m);
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsMissingSessionBeforeCallingPricing()
     {
         var act = () => CreateService().CreateAsync(ValidRequest(), " ");

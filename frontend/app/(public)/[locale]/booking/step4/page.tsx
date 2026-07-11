@@ -388,9 +388,13 @@ export default function BookingStep4Page() {
             const previous = selectedExtras[index];
             return !previous ||
               selection.optionId !== previous.optionId ||
-              selection.quantity !== previous.quantity;
+              selection.optionVersion !== previous.optionVersion ||
+              selection.quantity !== previous.quantity ||
+              selection.unitPrice !== previous.unitPrice ||
+              selection.pricingMode !== previous.pricingMode;
           });
-        if (selectionsChanged) {
+        const quoteTermsChanged = refreshedQuote.finalTotal !== quote!.finalTotal;
+        if (selectionsChanged || quoteTermsChanged) {
           setRequiresQuoteConfirmation(true);
           setQuoteError(t("quoteConfirmationRequired"));
           return;

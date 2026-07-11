@@ -11,6 +11,16 @@ const setDatesMock = vi.fn();
 const useOfficesMock = vi.fn();
 const getPublicReservationExtraOptionsMock = vi.fn();
 let searchParams = new URLSearchParams();
+let selectedExtras: Array<{
+  optionId: string;
+  optionVersion: number;
+  code: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  pricingMode: string;
+}> = [];
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
@@ -30,7 +40,7 @@ vi.mock("@/hooks/useBooking", () => ({
   }),
   useBookingState: () => ({
     vehicle: { vehicleGroupId: "group-1" },
-    selectedExtras: [],
+    selectedExtras,
   }),
 }));
 
@@ -45,6 +55,7 @@ vi.mock("@/hooks/useVehicles", () => ({
 describe("BookingStep3Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    selectedExtras = [];
     getPublicReservationExtraOptionsMock.mockResolvedValue([
       { id: "child-seat", code: "child_seat", name: "Child Seat", description: "For children", unitPrice: 10, pricingMode: "PER_DAY", maxQuantity: 2, iconKey: "BABY", sortOrder: 1, version: 1 },
       { id: "gps", code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", maxQuantity: 1, iconKey: "SHIELD", sortOrder: 2, version: 2 },
@@ -97,6 +108,48 @@ describe("BookingStep3Page", () => {
       expect.objectContaining({ optionId: "gps", optionVersion: 2, quantity: 1 }),
     ]);
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("aggregates repeated supported legacy extra codes into bounded quantities", async () => {
+    searchParams = new URLSearchParams({ vehicle: "compact", extras: "child_seat,child_seat,gps" });
+
+    render(<BookingStep3Page />);
+
+    await waitFor(() => {
+      expect(updateExtrasMock).toHaveBeenCalledWith([
+        expect.objectContaining({ optionId: "child-seat", optionVersion: 1, quantity: 2 }),
+        expect.objectContaining({ optionId: "gps", optionVersion: 2, quantity: 1 }),
+      ]);
+    });
+  });
+
+  it("reconciles stored extras with the fresh catalog", async () => {
+    selectedExtras = [
+      { optionId: "child-seat", optionVersion: 0, code: "child_seat", name: "Old seat", description: "Old", quantity: 5, unitPrice: 5, pricingMode: "PER_RENTAL" },
+      { optionId: "gps", optionVersion: 1, code: "gps", name: "Old GPS", description: "Old", quantity: 0, unitPrice: 4, pricingMode: "PER_RENTAL" },
+      { optionId: "removed", optionVersion: 1, code: "removed", name: "Removed", description: "Removed", quantity: 1, unitPrice: 1, pricingMode: "PER_RENTAL" },
+    ];
+
+    render(<BookingStep3Page />);
+
+    await waitFor(() => {
+      expect(updateExtrasMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          optionId: "child-seat",
+          optionVersion: 1,
+          quantity: 2,
+          unitPrice: 10,
+          pricingMode: "PER_DAY",
+        }),
+        expect.objectContaining({
+          optionId: "gps",
+          optionVersion: 2,
+          quantity: 1,
+          unitPrice: 8,
+          pricingMode: "PER_DAY",
+        }),
+      ]);
+    });
   });
 
   it("stores resolved pickup and return offices before continuing from a direct vehicle selection", async () => {

@@ -282,12 +282,13 @@ Allowed icon keys are `baby`, `users`, `navigation`, `wifi`, `shield`, `briefcas
 - Quantity controls support zero through `maxQuantity` and expose accessible increment/decrement labels.
 - Cards show localized name, description, pricing mode, unit price, and calculated display total.
 - Selections are stored in the persisted booking store as `optionId`, `quantity`, and `optionVersion` rather than in the URL.
+- On catalog load, persisted selections are reconciled against the current group/locale catalog: missing options are dropped, quantities are clamped, and version plus display-only pricing metadata are refreshed before Step 4 can quote them.
 - Step 4 obtains a server quote on entry and whenever campaign or selected extras change.
 - Payment and confirmation use only the server quote and persisted reservation values; the UI shows the quote expiry time.
 - Catalog-load failure shows a retryable warning and permits continuing with no extras.
-- A `409` preserves customer/driver fields, reloads the catalog and quote once, identifies changed selections, and requires customer confirmation before resubmission. Automatic refresh is limited to one attempt to prevent retry oscillation.
+- A `409` preserves customer/driver fields, reloads the catalog and quote once, and requires customer confirmation when option identity, quantity, version, unit price, pricing mode, or the authoritative quote total changed. Automatic resubmission is limited to one attempt and only when all terms are unchanged, preventing both silent repricing and retry oscillation.
 
-For one compatibility release, Step 4 recognizes legacy `extras=child_seat,...` query values and maps only the four seeded codes to current catalog records. Unknown codes are ignored with a visible warning. Newly generated links never include the `extras` parameter.
+For one compatibility release, Step 3 recognizes legacy `extras=child_seat,...` query values and maps only the four seeded codes to current catalog records. Repeated supported codes are aggregated into one bounded selection quantity so duplicate option IDs are never sent to the quote endpoint. Unknown or clamped codes produce a visible warning. Newly generated links never include the `extras` parameter.
 
 ## 11. Migration and Compatibility
 
@@ -302,6 +303,8 @@ Legacy request fields `ExtraDriverCount` and `ChildSeatCount` remain accepted du
 - requests containing a `QuoteId` and non-zero legacy counts are rejected;
 - the existing GET pricing breakdown endpoint remains available for existing callers;
 - the new public application uses the POST quote endpoint exclusively.
+
+Percentage and fixed campaigns apply to the authoritative subtotal after generic catalog extras are included. Both the legacy adapter and the quote-backed path use the same ordering and clamp the resulting discount to the authoritative subtotal.
 
 Built-in codes remain immutable and cannot be hard deleted while compatibility mode is active. Legacy mapping never bypasses active/group/quantity validation. Structured logs record legacy adapter usage, unknown legacy codes, and resulting reservations. The adapter may be removed only in a separate cleanup release after 14 consecutive production days with zero legacy requests.
 

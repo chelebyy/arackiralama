@@ -63,7 +63,16 @@ public sealed class ReservationQuoteService(
             request.SelectedExtras,
             cancellationToken);
         var extraTotal = Round(quotedExtras.Sum(item => item.Total));
-        var finalTotal = Round(baseBreakdown.FinalTotal + extraTotal);
+        var subtotalBeforeDiscount = Round(baseBreakdown.FinalTotal + baseBreakdown.CampaignDiscount + extraTotal);
+        var campaignDiscount = CalculateCampaignDiscount(baseBreakdown, subtotalBeforeDiscount);
+        var finalTotal = Round(subtotalBeforeDiscount - campaignDiscount);
+        var responseBreakdown = baseBreakdown with
+        {
+            ExtrasTotal = extraTotal,
+            CampaignDiscount = campaignDiscount,
+            FinalTotal = finalTotal,
+            ExtraItems = quotedExtras.Select(ToDto).ToArray()
+        };
         var issuedAtUtc = DateTime.UtcNow;
         var expiresAtUtc = issuedAtUtc.Add(QuoteLifetime);
         var quoteId = Guid.NewGuid();
@@ -71,7 +80,7 @@ public sealed class ReservationQuoteService(
             quoteId,
             issuedAtUtc,
             expiresAtUtc,
-            baseBreakdown,
+            responseBreakdown,
             quotedExtras,
             extraTotal,
             finalTotal);
@@ -102,12 +111,6 @@ public sealed class ReservationQuoteService(
             request.VehicleGroupId,
             quotedExtras.Count);
 
-        var responseBreakdown = baseBreakdown with
-        {
-            ExtrasTotal = extraTotal,
-            FinalTotal = finalTotal,
-            ExtraItems = quotedExtras.Select(ToDto).ToArray()
-        };
         return new ReservationQuoteDto(
             quoteId,
             expiresAtUtc,
@@ -216,6 +219,27 @@ public sealed class ReservationQuoteService(
 
     private static string? NormalizeCampaignCode(string? campaignCode) =>
         string.IsNullOrWhiteSpace(campaignCode) ? null : campaignCode.Trim().ToUpperInvariant();
+
+    private static decimal CalculateCampaignDiscount(
+        PriceBreakdownDto pricing,
+        decimal subtotalBeforeDiscount)
+    {
+        if (string.IsNullOrWhiteSpace(pricing.AppliedCampaignCode))
+        {
+            return 0m;
+        }
+
+        var discount = pricing.AppliedCampaignDiscountType?.Trim().ToLowerInvariant() switch
+        {
+            "percentage" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                subtotalBeforeDiscount * Math.Min(pricing.AppliedCampaignDiscountValue.Value, 100m) / 100m,
+            "fixed" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                pricing.AppliedCampaignDiscountValue.Value,
+            _ => pricing.CampaignDiscount
+        };
+
+        return Math.Clamp(Round(discount), 0m, subtotalBeforeDiscount);
+    }
 
     private static int CalculateRentalDays(DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc) =>
         Math.Max(1, DateOnly.FromDateTime(returnDateTimeUtc).DayNumber - DateOnly.FromDateTime(pickupDateTimeUtc).DayNumber);
