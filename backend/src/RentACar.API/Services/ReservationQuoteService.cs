@@ -60,7 +60,7 @@ public sealed class ReservationQuoteService(
             request.VehicleGroupId,
             request.Locale,
             baseBreakdown.RentalDays,
-            request.SelectedExtras,
+            request.SelectedExtras ?? [],
             cancellationToken);
         var extraTotal = Round(quotedExtras.Sum(item => item.Total));
         var subtotalBeforeDiscount = Round(baseBreakdown.FinalTotal + baseBreakdown.CampaignDiscount + extraTotal);

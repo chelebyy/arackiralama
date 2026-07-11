@@ -120,6 +120,44 @@ public sealed class ReservationQuoteServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_TreatsExplicitlyNullSelectedExtrasAsEmpty()
+    {
+        var request = ValidRequest() with { SelectedExtras = null! };
+        SetupValidReferences(request);
+        _pricingService
+            .Setup(service => service.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.ReturnOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                "SAVE10",
+                0,
+                0,
+                request.DriverAge,
+                request.FullCoverageWaiver,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BaseBreakdown());
+        _extraPricingService
+            .Setup(service => service.CalculateAsync(
+                request.VehicleGroupId,
+                request.Locale,
+                3,
+                It.Is<IReadOnlyList<SelectedReservationExtraInput>>(items => items.Count == 0),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _quoteStore
+            .Setup(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await CreateService().CreateAsync(request, "public-session-123");
+
+        result.ExtraItems.Should().BeEmpty();
+        result.ExtrasTotal.Should().Be(0m);
+        _extraPricingService.VerifyAll();
+    }
+
+    [Fact]
     public async Task CreateAsync_DoesNotAcceptAnyClientPriceFields()
     {
         typeof(SelectedReservationExtraInput).GetProperties()

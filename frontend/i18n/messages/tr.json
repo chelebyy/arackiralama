@@ -238,6 +238,14 @@
     "failedToRefreshQuote": "Fiyat teklifi yenilenemedi. Lütfen tekrar deneyin.",
     "quoteExpired": "Fiyat teklifinin süresi doldu. Güncel teklif hazırlandığında tekrar deneyin.",
     "quoteConfirmationRequired": "Ek seçenekler değişti. Güncel teklifi inceleyip yeniden onaylayın.",
+    "fees": {
+      "airport": "Havalimanı teslimat ücreti",
+      "oneWay": "Farklı ofis teslim ücreti",
+      "extraDriver": "Ek sürücü ücreti",
+      "childSeat": "Çocuk koltuğu ücreti",
+      "youngDriver": "Genç sürücü ücreti",
+      "fullCoverageWaiver": "Tam kapsam muafiyet ücreti"
+    },
     "quoteUnavailable": "Devam etmeden önce sunucu fiyat teklifi hazırlanmalıdır.",
     "quoteExpiresAt": "Fiyat teklifi {date} saatine kadar geçerlidir.",
     "perDay": "Günlük",

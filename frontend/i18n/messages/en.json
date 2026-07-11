@@ -238,6 +238,14 @@
     "failedToRefreshQuote": "The price quote could not be refreshed. Please try again.",
     "quoteExpired": "The price quote has expired. Try again after the current quote is ready.",
     "quoteConfirmationRequired": "Extra options changed. Review the updated quote and confirm again.",
+    "fees": {
+      "airport": "Airport pickup fee",
+      "oneWay": "One-way return fee",
+      "extraDriver": "Additional driver fee",
+      "childSeat": "Child seat fee",
+      "youngDriver": "Young driver fee",
+      "fullCoverageWaiver": "Full coverage waiver fee"
+    },
     "quoteUnavailable": "A server price quote must be prepared before you continue.",
     "quoteExpiresAt": "This price quote is valid until {date}.",
     "perDay": "per day",

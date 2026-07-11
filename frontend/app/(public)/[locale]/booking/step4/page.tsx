@@ -220,29 +220,73 @@ export default function BookingStep4Page() {
 
     setIsQuoteLoading(true);
     setQuoteError(null);
+    const requestQuote = (quoteSelections: SelectedBookingExtra[]) => createReservationQuote({
+      vehicleGroupId: selectedVehicleGroupId,
+      pickupOfficeId,
+      returnOfficeId,
+      pickupDateTimeUtc: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
+      returnDateTimeUtc: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
+      campaignCode,
+      driverAge,
+      fullCoverageWaiver: false,
+      locale,
+      selectedExtras: quoteSelections.map(({ optionId, quantity, optionVersion }) => ({ optionId, quantity, optionVersion })),
+    }, getSessionId());
     try {
-      const nextQuote = await createReservationQuote({
-        vehicleGroupId: selectedVehicleGroupId,
-        pickupOfficeId,
-        returnOfficeId,
-        pickupDateTimeUtc: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
-        returnDateTimeUtc: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
-        campaignCode,
-        driverAge,
-        fullCoverageWaiver: false,
-        locale,
-        selectedExtras: selections.map(({ optionId, quantity, optionVersion }) => ({ optionId, quantity, optionVersion })),
-      }, getSessionId());
+      const nextQuote = await requestQuote(selections);
       setQuote(nextQuote);
       return nextQuote;
     } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 409 && selections.length > 0) {
+        try {
+          const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale);
+          const optionsById = new Map(catalog.map((option) => [option.id, option]));
+          const reconciledSelections = selections.flatMap((selection) => {
+            const option = optionsById.get(selection.optionId);
+            return option ? [{
+              optionId: option.id,
+              optionVersion: option.version,
+              quantity: Math.min(selection.quantity, option.maxQuantity),
+              code: option.code,
+              name: option.name,
+              description: option.description,
+              unitPrice: option.unitPrice,
+              pricingMode: option.pricingMode,
+            }] : [];
+          });
+          const selectionsChanged =
+            reconciledSelections.length !== selections.length ||
+            reconciledSelections.some((selection, index) => {
+              const previous = selections[index];
+              return !previous ||
+                selection.optionId !== previous.optionId ||
+                selection.optionVersion !== previous.optionVersion ||
+                selection.quantity !== previous.quantity ||
+                selection.unitPrice !== previous.unitPrice ||
+                selection.pricingMode !== previous.pricingMode;
+            });
+
+          if (selectionsChanged) {
+            lastAutomaticQuoteKeyRef.current = buildAutomaticQuoteKey(reconciledSelections);
+            updateExtras(reconciledSelections);
+            const nextQuote = await requestQuote(reconciledSelections);
+            setQuote(nextQuote);
+            setRequiresQuoteConfirmation(true);
+            setQuoteError(t("quoteConfirmationRequired"));
+            return nextQuote;
+          }
+        } catch (recoveryError) {
+          setQuoteError(recoveryError instanceof Error ? recoveryError.message : t("failedToRefreshQuote"));
+          return null;
+        }
+      }
       setQuote(null);
       setQuoteError(error instanceof Error ? error.message : t("failedToRefreshQuote"));
       return null;
     } finally {
       setIsQuoteLoading(false);
     }
-  }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, t]);
+  }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, t, updateExtras]);
 
   const buildAutomaticQuoteKey = (selections: SelectedBookingExtra[]) => [
     selectedVehicleGroupId,
@@ -461,6 +505,15 @@ export default function BookingStep4Page() {
       toast.error(message);
     }
   };
+
+  const quoteFeeItems = quote ? [
+    { name: t("fees.airport"), price: quote.airportFee },
+    { name: t("fees.oneWay"), price: quote.oneWayFee },
+    { name: t("fees.extraDriver"), price: quote.extraDriverFee },
+    { name: t("fees.childSeat"), price: quote.childSeatFee },
+    { name: t("fees.youngDriver"), price: quote.youngDriverFee },
+    { name: t("fees.fullCoverageWaiver"), price: quote.fullCoverageWaiverFee },
+  ].filter((item) => item.price > 0) : [];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -730,7 +783,10 @@ export default function BookingStep4Page() {
                   dailyRate={quote.dailyRate}
                   days={quote.rentalDays}
                   vehicleGroup={vehicleGroupName}
-                  extras={quote.extraItems.map((item) => ({ name: item.name, price: item.total }))}
+                  extras={[
+                    ...quote.extraItems.map((item) => ({ name: item.name, price: item.total })),
+                    ...quoteFeeItems,
+                  ]}
                   campaignDiscountAmount={quote.campaignDiscount}
                   baseAmount={quote.baseTotal}
                   totalAmount={quote.finalTotal}

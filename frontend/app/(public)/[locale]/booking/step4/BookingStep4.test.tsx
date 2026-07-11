@@ -153,6 +153,31 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const baseQuote = {
+  quoteId: "quote-123",
+  expiresAtUtc: "2030-05-10T10:30:00Z",
+  dailyRate: 45,
+  rentalDays: 3,
+  baseTotal: 150,
+  extrasTotal: 39,
+  campaignDiscount: 0,
+  airportFee: 0,
+  oneWayFee: 0,
+  extraDriverFee: 0,
+  childSeatFee: 0,
+  youngDriverFee: 0,
+  fullCoverageWaiverFee: 0,
+  finalTotal: 189,
+  currency: "TRY",
+  depositAmount: 0,
+  preAuthorizationAmount: 0,
+  appliedCampaignCode: null,
+  extraItems: [
+    { optionId: "gps", optionVersion: 2, code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY" as const, quantity: 1, rentalDays: 3, total: 24 },
+    { optionId: "additional-driver", optionVersion: 1, code: "additional_driver", name: "Additional Driver", description: "Second driver", unitPrice: 15, pricingMode: "PER_RENTAL" as const, quantity: 1, rentalDays: 3, total: 15 },
+  ],
+};
+
 describe("BookingStep4Page", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -177,30 +202,7 @@ describe("BookingStep4Page", () => {
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
     createReservationQuoteMock.mockReset();
-    createReservationQuoteMock.mockResolvedValue({
-      quoteId: "quote-123",
-      expiresAtUtc: "2030-05-10T10:30:00Z",
-      dailyRate: 45,
-      rentalDays: 3,
-      baseTotal: 150,
-      extrasTotal: 39,
-      campaignDiscount: 0,
-      airportFee: 0,
-      oneWayFee: 0,
-      extraDriverFee: 0,
-      childSeatFee: 0,
-      youngDriverFee: 0,
-      fullCoverageWaiverFee: 0,
-      finalTotal: 189,
-      currency: "TRY",
-      depositAmount: 0,
-      preAuthorizationAmount: 0,
-      appliedCampaignCode: null,
-      extraItems: [
-        { optionId: "gps", optionVersion: 2, code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", quantity: 1, rentalDays: 3, total: 24 },
-        { optionId: "additional-driver", optionVersion: 1, code: "additional_driver", name: "Additional Driver", description: "Second driver", unitPrice: 15, pricingMode: "PER_RENTAL", quantity: 1, rentalDays: 3, total: 15 },
-      ],
-    });
+    createReservationQuoteMock.mockResolvedValue(baseQuote);
     getPublicReservationExtraOptionsMock.mockReset();
     getPublicReservationExtraOptionsMock.mockResolvedValue([]);
     updateExtrasMock.mockReset();
@@ -208,6 +210,10 @@ describe("BookingStep4Page", () => {
     pushMock.mockReset();
     bookingState.vehicle = { ...baseVehicle };
     bookingState.dates = { ...baseDates };
+    bookingState.selectedExtras = [
+      { optionId: "gps", optionVersion: 2, code: "gps", name: "GPS Navigation", description: "Navigation", quantity: 1, unitPrice: 8, pricingMode: "PER_DAY" },
+      { optionId: "additional-driver", optionVersion: 1, code: "additional_driver", name: "Additional Driver", description: "Second driver", quantity: 1, unitPrice: 15, pricingMode: "PER_RENTAL" },
+    ];
     searchParams = new URLSearchParams({
       vehicle: "economy",
       pickupDate: "2026-05-10",
@@ -234,6 +240,63 @@ describe("BookingStep4Page", () => {
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("shows every non-zero quote fee in the checkout summary", async () => {
+    createReservationQuoteMock.mockResolvedValueOnce({
+      ...baseQuote,
+      airportFee: 25,
+      oneWayFee: 30,
+      youngDriverFee: 20,
+      fullCoverageWaiverFee: 15,
+      finalTotal: 279,
+    });
+
+    render(<BookingStep4Page />);
+
+    expect(await screen.findByText("Airport pickup fee")).toBeInTheDocument();
+    expect(screen.getByText("One-way return fee")).toBeInTheDocument();
+    expect(screen.getByText("Young driver fee")).toBeInTheDocument();
+    expect(screen.getByText("Full coverage waiver fee")).toBeInTheDocument();
+  });
+
+  it("reconciles stale extras and prepares a refreshed quote after an initial 409", async () => {
+    updateExtrasMock.mockImplementationOnce((extras) => {
+      bookingState.selectedExtras = extras;
+    });
+    createReservationQuoteMock
+      .mockRejectedValueOnce(new ApiError({
+        statusCode: 409,
+        message: "Selected extra version is stale",
+        code: "CONFLICT",
+        timestamp: "2026-07-11T19:30:00Z",
+        path: "/api/pricing/quote",
+      }))
+      .mockResolvedValueOnce({
+        ...baseQuote,
+        quoteId: "quote-refreshed",
+        extrasTotal: 24,
+        finalTotal: 174,
+        extraItems: [baseQuote.extraItems[0]],
+      });
+    getPublicReservationExtraOptionsMock.mockResolvedValueOnce([
+      { id: "gps", code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", maxQuantity: 1, iconKey: "SHIELD", sortOrder: 1, version: 3 },
+    ]);
+
+    render(<BookingStep4Page />);
+
+    await waitFor(() => expect(createReservationQuoteMock).toHaveBeenCalledTimes(2));
+    expect(createReservationQuoteMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        selectedExtras: [{ optionId: "gps", optionVersion: 3, quantity: 1 }],
+      }),
+      "uuid-123"
+    );
+    expect(updateExtrasMock).toHaveBeenCalledWith([
+      expect.objectContaining({ optionId: "gps", optionVersion: 3, quantity: 1 }),
+    ]);
+    expect(await screen.findByText("Extra options changed. Review the updated quote and confirm again.")).toBeInTheDocument();
   });
 
   it("validates a campaign code through the API before applying it", async () => {
