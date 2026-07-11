@@ -5,7 +5,7 @@ Scope: Production release rehearsal on local Docker before live deployment
 
 Latest delta evidence: 2026-06-27 admin public-site localization smoke rerun on local Docker. `rentacar-web` was rebuilt from current frontend code; `rentacar-api`, `rentacar-postgres`, and `rentacar-redis` stayed on the local compose stack. Playwright selected Docker suite passed **17/17** against `http://localhost:3001`, including the new admin public settings smoke for five-language managed-content controls.
 
-------------------------------------------------------------------------
+---
 
 ## 1. Goal
 
@@ -19,7 +19,7 @@ Primary goals:
 - Confirm admin login and core admin pages work in the browser.
 - Capture evidence and blockers before production deployment.
 
-------------------------------------------------------------------------
+---
 
 ## 2. Test Environment
 
@@ -72,7 +72,7 @@ Environment safety evidence captured on 2026-06-03:
 - A redacted API container env check confirmed `ConnectionStrings__DefaultConnection` uses the `postgres` compose service and `Database=rentacar`, `Redis__ConnectionString` uses `redis:6379`, and `Jwt__Secret` contains the `local-dev-only` marker without printing the secret value.
 - `docker compose -f backend\docker-compose.yml config --volumes` reports only `postgres_data` and `redis_data`; section 9.1 documents `docker compose down --volumes`, so local test data can be discarded by recreating the compose volumes after the pass.
 
-------------------------------------------------------------------------
+---
 
 ## 3. Stack Startup Checklist
 
@@ -159,7 +159,7 @@ Root compose alternative status on 2026-06-03:
 - Temporary root compose secrets used for validation were local-only strings: PostgreSQL password `local-root-compose-postgres-only`, Redis password `local-root-compose-redis-only`, and JWT secret `local-root-compose-jwt-secret-at-least-32-chars`.
 - `docker network inspect dokploy-network --format "{{.Name}} {{.Driver}} {{.Scope}}"` returned `dokploy-network bridge local`, confirming the external Docker network exists.
 
-------------------------------------------------------------------------
+---
 
 ## 4. Browser Test Rules
 
@@ -194,7 +194,7 @@ Browser test rules evidence captured on 2026-06-03:
 - Console checks on `/tr`, `/en`, and `/dashboard/login/v2` showed no hydration mismatch or runtime stack trace. The only repeated console entry was `Google Analytics key not provided.`, expected for this local compose pass because `GA_KEY` is intentionally empty.
 - Network checks for document/fetch/xhr requests showed local app routes returning 200, including `/tr`, `/en`, localized RSC prefetches, and `/dashboard/login/v2`. No unexpected application 4xx/5xx responses were observed. The browser also emitted successful `gc.kis.v2.scr.kaspersky-labs.com` requests from the local Kaspersky browser extension; these are extension traffic, not application traffic.
 
-------------------------------------------------------------------------
+---
 
 ## 5. Public Customer Pages
 
@@ -335,7 +335,7 @@ Reservation tracking evidence captured on 2026-06-03:
   - The valid lookup did not expose card number, driver license, payment intent id, or other unrelated reservation data in visible page text.
   - The frontend tracking mapper was fixed to support the backend's flat public reservation response shape, and `corepack pnpm -C frontend test` passed afterward with 46 test files and 191 tests.
 
-------------------------------------------------------------------------
+---
 
 ## 6. Admin Panel
 
@@ -414,7 +414,7 @@ Automated §6.1 coverage (re-verified 2026-06-04):
   checklist bullets as Playwright assertions and runs headlessly
   against the local Docker stack.
 - `E2E_BASE_URL=http://localhost:3001 pnpm exec playwright test
-  e2e/tests/guest-auth-pages.spec.ts --project=chromium` produced
+e2e/tests/guest-auth-pages.spec.ts --project=chromium` produced
   `9 passed (7.8s)` on a clean run. The spec runs in `mode: "serial"`
   and reuses a single `loggedInPage` fixture so it stays inside the
   backend's 5-permit Strict rate-limit window
@@ -696,14 +696,14 @@ Dependency-security follow-up captured on 2026-07-08:
 - Follow-up commit `2ff2edf` added an explicit `Microsoft.OpenApi` 2.7.5
   package reference in `backend/src/RentACar.API/RentACar.API.csproj`.
 - Verification after the follow-up: `dotnet list backend\RentACar.sln package
-  --include-transitive --vulnerable` reported no vulnerable backend packages,
+--include-transitive --vulnerable` reported no vulnerable backend packages,
   `dotnet build backend\RentACar.sln --no-restore` passed with 0 warnings /
   0 errors, and `dotnet test backend\RentACar.sln --no-build` passed outside
   the sandbox with 682/682 unit tests and 34/34 integration tests.
 - This closes the OpenAPI dependency warning noted during the Docker build, but
   it does not replace the separate Aikido MCP release-security gate above.
 
-------------------------------------------------------------------------
+---
 
 ### 6.6 Reservation Extra Options Validation Gate
 
@@ -716,7 +716,7 @@ Required workflow:
 - [x] Select per-day and per-rental quantities in public Step 3; verify the URL has no newly generated `extras` parameter and that loading, retry, empty, and legacy-link warnings are usable.
 - [x] Verify Step 4 server quote lines, final total, expiry state, campaign refresh, paid/unpaid `quoteId` payloads, and payment ordering.
 - [x] Issue quotes across price-only and availability-invalidating catalog changes; confirm the first `409` refreshes safely and the second requires customer confirmation without losing customer/driver/card-form state.
-- [ ] Open the created reservation in admin and verify immutable snapshot names, quantities, pricing rules, totals, and the legacy-total-only indicator without double counting.
+- [x] Open the created reservation in admin and verify immutable snapshot names, quantities, pricing rules, totals, and the legacy-total-only indicator without double counting.
 - [ ] Verify expired, cross-session, and replayed quote IDs do not create duplicate reservations.
 - [ ] Record console/network, desktop/tablet/mobile layout, screenshots, and non-sensitive API evidence under a dated `docs/test-evidence/` folder.
 
@@ -732,8 +732,9 @@ Automated evidence recorded on 2026-07-11:
 - Step 3 continuation evidence on 2026-07-11: the expanded `reservation-extra-options.spec.ts` passed 4/4 against `http://localhost:3001` with one Chromium worker. The three new route-controlled browser scenarios proved the loading skeleton, per-day and per-rental quantity bounds and calculated totals, recoverable catalog error followed by retry and empty state, supported-plus-unsupported legacy-link warning, and removal of `extras` from the generated Step 4 URL. The first expanded run passed 1/4 because three locators assumed unformatted currency text or selected the Next.js route-announcer alert; narrowing those locators produced the final 4/4 pass. The scenarios created no server-side catalog or reservation data.
 - Step 4 continuation evidence on 2026-07-11: the suite expanded to 6/6 against the same Docker web target. The paid scenario rendered the server extra line, final total, and expiry state, refreshed the quote after campaign validation, submitted the refreshed `quoteId` with the quote session and an idempotency key, and proved the request order was reservation, hold, then payment intent. The unpaid scenario submitted its own `quoteId` with matching session/idempotency headers and proved that neither hold nor payment intent was called. All quote, reservation, hold, and payment responses were route-controlled; no real provider call or server-side reservation was created. The first 6-test run passed 5/6 because the unpaid radio locator used a non-rendered translation; the focused correction passed 1/1 and the final suite passed 6/6 in 9.3 seconds. A fresh supporting `BookingStep4` Vitest run passed 15/15.
 - Catalog-change continuation evidence on 2026-07-11: two route-controlled Chromium scenarios passed 2/2 after rebuilding the production Docker web, and the complete reservation-extra suite passed 8/8 with one worker. A price-only catalog edit left the issued unexpired quote and its promised total unchanged. The availability-invalidating path refreshed the catalog/quote once and retried with the same idempotency key; a second `409` stopped automation, removed the unavailable selection from the rendered quote, preserved payment method/card/terms state, and required an explicit quote refresh before a new submission. The first characterization run exposed a duplicate quote request because the selection-store update also triggered the automatic quote effect; Step 4 now marks that refreshed selection key as consumed before updating the store.
+- Immutable-history continuation evidence on 2026-07-11: a real public unpaid flow created a child-seat reservation and the rebuilt Docker admin UI displayed the persisted snapshot name, quantity, per-day rule, extra total, and full pricing totals. The test proved the selected-extra sum equals `extrasTotal`, recomposed `finalTotal` from base/fee/discount fields without adding the extra twice, changed the live child-seat name and price, and confirmed both selected-extra and full-pricing history remained byte-for-byte equivalent through the admin API and unchanged in the UI. A real pre-migration reservation displayed the explicit `Eski rezervasyon: yalnızca toplam tutar kaydı bulunuyor.` warning. The pass exposed and fixed admin-client normalization of raw `baseTotal`/`finalTotal` fields. Focused Playwright passed 1/1; the clean rate-limit rerun passed the complete reservation-extra suite 9/9 with one worker. The built-in child-seat catalog returned to `Çocuk Koltuğu`, 75 TRY/day, active/non-archived, and all test-created reservations were cancelled in `finally`.
 
-------------------------------------------------------------------------
+---
 
 ## 7. API and Network Verification
 
@@ -773,7 +774,7 @@ API and network verification evidence captured on 2026-06-04:
   - `GET /api/admin/v1/does-not-exist` returned `401` because the proxy requires a valid token before forwarding; this is the expected behaviour for unknown admin paths under the `/api/admin/[...path]` catch-all.
   - No 500 responses were observed in this pass. Any future unexpected `5xx` response on the local stack must be treated as a release blocker per the checklist.
 
-------------------------------------------------------------------------
+---
 
 ## 8. Optional Local Load Smoke
 
@@ -812,7 +813,7 @@ Optional local load smoke evidence captured on 2026-06-04:
 - `admin-dashboard.js` passed with the seeded `integration-admin@rentacar.test` local admin user, `checks=100.00%`, and `http_req_failed=0.00%`; evidence saved to `docs/test-evidence/local-docker-2026-06-04/k6-admin-dashboard.txt`.
 - `mixed-traffic.js` passed with `checks=100.00%`, `http_req_failed=0.00%`, and search/booking fallback checks passing; evidence saved to `docs/test-evidence/local-docker-2026-06-04/k6-mixed-traffic.txt`.
 
-------------------------------------------------------------------------
+---
 
 ## 9. Evidence Template
 
@@ -830,35 +831,42 @@ API URL:
 Browser(s):
 
 ## Stack Status
+
 - docker compose ps:
 - API health:
 - Frontend health:
 
 ## Public Pages
+
 - Passed:
 - Failed:
 - Screenshots:
 
 ## Booking Flow
+
 - Passed:
 - Failed:
 - Test reservation code:
 
 ## Admin Panel
+
 - Passed:
 - Failed:
 - Admin user used:
 
 ## Network / Console
+
 - Unexpected 4xx:
 - Unexpected 5xx:
 - Console errors:
 
 ## Blockers
+
 - [ ] None
 - [ ] Blocker listed below
 
 ## Decision
+
 - [ ] Ready for production deployment rehearsal
 - [ ] Not ready; fixes required
 ```
@@ -868,7 +876,7 @@ Evidence note created for this pass:
 - `docs/test-evidence/local-docker-2026-06-04/evidence.md`
 - Evidence folder also contains the six k6 stdout summaries listed in section 8 and the raw Docker health refresh file `raw-docker-health-2026-06-04.txt`.
 
-------------------------------------------------------------------------
+---
 
 ## 10. Release Gate Decision
 
@@ -895,7 +903,7 @@ Release gate decision captured on 2026-06-04:
 - Raw Docker health refresh evidence was added on 2026-06-04 after fixing the stale pnpm lockfile override metadata that initially blocked the reproducibility rebuild.
 - Known non-blocking follow-ups are explicitly listed in section 6.4; no unresolved release blocker is listed for this local pass.
 
-------------------------------------------------------------------------
+---
 
 ## 11. Cleanup
 

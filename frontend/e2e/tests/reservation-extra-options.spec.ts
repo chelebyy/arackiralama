@@ -1,6 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
-import { ADMIN_USER } from "../fixtures/test-data";
+import { type Page } from "@playwright/test";
+import { ADMIN_USER, test, expect } from "../fixtures/test-data";
 import { AdminLoginPage } from "../pages/AdminLoginPage";
+import { HomePage } from "../pages/HomePage";
 
 type VehicleGroup = {
   id: string;
@@ -14,8 +15,43 @@ type VehicleGroup = {
 
 type AdminExtra = {
   id: string;
+  code: string;
   version: number;
   isActive: boolean;
+  unitPrice: number;
+  pricingMode: "PER_DAY" | "PER_RENTAL";
+  maxQuantity: number;
+  iconKey: string;
+  sortOrder: number;
+  vehicleGroupIds: string[];
+  translations: Array<{ locale: string; name: string; description: string }>;
+};
+
+type AdminReservationDetail = {
+  id: string;
+  breakdownSource: "SNAPSHOT" | "LEGACY_TOTAL_ONLY";
+  selectedExtras?: Array<{
+    optionId: string;
+    optionVersion: number;
+    name: string;
+    unitPrice: number;
+    pricingMode: "PER_DAY" | "PER_RENTAL";
+    quantity: number;
+    rentalDays: number;
+    total: number;
+  }>;
+  priceBreakdown?: {
+    baseTotal: number;
+    extrasTotal: number;
+    campaignDiscount: number;
+    airportFee: number;
+    oneWayFee: number;
+    extraDriverFee: number;
+    childSeatFee: number;
+    youngDriverFee: number;
+    fullCoverageWaiverFee: number;
+    finalTotal: number;
+  };
 };
 
 const localizedNames = {
@@ -41,6 +77,101 @@ function unwrapItems(payload: unknown): unknown[] {
     return body.data.items;
   }
   return body.items ?? [];
+}
+
+function unwrapData<T>(payload: unknown): T {
+  const body = payload as { data?: T };
+  return (body.data ?? payload) as T;
+}
+
+async function getAdminExtraByCode(page: Page, code: string): Promise<AdminExtra> {
+  return page.evaluate(async (optionCode) => {
+    const response = await fetch(
+      `/api/admin/v1/reservation-extra-options?search=${encodeURIComponent(optionCode)}&includeArchived=true&pageSize=100`
+    );
+    if (!response.ok) throw new Error(`Reservation extras request failed: ${response.status}`);
+    const payload = await response.json();
+    const items = payload?.data?.items ?? payload?.items ?? [];
+    const option = items.find((item: { code?: string }) => item.code === optionCode);
+    if (!option) throw new Error(`Reservation extra not found: ${optionCode}`);
+    return option;
+  }, code);
+}
+
+async function updateAdminExtra(
+  page: Page,
+  option: AdminExtra,
+  changes: Partial<Pick<AdminExtra, "unitPrice" | "translations">>
+): Promise<AdminExtra> {
+  return page.evaluate(
+    async ({ item, patch }) => {
+      const response = await fetch(`/api/admin/v1/reservation-extra-options/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          version: item.version,
+          unitPrice: patch.unitPrice ?? item.unitPrice,
+          pricingMode: item.pricingMode,
+          maxQuantity: item.maxQuantity,
+          iconKey: item.iconKey,
+          sortOrder: item.sortOrder,
+          vehicleGroupIds: item.vehicleGroupIds,
+          translations: patch.translations ?? item.translations
+        })
+      });
+      if (!response.ok) throw new Error(`Reservation extra update failed: ${response.status}`);
+      const payload = await response.json();
+      return payload?.data ?? payload;
+    },
+    { item: option, patch: changes }
+  );
+}
+
+async function getAdminReservation(page: Page, id: string): Promise<AdminReservationDetail> {
+  return page.evaluate(async (reservationId) => {
+    const response = await fetch(`/api/admin/v1/reservations/${reservationId}`);
+    if (!response.ok) throw new Error(`Reservation detail request failed: ${response.status}`);
+    const payload = await response.json();
+    return payload?.data ?? payload;
+  }, id);
+}
+
+async function findLegacyReservation(page: Page): Promise<AdminReservationDetail> {
+  return page.evaluate(async () => {
+    let pageNumber = 1;
+    let totalPages = 1;
+    let totalCount = 0;
+    let inspectedCount = 0;
+    const observedSources = new Set<string>();
+    do {
+      const listResponse = await fetch(
+        `/api/admin/v1/reservations?page=${pageNumber}&pageSize=100`
+      );
+      if (!listResponse.ok) {
+        throw new Error(`Reservation list request failed: ${listResponse.status}`);
+      }
+      const listPayload = await listResponse.json();
+      const list = listPayload?.data ?? listPayload;
+      const items = Array.isArray(list) ? list : (list?.items ?? []);
+      totalCount = Array.isArray(list) ? items.length : (list?.totalCount ?? items.length);
+      totalPages = Array.isArray(list)
+        ? 1
+        : (list?.totalPages ?? Math.max(1, Math.ceil(totalCount / (list?.pageSize ?? 100))));
+      for (const item of items) {
+        const detailResponse = await fetch(`/api/admin/v1/reservations/${item.id}`);
+        if (!detailResponse.ok) continue;
+        const detailPayload = await detailResponse.json();
+        const detail = detailPayload?.data ?? detailPayload;
+        inspectedCount += 1;
+        observedSources.add(String(detail.breakdownSource));
+        if (detail.breakdownSource === "LEGACY_TOTAL_ONLY") return detail;
+      }
+      pageNumber += 1;
+    } while (pageNumber <= totalPages);
+    throw new Error(
+      `No LEGACY_TOTAL_ONLY reservation is available: total=${totalCount}, pages=${totalPages}, inspected=${inspectedCount}, sources=${Array.from(observedSources).join(",")}`
+    );
+  });
 }
 
 async function getAdminGroups(page: Page): Promise<VehicleGroup[]> {
@@ -751,5 +882,160 @@ test.describe("Reservation extra options acceptance", () => {
     expect(reservationRequests).toHaveLength(3);
     expect(reservationRequests[2].quoteId).toBe("quote-after-availability-change-3");
     expect(reservationRequests[2].idempotencyKey).not.toBe(reservationRequests[1].idempotencyKey);
+  });
+
+  test("admin detail preserves selected-extra history and marks legacy totals explicitly", async ({
+    page,
+    testDates
+  }) => {
+    let createdReservationId: string | undefined;
+    let originalOption: AdminExtra | undefined;
+    let updatedOption: AdminExtra | undefined;
+    let adminAuthenticated = false;
+
+    try {
+      const pickupDate = new Date(`${testDates.pickup}T00:00:00Z`);
+      pickupDate.setUTCDate(pickupDate.getUTCDate() + 30);
+      const returnDate = new Date(pickupDate);
+      returnDate.setUTCDate(returnDate.getUTCDate() + 3);
+      const homePage = new HomePage(page);
+      await homePage.goto("tr");
+      await homePage.fillSearchForm({
+        pickupOffice: "ala",
+        returnOffice: "gzp",
+        pickupDate: pickupDate.toISOString().split("T")[0],
+        returnDate: returnDate.toISOString().split("T")[0]
+      });
+      await homePage.submitSearch();
+
+      await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/);
+      await page
+        .getByRole("link", { name: /hemen rezerve et|book now/i })
+        .first()
+        .click();
+      await expect(page).toHaveURL(/\/booking\/step2/);
+      const step3Url = new URL(page.url());
+      step3Url.pathname = step3Url.pathname.replace("/booking/step2", "/booking/step3");
+      await page.goto(step3Url.toString());
+      await expect(page).toHaveURL(/\/booking\/step3/);
+      await page.getByRole("button", { name: "Adedi artır Çocuk Koltuğu" }).click();
+
+      await page.locator("#firstName").fill("Snapshot");
+      await page.locator("#lastName").fill("Acceptance");
+      await page.locator("#email").fill(`snapshot-${Date.now()}@example.test`);
+      await page.locator("#phone").fill("+905551234567");
+      await page.locator("#birthDate").fill("1990-05-10");
+      await page.locator("#driverLicense").fill(`SNAPSHOT-${Date.now()}`);
+      await page.locator("#driverLicenseCountry").fill("TR");
+      await page.getByRole("button", { name: /devam|continue/i }).click();
+
+      await expect(page).toHaveURL(/\/booking\/step4/);
+      await expect(page.getByText("Çocuk Koltuğu", { exact: true })).toBeVisible();
+      await page.getByRole("radio", { name: /Online ödeme olmadan talep/ }).check();
+      await page.getByRole("checkbox").check();
+      const createResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/reservations/unpaid-requests") &&
+          response.request().method() === "POST"
+      );
+      await page.getByRole("button", { name: "Talebi Gönder" }).click();
+      const createResponse = await createResponsePromise;
+      const createPayload = await createResponse.json();
+      expect(createResponse.status(), JSON.stringify(createPayload)).toBe(200);
+      const createdReservation = unwrapData<{ id: string; publicCode: string }>(createPayload);
+      createdReservationId = createdReservation.id;
+      await expect(page).toHaveURL(
+        new RegExp(`/tr/booking/confirmation\\?.*code=${createdReservation.publicCode}`)
+      );
+
+      const loginPage = new AdminLoginPage(page);
+      await loginPage.goto();
+      await loginPage.login(ADMIN_USER.email, ADMIN_USER.password);
+      await loginPage.expectLoginSuccess();
+      adminAuthenticated = true;
+
+      const originalDetail = await getAdminReservation(page, createdReservationId);
+      expect(originalDetail.breakdownSource).toBe("SNAPSHOT");
+      expect(originalDetail.selectedExtras).toHaveLength(1);
+      const selectedSnapshot = originalDetail.selectedExtras![0];
+      expect(selectedSnapshot.name).toBe("Çocuk Koltuğu");
+      expect(selectedSnapshot.pricingMode).toBe("PER_DAY");
+      expect(selectedSnapshot.quantity).toBe(1);
+      expect(selectedSnapshot.total).toBe(
+        selectedSnapshot.unitPrice * selectedSnapshot.quantity * selectedSnapshot.rentalDays
+      );
+
+      const originalBreakdown = originalDetail.priceBreakdown!;
+      expect(originalBreakdown.extrasTotal).toBe(selectedSnapshot.total);
+      expect(originalBreakdown.finalTotal).toBe(
+        originalBreakdown.baseTotal +
+          originalBreakdown.extrasTotal +
+          originalBreakdown.airportFee +
+          originalBreakdown.oneWayFee +
+          originalBreakdown.extraDriverFee +
+          originalBreakdown.childSeatFee +
+          originalBreakdown.youngDriverFee +
+          originalBreakdown.fullCoverageWaiverFee -
+          originalBreakdown.campaignDiscount
+      );
+
+      await page.goto(`/dashboard/reservations/${createdReservationId}`);
+      await expect(page.getByText(selectedSnapshot.name, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(`${selectedSnapshot.quantity} adet`, { exact: false })
+      ).toBeVisible();
+      await expect(page.getByText("Ekstralar", { exact: true })).toBeVisible();
+      await expect(page.getByText("Toplam", { exact: true })).toBeVisible();
+
+      originalOption = await getAdminExtraByCode(page, "child_seat");
+      const changedName = `Çocuk Koltuğu Güncel ${Date.now()}`;
+      updatedOption = await updateAdminExtra(page, originalOption, {
+        unitPrice: originalOption.unitPrice + 25,
+        translations: originalOption.translations.map((translation) =>
+          translation.locale === "tr" ? { ...translation, name: changedName } : translation
+        )
+      });
+
+      const detailAfterCatalogChange = await getAdminReservation(page, createdReservationId);
+      expect(detailAfterCatalogChange.selectedExtras).toEqual(originalDetail.selectedExtras);
+      expect(detailAfterCatalogChange.priceBreakdown).toEqual(originalDetail.priceBreakdown);
+      await page.reload();
+      await expect(page.getByText(selectedSnapshot.name, { exact: true })).toBeVisible();
+      await expect(page.getByText(changedName, { exact: true })).toBeHidden();
+
+      const legacyReservation = await findLegacyReservation(page);
+      await page.goto(`/dashboard/reservations/${legacyReservation.id}`);
+      await expect(
+        page.getByText("Eski rezervasyon: yalnızca toplam tutar kaydı bulunuyor.", {
+          exact: true
+        })
+      ).toBeVisible();
+    } finally {
+      if ((createdReservationId || updatedOption) && !adminAuthenticated) {
+        const loginPage = new AdminLoginPage(page);
+        await loginPage.goto();
+        await loginPage.login(ADMIN_USER.email, ADMIN_USER.password);
+        await loginPage.expectLoginSuccess();
+        adminAuthenticated = true;
+      }
+
+      if (updatedOption && originalOption) {
+        await updateAdminExtra(page, updatedOption, {
+          unitPrice: originalOption.unitPrice,
+          translations: originalOption.translations
+        });
+      }
+
+      if (createdReservationId && adminAuthenticated) {
+        await page.evaluate(async (reservationId) => {
+          const response = await fetch(`/api/admin/v1/reservations/${reservationId}/cancel`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify("Reservation extra immutable-history acceptance cleanup")
+          });
+          if (!response.ok) throw new Error(`Reservation cleanup failed: ${response.status}`);
+        }, createdReservationId);
+      }
+    }
   });
 });

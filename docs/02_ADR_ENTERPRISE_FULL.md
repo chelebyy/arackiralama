@@ -33,6 +33,7 @@ Used for: - Reservation hold TTL - Rate limiting - Short-lived caching
 Chosen: .NET Background Worker with persistent job table pattern.
 
 Rationale:
+
 - Reduced operational complexity compared to external message brokers
 - Guaranteed delivery via database persistence
 - Crash-safe retry mechanism
@@ -97,7 +98,7 @@ The system requires:
 - Resource efficiency on a single VPS (8GB RAM)
 - Future scalability without premature separation
 
-*Admin panel is for internal operational usage only and not public-facing.*
+_Admin panel is for internal operational usage only and not public-facing._
 
 # Decision
 
@@ -117,7 +118,6 @@ Deployment will use:
 - Single build artifact
 - Single frontend container
 - Nginx host-based routing to same container
-
 
 # Rationale
 
@@ -143,32 +143,33 @@ If admin traffic or operational complexity increases:
 - Admin can be extracted into a separate Next.js application
 - Backend remains unchanged (API-first design)
 
-
 ## Technology Versions
 
-| Component | Version | LTS/Status | Justification |
-|-----------|---------|------------|---------------|
-| .NET SDK | 10.0.103 | Stable SDK | Locked SDK feature band for local dev and CI |
-| ASP.NET Core | 10.0.3 | LTS (Nov 2028) | Strong transaction support, mature ecosystem |
-| Entity Framework Core | 10.0.0 | LTS | Native .NET 10 support, performance improvements |
-| PostgreSQL | 18.3 | Stable | JSONB support, advanced indexing, ACID compliance |
-| Redis | 7.4.x | Stable | Better clustering, improved ACL, hold TTL support |
-| Next.js | 16.1.6 | Stable | App Router, Server Actions, SSR for SEO |
-| React | 19.2.0 | Stable | Concurrent features, automatic batching |
-| TypeScript | 5.3+ | Active | Strict typing, better IDE support |
-| Tailwind CSS | 3.4+ | Active | Utility-first, rapid UI development |
-| next-intl | 3.5+ | Active | i18n routing, RTL support |
-| Node.js | 25.6.1 | Stable | Active LTS, stable for production |
-| Docker | 29.2.1 | Current | BuildKit, improved security |
-| Docker Compose | 2.20+ | Current | Compose spec v3, better networking |
-| Dokploy | Latest | Active | Self-hosted PaaS, Git-based deployment |
-| Traefik | Latest (Dokploy) | Stable | Auto SSL, reverse proxy, health-based routing |
-| Ubuntu | 22.04 LTS | LTS (Apr 2027) | Server-grade stability, security updates |
+| Component             | Version          | LTS/Status     | Justification                                     |
+| --------------------- | ---------------- | -------------- | ------------------------------------------------- |
+| .NET SDK              | 10.0.103         | Stable SDK     | Locked SDK feature band for local dev and CI      |
+| ASP.NET Core          | 10.0.3           | LTS (Nov 2028) | Strong transaction support, mature ecosystem      |
+| Entity Framework Core | 10.0.0           | LTS            | Native .NET 10 support, performance improvements  |
+| PostgreSQL            | 18.3             | Stable         | JSONB support, advanced indexing, ACID compliance |
+| Redis                 | 7.4.x            | Stable         | Better clustering, improved ACL, hold TTL support |
+| Next.js               | 16.1.6           | Stable         | App Router, Server Actions, SSR for SEO           |
+| React                 | 19.2.0           | Stable         | Concurrent features, automatic batching           |
+| TypeScript            | 5.3+             | Active         | Strict typing, better IDE support                 |
+| Tailwind CSS          | 3.4+             | Active         | Utility-first, rapid UI development               |
+| next-intl             | 3.5+             | Active         | i18n routing, RTL support                         |
+| Node.js               | 25.6.1           | Stable         | Active LTS, stable for production                 |
+| Docker                | 29.2.1           | Current        | BuildKit, improved security                       |
+| Docker Compose        | 2.20+            | Current        | Compose spec v3, better networking                |
+| Dokploy               | Latest           | Active         | Self-hosted PaaS, Git-based deployment            |
+| Traefik               | Latest (Dokploy) | Stable         | Auto SSL, reverse proxy, health-based routing     |
+| Ubuntu                | 22.04 LTS        | LTS (Apr 2027) | Server-grade stability, security updates          |
 
 ## 9. i18n & Localization
 
 ### Decision
+
 Multi-language support with 5 languages:
+
 - Turkish (TR) - Default
 - English (EN)
 - Russian (RU)
@@ -176,6 +177,7 @@ Multi-language support with 5 languages:
 - German (DE)
 
 ### Technology
+
 - **next-intl**: i18n routing and message management
 - **Locale path routing**: `/tr/`, `/en/`, `/ru/`, `/ar/`, `/de/`
 - **RTL support**: Conditional CSS direction for Arabic
@@ -187,6 +189,7 @@ Multi-language support with 5 languages:
 ## 10. URL Structure & Routing
 
 ### Public Website
+
 ```
 domain.com/tr/     → Turkish (default redirect from /)
 domain.com/en/     → English
@@ -197,12 +200,14 @@ domain.com/api/v1/ → API endpoints (language-agnostic)
 ```
 
 ### Admin Panel
+
 ```
 admin.domain.com/       → Admin login/dashboard
 admin.domain.com/api/   → Admin API endpoints
 ```
 
 ### Routing Logic
+
 - **Traefik (Dokploy)**: Host-based routing (`domain.com` vs `admin.domain.com`), auto SSL
 - **Next.js Middleware**: Locale detection and redirect
 - **Backend**: JWT validation, RBAC enforcement
@@ -212,13 +217,16 @@ admin.domain.com/api/   → Admin API endpoints
 ## 11. Redis Resilience Strategy
 
 ### Decision
+
 Redis is NOT the single source of truth. Degraded mode supported.
 
 ### Normal Mode
+
 - Reservation holds stored in Redis (15-min TTL)
 - High performance, automatic expiration
 
 ### Degraded Mode (Redis Down)
+
 - Fallback to `reservation_holds` table in PostgreSQL
 - `expires_at` field for manual cleanup
 - Performance penalty accepted temporarily
@@ -226,6 +234,7 @@ Redis is NOT the single source of truth. Degraded mode supported.
 - Alert sent to monitoring
 
 ### Implementation
+
 ```sql
 -- reservation_holds table (fallback)
 CREATE TABLE reservation_holds (
@@ -257,17 +266,20 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Ayrı bir `RentACar.ApiIntegrationTests` projesi oluşturuldu; `Microsoft.NET.Sdk.Web` + `WebApplicationFactory` kullanarak gerçek API pipeline'ını boot eder.
 
 **Rationale:**
+
 - WebApplicationFactory, gerçek middleware pipeline'ını, DI container'ını ve routing'i test eder.
 - PostgreSQL ve Redis'e karşı gerçek integration sağlar; InMemory davranış farklılıklarından kaçınılır.
 - CI'da ayrı job olarak çalıştırılabilir; servis bağımlılıkları explicit olarak tanımlanır.
 
 **Trade-offs:**
+
 - (+) Gerçekçi test ortamı; production'a daha yakın.
 - (+) MockPaymentProvider'ın string trigger'ları ile failure injection kolaylaşır.
 - (-) Daha yavaş çalışma süresi (DB/Redis bağlantıları, migration'lar).
 - (-) CI ortamında PostgreSQL + Redis servisleri gereklidir.
 
 **Consequences:**
+
 - `backend/tests/RentACar.ApiIntegrationTests/` projesi eklendi.
 - `Program.cs`'e `public partial class Program;` eklendi (WAF uyumu).
 - CI workflow'u `backend-unit` ve `backend-integration` job'larına ayrıldı.
@@ -278,6 +290,7 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Her integration test öncesi `PostgresFixture` yeni bir DB oluşturur; `RedisFixture` key prefix ile izolasyon sağlar.
 
 **Rationale:**
+
 - Testler arası veri kirliliğini önler.
 - Paralel çalıştırma güvenli hale gelir.
 - `DatabaseReset.TruncateAllAsync` ile test sonrası cleanup yapılır.
@@ -287,6 +300,7 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Integration test'lerde custom fake yerine gerçek `MockPaymentProvider` kullanılır.
 
 **Rationale:**
+
 - MockPaymentProvider zaten DI'da kayıtlı ve string trigger'ları var.
 - Timeout, failure, 3DS decline senaryoları string trigger'ları ile test edilebilir.
 - Ayrı fake implementasyonu maintain etmeye gerek kalmaz.
@@ -307,12 +321,14 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Keep frontend coverage expansion centered on Vitest + Testing Library tests that target real contracts. Admin/dashboard pages may mock `@/hooks/admin` data hooks and external UI side effects, while shared UI primitive tests should render real component APIs. Coverage collection excludes non-launch/test-support scaffold surfaces already outside the unit-test execution target: `e2e/**`, unused Tiptap editor scaffold, and `components/ui/kanban.tsx`.
 
 **Rationale:**
+
 - Keeps admin page tests deterministic without real backend or SWR/network dependencies.
 - Preserves the existing Next.js App Router test pattern used by public route tests.
 - Avoids brittle Radix/shadcn portal behavior by replacing complex primitives only where they block page-level behavior checks.
 - Closed the frontend coverage gate through broad, previously uncovered admin/shared surfaces rather than over-farming already-covered public pages.
 
 **Current Evidence (17 May 2026):**
+
 - Frontend Vitest: **190/190 PASS**
 - Frontend overall coverage: **63.17%**
 - Validator-backed PR follow-through handoff: `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md`
@@ -325,6 +341,7 @@ OS: Ubuntu 22.04 LTS
 - Fresh completion slice: `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, admin fleet/pricing/report page surfaces mostly **85–97%**.
 
 **Consequences:**
+
 - New admin page tests should use row-scoped Testing Library queries for icon-only actions.
 - Complex shadcn/Radix primitives may be mocked at the component boundary when the test target is a page workflow rather than the primitive itself.
 - API and auth helper tests may mock `../client` or `fetch`, but should assert endpoint construction, payload shape, and error/fallback branches rather than only importing modules for coverage.
@@ -337,11 +354,13 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Treat local Docker as the first validation environment for Phase 10.4 k6 runs, and defer Dokploy reruns until deployment infrastructure is actually available.
 
 **Rationale:**
+
 - Keeps load-validation work unblocked while Dokploy remains deferred.
 - Lets smoke-mode test tuning happen against reproducible local containers.
 - Preserves the distinction between local smoke evidence and deployed-infra evidence.
 
 **Consequences:**
+
 - `backend/tests/k6/` scripts should document any smoke-only assumptions, such as reduced VUs or feature-flag prerequisites.
 - The launch-gate docs must explicitly distinguish local smoke partials from full load-baseline completion.
 - Docker-local k6 runs that target the host backend may need an explicit `Host` header that matches `AllowedHosts`, and admin-dashboard smoke validation may require a seeded local admin account.
@@ -354,11 +373,13 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Implement admin reports as `AdminReportsController` + `IReportsService`/`ReportsService` under `/api/admin/v1/reports/*`, protected by the existing `AdminOnly` policy and standard rate-limit policy. Keep the launch scope to revenue, occupancy, and popular-vehicles reports using existing reservations, payments, and fleet tables.
 
 **Rationale:**
+
 - Keeps operational reports inside the existing monolith and admin API boundary.
 - Avoids new persistence or projection infrastructure before launch.
 - Preserves a clear deferred boundary for settings persistence and maintenance completion, which require separate configuration/migration decisions.
 
 **Consequences:**
+
 - The reports API contract is now tracked in `docs/07_API_Contract_ENTERPRISE_FULL.md`.
 - Richer analytics, export workflows, and accounting-grade ledgers remain post-launch scope.
 - Frontend report screens should consume these endpoints through the existing admin API client/hook patterns when that integration is scheduled.
@@ -370,18 +391,22 @@ OS: Ubuntu 22.04 LTS
 **Decision:** Keep the existing ASP.NET Core OpenAPI integration and add an explicit `Microsoft.OpenApi` 2.7.5 package reference in `backend/src/RentACar.API/RentACar.API.csproj` to force the patched 2.x line without changing runtime API behavior.
 
 **Rationale:**
+
 - Preserves the current `Microsoft.AspNetCore.OpenApi` 10.0.9 integration and generated OpenAPI behavior.
 - Avoids a broader framework/package upgrade in a focused dependency-security slice.
 - Uses the patched version identified by the GitHub advisory for the consumed 2.x package line.
 
 **Consequences:**
+
 - Backend dependency vulnerability checks must include transitive packages with `dotnet list backend\RentACar.sln package --include-transitive --vulnerable`.
 - Future ASP.NET Core package upgrades should verify whether the explicit `Microsoft.OpenApi` override is still needed or can be removed after the upstream transitive dependency advances.
 - As of 8 July 2026, backend restore/build/test passed after the override, and `dotnet list ... --vulnerable` reported no vulnerable backend packages.
 
 ### 12.8 Reservation Extra Options Persistence Boundary
 
-**Implementation status (2026-07-11):** Accepted and implemented through the admin and public booking phases on `codex/reservation-extra-options`. The relational catalog, session-bound Redis quote, unique reservation `quote_id`, versioned `jsonb` pricing snapshot, immutable selected-extra rows, five-locale admin/public surfaces, and legacy adapter now follow this boundary. Local Docker and core Chromium smoke pass. The self-cleaning authoring scenario proves activation readiness, assigned-group visibility in TR/EN/DE/RU/AR, and `no-store` public catalog responses. The expanded 8/8 reservation-extra browser suite additionally proves Step 3 state/quantity rules, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, and bounded availability-conflict recovery with one automatic refresh, same-key retry, second-conflict confirmation, and payment-form preservation. This records implementation conformance and partial acceptance evidence, not release approval. Immutable-history proof, expiry/cross-session/replay, responsive and durable browser evidence, CI, Aikido, deployment/rollback, and the legacy-adapter production observation gate remain open in `docs/17_Reservation_Extra_Options_Implementation.md` and checklist section 6.6.
+**Implementation status (2026-07-11):** Accepted and implemented through the admin and public booking phases on `codex/reservation-extra-options`. The relational catalog, session-bound Redis quote, unique reservation `quote_id`, versioned `jsonb` pricing snapshot, immutable selected-extra rows, five-locale admin/public surfaces, and legacy adapter now follow this boundary. Local Docker and core Chromium smoke pass. The self-cleaning authoring scenario proves activation readiness, assigned-group visibility in TR/EN/DE/RU/AR, and `no-store` public catalog responses. The expanded 9/9 reservation-extra browser suite additionally proves Step 3 state/quantity rules, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, bounded availability-conflict recovery with one automatic refresh, same-key retry, second-conflict confirmation, payment-form preservation, and immutable selected-extra/full-pricing history after a live catalog edit. The admin detail also renders a real pre-migration row as `LEGACY_TOTAL_ONLY`; raw snapshot price fields are normalized before display so extras are not counted twice. This records implementation conformance and partial acceptance evidence, not release approval. Expiry/cross-session/replay, responsive and durable browser evidence, CI, Aikido, deployment/rollback, and the legacy-adapter production observation gate remain open in `docs/17_Reservation_Extra_Options_Implementation.md` and checklist section 6.6.
+
+The redacted immutable-history closure handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-194923-reservation-extra-options-immutable-history-handoff.md`; it validates at 100/100 and is refreshed with the actual commit SHA after the local commit.
 
 **Context (decision time):** The public booking flow owned a hard-coded list of reservation extras and passed legacy extra counts into pricing. The approved replacement needed an admin-managed, five-locale catalog while preserving historical reservation pricing, legacy clients, and server authority over all monetary values.
 
@@ -394,6 +419,7 @@ The catalog application boundary remains in `RentACar.API/Services`, following t
 Catalog lifecycle is explicit: create produces an inactive draft, activation requires five complete translations plus at least one existing vehicle-group assignment, archived rows cannot be edited, and restore always returns to inactive draft. Unused rows may be deleted; used rows archive. A reference that races the hard-delete attempt is treated as archive after the PostgreSQL restrict violation, preserving the immutable reservation snapshot. Mutation audit rows share the catalog save boundary and contain stable action names, option identity, and changed field names without localized bodies or customer data.
 
 **Rationale:**
+
 - Keeps catalog querying relational and indexable without reconstructing historical prices from mutable option rows.
 - Preserves a truthful total-only fallback for pre-migration reservations and an exact snapshot source for new-format reservations.
 - Makes duplicate quote consumption and duplicate reservation-option snapshots database-enforced invariants.
@@ -401,6 +427,7 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 - Avoids a new service or dependency before the existing booking, pricing, admin, and observability boundaries are proven.
 
 **Consequences:**
+
 - Phase 1 is implemented by migration `20260709204616_AddReservationExtraOptions`; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 3.5.
 - Phase 2 is implemented by the dedicated catalog service and admin/public controllers; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 4.6.
 - Phase 3 is implemented by the generic calculator, session-bound Redis quote store, flat quote endpoint, quote-aware reservation transaction, legacy adapter, and snapshot-backed reads; detailed evidence is in `docs/17_Reservation_Extra_Options_Implementation.md` section 5.8.

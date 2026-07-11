@@ -28,7 +28,7 @@ The bundled browser connection could not start because its generated ESM kernel 
 ## Continuation Results
 
 - Exact-current Docker Chromium bundle: 16/16 PASS across `booking-flow.spec.ts`, `payment-flow.spec.ts`, `i18n.spec.ts`, and `mobile.spec.ts` using one worker.
-- Added `frontend/e2e/tests/reservation-extra-options.spec.ts` as a self-cleaning acceptance suite; final expanded run: 8/8 PASS.
+- Added `frontend/e2e/tests/reservation-extra-options.spec.ts` as a self-cleaning acceptance suite; final expanded run: 9/9 PASS.
 - The targeted scenario proved the incomplete draft state keeps `Kaydet ve Aktifleştir` disabled, then completed TR/EN/DE/RU/AR content, selected exactly one vehicle group, activated the option, and verified the assigned group returned the expected localized name in all five locales.
 - Every public catalog response asserted HTTP 200 and `Cache-Control: no-store`; a second unassigned vehicle group did not return the option.
 - The scenario deactivated and permanently deleted its unused test option in `finally`, including failure paths, so the local catalog was not left polluted.
@@ -39,7 +39,12 @@ The bundled browser connection could not start because its generated ESM kernel 
 - Fresh gates from the source-identical locked workspace: SHA-256 match PASS, TypeScript PASS, ESLint PASS, Prettier PASS, focused `BookingStep4` Vitest 15/15 PASS, and targeted Playwright 6/6 PASS.
 - Added two catalog-change scenarios. The price-only path kept the issued unexpired quote and promised total. The availability-invalidating path refreshed catalog/quote once, retried with the original idempotency key, stopped on a second `409`, preserved debit-card/card-field/terms state, and required explicit quote refresh before a new submission.
 - The first conflict characterization reached the second-`409` state but observed three quote calls instead of two. Updating the persisted selection triggered the normal automatic quote effect in parallel with the explicit recovery refresh. Step 4 now records the refreshed selection key before updating the store; the focused 2/2 rerun and complete 8/8 one-worker Chromium suite passed against the rebuilt production Docker web.
-- Final gates for this continuation: TypeScript PASS, focused `BookingStep4` Vitest 15/15 PASS, Docker production build PASS, focused catalog-change Playwright 2/2 PASS, and complete reservation-extra Playwright 8/8 PASS.
+- Added a real immutable-history scenario. It created a child-seat unpaid reservation, asserted the persisted selected-extra row and raw full-pricing snapshot, recomposed the final total without double counting, changed the live child-seat Turkish name and price, and verified both admin API history and rendered admin detail remained unchanged. It then opened a real pre-migration reservation and asserted the explicit legacy-total-only warning.
+- The first snapshot pass exposed that `normalizeReservation` returned the raw backend price-breakdown object unchanged when it was truthy, so `baseTotal`, `finalTotal`, and `campaignDiscount` did not reach the admin UI's normalized fields. The corrected admin client always maps the raw snapshot contract. Focused admin API Vitest passed 13/13; TypeScript, ESLint, Prettier, Docker production build, and health checks passed.
+- Focused immutable-history Playwright passed 1/1. Repeated diagnostics then exhausted the local in-memory rate limiter and produced a non-product 7/9 run with HTTP 429; after restarting only the local API runtime, the clean complete reservation-extra Chromium suite passed 9/9 with one worker.
+- Cleanup verification confirmed the built-in child seat returned to `Çocuk Koltuğu`, 75 TRY/day, active/non-archived, and every reservation created by the immutable-history attempts was cancelled.
+- Final gates for this continuation: TypeScript PASS, focused admin API Vitest 13/13 PASS, Docker production build PASS, focused immutable-history Playwright 1/1 PASS, and complete reservation-extra Playwright 9/9 PASS.
+- Validated immutable-history closure handoff: `C:\Users\muham\AppData\Local\Temp\2026-07-11-194923-reservation-extra-options-immutable-history-handoff.md` — 100/100, READY; the external temp artifact is refreshed with the actual commit SHA after commit creation.
 - Validated OS-temp continuation handoff: `C:\Users\muham\AppData\Local\Temp\reservation-extra-options-catalog-conflict-handoff-2026-07-11.md` — 100/100, READY.
 
 ## Runtime Defect Found and Fixed
@@ -52,7 +57,6 @@ The first real unpaid reservation write returned 500. API logs showed Npgsql rej
 
 ## Still Open
 
-- Immutable selected-extra snapshot history and explicit legacy-total-only row.
 - Expired, cross-session, and replayed quote behavior in the browser.
 - Desktop/tablet/mobile screenshots plus durable console/network capture.
 - CI and Aikido release-security gates.

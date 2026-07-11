@@ -7,7 +7,7 @@
 **Verification gate:** Focused backend/frontend tests plus Docker Desktop browser validation
 **Plan status:** Implemented through Phases 1-5; partial acceptance evidence recorded, release gates remain open
 
-**Current delivery note (2026-07-11):** The normalized catalog, server-authoritative quote boundary, immutable reservation snapshots, admin authoring UI, public booking integration, and compatibility adapter are implemented on `codex/reservation-extra-options`. A rebuilt local Docker stack and the exact-current Chromium booking/payment/i18n/mobile bundle pass. The first five section 6.6 acceptance rows are closed: the self-cleaning authoring scenario covers activation readiness and five-locale group visibility; the expanded 8/8 reservation-extra suite covers Step 3 loading, per-day/per-rental quantities and totals, error/retry/empty and legacy-link states, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, and bounded availability-conflict recovery without payment-form loss. Completion is still blocked by the remaining section 6.6 browser matrix, CI, Aikido, deployment/rollback evidence, and the production legacy-adapter observation window. See [17_Reservation_Extra_Options_Implementation.md](17_Reservation_Extra_Options_Implementation.md) and [13_Local_Docker_Browser_Test_Checklist.md](13_Local_Docker_Browser_Test_Checklist.md) for current evidence and remaining gates.
+**Current delivery note (2026-07-11):** The normalized catalog, server-authoritative quote boundary, immutable reservation snapshots, admin authoring UI, public booking integration, and compatibility adapter are implemented on `codex/reservation-extra-options`. A rebuilt local Docker stack and the exact-current Chromium booking/payment/i18n/mobile bundle pass. The first six section 6.6 acceptance rows are closed: the self-cleaning authoring scenario covers activation readiness and five-locale group visibility; the expanded 9/9 reservation-extra suite covers Step 3 loading, per-day/per-rental quantities and totals, error/retry/empty and legacy-link states, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, bounded availability-conflict recovery without payment-form loss, and real immutable snapshot plus `LEGACY_TOTAL_ONLY` admin-detail proof without double counting. Completion is still blocked by the remaining section 6.6 browser matrix, CI, Aikido, deployment/rollback evidence, and the production legacy-adapter observation window. See [17_Reservation_Extra_Options_Implementation.md](17_Reservation_Extra_Options_Implementation.md) and [13_Local_Docker_Browser_Test_Checklist.md](13_Local_Docker_Browser_Test_Checklist.md) for current evidence and remaining gates.
 
 Related execution document: [17_Reservation_Extra_Options_Implementation.md](17_Reservation_Extra_Options_Implementation.md)
 
@@ -57,16 +57,16 @@ The server remains the sole price authority. The browser sends option identifier
 
 ## 5. Current-State Findings and Disposition
 
-| Finding | Current behavior | Required disposition |
-|---|---|---|
-| Catalog ownership | Step 3 and Step 4 each contain a hard-coded option array | Replace both arrays with one public catalog endpoint |
-| Child seat price | Browser shows 10 TRY/day; server charges 75 TRY/day | Seed and display 75 TRY/day, then allow admin edits |
+| Finding                 | Current behavior                                           | Required disposition                                    |
+| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| Catalog ownership       | Step 3 and Step 4 each contain a hard-coded option array   | Replace both arrays with one public catalog endpoint    |
+| Child seat price        | Browser shows 10 TRY/day; server charges 75 TRY/day        | Seed and display 75 TRY/day, then allow admin edits     |
 | Additional driver price | Browser shows 15 TRY/rental; server charges 150 TRY/rental | Seed and display 150 TRY/rental, then allow admin edits |
-| GPS price | Browser shows 8 TRY/day; server ignores it | Seed 8 TRY/day and include it in server totals |
-| Wi-Fi price | Browser shows 12 TRY/day; server ignores it | Seed 12 TRY/day and include it in server totals |
-| Selection transport | Comma-separated option codes are put in the URL | Persist typed selections in the booking store |
-| Reservation history | Only the final reservation total is persisted | Persist one immutable row per selected option |
-| Admin placement | No reservation-extra settings page exists | Add a `Reservation Extras` tab under Settings |
+| GPS price               | Browser shows 8 TRY/day; server ignores it                 | Seed 8 TRY/day and include it in server totals          |
+| Wi-Fi price             | Browser shows 12 TRY/day; server ignores it                | Seed 12 TRY/day and include it in server totals         |
+| Selection transport     | Comma-separated option codes are put in the URL            | Persist typed selections in the booking store           |
+| Reservation history     | Only the final reservation total is persisted              | Persist one immutable row per selected option           |
+| Admin placement         | No reservation-extra settings page exists                  | Add a `Reservation Extras` tab under Settings           |
 
 ## 6. Domain and Data Model
 
@@ -171,7 +171,7 @@ The response is ordered by `sortOrder`, then localized name, and contains only a
       "code": "child_seat",
       "name": "Çocuk Koltuğu",
       "description": "...",
-      "unitPrice": 75.00,
+      "unitPrice": 75.0,
       "pricingMode": "PER_DAY",
       "maxQuantity": 3,
       "iconKey": "baby",
