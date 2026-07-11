@@ -57,6 +57,15 @@ The first real unpaid reservation write returned 500. API logs showed Npgsql rej
 
 ## Still Open
 
-- Expired, cross-session, and replayed quote behavior in the browser.
 - Desktop/tablet/mobile screenshots plus durable console/network capture.
 - CI and Aikido release-security gates.
+
+## Quote Lifecycle Continuation
+
+- Added a Docker-backed Chromium scenario for expired, cross-session, and replayed quote IDs.
+- A real Redis quote key was expired with `PEXPIRE`; reservation submission returned `409`, and PostgreSQL reported zero rows for that `quote_id`.
+- A valid quote submitted with a different `X-Session-Id` returned `409`, and PostgreSQL again reported zero rows.
+- The initial browser-issued quote created one reservation. Replaying it with a different idempotency key returned the original reservation ID; PostgreSQL reported exactly one row for the unique `quote_id`.
+- Cleanup cancelled the created reservation, removed quote/claim/consumed Redis keys, restored the built-in child seat to `Çocuk Koltuğu` at 75 TRY/day, and confirmed zero active quote-replay or snapshot test reservations.
+- Current-source gates: TypeScript PASS; ESLint PASS; Prettier PASS; existing reservation-extra Chromium scenarios 9/9 PASS; focused quote-lifecycle Chromium 1/1 PASS; focused `ReservationQuoteEndpointTests` 1/1 PASS.
+- The browser scenarios ran in two clean API windows because repeated real-service diagnostics can exhaust the local process-scoped rate limiter; failed 429/timeout runs are not claimed as product evidence.

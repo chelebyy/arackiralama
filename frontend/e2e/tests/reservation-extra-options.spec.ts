@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { type Page } from "@playwright/test";
 import { ADMIN_USER, test, expect } from "../fixtures/test-data";
 import { AdminLoginPage } from "../pages/AdminLoginPage";
@@ -54,6 +55,15 @@ type AdminReservationDetail = {
   };
 };
 
+type QuoteResponse = {
+  quoteId: string;
+};
+
+type ReservationCreateResponse = {
+  id: string;
+  publicCode: string;
+};
+
 const localizedNames = {
   tr: "Bagaj Koruma",
   en: "Luggage Protection",
@@ -82,6 +92,75 @@ function unwrapItems(payload: unknown): unknown[] {
 function unwrapData<T>(payload: unknown): T {
   const body = payload as { data?: T };
   return (body.data ?? payload) as T;
+}
+
+function runDockerExec(container: string, args: string[]): string {
+  return execFileSync("docker", ["exec", container, ...args], {
+    encoding: "utf8"
+  }).trim();
+}
+
+function assertQuoteId(quoteId: string): void {
+  expect(quoteId).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  );
+}
+
+function countReservationsByQuoteId(quoteId: string): number {
+  assertQuoteId(quoteId);
+  const count = runDockerExec("rentacar-postgres", [
+    "psql",
+    "-U",
+    "postgres",
+    "-d",
+    "rentacar",
+    "-t",
+    "-A",
+    "-c",
+    `select count(*) from reservations where quote_id = '${quoteId}'::uuid;`
+  ]);
+  return Number.parseInt(count, 10);
+}
+
+function cancelReservationInDatabase(reservationId: string): void {
+  assertQuoteId(reservationId);
+  expect(
+    runDockerExec("rentacar-postgres", [
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "rentacar",
+      "-t",
+      "-A",
+      "-c",
+      `update reservations set status = 'Cancelled', unpaid_request_expires_at_utc = null where id = '${reservationId}'::uuid returning 1;`
+    ])
+  ).toContain("1");
+}
+
+function expireQuote(quoteId: string): void {
+  assertQuoteId(quoteId);
+  expect(
+    runDockerExec("rentacar-redis", [
+      "redis-cli",
+      "PEXPIRE",
+      `reservation_quote:${quoteId.replaceAll("-", "")}`,
+      "1"
+    ])
+  ).toBe("1");
+}
+
+function cleanupQuoteKeys(quoteId: string): void {
+  assertQuoteId(quoteId);
+  const compactId = quoteId.replaceAll("-", "");
+  runDockerExec("rentacar-redis", [
+    "redis-cli",
+    "DEL",
+    `reservation_quote:${compactId}`,
+    `reservation_quote_claim:${compactId}`,
+    `reservation_quote_consumed:${compactId}`
+  ]);
 }
 
 async function getAdminExtraByCode(page: Page, code: string): Promise<AdminExtra> {
@@ -882,6 +961,177 @@ test.describe("Reservation extra options acceptance", () => {
     expect(reservationRequests).toHaveLength(3);
     expect(reservationRequests[2].quoteId).toBe("quote-after-availability-change-3");
     expect(reservationRequests[2].idempotencyKey).not.toBe(reservationRequests[1].idempotencyKey);
+  });
+
+  test("expired, cross-session, and replayed quotes create at most one reservation", async ({
+    page,
+    testDates
+  }) => {
+    const quoteIds: string[] = [];
+    let createdReservationId: string | undefined;
+
+    try {
+      const pickupDate = new Date(`${testDates.pickup}T00:00:00Z`);
+      pickupDate.setUTCDate(pickupDate.getUTCDate() + 45);
+      const returnDate = new Date(pickupDate);
+      returnDate.setUTCDate(returnDate.getUTCDate() + 3);
+      const homePage = new HomePage(page);
+      await homePage.goto("tr");
+      await homePage.fillSearchForm({
+        pickupOffice: "ala",
+        returnOffice: "gzp",
+        pickupDate: pickupDate.toISOString().split("T")[0],
+        returnDate: returnDate.toISOString().split("T")[0]
+      });
+      await homePage.submitSearch();
+
+      await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/);
+      await page
+        .getByRole("link", { name: /hemen rezerve et|book now/i })
+        .first()
+        .click();
+      await expect(page).toHaveURL(/\/booking\/step2/);
+      const step3Url = new URL(page.url());
+      step3Url.pathname = step3Url.pathname.replace("/booking/step2", "/booking/step3");
+      await page.goto(step3Url.toString());
+      await expect(page).toHaveURL(/\/booking\/step3/);
+      await page.getByRole("button", { name: "Adedi artır Çocuk Koltuğu" }).click();
+
+      await page.locator("#firstName").fill("Quote");
+      await page.locator("#lastName").fill("Replay");
+      await page.locator("#email").fill(`quote-replay-${Date.now()}@example.test`);
+      await page.locator("#phone").fill("+905551234567");
+      await page.locator("#birthDate").fill("1990-05-10");
+      await page.locator("#driverLicense").fill(`QUOTE-${Date.now()}`);
+      await page.locator("#driverLicenseCountry").fill("TR");
+      const initialQuoteResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/pricing/quote") && response.request().method() === "POST"
+      );
+      await page.getByRole("button", { name: /devam|continue/i }).click();
+      const initialQuoteResponse = await initialQuoteResponsePromise;
+      const initialQuotePayload = await initialQuoteResponse.json();
+      expect(initialQuoteResponse.status(), JSON.stringify(initialQuotePayload)).toBe(200);
+      const initialQuote = unwrapData<QuoteResponse>(initialQuotePayload);
+      assertQuoteId(initialQuote.quoteId);
+      quoteIds.push(initialQuote.quoteId);
+      const apiOrigin = new URL(initialQuoteResponse.url()).origin;
+
+      const quoteRequest = initialQuoteResponse.request().postDataJSON() as Record<string, unknown>;
+      const sessionId = initialQuoteResponse.request().headers()["x-session-id"];
+      expect(sessionId).toBeTruthy();
+      const reservationInputs = { ...quoteRequest };
+      delete reservationInputs.selectedExtras;
+      const reservationRequest = {
+        ...reservationInputs,
+        customer: {
+          firstName: "Quote",
+          lastName: "Replay",
+          email: `quote-replay-api-${Date.now()}@example.test`,
+          phone: "+90 555 123 45 67"
+        }
+      };
+
+      const createQuote = async (): Promise<QuoteResponse> => {
+        const result = await page.evaluate(
+          async ({ body, ownerSession, origin }) => {
+            const response = await fetch(`${origin}/api/v1/pricing/quote`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Session-Id": ownerSession
+              },
+              body: JSON.stringify(body)
+            });
+            return { status: response.status, payload: await response.json() };
+          },
+          { body: quoteRequest, ownerSession: sessionId!, origin: apiOrigin }
+        );
+        expect(result.status, JSON.stringify(result.payload)).toBe(200);
+        const quote = unwrapData<QuoteResponse>(result.payload);
+        assertQuoteId(quote.quoteId);
+        quoteIds.push(quote.quoteId);
+        return quote;
+      };
+
+      const createReservation = async (
+        quoteId: string,
+        ownerSession: string,
+        idempotencyKey: string
+      ) =>
+        page.evaluate(
+          async ({ body, currentQuoteId, currentSession, currentIdempotencyKey, origin }) => {
+            const response = await fetch(`${origin}/api/v1/reservations`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Session-Id": currentSession,
+                "Idempotency-Key": currentIdempotencyKey
+              },
+              body: JSON.stringify({ ...body, quoteId: currentQuoteId })
+            });
+            return { status: response.status, payload: await response.json() };
+          },
+          {
+            body: reservationRequest,
+            currentQuoteId: quoteId,
+            currentSession: ownerSession,
+            currentIdempotencyKey: idempotencyKey,
+            origin: apiOrigin
+          }
+        );
+
+      const crossSessionQuote = await createQuote();
+      const crossSessionResult = await createReservation(
+        crossSessionQuote.quoteId,
+        `cross-session-${Date.now()}`,
+        `cross-session-${Date.now()}`
+      );
+      expect(crossSessionResult.status, JSON.stringify(crossSessionResult.payload)).toBe(409);
+      expect(countReservationsByQuoteId(crossSessionQuote.quoteId)).toBe(0);
+
+      const expiredQuote = await createQuote();
+      expireQuote(expiredQuote.quoteId);
+      await expect
+        .poll(() =>
+          runDockerExec("rentacar-redis", [
+            "redis-cli",
+            "EXISTS",
+            `reservation_quote:${expiredQuote.quoteId.replaceAll("-", "")}`
+          ])
+        )
+        .toBe("0");
+      const expiredResult = await createReservation(
+        expiredQuote.quoteId,
+        sessionId!,
+        `expired-${Date.now()}`
+      );
+      expect(expiredResult.status, JSON.stringify(expiredResult.payload)).toBe(409);
+      expect(countReservationsByQuoteId(expiredQuote.quoteId)).toBe(0);
+
+      const firstResult = await createReservation(
+        initialQuote.quoteId,
+        sessionId!,
+        `replay-first-${Date.now()}`
+      );
+      expect(firstResult.status, JSON.stringify(firstResult.payload)).toBe(200);
+      const firstReservation = unwrapData<ReservationCreateResponse>(firstResult.payload);
+      createdReservationId = firstReservation.id;
+
+      const replayResult = await createReservation(
+        initialQuote.quoteId,
+        sessionId!,
+        `replay-second-${Date.now()}`
+      );
+      expect(replayResult.status, JSON.stringify(replayResult.payload)).toBe(200);
+      const replayReservation = unwrapData<ReservationCreateResponse>(replayResult.payload);
+      expect(replayReservation.id).toBe(firstReservation.id);
+      expect(countReservationsByQuoteId(initialQuote.quoteId)).toBe(1);
+    } finally {
+      if (createdReservationId) cancelReservationInDatabase(createdReservationId);
+
+      for (const quoteId of quoteIds) cleanupQuoteKeys(quoteId);
+    }
   });
 
   test("admin detail preserves selected-extra history and marks legacy totals explicitly", async ({
