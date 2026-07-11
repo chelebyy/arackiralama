@@ -150,6 +150,22 @@ function groupLabel(group: AdminVehicleGroup) {
   return group.nameTr ?? group.nameEn ?? group.name ?? group.id;
 }
 
+function buildPayload(data: EditorData): CreateReservationExtraOptionData {
+  return {
+    unitPrice: data.unitPrice,
+    pricingMode: data.pricingMode,
+    maxQuantity: data.maxQuantity,
+    iconKey: data.iconKey,
+    sortOrder: data.sortOrder,
+    vehicleGroupIds: data.vehicleGroupIds,
+    translations: RESERVATION_EXTRA_LOCALES.map((locale) => ({
+      locale,
+      name: data.translations[locale].name.trim(),
+      description: data.translations[locale].description.trim()
+    }))
+  };
+}
+
 export default function ReservationExtraOptionDialog({
   open,
   onOpenChange,
@@ -177,20 +193,6 @@ export default function ReservationExtraOptionDialog({
     ...form.getValues(),
     translations,
     vehicleGroupIds
-  });
-
-  const buildPayload = (data: EditorData): CreateReservationExtraOptionData => ({
-    unitPrice: data.unitPrice,
-    pricingMode: data.pricingMode,
-    maxQuantity: data.maxQuantity,
-    iconKey: data.iconKey,
-    sortOrder: data.sortOrder,
-    vehicleGroupIds: data.vehicleGroupIds,
-    translations: RESERVATION_EXTRA_LOCALES.map((locale) => ({
-      locale,
-      name: data.translations[locale].name.trim(),
-      description: data.translations[locale].description.trim()
-    }))
   });
 
   const save = async (data: EditorData, activate: boolean) => {

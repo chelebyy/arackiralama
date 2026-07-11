@@ -158,7 +158,10 @@ export default function BookingStep3Page() {
   useEffect(() => {
     if (legacyExtrasApplied.current || booking.selectedExtras.length > 0 || extraOptions.length === 0) return;
 
-    const legacyCodes = (searchParams.get("extras") || "").split(",").map((code) => code.trim()).filter(Boolean);
+    const legacyCodes = (searchParams.get("extras") || "").split(",").flatMap((code) => {
+      const trimmedCode = code.trim();
+      return trimmedCode ? [trimmedCode] : [];
+    });
     if (legacyCodes.length === 0) return;
 
     legacyExtrasApplied.current = true;
