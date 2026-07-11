@@ -16,7 +16,7 @@
 
 ## Fresh Feature Update — 10 Temmuz 2026
 
-**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented and all eight local section 6.6 Docker/Chromium rows pass with durable evidence. CI, Aikido, deployment/rollback, and the production legacy-adapter observation gates remain open.
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented, all eight local section 6.6 Docker/Chromium rows pass, and PR #386 CI is green. Aikido, deployment/rollback, and the production legacy-adapter observation gates remain open.
 
 - Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
 - Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
@@ -36,6 +36,7 @@
 - Quote expiry/cross-session/replay is now closed with a real Docker Chromium + Redis + PostgreSQL gate: expired and mismatched-session submissions returned `409` with zero rows, replay returned the original reservation ID, and the unique `quote_id` count remained one. Current-source browser validation passed as the existing scenarios 9/9 plus focused quote lifecycle 1/1 in separate clean API rate-limit windows; focused .NET replay integration passed 1/1.
 - Section 6.6 is complete locally at 8/8 rows. The final focused Chromium pass captured and visually inspected Step 3/4 at desktop, tablet, and mobile widths, asserted no horizontal overflow or inaccessible icon action, and stored non-sensitive console/network evidence under `docs/test-evidence/2026-07-11-reservation-extra-options-responsive/`.
 - The current comprehensive implementation handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; it remains the historical continuation entry point, while the canonical docs now record local acceptance at 8/8 and keep CI/Aikido/deployment/observation gates separate.
+- PR #386 Codex review follow-up closed three valid findings: invalid legacy quantities now return 400, adapted legacy extras retain campaign-discount semantics, and changed selections require explicit confirmation before resubmission. Focused backend 34/34, full backend 733/733, TypeScript, Step 4 Vitest 15/15, rebuilt Docker build, and focused Chromium 1/1 passed.
 - Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
 - Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.
 

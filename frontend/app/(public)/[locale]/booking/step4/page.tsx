@@ -382,6 +382,20 @@ export default function BookingStep4Page() {
           return;
         }
 
+        const selectionsChanged =
+          refreshedSelections.length !== selectedExtras.length ||
+          refreshedSelections.some((selection, index) => {
+            const previous = selectedExtras[index];
+            return !previous ||
+              selection.optionId !== previous.optionId ||
+              selection.quantity !== previous.quantity;
+          });
+        if (selectionsChanged) {
+          setRequiresQuoteConfirmation(true);
+          setQuoteError(t("quoteConfirmationRequired"));
+          return;
+        }
+
         try {
           reservation = await createForQuote(refreshedQuote);
         } catch (retryError) {

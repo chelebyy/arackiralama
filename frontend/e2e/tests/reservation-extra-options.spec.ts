@@ -1060,7 +1060,7 @@ test.describe("Reservation extra options acceptance", () => {
         quoteId: body.quoteId,
         idempotencyKey: route.request().headers()["idempotency-key"]
       });
-      if (reservationRequests.length <= 2) {
+      if (reservationRequests.length === 1) {
         await route.fulfill({
           status: 409,
           json: { statusCode: 409, code: "CONFLICT", message: "Quote availability changed" }
@@ -1105,19 +1105,18 @@ test.describe("Reservation extra options acceptance", () => {
     await expect(page.locator("#expiryDate")).toHaveValue("12/30");
     await expect(page.locator("#cvv")).toHaveValue("123");
     await expect(page.getByRole("checkbox")).toBeChecked();
-    expect(reservationRequests).toHaveLength(2);
-    expect(reservationRequests[0].idempotencyKey).toBe(reservationRequests[1].idempotencyKey);
+    expect(reservationRequests).toHaveLength(1);
     await expect.poll(() => quoteCalls).toBe(2);
 
     await conflictAlert.getByRole("button", { name: "Teklifi yenile" }).click();
     await expect.poll(() => quoteCalls).toBe(3);
-    expect(reservationRequests).toHaveLength(2);
+    expect(reservationRequests).toHaveLength(1);
     await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
 
     await expect(page).toHaveURL(/\/tr\/booking\/confirmation\?.*code=ALN-CONFLICT-E2E/);
-    expect(reservationRequests).toHaveLength(3);
-    expect(reservationRequests[2].quoteId).toBe("quote-after-availability-change-3");
-    expect(reservationRequests[2].idempotencyKey).not.toBe(reservationRequests[1].idempotencyKey);
+    expect(reservationRequests).toHaveLength(2);
+    expect(reservationRequests[1].quoteId).toBe("quote-after-availability-change-3");
+    expect(reservationRequests[1].idempotencyKey).not.toBe(reservationRequests[0].idempotencyKey);
   });
 
   test("expired, cross-session, and replayed quotes create at most one reservation", async ({

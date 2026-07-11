@@ -1571,10 +1571,14 @@ public sealed class ReservationService : IReservationService
             request.ChildSeatCount,
             cancellationToken);
         var extraTotal = RoundAmount(quotedExtras.Sum(item => item.Total));
+        var subtotalBeforeDiscount = RoundAmount(
+            basePricing.FinalTotal + basePricing.CampaignDiscount + extraTotal);
+        var campaignDiscount = CalculateLegacyCampaignDiscount(basePricing, subtotalBeforeDiscount);
         var pricing = basePricing with
         {
             ExtrasTotal = extraTotal,
-            FinalTotal = RoundAmount(basePricing.FinalTotal + extraTotal),
+            CampaignDiscount = campaignDiscount,
+            FinalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount),
             ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
         };
         var now = DateTime.UtcNow;
@@ -1589,6 +1593,27 @@ public sealed class ReservationService : IReservationService
         }
 
         return new ReservationPricingContext(pricing, snapshot, quotedExtras, null, null);
+    }
+
+    private static decimal CalculateLegacyCampaignDiscount(
+        PriceBreakdownDto pricing,
+        decimal subtotalBeforeDiscount)
+    {
+        if (string.IsNullOrWhiteSpace(pricing.AppliedCampaignCode))
+        {
+            return 0m;
+        }
+
+        var discount = pricing.AppliedCampaignDiscountType?.Trim().ToLowerInvariant() switch
+        {
+            "percentage" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                subtotalBeforeDiscount * Math.Min(pricing.AppliedCampaignDiscountValue.Value, 100m) / 100m,
+            "fixed" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                pricing.AppliedCampaignDiscountValue.Value,
+            _ => pricing.CampaignDiscount
+        };
+
+        return Math.Clamp(RoundAmount(discount), 0m, subtotalBeforeDiscount);
     }
 
     private async Task<Reservation?> FindReservationByQuoteIdAsync(

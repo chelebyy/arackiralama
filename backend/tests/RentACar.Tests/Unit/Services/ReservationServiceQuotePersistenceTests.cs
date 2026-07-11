@@ -167,6 +167,127 @@ public sealed class ReservationServiceQuotePersistenceTests
         context.Reservations.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task CreateDraftReservationAsync_AppliesPercentageCampaignToAdaptedLegacyExtras()
+    {
+        using var factory = new TestDbContextFactory();
+        await using var context = factory.CreateContext();
+        var office = new Office { Name = "Office", Code = "LEG" };
+        var group = new VehicleGroup { NameTr = "Group", NameEn = "Group", DepositAmount = 1000m };
+        var vehicle = new Vehicle
+        {
+            Plate = "07 LEG 07",
+            Brand = "Test",
+            Model = "Car",
+            Group = group,
+            GroupId = group.Id,
+            Office = office,
+            OfficeId = office.Id,
+            Status = VehicleStatus.Available
+        };
+        context.AddRange(office, group, vehicle);
+        await context.SaveChangesAsync();
+
+        var pickup = new DateTime(2027, 8, 10, 10, 0, 0, DateTimeKind.Utc);
+        var pricing = new Mock<IPricingService>();
+        pricing.Setup(service => service.CalculateBreakdownAsync(
+                group.Id,
+                office.Id,
+                office.Id,
+                pickup,
+                pickup.AddDays(2),
+                "SAVE10",
+                0,
+                0,
+                null,
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceBreakdownDto(
+                500m, 2, 1000m, 0m, 100m, 0m, 0m, 0m, 0m, 0m, 0m,
+                900m, 1000m, 1000m, "TRY", "SAVE10")
+            {
+                AppliedCampaignDiscountType = "percentage",
+                AppliedCampaignDiscountValue = 10m
+            });
+        var extraPricing = new Mock<IReservationExtraPricingService>();
+        extraPricing.Setup(service => service.CalculateLegacyAsync(
+                group.Id,
+                "tr",
+                2,
+                1,
+                0,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new ReservationQuotedExtraV1
+                {
+                    ExtraOptionId = Guid.NewGuid(),
+                    OptionVersion = 1,
+                    Code = "additional_driver",
+                    Locale = "tr",
+                    Name = "Ek Sürücü",
+                    Description = "Ek sürücü",
+                    UnitPrice = 200m,
+                    PricingMode = "PER_RENTAL",
+                    Quantity = 1,
+                    RentalDays = 2,
+                    Total = 200m
+                }
+            ]);
+        var fleet = new Mock<IFleetService>();
+        fleet.Setup(service => service.SearchAvailableVehicleGroupsAsync(
+                office.Id,
+                pickup,
+                pickup.AddDays(2),
+                group.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new RentACar.API.Contracts.Fleet.AvailableVehicleGroupDto(
+                group.Id, "Group", "Group", 1, 500m, "TRY", 1000m, 21, 2, [], null)]);
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var service = new ReservationService(
+            new ReservationRepository(context),
+            new CustomerRepository(context),
+            new VehicleRepository(context),
+            new VehicleRepository(context),
+            new OfficeRepository(context),
+            Mock.Of<IReservationHoldService>(),
+            context,
+            fleet.Object,
+            pricing.Object,
+            Mock.Of<IPaymentService>(),
+            Mock.Of<INotificationQueueService>(),
+            memoryCache,
+            new AvailabilityCacheInvalidationSignal(),
+            Mock.Of<IConnectionMultiplexer>(),
+            new ConfigurationBuilder().Build(),
+            NullLogger<ReservationService>.Instance,
+            null,
+            extraPricing.Object);
+
+        var result = await service.CreateDraftReservationAsync(new CreateReservationRequest
+        {
+            VehicleGroupId = group.Id,
+            PickupOfficeId = office.Id,
+            ReturnOfficeId = office.Id,
+            PickupDateTimeUtc = pickup,
+            ReturnDateTimeUtc = pickup.AddDays(2),
+            CampaignCode = "SAVE10",
+            ExtraDriverCount = 1,
+            Locale = "tr",
+            Customer = new CustomerInfoRequest
+            {
+                FirstName = "Legacy",
+                LastName = "Campaign",
+                Email = "legacy-campaign@example.test",
+                Phone = "+905551234567"
+            }
+        });
+
+        result.PriceBreakdown!.ExtrasTotal.Should().Be(200m);
+        result.PriceBreakdown.CampaignDiscount.Should().Be(120m);
+        result.PriceBreakdown.FinalTotal.Should().Be(1080m);
+        result.TotalAmount.Should().Be(1080m);
+    }
+
     private static ReservationQuoteV1 CreateQuote(Guid groupId, Guid officeId, DateTime pickup)
     {
         var quoteId = Guid.NewGuid();

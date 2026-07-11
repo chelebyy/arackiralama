@@ -59,6 +59,10 @@ public sealed class ReservationsController(IReservationService reservationServic
         {
             return BadRequestResponse(ex.Message);
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
     }
 
     [HttpPost("unpaid-requests")]
@@ -100,6 +104,10 @@ public sealed class ReservationsController(IReservationService reservationServic
             return Conflict(ApiResponse<object>.Fail(ex.Message));
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (ArgumentException ex)
         {
             return BadRequestResponse(ex.Message);
         }
