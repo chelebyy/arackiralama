@@ -145,6 +145,15 @@ function step4Quote(quoteId: string, campaignCode?: string) {
   };
 }
 
+function step4QuoteWithoutExtras(quoteId: string) {
+  return {
+    ...step4Quote(quoteId),
+    extrasTotal: 0,
+    finalTotal: 300,
+    extraItems: []
+  };
+}
+
 async function openStep4WithLegacyExtra(page: Page, vehicleGroupId: string) {
   await page.goto(
     `/tr/booking/step3?pickup=ala&return=gzp&pickupDate=2027-08-10&pickupTime=10%3A00&returnDate=2027-08-13&returnTime=09%3A00&vehicle=${vehicleGroupId}&extras=child_seat`
@@ -578,5 +587,169 @@ test.describe("Reservation extra options acceptance", () => {
     expect(unpaidRequest!.headers["idempotency-key"]).toBeTruthy();
     expect(holdCalls).toBe(0);
     expect(paymentCalls).toBe(0);
+  });
+
+  test("public Step 4 keeps an unexpired quote across a price-only catalog change", async ({
+    page
+  }) => {
+    let catalogCalls = 0;
+    let quoteCalls = 0;
+    const reservationQuoteIds: unknown[] = [];
+
+    await page.route("**/api/v1/reservation-extra-options?*", (route) => {
+      catalogCalls += 1;
+      const option =
+        catalogCalls === 1
+          ? step4CatalogOption
+          : { ...step4CatalogOption, unitPrice: 40, version: 32 };
+      return route.fulfill({ json: { items: [option] } });
+    });
+    await page.route("**/api/v1/public-site-settings", (route) =>
+      route.fulfill({
+        json: {
+          onlinePaymentEnabled: true,
+          paymentMethods: {
+            creditCardEnabled: true,
+            debitCardEnabled: false,
+            unpaidRequestEnabled: false,
+            paypalEnabled: false,
+            anyEnabled: true
+          }
+        }
+      })
+    );
+    await page.route("**/api/v1/pricing/quote", async (route) => {
+      quoteCalls += 1;
+      await route.fulfill({ json: step4Quote("quote-before-price-change") });
+    });
+    await page.route("**/api/v1/reservations", async (route) => {
+      reservationQuoteIds.push((route.request().postDataJSON() as Record<string, unknown>).quoteId);
+      await route.fulfill({ json: { id: "price-only-reservation", publicCode: "ALN-PRICE-E2E" } });
+    });
+    await page.route("**/api/v1/reservations/price-only-reservation/hold", (route) =>
+      route.fulfill({ json: { id: "price-only-reservation", publicCode: "ALN-PRICE-E2E" } })
+    );
+    await page.route("**/api/v1/payments/intents", (route) =>
+      route.fulfill({
+        json: {
+          paymentIntentId: "price-only-payment",
+          status: "Succeeded",
+          redirectUrl: null
+        }
+      })
+    );
+
+    await openStep4WithLegacyExtra(page, "step4-price-only-group");
+    await expect.poll(() => quoteCalls).toBe(1);
+    await page.locator("#cardNumber").fill("4111 1111 1111 1111");
+    await page.locator("#cardHolder").fill("Price Promise");
+    await page.locator("#expiryDate").fill("12/30");
+    await page.locator("#cvv").fill("123");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
+
+    await expect(page).toHaveURL(/\/tr\/booking\/confirmation\?.*code=ALN-PRICE-E2E/);
+    expect(reservationQuoteIds).toEqual(["quote-before-price-change"]);
+    expect(catalogCalls).toBe(1);
+    expect(quoteCalls).toBe(1);
+  });
+
+  test("public Step 4 bounds availability conflict recovery and preserves payment form state", async ({
+    page
+  }) => {
+    let catalogCalls = 0;
+    let quoteCalls = 0;
+    const reservationRequests: Array<{ quoteId: unknown; idempotencyKey?: string }> = [];
+
+    await page.route("**/api/v1/reservation-extra-options?*", (route) => {
+      catalogCalls += 1;
+      return route.fulfill({ json: { items: catalogCalls === 1 ? [step4CatalogOption] : [] } });
+    });
+    await page.route("**/api/v1/public-site-settings", (route) =>
+      route.fulfill({
+        json: {
+          onlinePaymentEnabled: true,
+          paymentMethods: {
+            creditCardEnabled: true,
+            debitCardEnabled: true,
+            unpaidRequestEnabled: true,
+            paypalEnabled: false,
+            anyEnabled: true
+          }
+        }
+      })
+    );
+    await page.route("**/api/v1/pricing/quote", async (route) => {
+      quoteCalls += 1;
+      const quote =
+        quoteCalls === 1
+          ? step4Quote("quote-before-availability-change")
+          : step4QuoteWithoutExtras(`quote-after-availability-change-${quoteCalls}`);
+      await route.fulfill({ json: quote });
+    });
+    await page.route("**/api/v1/reservations", async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      reservationRequests.push({
+        quoteId: body.quoteId,
+        idempotencyKey: route.request().headers()["idempotency-key"]
+      });
+      if (reservationRequests.length <= 2) {
+        await route.fulfill({
+          status: 409,
+          json: { statusCode: 409, code: "CONFLICT", message: "Quote availability changed" }
+        });
+        return;
+      }
+      await route.fulfill({
+        json: { id: "confirmed-reservation", publicCode: "ALN-CONFLICT-E2E" }
+      });
+    });
+    await page.route("**/api/v1/reservations/confirmed-reservation/hold", (route) =>
+      route.fulfill({ json: { id: "confirmed-reservation", publicCode: "ALN-CONFLICT-E2E" } })
+    );
+    await page.route("**/api/v1/payments/intents", (route) =>
+      route.fulfill({
+        json: {
+          paymentIntentId: "confirmed-payment",
+          status: "Succeeded",
+          redirectUrl: null
+        }
+      })
+    );
+
+    await openStep4WithLegacyExtra(page, "step4-availability-group");
+    await page.getByRole("radio", { name: /Banka Kartı/ }).check();
+    await page.locator("#cardNumber").fill("4111 1111 1111 1111");
+    await page.locator("#cardHolder").fill("Conflict Survivor");
+    await page.locator("#expiryDate").fill("12/30");
+    await page.locator("#cvv").fill("123");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
+
+    const conflictAlert = page.getByRole("alert").filter({
+      hasText: "Ek seçenekler değişti. Güncel teklifi inceleyip yeniden onaylayın."
+    });
+    await expect(conflictAlert).toBeVisible();
+    await expect(page.getByText(step4CatalogOption.name, { exact: true })).toBeHidden();
+    await expect(page.getByText(/300[,.]00/).last()).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Banka Kartı/ })).toBeChecked();
+    await expect(page.locator("#cardNumber")).toHaveValue("4111 1111 1111 1111");
+    await expect(page.locator("#cardHolder")).toHaveValue("Conflict Survivor");
+    await expect(page.locator("#expiryDate")).toHaveValue("12/30");
+    await expect(page.locator("#cvv")).toHaveValue("123");
+    await expect(page.getByRole("checkbox")).toBeChecked();
+    expect(reservationRequests).toHaveLength(2);
+    expect(reservationRequests[0].idempotencyKey).toBe(reservationRequests[1].idempotencyKey);
+    await expect.poll(() => quoteCalls).toBe(2);
+
+    await conflictAlert.getByRole("button", { name: "Teklifi yenile" }).click();
+    await expect.poll(() => quoteCalls).toBe(3);
+    expect(reservationRequests).toHaveLength(2);
+    await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
+
+    await expect(page).toHaveURL(/\/tr\/booking\/confirmation\?.*code=ALN-CONFLICT-E2E/);
+    expect(reservationRequests).toHaveLength(3);
+    expect(reservationRequests[2].quoteId).toBe("quote-after-availability-change-3");
+    expect(reservationRequests[2].idempotencyKey).not.toBe(reservationRequests[1].idempotencyKey);
   });
 });

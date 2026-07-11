@@ -244,7 +244,7 @@ export default function BookingStep4Page() {
     }
   }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, t]);
 
-  const automaticQuoteKey = [
+  const buildAutomaticQuoteKey = (selections: SelectedBookingExtra[]) => [
     selectedVehicleGroupId,
     pickupOfficeId,
     returnOfficeId,
@@ -252,8 +252,9 @@ export default function BookingStep4Page() {
     returnDate,
     locale,
     booking.campaignCode ?? "",
-    selectedExtras.map((extra) => `${extra.optionId}:${extra.optionVersion}:${extra.quantity}`).join(","),
+    selections.map((extra) => `${extra.optionId}:${extra.optionVersion}:${extra.quantity}`).join(","),
   ].join("|");
+  const automaticQuoteKey = buildAutomaticQuoteKey(selectedExtras);
 
   useEffect(() => {
     if (lastAutomaticQuoteKeyRef.current === automaticQuoteKey) return;
@@ -373,6 +374,7 @@ export default function BookingStep4Page() {
             pricingMode: option.pricingMode,
           }] : [];
         });
+        lastAutomaticQuoteKeyRef.current = buildAutomaticQuoteKey(refreshedSelections);
         updateExtras(refreshedSelections);
         const refreshedQuote = await refreshQuote(appliedCampaign?.code, refreshedSelections);
         if (!refreshedQuote) {
