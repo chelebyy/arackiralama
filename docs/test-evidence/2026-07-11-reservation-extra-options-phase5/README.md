@@ -25,6 +25,15 @@ The bundled browser connection could not start because its generated ESM kernel 
 - Verified quote validity status, terms acceptance validation, unpaid reservation creation, confirmation redirect, admin catalog load, and current no-extra/non-legacy admin reservation detail.
 - Test-created unpaid holds were changed to `Cancelled` with their expiry cleared after evidence collection so the single seeded vehicle remained reusable.
 
+## Continuation Results
+
+- Exact-current Docker Chromium bundle: 16/16 PASS across `booking-flow.spec.ts`, `payment-flow.spec.ts`, `i18n.spec.ts`, and `mobile.spec.ts` using one worker.
+- Added `frontend/e2e/tests/reservation-extra-options.spec.ts` as a self-cleaning acceptance scenario; final run: 1/1 PASS.
+- The targeted scenario proved the incomplete draft state keeps `Kaydet ve Aktifleştir` disabled, then completed TR/EN/DE/RU/AR content, selected exactly one vehicle group, activated the option, and verified the assigned group returned the expected localized name in all five locales.
+- Every public catalog response asserted HTTP 200 and `Cache-Control: no-store`; a second unassigned vehicle group did not return the option.
+- The scenario deactivated and permanently deleted its unused test option in `finally`, including failure paths, so the local catalog was not left polluted.
+- Fresh gates for the new E2E source: TypeScript PASS, ESLint PASS, Prettier PASS, and repeated targeted Playwright 1/1 PASS.
+
 ## Runtime Defect Found and Fixed
 
 The first real unpaid reservation write returned 500. API logs showed Npgsql rejecting `DateTimeKind.Unspecified` for `timestamp with time zone` driver snapshot columns. `ReservationService.ApplyDriverSnapshot` now normalizes birth, license-issue, and license-expiry values to UTC.
@@ -35,8 +44,6 @@ The first real unpaid reservation write returned 500. API logs showed Npgsql rej
 
 ## Still Open
 
-- Admin draft creation and incomplete activation rejection.
-- Five-locale public visibility.
 - Loading, retry, empty, and legacy-link warning interactions.
 - Paid mode and payment ordering with online payment enabled.
 - Price-only versus invalidating catalog changes and first/second `409` behavior.

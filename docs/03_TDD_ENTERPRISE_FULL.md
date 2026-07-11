@@ -1442,6 +1442,12 @@ Audit entries are added to `AuditLogs` in the same save boundary as each catalog
 
 Draft and unpaid reservation creation first validate quote/session/input equality and current option structure, then persist the reservation, nullable unique `QuoteId`, `ReservationSelectedExtra` rows, and `ReservationPricingSnapshotV1` in one relational transaction. A retry that finds the unique database `QuoteId` must still validate the retained quote session and booking inputs before returning the existing DTO; it then reconciles Redis consumed state. Snapshot-backed reads never reconstruct current catalog prices, while pre-migration rows remain explicit total-only fallbacks.
 
+### Phase 4-5 Admin, Public Booking, and Browser Acceptance Boundary
+
+The admin settings surface uses explicit reservation-extra API contracts and stable SWR keys for list filters and lifecycle mutations. Its editor permits incomplete inactive drafts, derives readiness from all five locale name/description pairs plus at least one vehicle-group assignment, and submits activation to the server as the final authority. Public Step 3 stores only option identity, version, quantity, and display-only catalog fields; it removes newly generated legacy `extras` URL state and clears incompatible selections when the vehicle group changes. Step 4 renders the server quote, sends the quote ID with the matching session and non-price inputs, retries one recoverable conflict after refreshing the catalog/quote, and never creates a payment intent before reservation success.
+
+The Docker acceptance target is the production web image at `http://localhost:3001`, not the development server. `frontend/e2e/tests/reservation-extra-options.spec.ts` is a self-cleaning acceptance scenario that verifies incomplete activation is disabled, activates complete TR/EN/DE/RU/AR content assigned to exactly one group, asserts localized `no-store` public catalog results for the assigned group, rejects visibility for an unassigned group, and deactivates/deletes its unused test option in `finally`. The exact-current booking/payment/i18n/mobile Chromium bundle passed 16/16 and the focused authoring/localization scenario passed 1/1. These checks close only the first two rows in checklist section 6.6; conflict/replay/expiry, paid mode, immutable-history, and extra-specific responsive/network evidence remain separate acceptance gates.
+
 
 ------------------------------------------------------------------------
 

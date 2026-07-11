@@ -711,8 +711,8 @@ Dependency-security follow-up captured on 2026-07-08:
 
 Required workflow:
 
-- [ ] Create a draft extra option as an Admin and confirm incomplete translations or vehicle-group assignment block activation.
-- [ ] Complete TR/EN/DE/RU/AR translations, assign one vehicle group, activate the option, and confirm group-specific public visibility across all five locales.
+- [x] Create a draft extra option as an Admin and confirm incomplete translations or vehicle-group assignment block activation.
+- [x] Complete TR/EN/DE/RU/AR translations, assign one vehicle group, activate the option, and confirm group-specific public visibility across all five locales.
 - [ ] Select per-day and per-rental quantities in public Step 3; verify the URL has no newly generated `extras` parameter and that loading, retry, empty, and legacy-link warnings are usable.
 - [ ] Verify Step 4 server quote lines, final total, expiry state, campaign refresh, paid/unpaid `quoteId` payloads, and payment ordering.
 - [ ] Issue quotes across price-only and availability-invalidating catalog changes; confirm the first `409` refreshes safely and the second requires customer confirmation without losing customer/driver/card-form state.
@@ -728,6 +728,7 @@ Automated evidence recorded on 2026-07-11:
 - The real unpaid-request run initially returned 500 because driver snapshot date-only values were deserialized with `DateTimeKind.Unspecified` and written to PostgreSQL `timestamptz`. UTC normalization was added for birth/license dates, its focused backend regression passed 1/1, the API image was rebuilt, and the same browser flow then passed. Test-created local holds were cancelled after the proof.
 - Browser-client bootstrap remains unavailable because its generated ESM kernel uses CommonJS `require`; the repository Playwright/Chromium runner was used as the browser fallback. This pass does not claim the still-unchecked authoring, five-locale, conflict/replay/expiry, paid-mode, responsive, console/network, screenshot, CI, or Aikido gates.
 - Detailed command/result record: `docs/test-evidence/2026-07-11-reservation-extra-options-phase5/README.md`.
+- Continuation evidence on 2026-07-11: the exact-final Docker Chromium bundle passed 16/16 across booking, payment, five-locale homepage/English booking, and iPhone/iPad/Android smoke. The new self-cleaning `reservation-extra-options.spec.ts` passed 1/1 and proved incomplete readiness keeps activation disabled, complete five-locale content plus one group activates successfully, every locale returns the localized option with `Cache-Control: no-store`, and an unassigned group does not return it. The unused test option was deactivated and permanently deleted in `finally`.
 
 ------------------------------------------------------------------------
 

@@ -444,7 +444,7 @@ Add an `Extra Options` card to admin reservation detail. Each row displays snaps
 - Fresh Docker evidence now passes: all five Compose services started from rebuilt images; PostgreSQL/Redis were healthy; API `/health` and frontend `/tr` returned 200; `/` redirected 307 to `/tr`; and the production web build included the Phase 5 routes.
 - Repository Playwright/Chromium booking/payment smoke passed 6/6 after stale E2E vehicle selectors, the unavailable `ayt` seed office, required driver fields, and disabled-online-payment expectations were aligned with the current application. A focused Docker browser proof also passed 6/6 for admin catalog load, selected child-seat quote rendering, removal of generated `extras`, quote-expiry status, terms validation, real unpaid creation/confirmation, and the new reservation's current no-extra/non-legacy admin detail.
 - The real persistence pass exposed a PostgreSQL blocker outside the original frontend slice: driver birth/license dates arrived as `DateTimeKind.Unspecified`, causing a `timestamptz` write failure. `ApplyDriverSnapshot` now normalizes those values to UTC; a focused backend regression passed 1/1, the API image was rebuilt, and the browser reservation flow passed. Test-created local holds were cancelled after verification.
-- Browser-client bootstrap still fails in the host environment because its generated ESM kernel calls CommonJS `require`, so the existing repository Playwright/Chromium runner provided the browser fallback. CI, Aikido, and the unchecked section 6.6 scenarios remain open: draft/activation authoring, all five locales, loading/retry/empty/legacy states, paid mode, catalog-change `409` recovery, immutable selected-extra history, expiry/cross-session/replay, responsive layout, and durable console/network/screenshot evidence.
+- Browser-client bootstrap still fails in the host environment because its generated ESM kernel calls CommonJS `require`, so the existing repository Playwright/Chromium runner provided the browser fallback. A continuation run passed the exact-current booking/payment/i18n/mobile Chromium bundle at 16/16 and added a self-cleaning 1/1 acceptance test proving incomplete activation blocking plus group-specific TR/EN/DE/RU/AR catalog visibility with `Cache-Control: no-store`; its unused option was deleted in `finally`, and PostgreSQL cleanup verification returned zero matching rows. CI, Aikido, and the remaining section 6.6 scenarios stay open: loading/retry/empty/legacy states, paid mode, catalog-change `409` recovery, immutable selected-extra history, expiry/cross-session/replay, extra-specific responsive layout, and durable console/network/screenshot evidence.
 
 ## 8. Automated Validation Matrix
 
@@ -560,20 +560,20 @@ After implementation and evidence collection:
 
 - [x] Domain model, configuration, migration, and seed implemented.
 - [x] Admin catalog service/API implemented with authorization, audit, and concurrency.
-- [ ] Public catalog and generic quote endpoint implemented.
-- [ ] Redis quote lifecycle, session binding, expiry, and replay protection implemented.
-- [ ] Selected-extra and complete pricing snapshots implemented without double counting.
+- [x] Public catalog and generic quote endpoint implemented.
+- [x] Redis quote lifecycle, session binding, expiry, and replay protection implemented.
+- [x] Selected-extra and complete pricing snapshots implemented without double counting.
 - [ ] Legacy adapter, usage events, and 14-day cleanup gate implemented and documented.
-- [ ] Admin settings page and editor implemented.
+- [x] Admin settings page and editor implemented.
 - [x] Archive restore and concurrent hard-delete behavior implemented.
-- [ ] Public Step 3/Step 4 moved off hard-coded and URL-based extras.
-- [ ] Admin/customer reservation responses expose snapshots.
-- [ ] Focused and full backend/frontend validation passed or blockers recorded precisely.
+- [x] Public Step 3/Step 4 moved off hard-coded and URL-based extras.
+- [x] Admin/customer reservation responses expose snapshots.
+- [x] Focused and full backend/frontend validation passed or blockers recorded precisely.
 - [ ] Docker Desktop browser scenario completed with evidence.
 - [ ] Backend-first deployment and frontend rollback smoke completed.
 - [ ] Aikido full-content scan passed with zero unresolved findings, or release blocker recorded.
-- [x] Checklist and execution tracking synchronized through the completed Phase 2 boundary.
-- [x] `git diff --check` passed for the Phase 2 closeout diff.
-- [x] Final Phase 2 commit scope contains no unrelated user changes.
+- [x] Checklist and execution tracking synchronized through the completed Phase 5 boundary and current partial release evidence.
+- [x] `git diff --check` passed for the Phase 5 closeout diff.
+- [x] Final Phase 5 commit scope contains no unrelated user changes.
 
 Implementation is complete only when every applicable item above is closed. A green build without Docker/browser evidence, historical snapshot proof, and the required security gate is not sufficient.
