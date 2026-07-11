@@ -174,6 +174,56 @@ describe("useBooking", () => {
     expect(state.current.isComplete).toBe(true);
   });
 
+  it("keeps customer and driver details out of durable browser storage", () => {
+    act(() => {
+      useBookingStore.getState().setCustomer({
+        ...sampleCustomer,
+        passportNumber: "P1234567",
+      });
+      useBookingStore.getState().setDriver(sampleDriver);
+    });
+
+    const persisted = JSON.parse(localStorage.getItem("car-rental-booking-storage") ?? "{}");
+
+    expect(persisted.version).toBe(3);
+    expect(persisted.state).not.toHaveProperty("customer");
+    expect(persisted.state).not.toHaveProperty("driver");
+    expect(JSON.stringify(persisted)).not.toContain("jane@example.com");
+    expect(JSON.stringify(persisted)).not.toContain("P1234567");
+    expect(JSON.stringify(persisted)).not.toContain("TR12345");
+    expect(useBookingStore.getState().customer).toEqual({
+      ...sampleCustomer,
+      passportNumber: "P1234567",
+    });
+    expect(useBookingStore.getState().driver).toEqual(sampleDriver);
+  });
+
+  it("removes customer and driver details from version 2 persisted state", async () => {
+    localStorage.setItem("car-rental-booking-storage", JSON.stringify({
+      version: 2,
+      state: {
+        selectedExtras: [],
+        customer: sampleCustomer,
+        driver: sampleDriver,
+        campaignCode: "SUMMER15",
+        campaignDiscount: 15,
+      },
+    }));
+
+    await useBookingStore.persist.rehydrate();
+
+    expect(useBookingStore.getState()).toMatchObject({
+      customer: null,
+      driver: null,
+      campaignCode: "SUMMER15",
+      campaignDiscount: 15,
+    });
+    const migrated = JSON.parse(localStorage.getItem("car-rental-booking-storage") ?? "{}");
+    expect(migrated.version).toBe(3);
+    expect(migrated.state).not.toHaveProperty("customer");
+    expect(migrated.state).not.toHaveProperty("driver");
+  });
+
   it("moves between steps and resets booking state", () => {
     const { result: actions } = renderHook(() => useBookingActions());
 

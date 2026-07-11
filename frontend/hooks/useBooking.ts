@@ -118,15 +118,15 @@ export const useBookingStore = create<BookingState & BookingActions>()(
     }),
     {
       name: 'car-rental-booking-storage',
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<BookingState>;
         return {
           dates: state.dates ?? null,
           vehicle: state.vehicle ?? null,
           selectedExtras: Array.isArray(state.selectedExtras) ? state.selectedExtras : [],
-          customer: state.customer ?? null,
-          driver: state.driver ?? null,
+          customer: null,
+          driver: null,
           campaignCode: state.campaignCode ?? null,
           campaignDiscount: state.campaignDiscount ?? null,
         };
@@ -135,8 +135,6 @@ export const useBookingStore = create<BookingState & BookingActions>()(
         dates: state.dates,
         vehicle: state.vehicle,
         selectedExtras: state.selectedExtras,
-        customer: state.customer,
-        driver: state.driver,
         campaignCode: state.campaignCode,
         campaignDiscount: state.campaignDiscount,
       }),
