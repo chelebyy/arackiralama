@@ -381,7 +381,9 @@ OS: Ubuntu 22.04 LTS
 
 ### 12.8 Reservation Extra Options Persistence Boundary
 
-**Context:** The public booking flow currently owns a hard-coded list of reservation extras and passes legacy extra counts into pricing. The approved replacement needs an admin-managed, five-locale catalog while preserving historical reservation pricing, legacy clients, and server authority over all monetary values.
+**Implementation status (2026-07-11):** Accepted and implemented through the admin and public booking phases on `codex/reservation-extra-options`. The relational catalog, session-bound Redis quote, unique reservation `quote_id`, versioned `jsonb` pricing snapshot, immutable selected-extra rows, five-locale admin/public surfaces, and legacy adapter now follow this boundary. Local Docker and core Chromium smoke evidence pass; this records implementation conformance, not release approval. The full browser matrix, CI, Aikido, and legacy-adapter production observation gate remain open in `docs/17_Reservation_Extra_Options_Implementation.md` and checklist section 6.6.
+
+**Context (decision time):** The public booking flow owned a hard-coded list of reservation extras and passed legacy extra counts into pricing. The approved replacement needed an admin-managed, five-locale catalog while preserving historical reservation pricing, legacy clients, and server authority over all monetary values.
 
 **Decision:** Keep the feature inside the existing Core/API/Infrastructure monolith and introduce a normalized reservation-extra catalog with immutable reservation snapshots. Persist catalog options, translations, vehicle-group assignments, and selected reservation extras in four relational tables. Store the complete versioned pricing snapshot as `jsonb` on `reservations`, add nullable unique `quote_id` as the replay barrier, and use PostgreSQL `xmin` for catalog write concurrency.
 

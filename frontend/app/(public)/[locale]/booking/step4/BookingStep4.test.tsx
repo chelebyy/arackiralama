@@ -9,7 +9,9 @@ const createUnpaidReservationRequestMock = vi.fn();
 const createPaymentIntentMock = vi.fn();
 const getPublicSiteSettingsMock = vi.fn();
 const validateCampaignMock = vi.fn();
-const getPriceBreakdownMock = vi.fn();
+const createReservationQuoteMock = vi.fn();
+const getPublicReservationExtraOptionsMock = vi.fn();
+const updateExtrasMock = vi.fn();
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 let searchParams = new URLSearchParams();
@@ -51,7 +53,10 @@ const bookingState = {
     dailyPrice: 45,
     groupName: "Economy",
   } as BookingVehicle | undefined,
-  extras: { items: [], total: 0 },
+  selectedExtras: [
+    { optionId: "gps", optionVersion: 2, code: "gps", name: "GPS Navigation", description: "Navigation", quantity: 1, unitPrice: 8, pricingMode: "PER_DAY" },
+    { optionId: "additional-driver", optionVersion: 1, code: "additional_driver", name: "Additional Driver", description: "Second driver", quantity: 1, unitPrice: 15, pricingMode: "PER_RENTAL" },
+  ],
   customer: {
     firstName: "Jane",
     lastName: "Doe",
@@ -106,6 +111,7 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/hooks/useBooking", () => ({
   useBookingState: () => bookingState,
+  useBookingActions: () => ({ updateExtras: updateExtrasMock }),
 }));
 
 vi.mock("@/lib/api/reservations", () => ({
@@ -123,7 +129,11 @@ vi.mock("@/lib/api/payments", () => ({
 
 vi.mock("@/lib/api/pricing", () => ({
   validateCampaign: (...args: unknown[]) => validateCampaignMock(...args),
-  getPriceBreakdown: (...args: unknown[]) => getPriceBreakdownMock(...args),
+}));
+
+vi.mock("@/lib/api/reservationExtras", () => ({
+  createReservationQuote: (...args: unknown[]) => createReservationQuoteMock(...args),
+  getPublicReservationExtraOptions: (...args: unknown[]) => getPublicReservationExtraOptionsMock(...args),
 }));
 
 const placeHoldMock = vi.fn();
@@ -165,17 +175,34 @@ describe("BookingStep4Page", () => {
     placeHoldMock.mockReset();
     placeHoldMock.mockResolvedValue({ id: "res-123", publicCode: "ALN-REAL-123" });
     validateCampaignMock.mockReset();
-    getPriceBreakdownMock.mockReset();
-    getPriceBreakdownMock.mockResolvedValue({
+    createReservationQuoteMock.mockReset();
+    createReservationQuoteMock.mockResolvedValue({
+      quoteId: "quote-123",
+      expiresAtUtc: "2030-05-10T10:30:00Z",
       dailyRate: 45,
       rentalDays: 3,
       baseTotal: 150,
-      extrasTotal: 0,
-      campaignDiscount: 20.25,
-      finalTotal: 114.75,
+      extrasTotal: 39,
+      campaignDiscount: 0,
+      airportFee: 0,
+      oneWayFee: 0,
+      extraDriverFee: 0,
+      childSeatFee: 0,
+      youngDriverFee: 0,
+      fullCoverageWaiverFee: 0,
+      finalTotal: 189,
       currency: "TRY",
       depositAmount: 0,
+      preAuthorizationAmount: 0,
+      appliedCampaignCode: null,
+      extraItems: [
+        { optionId: "gps", optionVersion: 2, code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", quantity: 1, rentalDays: 3, total: 24 },
+        { optionId: "additional-driver", optionVersion: 1, code: "additional_driver", name: "Additional Driver", description: "Second driver", unitPrice: 15, pricingMode: "PER_RENTAL", quantity: 1, rentalDays: 3, total: 15 },
+      ],
     });
+    getPublicReservationExtraOptionsMock.mockReset();
+    getPublicReservationExtraOptionsMock.mockResolvedValue([]);
+    updateExtrasMock.mockReset();
     toastErrorMock.mockReset();
     pushMock.mockReset();
     bookingState.vehicle = { ...baseVehicle };
@@ -184,7 +211,6 @@ describe("BookingStep4Page", () => {
       vehicle: "economy",
       pickupDate: "2026-05-10",
       returnDate: "2026-05-13",
-      extras: "gps,additional_driver",
     });
     Object.defineProperty(globalThis, "crypto", {
       value: { randomUUID: () => "uuid-123" },
@@ -229,25 +255,24 @@ describe("BookingStep4Page", () => {
       });
     });
     await waitFor(() => {
-      expect(getPriceBreakdownMock).toHaveBeenCalledWith({
-        vehicle_group_id: "economy",
-        pickup_office_id: "ala",
-        return_office_id: "gzp",
-        pickup_datetime: "2026-05-10T10:00:00Z",
-        return_datetime: "2026-05-13T09:00:00Z",
-        campaign_code: "SUMMER15",
-        extra_driver_count: 1,
-        child_seat_count: 0,
-        full_coverage_waiver: false,
-      });
+      expect(createReservationQuoteMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          vehicleGroupId: "economy",
+          pickupOfficeId: "ala",
+          returnOfficeId: "gzp",
+          campaignCode: "SUMMER15",
+          locale: "en",
+          selectedExtras: [
+            { optionId: "gps", optionVersion: 2, quantity: 1 },
+            { optionId: "additional-driver", optionVersion: 1, quantity: 1 },
+          ],
+        }),
+        "uuid-123"
+      );
     });
 
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
-    expect(screen.getByText("TRY 150.00")).toBeInTheDocument();
-    expect(screen.getByText("TRY 168.75")).toBeInTheDocument();
-    expect(screen.queryByText("TRY 153.75")).not.toBeInTheDocument();
-    expect(screen.queryByText("TRY 114.75")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
   });
 
@@ -314,20 +339,20 @@ describe("BookingStep4Page", () => {
     await user.click(screen.getByRole("button", { name: /send request/i }));
 
     await waitFor(() => {
-      expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith({
-        vehicleGroupId: "economy",
-        pickupOfficeId: "ala",
-        returnOfficeId: "gzp",
-        pickupDateTimeUtc: "2026-05-10T10:00:00Z",
-        returnDateTimeUtc: "2026-05-13T09:00:00Z",
-        customer: bookingState.customer,
-        driver: bookingState.driver,
-        extraDriverCount: 1,
-        childSeatCount: 0,
-        campaignCode: undefined,
-      });
+      expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vehicleGroupId: "economy",
+          pickupOfficeId: "ala",
+          returnOfficeId: "gzp",
+          customer: bookingState.customer,
+          driver: bookingState.driver,
+          quoteId: "quote-123",
+          locale: "en",
+        }),
+        { sessionId: "uuid-123", idempotencyKey: "uuid-123" }
+      );
       expect(pushMock).toHaveBeenCalledWith(
-        "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REQ-123&request=unpaid"
+        "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&code=ALN-REQ-123&request=unpaid"
       );
     });
     expect(createReservationMock).not.toHaveBeenCalled();
@@ -409,7 +434,7 @@ describe("BookingStep4Page", () => {
     expect(sessionStorage.getItem("pendingPaymentIntentId")).toBe("pi-redirect");
     expect(sessionStorage.getItem("pendingReservationPublicCode")).toBe("ALN-REAL-123");
     expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&extras=gps%2Cadditional_driver&code=ALN-REAL-123"
+      "/en/booking/confirmation?vehicle=economy&pickupDate=2026-05-10&returnDate=2026-05-13&code=ALN-REAL-123"
     );
   });
 

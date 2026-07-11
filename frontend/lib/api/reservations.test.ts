@@ -44,6 +44,25 @@ describe("reservations API", () => {
     expect(mockedPost).toHaveBeenCalledWith("/reservations", payload);
   });
 
+  it("passes the quote session and idempotency headers when supplied", async () => {
+    const payload = {
+      vehicleGroupId: "vehicle-1",
+      pickupOfficeId: "ala",
+      returnOfficeId: "gzp",
+      pickupDateTimeUtc: "2026-05-10T10:00:00Z",
+      returnDateTimeUtc: "2026-05-12T09:00:00Z",
+      customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.com", phone: "+905551234567" },
+      quoteId: "quote-1",
+      locale: "en",
+    };
+
+    await createReservation(payload, { sessionId: "session-1", idempotencyKey: "key-1" });
+
+    expect(mockedPost).toHaveBeenCalledWith("/reservations", payload, {
+      headers: { "X-Session-Id": "session-1", "Idempotency-Key": "key-1" },
+    });
+  });
+
   it("posts unpaid reservation request payloads", async () => {
     const payload = {
       vehicleGroupId: "vehicle-1",

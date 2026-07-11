@@ -6,8 +6,10 @@ import BookingStep3Page from "./page";
 
 const pushMock = vi.fn();
 const updateCustomerDetailsMock = vi.fn();
+const updateExtrasMock = vi.fn();
 const setDatesMock = vi.fn();
 const useOfficesMock = vi.fn();
+const getPublicReservationExtraOptionsMock = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
@@ -23,8 +25,17 @@ vi.mock("next/link", () => ({
 vi.mock("@/hooks/useBooking", () => ({
   useBookingActions: () => ({
     updateCustomerDetails: updateCustomerDetailsMock,
+    updateExtras: updateExtrasMock,
     setDates: setDatesMock,
   }),
+  useBookingState: () => ({
+    vehicle: { vehicleGroupId: "group-1" },
+    selectedExtras: [],
+  }),
+}));
+
+vi.mock("@/lib/api/reservationExtras", () => ({
+  getPublicReservationExtraOptions: (...args: unknown[]) => getPublicReservationExtraOptionsMock(...args),
 }));
 
 vi.mock("@/hooks/useVehicles", () => ({
@@ -34,6 +45,10 @@ vi.mock("@/hooks/useVehicles", () => ({
 describe("BookingStep3Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getPublicReservationExtraOptionsMock.mockResolvedValue([
+      { id: "child-seat", code: "child_seat", name: "Child Seat", description: "For children", unitPrice: 10, pricingMode: "PER_DAY", maxQuantity: 2, iconKey: "BABY", sortOrder: 1, version: 1 },
+      { id: "gps", code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", maxQuantity: 1, iconKey: "SHIELD", sortOrder: 2, version: 2 },
+    ]);
     searchParams = new URLSearchParams({ vehicle: "compact" });
     useOfficesMock.mockReturnValue({
       offices: [
@@ -58,7 +73,7 @@ describe("BookingStep3Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("lets customers toggle paid extras while completing visible driver fields", async () => {
+  it("stores server catalog selections with bounded quantities", async () => {
     const user = userEvent.setup();
 
     render(<BookingStep3Page />);
@@ -69,14 +84,18 @@ describe("BookingStep3Page", () => {
     await user.type(screen.getByLabelText("Phone"), "+905551234567");
     await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
     await user.type(screen.getByLabelText("License Number"), "TR-12345");
-    const childSeatOption = screen.getByRole("button", { name: /child seat/i });
-    const gpsOption = screen.getByRole("button", { name: /gps navigation/i });
+    const increaseChildSeat = await screen.findByRole("button", { name: /increase quantity child seat/i });
+    const increaseGps = screen.getByRole("button", { name: /increase quantity gps navigation/i });
 
-    await user.click(childSeatOption);
-    await user.click(gpsOption);
+    await user.click(increaseChildSeat);
+    await user.click(increaseGps);
 
-    expect(childSeatOption).toHaveClass("border-sky-600");
-    expect(gpsOption).toHaveClass("border-sky-600");
+    expect(updateExtrasMock).toHaveBeenCalledWith([
+      expect.objectContaining({ optionId: "child-seat", optionVersion: 1, quantity: 1 }),
+    ]);
+    expect(updateExtrasMock).toHaveBeenCalledWith([
+      expect.objectContaining({ optionId: "gps", optionVersion: 2, quantity: 1 }),
+    ]);
     expect(pushMock).not.toHaveBeenCalled();
   });
 
@@ -107,7 +126,7 @@ describe("BookingStep3Page", () => {
 
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith(
-        "/en/booking/step4?pickup=ala&return=gzp&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai&extras="
+        "/en/booking/step4?pickup=ala&return=gzp&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai"
       );
     });
     expect(setDatesMock).toHaveBeenCalledWith({

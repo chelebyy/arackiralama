@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 
 import { useBookingActions, useBookingState, useBookingStore } from "./useBooking";
-import type { Customer, Driver, Office, ReservationExtra, Vehicle } from "@/lib/api/types";
+import type { Customer, Driver, Office, SelectedBookingExtra, Vehicle } from "@/lib/api/types";
 
 const sampleVehicle: Vehicle = {
   id: "vehicle-1",
@@ -116,21 +116,35 @@ describe("useBooking", () => {
     expect(state.current.step).toBe("vehicles");
   });
 
-  it("calculates extras totals from reservation extras", () => {
+  it("replaces the full selection set with public extra-option selections", () => {
     const { result: actions } = renderHook(() => useBookingActions());
-    const extras: ReservationExtra[] = [
-      { extraId: "gps", name: "GPS", quantity: 1, dailyPrice: 8, totalPrice: 24 },
-      { extraId: "wifi", name: "WiFi", quantity: 1, dailyPrice: 12, totalPrice: 36 },
+    const extras: SelectedBookingExtra[] = [
+      { optionId: "gps", optionVersion: 1, code: "gps", name: "GPS", description: "Navigation", quantity: 1, unitPrice: 8, pricingMode: "PER_DAY" },
+      { optionId: "wifi", optionVersion: 2, code: "wifi", name: "WiFi", description: "Internet", quantity: 2, unitPrice: 12, pricingMode: "PER_RENTAL" },
     ];
 
     act(() => {
       actions.current.updateExtras(extras);
     });
 
-    expect(useBookingStore.getState().extras).toEqual({
-      items: extras,
-      total: 60,
+    expect(useBookingStore.getState().selectedExtras).toEqual(extras);
+  });
+
+  it("clears selections when the vehicle group changes", () => {
+    act(() => {
+      useBookingStore.getState().setExtras([
+        { optionId: "gps", optionVersion: 1, code: "gps", name: "GPS", description: "Navigation", quantity: 1, unitPrice: 8, pricingMode: "PER_DAY" },
+      ]);
+      useBookingStore.getState().setVehicle({
+        vehicleGroupId: "group-2",
+        vehicleName: "SUV",
+        vehicleImage: "/images/suv.jpg",
+        dailyPrice: 70,
+        groupName: "SUV",
+      });
     });
+
+    expect(useBookingStore.getState().selectedExtras).toEqual([]);
   });
 
   it("marks booking complete once dates, vehicle, customer, and driver are present", () => {

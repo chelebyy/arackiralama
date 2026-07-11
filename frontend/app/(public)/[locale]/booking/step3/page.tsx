@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,21 +17,21 @@ import {
   ArrowLeft,
   Info,
   Check,
+  Minus,
+  Navigation,
+  Plus,
+  RefreshCw,
+  Wifi,
 } from "lucide-react";
 import Link from "next/link";
+import useSWR from "swr";
 import { cn } from "@/lib/utils";
-import { useBookingActions } from "@/hooks/useBooking";
+import { useBookingActions, useBookingState } from "@/hooks/useBooking";
 import { useOffices } from "@/hooks/useVehicles";
+import { getPublicReservationExtraOptions } from "@/lib/api/reservationExtras";
+import type { PublicReservationExtraOption, SelectedBookingExtra } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
-
-interface ExtraOption {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  priceType: "per_day" | "per_rental";
-  icon: React.ReactNode;
-}
+import { differenceInCalendarDays } from "date-fns";
 
 function openDatePicker(event: MouseEvent<HTMLInputElement>) {
   event.currentTarget.showPicker?.();
@@ -76,15 +76,43 @@ function resolveOffice(offices: { id: string; name: string }[], slugOrGuid: stri
   return matched ?? { id: slugOrGuid, name: slugOrGuid };
 }
 
+function ExtraIcon({ iconKey }: { iconKey: string }) {
+  const Icon = iconKey === "baby"
+    ? Baby
+    : iconKey === "users"
+      ? Users
+      : iconKey === "navigation"
+        ? Navigation
+        : iconKey === "wifi"
+          ? Wifi
+          : Shield;
+  return <Icon className="h-5 w-5" />;
+}
+
+function toSelection(option: PublicReservationExtraOption, quantity: number): SelectedBookingExtra {
+  return {
+    optionId: option.id,
+    quantity,
+    optionVersion: option.version,
+    code: option.code,
+    name: option.name,
+    description: option.description,
+    unitPrice: option.unitPrice,
+    pricingMode: option.pricingMode,
+  };
+}
+
 export default function BookingStep3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations("booking");
-  const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
-  const { updateCustomerDetails, setDates } = useBookingActions();
+  const booking = useBookingState();
+  const { updateCustomerDetails, updateExtras, setDates } = useBookingActions();
   const { offices, isLoading: officesLoading, isError: officesError } = useOffices();
+  const [legacyWarning, setLegacyWarning] = useState(false);
+  const legacyExtrasApplied = useRef(false);
   const pickupOffice = searchParams.get("pickup") || "ala";
   const returnOffice = searchParams.get("return") || pickupOffice;
   const pickupOfficeMatch = resolveOffice(offices, pickupOffice);
@@ -94,6 +122,26 @@ export default function BookingStep3Page() {
     !officesError &&
     isGuid(pickupOfficeMatch.id) &&
     isGuid(returnOfficeMatch.id);
+  const vehicleGroupId = booking.vehicle?.vehicleGroupId ?? searchParams.get("vehicleGroupId") ?? searchParams.get("vehicle") ?? "";
+  const {
+    data: extraOptions = [],
+    error: extraOptionsError,
+    isLoading: extraOptionsLoading,
+    mutate: retryExtraOptions,
+  } = useSWR<PublicReservationExtraOption[], Error>(
+    vehicleGroupId ? ["reservation-extra-options", vehicleGroupId, locale] : null,
+    () => getPublicReservationExtraOptions(vehicleGroupId, locale),
+    { revalidateOnFocus: false }
+  );
+  const pickupDate = searchParams.get("pickupDate") || "";
+  const returnDate = searchParams.get("returnDate") || "";
+  const rentalDays = pickupDate && returnDate
+    ? Math.max(1, differenceInCalendarDays(new Date(returnDate), new Date(pickupDate)))
+    : 1;
+  const selectionsByOptionId = useMemo(
+    () => new Map(booking.selectedExtras.map((selection) => [selection.optionId, selection])),
+    [booking.selectedExtras]
+  );
 
   const step3Schema = z.object({
     firstName: z.string().min(2, t("validation.requiredFirstName")),
@@ -107,40 +155,25 @@ export default function BookingStep3Page() {
   });
   type Step3FormData = z.infer<typeof step3Schema>;
 
-  const extraOptions: ExtraOption[] = [
-    {
-      id: "child_seat",
-      name: t("extras.childSeat"),
-      description: t("extras.childSeatDesc"),
-      price: 10,
-      priceType: "per_day",
-      icon: <Baby className="h-5 w-5" />,
-    },
-    {
-      id: "additional_driver",
-      name: t("extras.additionalDriver"),
-      description: t("extras.additionalDriverDesc"),
-      price: 15,
-      priceType: "per_rental",
-      icon: <Users className="h-5 w-5" />,
-    },
-    {
-      id: "gps",
-      name: t("extras.gps"),
-      description: t("extras.gpsDesc"),
-      price: 8,
-      priceType: "per_day",
-      icon: <Shield className="h-5 w-5" />,
-    },
-    {
-      id: "wifi",
-      name: t("extras.wifi"),
-      description: t("extras.wifiDesc"),
-      price: 12,
-      priceType: "per_day",
-      icon: <Shield className="h-5 w-5" />,
-    },
-  ];
+  useEffect(() => {
+    if (legacyExtrasApplied.current || booking.selectedExtras.length > 0 || extraOptions.length === 0) return;
+
+    const legacyCodes = (searchParams.get("extras") || "").split(",").map((code) => code.trim()).filter(Boolean);
+    if (legacyCodes.length === 0) return;
+
+    legacyExtrasApplied.current = true;
+    const supportedCodes = new Set(["child_seat", "additional_driver", "gps", "wifi"]);
+    const optionsByCode = new Map(extraOptions.map((option) => [option.code, option]));
+    const restoredSelections = legacyCodes.flatMap((code) => {
+      const option = supportedCodes.has(code) ? optionsByCode.get(code) : undefined;
+      return option ? [toSelection(option, 1)] : [];
+    });
+
+    if (restoredSelections.length > 0) {
+      updateExtras(restoredSelections);
+    }
+    setLegacyWarning(restoredSelections.length !== legacyCodes.length);
+  }, [booking.selectedExtras.length, extraOptions, searchParams, updateExtras]);
 
   const {
     register,
@@ -150,16 +183,12 @@ export default function BookingStep3Page() {
     resolver: zodResolver(step3Schema),
   });
 
-  const toggleExtra = (id: string) => {
-    setSelectedExtras((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
+  const updateQuantity = (option: PublicReservationExtraOption, quantity: number) => {
+    const currentSelections = booking.selectedExtras.filter((selection) => selection.optionId !== option.id);
+    if (quantity > 0) {
+      currentSelections.push(toSelection(option, quantity));
+    }
+    updateExtras(currentSelections);
   };
 
   const onSubmit = (data: Step3FormData) => {
@@ -197,7 +226,7 @@ export default function BookingStep3Page() {
     );
 
     const queryParams = new URLSearchParams(searchParams.toString());
-    queryParams.set("extras", Array.from(selectedExtras).join(","));
+    queryParams.delete("extras");
     router.push(`/${locale}/booking/step4?${queryParams.toString()}`);
   };
 
@@ -361,42 +390,87 @@ export default function BookingStep3Page() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {extraOptions.map((option) => (
+          {extraOptionsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-label={t("loadingExtraOptions")}>
+              {[0, 1].map((index) => <div key={index} className="h-32 animate-pulse rounded-lg bg-slate-100" />)}
+            </div>
+          ) : extraOptionsError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
+              <p className="text-sm text-red-700">{t("failedToLoadExtraOptions")}</p>
               <button
-                key={option.id}
                 type="button"
-                onClick={() => toggleExtra(option.id)}
-                className={cn(
-                  "relative p-4 border-2 rounded-lg text-left transition-all duration-200",
-                  selectedExtras.has(option.id)
-                    ? "border-sky-600 bg-sky-50"
-                    : "border-slate-200 hover:border-sky-300"
-                )}
+                onClick={() => retryExtraOptions()}
+                className="mt-3 inline-flex items-center gap-2 rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-100"
               >
-                <div className="flex items-start gap-3">
+                <RefreshCw className="h-4 w-4" />
+                {t("retry")}
+              </button>
+            </div>
+          ) : extraOptions.length === 0 ? (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{t("noExtraOptions")}</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {extraOptions.map((option) => {
+                const quantity = selectionsByOptionId.get(option.id)?.quantity ?? 0;
+                const isSelected = quantity > 0;
+                const displayTotal = option.pricingMode === "PER_DAY"
+                  ? option.unitPrice * rentalDays * quantity
+                  : option.unitPrice * quantity;
+
+                return (
                   <div
+                    key={option.id}
                     className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                      selectedExtras.has(option.id) ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
+                      "relative rounded-lg border-2 p-4 transition-colors duration-200",
+                      isSelected ? "border-sky-600 bg-sky-50" : "border-slate-200 hover:border-sky-300"
                     )}
                   >
-                    {selectedExtras.has(option.id) ? <Check className="h-5 w-5" /> : option.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-slate-900">{option.name}</h3>
-                      <span className="font-semibold text-sky-700">
-                        ₺{option.price}
-                        <span className="text-xs text-slate-500 font-normal">/{option.priceType === "per_day" ? t("day") : t("rental")}</span>
-                      </span>
+                    <div className="flex items-start gap-3">
+                      <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg", isSelected ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700")}>
+                        {isSelected ? <Check className="h-5 w-5" /> : <ExtraIcon iconKey={option.iconKey} />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-medium text-slate-900">{option.name}</h3>
+                          <span className="whitespace-nowrap font-semibold text-sky-700">
+                            ₺{option.unitPrice}
+                            <span className="text-xs font-normal text-slate-600">/{option.pricingMode === "PER_DAY" ? t("day") : t("rental")}</span>
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">{option.description}</p>
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                          <div className="inline-flex items-center rounded-md border border-slate-300 bg-white">
+                            <button
+                              type="button"
+                              aria-label={`${t("decreaseQuantity")} ${option.name}`}
+                              disabled={quantity === 0}
+                              onClick={() => updateQuantity(option, quantity - 1)}
+                              className="p-2 text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="min-w-9 border-x border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-900">{quantity}</span>
+                            <button
+                              type="button"
+                              aria-label={`${t("increaseQuantity")} ${option.name}`}
+                              disabled={quantity === option.maxQuantity}
+                              onClick={() => updateQuantity(option, quantity + 1)}
+                              className="p-2 text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {isSelected && <span className="text-sm font-semibold text-slate-800">₺{displayTotal.toFixed(2)}</span>}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">{option.description}</p>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
+          <p className="mt-4 text-sm text-sky-800">{t("quoteAuthoritative")}</p>
+          {legacyWarning && <p className="mt-2 text-sm text-amber-800" role="status">{t("legacyExtrasUpdated")}</p>}
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-6">

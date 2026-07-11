@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import type {
   Customer,
   Driver,
-  ReservationExtra,
+  SelectedBookingExtra,
   Vehicle,
   Office,
 } from '@/lib/api/types';
@@ -28,15 +28,10 @@ interface BookingVehicle {
   groupName: string;
 }
 
-interface BookingExtras {
-  items: ReservationExtra[];
-  total: number;
-}
-
 interface BookingState {
   dates: BookingDates | null;
   vehicle: BookingVehicle | null;
-  extras: BookingExtras;
+  selectedExtras: SelectedBookingExtra[];
   customer: Customer | null;
   driver: Driver | null;
   campaignCode: string | null;
@@ -47,7 +42,7 @@ interface BookingState {
 interface BookingActions {
   setDates: (dates: BookingDates) => void;
   setVehicle: (vehicle: BookingVehicle) => void;
-  setExtras: (extras: ReservationExtra[]) => void;
+  setExtras: (extras: SelectedBookingExtra[]) => void;
   setCustomer: (customer: Customer) => void;
   setDriver: (driver: Driver) => void;
   setCampaign: (code: string | null, discount?: number | null) => void;
@@ -60,7 +55,7 @@ interface BookingActions {
 const initialState: BookingState = {
   dates: null,
   vehicle: null,
-  extras: { items: [], total: 0 },
+  selectedExtras: [],
   customer: null,
   driver: null,
   campaignCode: null,
@@ -84,12 +79,13 @@ export const useBookingStore = create<BookingState & BookingActions>()(
 
       setDates: (dates) => set({ dates }),
 
-      setVehicle: (vehicle) => set({ vehicle }),
+      setVehicle: (vehicle) => set((state) => ({
+        vehicle,
+        selectedExtras:
+          state.vehicle?.vehicleGroupId === vehicle.vehicleGroupId ? state.selectedExtras : [],
+      })),
 
-      setExtras: (items) => {
-        const total = items.reduce((sum, item) => sum + item.totalPrice, 0);
-        set({ extras: { items, total } });
-      },
+      setExtras: (selectedExtras) => set({ selectedExtras }),
 
       setCustomer: (customer) => set({ customer }),
 
@@ -122,10 +118,23 @@ export const useBookingStore = create<BookingState & BookingActions>()(
     }),
     {
       name: 'car-rental-booking-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<BookingState>;
+        return {
+          dates: state.dates ?? null,
+          vehicle: state.vehicle ?? null,
+          selectedExtras: Array.isArray(state.selectedExtras) ? state.selectedExtras : [],
+          customer: state.customer ?? null,
+          driver: state.driver ?? null,
+          campaignCode: state.campaignCode ?? null,
+          campaignDiscount: state.campaignDiscount ?? null,
+        };
+      },
       partialize: (state) => ({
         dates: state.dates,
         vehicle: state.vehicle,
-        extras: state.extras,
+        selectedExtras: state.selectedExtras,
         customer: state.customer,
         driver: state.driver,
         campaignCode: state.campaignCode,
@@ -141,7 +150,7 @@ export function useBookingState() {
   return {
     dates: state.dates,
     vehicle: state.vehicle,
-    extras: state.extras,
+    selectedExtras: state.selectedExtras,
     customer: state.customer,
     driver: state.driver,
     campaignCode: state.campaignCode,
@@ -174,7 +183,7 @@ export function useBookingActions() {
   );
 
   const updateExtras = useCallback(
-    (extras: ReservationExtra[]) => {
+    (extras: SelectedBookingExtra[]) => {
       store.setExtras(extras);
     },
     [store]

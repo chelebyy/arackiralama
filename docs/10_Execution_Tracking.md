@@ -16,7 +16,7 @@
 
 ## Fresh Feature Update — 10 Temmuz 2026
 
-**Reservation Extra Options:** 🟨 In Progress — Phases 1-3 completed; Phase 4 admin frontend is next.
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented; the rebuilt Docker stack and core Chromium booking/admin smoke now pass. The full section 6.6 browser matrix, CI, and Aikido release-security gates remain open.
 
 - Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
 - Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
@@ -29,7 +29,11 @@
 - Latest backend validation passed: `RentACar.Tests` 730/730 and `RentACar.ApiIntegrationTests` 51/51. Focused Phase 3 filters passed 20/20 and 3/3 respectively.
 - Docker Desktop full compose build passed; API and web returned HTTP 200. Running PostgreSQL confirmed 4 active built-ins, 20 translations, 8 migration-time assignments, and the expected latest migration. API restart preserved built-in `xmin`/`UpdatedAt` state.
 - Phase 3 integration validation reused healthy Docker PostgreSQL and Redis services and proved the real quote-to-reservation/replay path; CI has not run for the local feature branch.
-- Full admin/public browser workflow remains open because the UI phases are not implemented.
+- Phase 4 admin catalog and Phase 5 booking UI are now implemented. The public flow fetches only active group/locale catalog entries, persists identifier/version/quantity selections, requests a session-bound server quote, submits the quote ID plus matching non-price booking inputs with the same session/idempotency headers, maps the measured legacy URL codes only during compatibility, and renders immutable selected-extra snapshots in admin reservation detail.
+- Latest Phase 5 local frontend evidence from `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript PASS; focused Vitest 42/42; full Vitest 60 files / 274 tests PASS; ESLint 0 errors with the existing `SearchForm.test.tsx` warning; Next.js production build PASS. This full-suite/build evidence predates the final one-line `driverAge` contract-alignment correction; the final TypeScript and Step 4 focused suite (15/15) passed, while repeated full-suite/build commands made no progress within timeout and are not claimed. No repository-local `node_modules` success is claimed because that tree remains incomplete.
+- A fresh `docker compose -f backend/docker-compose.yml up -d --build` passed on 11 July 2026; PostgreSQL/Redis were healthy, API `/health` and `/tr` returned 200, and `/` redirected 307 to `/tr`. Chromium booking/payment smoke passed 6/6 after aligning stale E2E selectors and seed-office assumptions. A focused Docker browser proof also passed 6/6: admin catalog load, selected child-seat line in the server quote, no generated `extras` URL parameter, quote-expiry status, terms validation, unpaid reservation creation/confirmation, and the new reservation's non-legacy no-extra admin detail.
+- The browser pass exposed and fixed a real backend blocker: date-only driver snapshot values arrived as `DateTimeKind.Unspecified` and caused PostgreSQL `timestamptz` writes to fail with 500. Driver birth/license dates are now normalized to UTC; the focused backend regression test passed 1/1 and the rebuilt API completed the real unpaid-request flow. The test-created local holds were cancelled after evidence collection.
+- The remaining section 6.6 workflow must still cover draft authoring/activation validation, all five public locales, loading/retry/empty/legacy-warning states, paid mode, catalog-change `409` recovery, immutable selected-extra history, quote expiry/cross-session/replay, responsive layout, console/network capture, and durable screenshots.
 - Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
 - Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.
 

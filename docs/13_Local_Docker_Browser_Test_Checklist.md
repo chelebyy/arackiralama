@@ -705,6 +705,32 @@ Dependency-security follow-up captured on 2026-07-08:
 
 ------------------------------------------------------------------------
 
+### 6.6 Reservation Extra Options Validation Gate
+
+**Status:** PARTIAL — the 2026-07-11 rebuilt Docker stack and core Chromium booking/admin smoke pass, including a selected extra in the authoritative quote and real unpaid reservation persistence. The unchecked combined scenarios below still block completion.
+
+Required workflow:
+
+- [ ] Create a draft extra option as an Admin and confirm incomplete translations or vehicle-group assignment block activation.
+- [ ] Complete TR/EN/DE/RU/AR translations, assign one vehicle group, activate the option, and confirm group-specific public visibility across all five locales.
+- [ ] Select per-day and per-rental quantities in public Step 3; verify the URL has no newly generated `extras` parameter and that loading, retry, empty, and legacy-link warnings are usable.
+- [ ] Verify Step 4 server quote lines, final total, expiry state, campaign refresh, paid/unpaid `quoteId` payloads, and payment ordering.
+- [ ] Issue quotes across price-only and availability-invalidating catalog changes; confirm the first `409` refreshes safely and the second requires customer confirmation without losing customer/driver/card-form state.
+- [ ] Open the created reservation in admin and verify immutable snapshot names, quantities, pricing rules, totals, and the legacy-total-only indicator without double counting.
+- [ ] Verify expired, cross-session, and replayed quote IDs do not create duplicate reservations.
+- [ ] Record console/network, desktop/tablet/mobile layout, screenshots, and non-sensitive API evidence under a dated `docs/test-evidence/` folder.
+
+Automated evidence recorded on 2026-07-11:
+
+- Clean locked frontend workspace `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript PASS, focused Vitest 42/42, full Vitest 60 files / 274 tests PASS, ESLint 0 errors with one pre-existing warning, and production build PASS. The full-suite/build evidence predates the final one-line `driverAge` contract-alignment correction; final TypeScript and Step 4 focused tests (15/15) passed, but repeated full-suite/build commands did not progress within timeout and are not claimed.
+- Fresh Docker rebuild PASS: PostgreSQL and Redis healthy; API `/health` 200; frontend `/tr` 200; root `/` returned 307 with `Location: /tr`; the production build included the Phase 5 routes.
+- Chromium E2E PASS after repairing stale selectors/seed assumptions: booking plus payment suite 6/6. Focused Phase 5 Docker browser proof 6/6 verified admin catalog load, Step 3 child-seat selection, no generated `extras` query parameter, selected-extra line and expiry state in the Step 4 server quote, terms validation, real unpaid reservation creation/confirmation, and a current no-extra/non-legacy admin detail.
+- The real unpaid-request run initially returned 500 because driver snapshot date-only values were deserialized with `DateTimeKind.Unspecified` and written to PostgreSQL `timestamptz`. UTC normalization was added for birth/license dates, its focused backend regression passed 1/1, the API image was rebuilt, and the same browser flow then passed. Test-created local holds were cancelled after the proof.
+- Browser-client bootstrap remains unavailable because its generated ESM kernel uses CommonJS `require`; the repository Playwright/Chromium runner was used as the browser fallback. This pass does not claim the still-unchecked authoring, five-locale, conflict/replay/expiry, paid-mode, responsive, console/network, screenshot, CI, or Aikido gates.
+- Detailed command/result record: `docs/test-evidence/2026-07-11-reservation-extra-options-phase5/README.md`.
+
+------------------------------------------------------------------------
+
 ## 7. API and Network Verification
 
 While using the browser, keep DevTools Network tab open.

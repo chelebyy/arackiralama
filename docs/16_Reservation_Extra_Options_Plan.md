@@ -5,7 +5,9 @@
 **Primary users:** Customers making a booking; Admin and SuperAdmin operators
 **Source of truth:** This document defines the approved product and architecture decisions
 **Verification gate:** Focused backend/frontend tests plus Docker Desktop browser validation
-**Plan status:** Approved for implementation
+**Plan status:** Implemented through Phases 1-5; partial acceptance evidence recorded, release gates remain open
+
+**Current delivery note (2026-07-11):** The normalized catalog, server-authoritative quote boundary, immutable reservation snapshots, admin authoring UI, public booking integration, and compatibility adapter are implemented on `codex/reservation-extra-options`. A rebuilt local Docker stack and the core Chromium booking/admin proof pass. Completion is still blocked by the unchecked section 6.6 browser matrix, CI, Aikido, and the production legacy-adapter observation window. See [17_Reservation_Extra_Options_Implementation.md](17_Reservation_Extra_Options_Implementation.md) and [13_Local_Docker_Browser_Test_Checklist.md](13_Local_Docker_Browser_Test_Checklist.md) for current evidence and remaining gates.
 
 Related execution document: [17_Reservation_Extra_Options_Implementation.md](17_Reservation_Extra_Options_Implementation.md)
 

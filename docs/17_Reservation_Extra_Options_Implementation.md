@@ -4,7 +4,7 @@
 **Scope:** Implementation sequence for admin-managed reservation extra options
 **Decision source:** [16_Reservation_Extra_Options_Plan.md](16_Reservation_Extra_Options_Plan.md)
 **Verification gate:** Automated test suite plus Docker Desktop browser validation
-**Implementation status:** In progress; Phases 1-4 completed and Phase 5 is next
+**Implementation status:** In progress; Phases 1-5 are implemented and the rebuilt Docker stack plus core Chromium booking/admin smoke pass. The full browser matrix, CI, and Aikido release-security gates remain open.
 
 ## 1. Objective
 
@@ -432,6 +432,19 @@ Add an `Extra Options` card to admin reservation detail. Each row displays snaps
 - Legacy URL mapping and unknown-code warning.
 - Admin reservation snapshot rendering.
 - Public booking and admin page focused suites pass before the full suite.
+
+### 7.7 Phase 5 Local Implementation Evidence - 2026-07-11
+
+- Replaced the persisted legacy booking-extra shape with a dedicated selection contract carrying option ID, quantity, option version, and display-only catalog fields. The Zustand store now replaces selections atomically, clears them on vehicle-group changes, and migrates stale persisted state safely to schema version 2.
+- Added a public no-store catalog/quote API client. Step 3 now queries the catalog by vehicle group and locale, exposes bounded quantity controls with loading/error/empty/retry states, maps only the four measured legacy URL codes when no current selection exists, and removes `extras` from all newly generated navigation URLs.
+- Step 4 now requests the session-bound server quote on load, selection changes, and valid campaign changes; renders server `extraItems`, final total, and expiry state; and sends `quoteId`, locale, and the matching non-price booking inputs (driver age and coverage flag) with the same `X-Session-Id` and `Idempotency-Key` on paid or unpaid reservation creation. It does not resend trusted selection or pricing data.
+- The first reservation `409` refreshes the public catalog and quote while retaining customer, driver, payment-method, and card-form state, then retries once with the original idempotency key. A second conflict stops automation and requires the customer to refresh and review the quote explicitly. Payment-intent creation still occurs only after a reservation succeeds with an accepted quote.
+- Added the admin reservation-detail `Ek Seçenekler` card for immutable selected-extra snapshots, including quantity, unit pricing rule, total, and the `LEGACY_TOTAL_ONLY` fallback for pre-migration rows.
+- Local validation ran from the clean locked workspace `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript passed; 6 focused Vitest files / 42 tests passed; full Vitest passed with 60 files / 274 tests; ESLint passed with 0 errors and one pre-existing warning in `components/public/SearchForm.test.tsx`; and the Next.js production build passed with Step 3, Step 4, and admin reservation-detail routes emitted. The full suite/build evidence preceded the final one-line `driverAge` request-alignment correction; after that correction, TypeScript and the focused Step 4 suite (15/15) passed. A repeat full-suite/build attempt made no progress within the local command timeout and is not claimed as final proof.
+- Fresh Docker evidence now passes: all five Compose services started from rebuilt images; PostgreSQL/Redis were healthy; API `/health` and frontend `/tr` returned 200; `/` redirected 307 to `/tr`; and the production web build included the Phase 5 routes.
+- Repository Playwright/Chromium booking/payment smoke passed 6/6 after stale E2E vehicle selectors, the unavailable `ayt` seed office, required driver fields, and disabled-online-payment expectations were aligned with the current application. A focused Docker browser proof also passed 6/6 for admin catalog load, selected child-seat quote rendering, removal of generated `extras`, quote-expiry status, terms validation, real unpaid creation/confirmation, and the new reservation's current no-extra/non-legacy admin detail.
+- The real persistence pass exposed a PostgreSQL blocker outside the original frontend slice: driver birth/license dates arrived as `DateTimeKind.Unspecified`, causing a `timestamptz` write failure. `ApplyDriverSnapshot` now normalizes those values to UTC; a focused backend regression passed 1/1, the API image was rebuilt, and the browser reservation flow passed. Test-created local holds were cancelled after verification.
+- Browser-client bootstrap still fails in the host environment because its generated ESM kernel calls CommonJS `require`, so the existing repository Playwright/Chromium runner provided the browser fallback. CI, Aikido, and the unchecked section 6.6 scenarios remain open: draft/activation authoring, all five locales, loading/retry/empty/legacy states, paid mode, catalog-change `409` recovery, immutable selected-extra history, expiry/cross-session/replay, responsive layout, and durable console/network/screenshot evidence.
 
 ## 8. Automated Validation Matrix
 

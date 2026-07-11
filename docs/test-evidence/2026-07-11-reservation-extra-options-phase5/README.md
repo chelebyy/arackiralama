@@ -1,0 +1,46 @@
+# Reservation Extra Options Phase 5 Docker Browser Evidence
+
+**Date:** 2026-07-11
+**Target:** local Docker Compose stack (`backend/docker-compose.yml`)
+**Scope:** partial section 6.6 acceptance; unchecked scenarios remain open
+
+## Stack
+
+- Docker Engine: 29.6.1.
+- `docker compose -f backend/docker-compose.yml up -d --build`: PASS.
+- PostgreSQL and Redis: healthy.
+- API `http://localhost:5000/health`: HTTP 200.
+- Frontend `http://localhost:3001/tr`: HTTP 200.
+- Frontend `/`: HTTP 307, `Location: /tr`.
+
+## Browser Results
+
+The bundled browser connection could not start because its generated ESM kernel called CommonJS `require`. The repository's existing Playwright 1.61 Chromium runner was therefore used against the same Docker URL.
+
+- Booking/payment smoke: 6/6 PASS.
+- Focused payment/admin proof: 6/6 PASS.
+- Exact-final TypeScript: PASS. The expanded booking/payment run passed 6/7 in one batch after a single vehicle-list request took 16.1 seconds against a 15-second action timeout; the same remaining completion scenario passed 1/1 immediately when rerun alone.
+- Verified selected `Çocuk Koltuğu` appeared in the authoritative Step 4 quote.
+- Verified generated booking URLs did not contain `extras`.
+- Verified quote validity status, terms acceptance validation, unpaid reservation creation, confirmation redirect, admin catalog load, and current no-extra/non-legacy admin reservation detail.
+- Test-created unpaid holds were changed to `Cancelled` with their expiry cleared after evidence collection so the single seeded vehicle remained reusable.
+
+## Runtime Defect Found and Fixed
+
+The first real unpaid reservation write returned 500. API logs showed Npgsql rejecting `DateTimeKind.Unspecified` for `timestamp with time zone` driver snapshot columns. `ReservationService.ApplyDriverSnapshot` now normalizes birth, license-issue, and license-expiry values to UTC.
+
+- Focused backend regression: 1/1 PASS.
+- Rebuilt API health: HTTP 200.
+- Repeated real Chromium flow: PASS.
+
+## Still Open
+
+- Admin draft creation and incomplete activation rejection.
+- Five-locale public visibility.
+- Loading, retry, empty, and legacy-link warning interactions.
+- Paid mode and payment ordering with online payment enabled.
+- Price-only versus invalidating catalog changes and first/second `409` behavior.
+- Immutable selected-extra snapshot history and explicit legacy-total-only row.
+- Expired, cross-session, and replayed quote behavior in the browser.
+- Desktop/tablet/mobile screenshots plus durable console/network capture.
+- CI and Aikido release-security gates.

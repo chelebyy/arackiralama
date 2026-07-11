@@ -619,7 +619,20 @@ public sealed class ReservationServiceTests
         // Arrange
         var groupId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
-        var request = CreateValidReservationRequest() with { VehicleGroupId = groupId };
+        var request = CreateValidReservationRequest() with
+        {
+            VehicleGroupId = groupId,
+            Driver = new DriverInfoRequest
+            {
+                FirstName = "Ahmet",
+                LastName = "Yilmaz",
+                DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
+                LicenseNumber = "TR12345678",
+                LicenseCountry = "Turkey",
+                LicenseIssueDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
+                LicenseExpiryDate = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Unspecified)
+            }
+        };
         var availableVehicle = new Vehicle
         {
             Id = vehicleId,
@@ -702,7 +715,13 @@ public sealed class ReservationServiceTests
             It.Is<Reservation>(r =>
                 r.Status == ReservationStatus.Draft
                 && r.TotalAmount == 1700
-                && r.VehicleId == vehicleId),
+                && r.VehicleId == vehicleId
+                && r.DriverDateOfBirth.HasValue
+                && r.DriverDateOfBirth.Value.Kind == DateTimeKind.Utc
+                && r.DriverLicenseIssueDate.HasValue
+                && r.DriverLicenseIssueDate.Value.Kind == DateTimeKind.Utc
+                && r.DriverLicenseExpiryDate.HasValue
+                && r.DriverLicenseExpiryDate.Value.Kind == DateTimeKind.Utc),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }

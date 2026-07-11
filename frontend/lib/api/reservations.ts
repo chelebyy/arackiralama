@@ -4,15 +4,35 @@ import type {
   CreateReservationData,
   ExtendHoldData,
   HoldReservationData,
+  ReservationRequestOptions,
   Reservation,
 } from './types';
 
-export async function createReservation(data: CreateReservationData): Promise<Reservation> {
-  return post<Reservation>(API_ENDPOINTS.reservations.create, data);
+function requestHeaders(options?: ReservationRequestOptions) {
+  if (!options) return undefined;
+
+  return {
+    'X-Session-Id': options.sessionId,
+    'Idempotency-Key': options.idempotencyKey,
+  };
 }
 
-export async function createUnpaidReservationRequest(data: CreateReservationData): Promise<Reservation> {
-  return post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
+export async function createReservation(
+  data: CreateReservationData,
+  options?: ReservationRequestOptions
+): Promise<Reservation> {
+  return options
+    ? post<Reservation>(API_ENDPOINTS.reservations.create, data, { headers: requestHeaders(options) })
+    : post<Reservation>(API_ENDPOINTS.reservations.create, data);
+}
+
+export async function createUnpaidReservationRequest(
+  data: CreateReservationData,
+  options?: ReservationRequestOptions
+): Promise<Reservation> {
+  return options
+    ? post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data, { headers: requestHeaders(options) })
+    : post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
 }
 
 export async function getReservationByPublicCode(code: string): Promise<Reservation> {

@@ -2049,11 +2049,29 @@ public sealed class ReservationService : IReservationService
     {
         reservation.DriverFirstName = ValueOrNull(driver?.FirstName) ?? customer?.FirstName ?? reservation.DriverFirstName;
         reservation.DriverLastName = ValueOrNull(driver?.LastName) ?? customer?.LastName ?? reservation.DriverLastName;
-        reservation.DriverDateOfBirth = driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth;
+        reservation.DriverDateOfBirth = NormalizeUtc(
+            driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth);
         reservation.DriverLicenseNumber = ValueOrNull(driver?.LicenseNumber) ?? customer?.DriverLicenseNumber ?? reservation.DriverLicenseNumber;
         reservation.DriverLicenseCountry = ValueOrNull(driver?.LicenseCountry) ?? reservation.DriverLicenseCountry;
-        reservation.DriverLicenseIssueDate = driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate;
-        reservation.DriverLicenseExpiryDate = driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate;
+        reservation.DriverLicenseIssueDate = NormalizeUtc(
+            driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate);
+        reservation.DriverLicenseExpiryDate = NormalizeUtc(
+            driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate);
+    }
+
+    private static DateTime? NormalizeUtc(DateTime? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return value.Value.Kind switch
+        {
+            DateTimeKind.Utc => value.Value,
+            DateTimeKind.Local => value.Value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+        };
     }
 
     private async Task ApplyCustomerUpdateAsync(

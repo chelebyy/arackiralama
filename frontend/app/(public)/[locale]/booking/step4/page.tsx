@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,16 +21,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
 import { differenceInCalendarDays } from "date-fns";
-import { useBookingState } from "@/hooks/useBooking";
+import { useBookingActions, useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
-import { getPriceBreakdown } from "@/lib/api/pricing";
+import { ApiError } from "@/lib/api/client";
+import { createReservationQuote, getPublicReservationExtraOptions } from "@/lib/api/reservationExtras";
 import { usePlaceHold } from "@/hooks/useReservations";
 import { createReservation, createUnpaidReservationRequest } from "@/lib/api/reservations";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicPaymentMethods } from "@/lib/api/publicSiteSettings";
 import { createPaymentIntent } from "@/lib/api/payments";
 import type { PaymentIntentResponse } from "@/lib/api/payments";
-import type { CreateReservationData, PriceBreakdown as ApiPriceBreakdown } from "@/lib/api/types";
+import type { CreateReservationData, ReservationQuote, SelectedBookingExtra } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
 
 type PaymentMethodId = "credit_card" | "debit_card" | "unpaid";
@@ -58,13 +59,19 @@ export default function BookingStep4Page() {
   const locale = params.locale as string;
   const t = useTranslations("booking");
   const booking = useBookingState();
+  const { updateExtras } = useBookingActions();
   const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
   const { placeHold } = usePlaceHold();
   const [appliedCampaign, setAppliedCampaign] = useState<{ code: string } | null>(null);
-  const [campaignPriceBreakdown, setCampaignPriceBreakdown] = useState<ApiPriceBreakdown | null>(null);
   const [campaignInput, setCampaignInput] = useState("");
   const [paymentMethodsAvailability, setPaymentMethodsAvailability] = useState(noPaymentMethods);
+  const [quote, setQuote] = useState<ReservationQuote | null>(null);
+  const [isQuoteLoading, setIsQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [requiresQuoteConfirmation, setRequiresQuoteConfirmation] = useState(false);
   const submitModeRef = useRef<PaymentMethodId>("credit_card");
+  const sessionIdRef = useRef<string | null>(null);
+  const lastAutomaticQuoteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,13 +92,6 @@ export default function BookingStep4Page() {
       isMounted = false;
     };
   }, []);
-
-  const extraOptions = [
-    { id: "child_seat", name: t("extras.childSeat"), price: 10, priceType: "per_day" as const },
-    { id: "additional_driver", name: t("extras.additionalDriver"), price: 15, priceType: "per_rental" as const },
-    { id: "gps", name: t("extras.gps"), price: 8, priceType: "per_day" as const },
-    { id: "wifi", name: t("extras.wifi"), price: 12, priceType: "per_day" as const },
-  ];
 
   const step4Schema = z.object({
     paymentMethod: z.enum(["credit_card", "debit_card", "unpaid"]).optional(),
@@ -182,7 +182,6 @@ export default function BookingStep4Page() {
 
   const pickupDate = booking.dates?.pickupDate ?? searchParams.get("pickupDate") ?? "";
   const returnDate = booking.dates?.returnDate ?? searchParams.get("returnDate") ?? "";
-  const extrasParam = searchParams.get("extras") || "";
   const rentalDays = Math.max(
     1,
     pickupDate && returnDate
@@ -195,9 +194,72 @@ export default function BookingStep4Page() {
   const pickupOfficeId = booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "";
   const returnOfficeId = booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "";
   const vehicle = booking.vehicle;
-  const dailyPriceParam = Number(searchParams.get("dailyPrice") ?? 0);
-  const dailyRate = vehicle?.dailyPrice ?? (Number.isFinite(dailyPriceParam) ? dailyPriceParam : 0);
   const vehicleGroupName = vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : searchParams.get("vehicleName") ?? selectedVehicleGroupId;
+
+  const selectedExtras = booking.selectedExtras ?? [];
+  const getSessionId = () => {
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+    return sessionIdRef.current;
+  };
+  const driverAge = booking.driver?.dateOfBirth
+    ? Math.max(0, Math.floor((Date.now() - new Date(booking.driver.dateOfBirth).getTime()) / 31_556_952_000))
+    : undefined;
+  const quoteExpired = !quote || new Date(quote.expiresAtUtc).getTime() <= Date.now();
+
+  const refreshQuote = useCallback(async (
+    campaignCode?: string,
+    selections: SelectedBookingExtra[] = selectedExtras
+  ) => {
+    if (!selectedVehicleGroupId || !pickupOfficeId || !returnOfficeId || !pickupDate || !returnDate) {
+      setQuote(null);
+      setQuoteError(t("missingBookingDetailsStep"));
+      return null;
+    }
+
+    setIsQuoteLoading(true);
+    setQuoteError(null);
+    try {
+      const nextQuote = await createReservationQuote({
+        vehicleGroupId: selectedVehicleGroupId,
+        pickupOfficeId,
+        returnOfficeId,
+        pickupDateTimeUtc: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
+        returnDateTimeUtc: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
+        campaignCode,
+        driverAge,
+        fullCoverageWaiver: false,
+        locale,
+        selectedExtras: selections.map(({ optionId, quantity, optionVersion }) => ({ optionId, quantity, optionVersion })),
+      }, getSessionId());
+      setQuote(nextQuote);
+      return nextQuote;
+    } catch (error) {
+      setQuote(null);
+      setQuoteError(error instanceof Error ? error.message : t("failedToRefreshQuote"));
+      return null;
+    } finally {
+      setIsQuoteLoading(false);
+    }
+  }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, t]);
+
+  const automaticQuoteKey = [
+    selectedVehicleGroupId,
+    pickupOfficeId,
+    returnOfficeId,
+    pickupDate,
+    returnDate,
+    locale,
+    booking.campaignCode ?? "",
+    selectedExtras.map((extra) => `${extra.optionId}:${extra.optionVersion}:${extra.quantity}`).join(","),
+  ].join("|");
+
+  useEffect(() => {
+    if (lastAutomaticQuoteKeyRef.current === automaticQuoteKey) return;
+    lastAutomaticQuoteKeyRef.current = automaticQuoteKey;
+    void refreshQuote(booking.campaignCode ?? undefined);
+  }, [automaticQuoteKey, booking.campaignCode, refreshQuote]);
 
   const applyCampaign = async () => {
     const normalizedCode = campaignInput.trim().toUpperCase();
@@ -220,7 +282,6 @@ export default function BookingStep4Page() {
 
     if (!validation) {
       setAppliedCampaign(null);
-      setCampaignPriceBreakdown(null);
       setValue("campaignCode", "");
       toast.error(t("failedToValidateCampaign"));
       return;
@@ -228,50 +289,51 @@ export default function BookingStep4Page() {
 
     if (!validation.valid) {
       setAppliedCampaign(null);
-      setCampaignPriceBreakdown(null);
       setValue("campaignCode", "");
       toast.error(t("invalidCampaign"));
       return;
     }
 
-    const selectedExtraIds = extrasParam ? extrasParam.split(",").filter(Boolean) : [];
-    const priceBreakdown = await getPriceBreakdown({
-      vehicle_group_id: selectedVehicleGroupId,
-      pickup_office_id: pickupOfficeId,
-      return_office_id: returnOfficeId,
-      pickup_datetime: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
-      return_datetime: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
-      campaign_code: normalizedCode,
-      extra_driver_count: selectedExtraIds.filter((id) => id.trim() === "additional_driver").length,
-      child_seat_count: selectedExtraIds.filter((id) => id.trim() === "child_seat").length,
-      full_coverage_waiver: false,
-    });
-
-    setCampaignPriceBreakdown(priceBreakdown);
-    setAppliedCampaign({ code: normalizedCode });
-    setValue("campaignCode", normalizedCode);
+    const nextQuote = await refreshQuote(normalizedCode);
+    if (nextQuote) {
+      setAppliedCampaign({ code: normalizedCode });
+      setValue("campaignCode", normalizedCode);
+    }
   };
 
   const onSubmit = async (data: Step4FormData) => {
-    if (!booking.customer || !booking.driver) {
+    const customer = booking.customer;
+    const driver = booking.driver;
+    if (!customer || !driver) {
       toast.error(t("missingBookingDetailsStep"));
       return;
     }
 
-    const selectedExtraIds = extrasParam ? extrasParam.split(",").filter(Boolean) : [];
+    if (requiresQuoteConfirmation) {
+      toast.error(t("quoteConfirmationRequired"));
+      return;
+    }
 
-    const reservationData: CreateReservationData = {
+    if (quoteExpired) {
+      await refreshQuote(appliedCampaign?.code);
+      toast.error(t("quoteExpired"));
+      return;
+    }
+
+    const reservationData = (activeQuote: ReservationQuote): CreateReservationData => ({
       vehicleGroupId: booking.vehicle?.vehicleGroupId ?? vehicleParam,
       pickupOfficeId,
       returnOfficeId,
       pickupDateTimeUtc: `${booking.dates?.pickupDate ?? pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
       returnDateTimeUtc: `${booking.dates?.returnDate ?? returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
-      customer: booking.customer,
-      driver: booking.driver,
-      extraDriverCount: selectedExtraIds.filter((id) => id.trim() === "additional_driver").length,
-      childSeatCount: selectedExtraIds.filter((id) => id.trim() === "child_seat").length,
-      campaignCode: appliedCampaign?.code,
-    };
+      customer,
+      driver,
+      campaignCode: activeQuote.appliedCampaignCode ?? undefined,
+      driverAge,
+      fullCoverageWaiver: false,
+      quoteId: activeQuote.quoteId,
+      locale,
+    });
 
     try {
       const submittedMethod = data.paymentMethod;
@@ -283,17 +345,63 @@ export default function BookingStep4Page() {
         return;
       }
 
+      const requestOptions = { sessionId: getSessionId(), idempotencyKey: crypto.randomUUID() };
+      const createForQuote = (activeQuote: ReservationQuote) => selectedMethod === "unpaid"
+        ? createUnpaidReservationRequest(reservationData(activeQuote), requestOptions)
+        : createReservation(reservationData(activeQuote), requestOptions);
+
+      let reservation;
+      try {
+        reservation = await createForQuote(quote!);
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.statusCode !== 409) {
+          throw error;
+        }
+
+        const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale);
+        const optionsById = new Map(catalog.map((option) => [option.id, option]));
+        const refreshedSelections = selectedExtras.flatMap((selection) => {
+          const option = optionsById.get(selection.optionId);
+          return option ? [{
+            optionId: option.id,
+            optionVersion: option.version,
+            quantity: Math.min(selection.quantity, option.maxQuantity),
+            code: option.code,
+            name: option.name,
+            description: option.description,
+            unitPrice: option.unitPrice,
+            pricingMode: option.pricingMode,
+          }] : [];
+        });
+        updateExtras(refreshedSelections);
+        const refreshedQuote = await refreshQuote(appliedCampaign?.code, refreshedSelections);
+        if (!refreshedQuote) {
+          setRequiresQuoteConfirmation(true);
+          return;
+        }
+
+        try {
+          reservation = await createForQuote(refreshedQuote);
+        } catch (retryError) {
+          if (retryError instanceof ApiError && retryError.statusCode === 409) {
+            setRequiresQuoteConfirmation(true);
+            setQuoteError(t("quoteConfirmationRequired"));
+            return;
+          }
+          throw retryError;
+        }
+      }
+
       if (selectedMethod === "unpaid") {
-        const reservation = await createUnpaidReservationRequest(reservationData);
         const queryParams = new URLSearchParams(searchParams.toString());
+        queryParams.delete("extras");
         queryParams.set("code", reservation.publicCode);
         queryParams.set("request", "unpaid");
         router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
         return;
       }
 
-      const reservation = await createReservation(reservationData);
-      const holdResult = await placeHold(reservation.id, { durationMinutes: 15 });
+      const holdResult = await placeHold(reservation.id, { durationMinutes: 15 }, getSessionId());
 
       if (!holdResult) {
         toast.error(t("failedToHoldReservation"));
@@ -325,6 +433,7 @@ export default function BookingStep4Page() {
       }
 
       const queryParams = new URLSearchParams(searchParams.toString());
+      queryParams.delete("extras");
       queryParams.set("code", reservation.publicCode);
       router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
     } catch (error) {
@@ -332,17 +441,6 @@ export default function BookingStep4Page() {
       toast.error(message);
     }
   };
-
-  const selectedExtras = extrasParam
-    ? extrasParam.split(",").map((id) => {
-        const extra = extraOptions.find((e) => e.id === id.trim());
-        if (!extra) return null;
-        return {
-          name: extra.name,
-          price: extra.priceType === "per_day" ? extra.price * rentalDays : extra.price,
-        };
-      }).filter((e): e is { name: string; price: number } => e !== null)
-    : [];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -354,6 +452,27 @@ export default function BookingStep4Page() {
           {t("step4.title")}
         </h1>
         <p className="text-slate-600">{t("step4.subtitle")}</p>
+        {isQuoteLoading && <p className="mt-3 text-sm text-sky-800" role="status">{t("loadingQuote")}</p>}
+        {quote && !quoteExpired && (
+          <p className="mt-3 text-sm text-sky-800" role="status">
+            {t("quoteExpiresAt", { date: new Date(quote.expiresAtUtc).toLocaleTimeString(locale) })}
+          </p>
+        )}
+        {quoteError && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
+            <p className="text-sm text-red-800">{quoteError}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                const nextQuote = await refreshQuote(appliedCampaign?.code);
+                if (nextQuote) setRequiresQuoteConfirmation(false);
+              }}
+              className="mt-3 rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-100"
+            >
+              {t("refreshQuote")}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -433,7 +552,7 @@ export default function BookingStep4Page() {
                     <div
                       className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
-                        selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"
+                        selectedPaymentMethod === method.id ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-700"
                       )}
                     >
                       {method.icon}
@@ -584,21 +703,27 @@ export default function BookingStep4Page() {
           </form>
         </div>
 
-        <div className="lg:col-span-1">
-          <div className="sticky top-24">
-            <PriceBreakdown
-              dailyRate={campaignPriceBreakdown?.dailyRate ?? dailyRate}
-              days={campaignPriceBreakdown?.rentalDays ?? rentalDays}
-              vehicleGroup={vehicleGroupName}
-              extras={selectedExtras}
-              campaignDiscount={booking.campaignDiscount ?? 0}
-              campaignDiscountAmount={campaignPriceBreakdown?.campaignDiscount ?? campaignPriceBreakdown?.discountAmount}
-              baseAmount={campaignPriceBreakdown?.baseTotal}
-              campaignCode={appliedCampaign?.code}
-              currency={campaignPriceBreakdown?.currency ?? "TRY"}
-            />
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              {quote ? (
+                <PriceBreakdown
+                  dailyRate={quote.dailyRate}
+                  days={quote.rentalDays}
+                  vehicleGroup={vehicleGroupName}
+                  extras={quote.extraItems.map((item) => ({ name: item.name, price: item.total }))}
+                  campaignDiscountAmount={quote.campaignDiscount}
+                  baseAmount={quote.baseTotal}
+                  totalAmount={quote.finalTotal}
+                  campaignCode={quote.appliedCampaignCode ?? undefined}
+                  currency={quote.currency}
+                />
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700">
+                  {isQuoteLoading ? t("loadingQuote") : t("quoteUnavailable")}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
       </div>
     </div>
   );
