@@ -4,7 +4,7 @@
 **Scope:** Implementation sequence for admin-managed reservation extra options
 **Decision source:** [16_Reservation_Extra_Options_Plan.md](16_Reservation_Extra_Options_Plan.md)
 **Verification gate:** Automated test suite plus Docker Desktop browser validation
-**Implementation status:** In progress; Phases 1-3 completed and Phase 4 is next
+**Implementation status:** In progress; Phases 1-4 completed and Phase 5 is next
 
 ## 1. Objective
 
@@ -364,6 +364,20 @@ Activation remains a server decision. The frontend mirrors validation for immedi
 - Stale-version recovery.
 - Accessible names for every icon-only control.
 - Focused Vitest, TypeScript, and lint pass.
+
+### 6.5 Phase 4 Completion Evidence - 2026-07-11
+
+- Added explicit admin reservation-extra contracts and API functions for filtered list, create, update, status, delete/archive, and restore operations. Admin responses are unwrapped consistently, delete sends the server version as a query value, and restore returns the server DTO used for subsequent UI state.
+- Added an SWR hook with a stable primitive key containing search, status, vehicle group, archived inclusion, page, and page size. Mutations delegate to the API without optimistic content writes.
+- Added `/dashboard/settings/reservation-extras` to both the settings tab strip and the admin sidebar while preserving the existing narrow-viewport horizontal overflow behavior.
+- Added the admin catalog page with search, status and vehicle-group filters; loading, error, empty, populated, and paginated states; accessible row actions; explicit activation/deactivation; confirmed server-decided delete/archive; restore-to-draft; and explicit stale-version reload handling.
+- Added a localized editor with TR/EN/DE/RU/AR tabs, per-locale completion badges, bounded price/quantity/order inputs, pricing mode, icon allowlist, vehicle-group multi-select, readiness summary, draft save, activation, authoritative server errors, and `409` recovery. The editor closes only after the returned DTO is available and the list revalidation starts.
+- Focused Phase 4 validation passed: 4 Vitest files and 15 tests covering API unwrap/error behavior, stable hook keys and mutation delegation, page states and lifecycle actions, five-locale readiness, draft/create/edit behavior, partial activation failure recovery, accessible controls, and stale-version recovery.
+- Full frontend validation passed from a clean temporary dependency workspace created from the exact repository source and `pnpm-lock.yaml`: TypeScript, ESLint with 0 errors, 59 Vitest files with 269 tests, and the Next.js production build. The build emitted `/dashboard/settings/reservation-extras`.
+- The full lint run retained one pre-existing out-of-scope warning in `components/public/SearchForm.test.tsx` for an unused ESLint disable directive. No Phase 4 file produced a lint warning.
+- The repository `frontend/node_modules` tree was already incomplete and repeated in-place pnpm repair attempts did not materialize binaries. The clean validation workspace installed 910 locked packages successfully; SHA-256 comparison confirmed all 12 Phase 4 source/test/navigation files in that workspace matched the repository files exactly.
+- `git diff --check` passed. No dependency, secret, backend authorization rule, public route, or Phase 5 booking-flow file changed in this phase.
+- CI, Docker browser validation, the plan-required Aikido full-content scan, and the combined public booking workflow remain open. Phase 5 must start from the server-owned public catalog and quote contracts rather than duplicating pricing logic in the browser.
 
 ## 7. Phase 5 - Public Booking Flow
 
