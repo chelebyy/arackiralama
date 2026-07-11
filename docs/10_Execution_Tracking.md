@@ -16,7 +16,7 @@
 
 ## Fresh Feature Update — 10 Temmuz 2026
 
-**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented; the rebuilt Docker stack and core Chromium booking/admin smoke now pass. The full section 6.6 browser matrix, CI, and Aikido release-security gates remain open.
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented and all eight local section 6.6 Docker/Chromium rows pass with durable evidence. CI, Aikido, deployment/rollback, and the production legacy-adapter observation gates remain open.
 
 - Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
 - Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
@@ -34,8 +34,8 @@
 - A fresh `docker compose -f backend/docker-compose.yml up -d --build` passed on 11 July 2026; PostgreSQL/Redis were healthy, API `/health` and `/tr` returned 200, and `/` redirected 307 to `/tr`. Chromium booking/payment smoke passed 6/6 after aligning stale E2E selectors and seed-office assumptions. A focused Docker browser proof also passed 6/6: admin catalog load, selected child-seat line in the server quote, no generated `extras` URL parameter, quote-expiry status, terms validation, unpaid reservation creation/confirmation, and the new reservation's non-legacy no-extra admin detail.
 - The browser pass exposed and fixed a real backend blocker: date-only driver snapshot values arrived as `DateTimeKind.Unspecified` and caused PostgreSQL `timestamptz` writes to fail with 500. Driver birth/license dates are now normalized to UTC; the focused backend regression test passed 1/1 and the rebuilt API completed the real unpaid-request flow. The test-created local holds were cancelled after evidence collection.
 - Quote expiry/cross-session/replay is now closed with a real Docker Chromium + Redis + PostgreSQL gate: expired and mismatched-session submissions returned `409` with zero rows, replay returned the original reservation ID, and the unique `quote_id` count remained one. Current-source browser validation passed as the existing scenarios 9/9 plus focused quote lifecycle 1/1 in separate clean API rate-limit windows; focused .NET replay integration passed 1/1.
-- The remaining section 6.6 workflow is extra-specific responsive layout, console/network capture, and durable screenshots. Admin readiness, five-locale group visibility, the Step 3/4 matrix, bounded catalog-change recovery, immutable history, legacy rendering, and quote lifecycle are proven.
-- The current comprehensive implementation handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; it records Phase 1-5 code completion, local acceptance at 7/8 rows, the exact remaining browser evidence row, and the separate CI/Aikido/deployment/observation gates.
+- Section 6.6 is complete locally at 8/8 rows. The final focused Chromium pass captured and visually inspected Step 3/4 at desktop, tablet, and mobile widths, asserted no horizontal overflow or inaccessible icon action, and stored non-sensitive console/network evidence under `docs/test-evidence/2026-07-11-reservation-extra-options-responsive/`.
+- The current comprehensive implementation handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; it remains the historical continuation entry point, while the canonical docs now record local acceptance at 8/8 and keep CI/Aikido/deployment/observation gates separate.
 - Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
 - Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.
 

@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { type Page } from "@playwright/test";
 import { ADMIN_USER, test, expect } from "../fixtures/test-data";
 import { AdminLoginPage } from "../pages/AdminLoginPage";
@@ -626,6 +628,161 @@ test.describe("Reservation extra options acceptance", () => {
 
     await expect(page).toHaveURL(/\/tr\/booking\/step4\?/);
     expect(new URL(page.url()).searchParams.has("extras")).toBe(false);
+  });
+
+  test("public extra-option layouts stay usable across desktop, tablet, and mobile", async ({
+    page
+  }) => {
+    const evidenceDir = resolve(
+      process.cwd(),
+      "../docs/test-evidence/2026-07-11-reservation-extra-options-responsive"
+    );
+    mkdirSync(evidenceDir, { recursive: true });
+
+    const consoleErrors: string[] = [];
+    const apiEvidence: Array<{
+      method: string;
+      path: string;
+      status: number;
+      contentType: string | null;
+      cacheControl: string | null;
+    }> = [];
+
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("response", (response) => {
+      const url = new URL(response.url());
+      if (!url.pathname.startsWith("/api/")) return;
+      apiEvidence.push({
+        method: response.request().method(),
+        path: url.pathname,
+        status: response.status(),
+        contentType: response.headers()["content-type"] ?? null,
+        cacheControl: response.headers()["cache-control"] ?? null
+      });
+    });
+
+    await page.route("**/api/v1/reservation-extra-options?*", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { "Cache-Control": "no-store" },
+        json: { items: [step4CatalogOption] }
+      })
+    );
+    await page.route("**/api/v1/public-site-settings", (route) =>
+      route.fulfill({
+        json: {
+          onlinePaymentEnabled: true,
+          paymentMethods: {
+            creditCardEnabled: true,
+            debitCardEnabled: true,
+            unpaidRequestEnabled: true,
+            paypalEnabled: false,
+            anyEnabled: true
+          }
+        }
+      })
+    );
+    await page.route("**/api/v1/pricing/quote", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { "Cache-Control": "no-store" },
+        json: step4Quote("quote-responsive-evidence")
+      })
+    );
+
+    const viewports = [
+      { name: "desktop", width: 1440, height: 1000 },
+      { name: "tablet", width: 834, height: 1112 },
+      { name: "mobile", width: 390, height: 844 }
+    ] as const;
+
+    for (const viewport of viewports) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(
+        "/tr/booking/step3?pickup=ala&return=gzp&pickupDate=2027-08-10&pickupTime=10%3A00&returnDate=2027-08-13&returnTime=09%3A00&vehicle=responsive-evidence-group&extras=child_seat"
+      );
+      await expect(page.getByText(step4CatalogOption.name, { exact: true })).toBeVisible();
+      await expect(page.getByText("₺75.00", { exact: true })).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
+      ).toBe(true);
+      await page.screenshot({
+        path: resolve(evidenceDir, `step3-${viewport.name}.png`),
+        fullPage: true
+      });
+
+      await page.locator("#firstName").fill("Responsive");
+      await page.locator("#lastName").fill("Evidence");
+      await page.locator("#email").fill("responsive-evidence@example.test");
+      await page.locator("#phone").fill("+905551234567");
+      await page.locator("#birthDate").fill("1990-05-10");
+      await page.locator("#driverLicense").fill("RESPONSIVE-12345");
+      await page.locator("#driverLicenseCountry").fill("TR");
+      await page.getByRole("button", { name: /ödemeye devam et/i }).click();
+
+      await expect(page).toHaveURL(/\/tr\/booking\/step4\?/);
+      await expect(page.getByText(step4CatalogOption.name, { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("status").filter({ hasText: /Fiyat teklifi .* geçerlidir/ })
+      ).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
+      ).toBe(true);
+      expect(
+        await page.locator("button:visible").evaluateAll(
+          (buttons) =>
+            buttons.filter((button) => {
+              const hasIcon = button.querySelector("svg") !== null;
+              const accessibleName =
+                button.getAttribute("aria-label") ??
+                button.getAttribute("title") ??
+                button.textContent?.trim();
+              return hasIcon && !accessibleName;
+            }).length
+        )
+      ).toBe(0);
+      await page.screenshot({
+        path: resolve(evidenceDir, `step4-${viewport.name}.png`),
+        fullPage: true
+      });
+    }
+
+    const knownLocalConsoleErrors = consoleErrors.filter(
+      (message) => message === "Google Analytics key not provided."
+    );
+    const unexpectedConsoleErrors = consoleErrors.filter(
+      (message) => message !== "Google Analytics key not provided."
+    );
+    expect(knownLocalConsoleErrors).toHaveLength(viewports.length);
+    expect(unexpectedConsoleErrors).toEqual([]);
+    expect(apiEvidence.length).toBeGreaterThanOrEqual(9);
+    expect(apiEvidence.every((entry) => entry.status < 400)).toBe(true);
+    expect(
+      apiEvidence
+        .filter((entry) =>
+          ["/api/v1/reservation-extra-options", "/api/v1/pricing/quote"].includes(entry.path)
+        )
+        .every((entry) => entry.cacheControl?.includes("no-store"))
+    ).toBe(true);
+
+    writeFileSync(
+      resolve(evidenceDir, "browser-evidence.json"),
+      `${JSON.stringify(
+        {
+          baseUrl: "http://localhost:3001",
+          viewports,
+          consoleErrors,
+          knownLocalConsoleErrors: ["Google Analytics key not provided."],
+          unexpectedConsoleErrors,
+          apiEvidence
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
   });
 
   test("public Step 4 refreshes the server quote and creates payment only after reservation and hold", async ({

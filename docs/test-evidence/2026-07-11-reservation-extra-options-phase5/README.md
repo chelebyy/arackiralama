@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-11
 **Target:** local Docker Compose stack (`backend/docker-compose.yml`)
-**Scope:** partial section 6.6 acceptance; unchecked scenarios remain open
+**Scope:** Phase 5 and first seven section 6.6 rows; the final responsive row is recorded separately
 
 ## Stack
 
@@ -57,8 +57,9 @@ The first real unpaid reservation write returned 500. API logs showed Npgsql rej
 
 ## Still Open
 
-- Desktop/tablet/mobile screenshots plus durable console/network capture.
 - CI and Aikido release-security gates.
+- Deployment/rollback rehearsal and the production legacy-adapter observation window.
+- Final responsive evidence: `../2026-07-11-reservation-extra-options-responsive/README.md`.
 
 ## Quote Lifecycle Continuation
 
