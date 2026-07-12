@@ -1,0 +1,744 @@
+# Instincts generated from https://github.com/chelebyy/arackiralama
+# Generated: 2026-07-12T13:46:02.405Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: arackiralama-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix, test, feat, docs
+
+## Evidence
+
+- 23 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat(reservations): add extra options persistence foundation, test(reservations): validate extra option authoring locales
+
+---
+id: arackiralama-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Commit Length
+
+## Action
+
+Write moderate-length commit messages (~50 characters)
+
+## Evidence
+
+- Average commit message length: 50 chars
+- Based on 23 commits
+
+---
+id: arackiralama-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Naming Files
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: PascalCase
+
+---
+id: arackiralama-import-alias
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Import Alias
+
+## Action
+
+Use path aliases (@/, ~/) instead of relative imports
+
+## Evidence
+
+- Import analysis shows alias pattern
+- Example: import { x } from '@/lib/x'
+
+---
+id: arackiralama-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: arackiralama-test-framework
+trigger: "when writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Test Framework
+
+## Action
+
+Use vitest as the test framework
+
+## Evidence
+
+- Test framework detected: vitest
+- File pattern: *Tests.cs
+
+---
+id: arackiralama-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Test Naming
+
+## Action
+
+Name test files using the pattern: *Tests.cs
+
+## Evidence
+
+- File pattern: *Tests.cs
+- Consistent across test files
+
+---
+id: arackiralama-test-mocking
+trigger: "when mocking dependencies in tests"
+confidence: 0.75
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Test Mocking
+
+## Action
+
+Use vi.mock for mocking
+
+## Evidence
+
+- Mocking pattern detected: vi.mock
+- Consistent across test files
+
+---
+id: arackiralama-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Test Types
+
+## Action
+
+Write unit, integration, e2e tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, integration, e2e
+- Coverage config: no
+
+---
+id: arackiralama-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~8x per month
+- Files: frontend/app/(admin)/dashboard/(auth)/settings/*, frontend/app/(admin)/dashboard/(auth)/settings/reservation-extras/*, frontend/components/admin/dialogs/*
+
+---
+id: arackiralama-workflow-add-or-modify-database-table-with-migrations
+trigger: "when doing add or modify database table with migrations"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Add Or Modify Database Table With Migrations
+
+## Action
+
+Follow the add-or-modify-database-table-with-migrations workflow:
+1. Create or update entity classes in backend/src/RentACar.Core/Entities/
+2. Update ORM configuration files in backend/src/RentACar.Infrastructure/Data/Configurations/
+3. Add or update migration files in backend/src/RentACar.Infrastructure/Data/Migrations/
+4. Update DbContext in backend/src/RentACar.Infrastructure/Data/RentACarDbContext.cs
+5. Update interfaces in backend/src/RentACar.Core/Interfaces/
+6. Add or update integration tests in backend/tests/RentACar.ApiIntegrationTests/Database/
+7. Document the change in docs/
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: backend/src/RentACar.Core/Entities/*.cs, backend/src/RentACar.Infrastructure/Data/Configurations/*.cs, backend/src/RentACar.Infrastructure/Data/Migrations/*.cs
+
+---
+id: arackiralama-workflow-add-or-update-api-endpoint-with-tests
+trigger: "when doing add or update api endpoint with tests"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Add Or Update Api Endpoint With Tests
+
+## Action
+
+Follow the add-or-update-api-endpoint-with-tests workflow:
+1. Create or update DTOs in backend/src/RentACar.API/Contracts/
+2. Implement or modify controllers in backend/src/RentACar.API/Controllers/
+3. Implement or update services in backend/src/RentACar.API/Services/
+4. Register services in backend/src/RentACar.API/Configuration/ServiceCollectionExtensions.cs
+5. Add or update integration and unit tests in backend/tests/
+6. Document the API in docs/
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: backend/src/RentACar.API/Contracts/**/*.cs, backend/src/RentACar.API/Controllers/**/*.cs, backend/src/RentACar.API/Services/**/*.cs
+
+---
+id: arackiralama-workflow-feature-development-frontend-implementation-tests
+trigger: "when doing feature development frontend implementation tests"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Feature Development Frontend Implementation Tests
+
+## Action
+
+Follow the feature-development-frontend-implementation-tests workflow:
+1. Add or update page components in frontend/app/
+2. Add or update supporting components in frontend/components/
+3. Implement or update hooks in frontend/hooks/
+4. Update or create API client files in frontend/lib/api/
+5. Add or update tests for components, hooks, and API clients
+6. Update i18n files if needed
+7. Document the feature in docs/
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: frontend/app/**/*.tsx, frontend/components/**/*.tsx, frontend/hooks/**/*.ts
+
+---
+id: arackiralama-workflow-test-gate-closure-and-evidence-capture
+trigger: "when doing test gate closure and evidence capture"
+confidence: 0.75
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Test Gate Closure And Evidence Capture
+
+## Action
+
+Follow the test-gate-closure-and-evidence-capture workflow:
+1. Update relevant documentation and checklists in docs/
+2. Add or update test evidence files in docs/test-evidence/
+3. Add or update end-to-end tests in frontend/e2e/tests/
+4. Update related frontend/backend tests if needed
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~5x per month
+- Files: docs/13_Local_Docker_Browser_Test_Checklist.md, docs/16_Reservation_Extra_Options_Plan.md, docs/17_Reservation_Extra_Options_Implementation.md
+
+---
+id: arackiralama-workflow-documentation-update-for-feature-progress
+trigger: "when doing documentation update for feature progress"
+confidence: 0.8
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Documentation Update For Feature Progress
+
+## Action
+
+Follow the documentation-update-for-feature-progress workflow:
+1. Update architectural decision records in docs/02_ADR_ENTERPRISE_FULL.md
+2. Update TDD plans in docs/03_TDD_ENTERPRISE_FULL.md
+3. Update execution tracking in docs/10_Execution_Tracking.md
+4. Update feature-specific plans and implementation docs
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~6x per month
+- Files: docs/02_ADR_ENTERPRISE_FULL.md, docs/03_TDD_ENTERPRISE_FULL.md, docs/10_Execution_Tracking.md
+
+---
+id: arackiralama-workflow-bugfix-or-review-feedback-cycle
+trigger: "when doing bugfix or review feedback cycle"
+confidence: 0.75
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Bugfix Or Review Feedback Cycle
+
+## Action
+
+Follow the bugfix-or-review-feedback-cycle workflow:
+1. Update implementation files (backend or frontend) as needed
+2. Update or add relevant tests
+3. Update documentation if required
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~5x per month
+- Files: backend/src/**/*.cs, backend/tests/**/*.cs, frontend/app/**/*.tsx
+
+---
+id: arackiralama-coding-naming-files
+trigger: "When creating or renaming a file"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Naming Files
+
+## Action
+
+Use PascalCase for file names
+
+## Evidence
+
+- Pattern in namingConventions.files
+- Observed in backend/src/RentACar.Core/Entities/ReservationExtraOption.cs
+
+---
+id: arackiralama-coding-naming-functions
+trigger: "When defining a function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Naming Functions
+
+## Action
+
+Use camelCase for function names
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: arackiralama-coding-naming-classes
+trigger: "When defining a class"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Naming Classes
+
+## Action
+
+Use PascalCase for class names
+
+## Evidence
+
+- Pattern in namingConventions.classes
+- Seen in backend/src/RentACar.Core/Entities/ReservationExtraOption.cs
+
+---
+id: arackiralama-coding-naming-constants
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Naming Constants
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: arackiralama-coding-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Import Style
+
+## Action
+
+Use alias import style
+
+## Evidence
+
+- Pattern in importStyle
+
+---
+id: arackiralama-coding-export-style
+trigger: "When exporting modules"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Coding Export Style
+
+## Action
+
+Use mixed export style as appropriate
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: arackiralama-testing-file-pattern
+trigger: "When creating a test file for C# code"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Testing File Pattern
+
+## Action
+
+Name the file with *Tests.cs suffix
+
+## Evidence
+
+- Pattern in testing.filePattern
+- Seen in backend/tests/RentACar.ApiIntegrationTests/Database/ReservationExtraOptionTests.cs
+
+---
+id: arackiralama-testing-framework
+trigger: "When writing tests for frontend TypeScript code"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Testing Framework
+
+## Action
+
+Use vitest as the testing framework
+
+## Evidence
+
+- Pattern in testing.framework
+- frontend/lib/api/**/*.test.ts
+
+---
+id: arackiralama-testing-mocking
+trigger: "When mocking dependencies in frontend tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Testing Mocking
+
+## Action
+
+Use vi.mock for mocking
+
+## Evidence
+
+- Pattern in testing.mockingStyle
+- frontend/lib/api/**/*.test.ts
+
+---
+id: arackiralama-testing-types
+trigger: "When writing tests"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Testing Types
+
+## Action
+
+Include unit, integration, and e2e tests as appropriate
+
+## Evidence
+
+- Pattern in testing.testTypes
+- frontend/e2e/tests/*.spec.ts
+- backend/tests/RentACar.ApiIntegrationTests/Database/*.cs
+
+---
+id: arackiralama-git-commit-format
+trigger: "When writing a commit message"
+confidence: 0.95
+domain: git
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Git Commit Format
+
+## Action
+
+Use conventional commit format: <type>(<scope>): <description>
+
+## Evidence
+
+- Pattern in commits.type and commits.prefixes
+- Seen in 'feat(reservations): add extra options persistence foundation'
+
+---
+id: arackiralama-git-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Git Commit Length
+
+## Action
+
+Keep commit message length around 50 characters
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: arackiralama-git-commit-prefixes
+trigger: "When categorizing a commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Git Commit Prefixes
+
+## Action
+
+Use one of: fix, feat, test, docs as the commit type prefix
+
+## Evidence
+
+- Pattern in commits.prefixes
+- Seen in commit examples
+
+---
+id: arackiralama-workflow-add-table
+trigger: "When introducing a new database table or making schema changes"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Add Table
+
+## Action
+
+Follow the add-or-modify-database-table-with-migrations workflow
+
+## Evidence
+
+- Workflow: add-or-modify-database-table-with-migrations
+- Pattern in backend/src/RentACar.Core/Entities/*.cs
+
+---
+id: arackiralama-workflow-add-api-endpoint
+trigger: "When exposing new backend functionality via an API endpoint"
+confidence: 0.88
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Add Api Endpoint
+
+## Action
+
+Follow the add-or-update-api-endpoint-with-tests workflow
+
+## Evidence
+
+- Workflow: add-or-update-api-endpoint-with-tests
+- Pattern in backend/src/RentACar.API/Controllers/**/*.cs
+
+---
+id: arackiralama-workflow-frontend-feature
+trigger: "When adding or enhancing a frontend feature or flow"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Frontend Feature
+
+## Action
+
+Follow the feature-development-frontend-implementation-tests workflow
+
+## Evidence
+
+- Workflow: feature-development-frontend-implementation-tests
+- Pattern in frontend/app/**/*.tsx
+
+---
+id: arackiralama-workflow-close-test-gate
+trigger: "When formally closing a test/acceptance gate for a feature or milestone"
+confidence: 0.92
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Close Test Gate
+
+## Action
+
+Follow the test-gate-closure-and-evidence-capture workflow
+
+## Evidence
+
+- Workflow: test-gate-closure-and-evidence-capture
+- Pattern in docs/test-evidence/**/*
+
+---
+id: arackiralama-workflow-update-docs
+trigger: "When recording or updating the status, plan, or implementation details of a feature"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Update Docs
+
+## Action
+
+Follow the documentation-update-for-feature-progress workflow
+
+## Evidence
+
+- Workflow: documentation-update-for-feature-progress
+- Pattern in docs/02_ADR_ENTERPRISE_FULL.md
+
+---
+id: arackiralama-workflow-bugfix-cycle
+trigger: "When fixing bugs or addressing code review findings"
+confidence: 0.87
+domain: workflow
+source: repo-analysis
+source_repo: chelebyy/arackiralama
+---
+
+# Arackiralama Workflow Bugfix Cycle
+
+## Action
+
+Follow the bugfix-or-review-feedback-cycle workflow
+
+## Evidence
+
+- Workflow: bugfix-or-review-feedback-cycle
+- Pattern in fix(frontend): address React Doctor warnings
+
