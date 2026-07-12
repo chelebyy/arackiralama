@@ -62,6 +62,21 @@ public sealed class PricingQuoteControllerTests
         controller.Response.Headers.CacheControl.ToString().Should().Be("no-store");
     }
 
+    [Fact]
+    public async Task CreateQuote_StaleExtraReturnsConflictWithNoStoreHeader()
+    {
+        var request = ValidRequest();
+        var quoteService = new Mock<IReservationQuoteService>();
+        quoteService.Setup(service => service.CreateAsync(request, "session-123", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ReservationQuoteConflictException("stale extra"));
+        var controller = CreateController(quoteService.Object);
+
+        var result = await controller.CreateQuote(request, "session-123", CancellationToken.None);
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        controller.Response.Headers.CacheControl.ToString().Should().Be("no-store");
+    }
+
     private static PricingController CreateController(IReservationQuoteService quoteService)
     {
         var controller = new PricingController(Mock.Of<IPricingService>(), quoteService)

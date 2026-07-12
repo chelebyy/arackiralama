@@ -41,6 +41,8 @@ public static class ReservationExtraOptionsBackfillExtensions
                 ('44444444-4444-4444-4444-444444444443'::uuid),
                 ('44444444-4444-4444-4444-444444444444'::uuid)
             ) AS option_ids(option_id)
+            INNER JOIN reservation_extra_options option
+                ON option.id = option_ids.option_id
             CROSS JOIN vehicle_groups
             ON CONFLICT DO NOTHING;
 

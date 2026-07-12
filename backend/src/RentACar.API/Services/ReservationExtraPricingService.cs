@@ -50,7 +50,7 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
 
         if (options.Count != optionIds.Length)
         {
-            throw new ArgumentException("One or more reservation extra options do not exist.");
+            throw new ReservationQuoteConflictException("One or more reservation extra options no longer exist.");
         }
 
         var result = new List<ReservationQuotedExtraV1>(selections.Count);
@@ -174,19 +174,19 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
     {
         if (!option.IsActive || option.IsArchived)
         {
-            throw new ArgumentException($"Extra option {option.Code} is not active.");
+            throw new ReservationQuoteConflictException($"Extra option {option.Code} is not active.");
         }
         if (option.Version != selection.OptionVersion)
         {
-            throw new ArgumentException($"Extra option {option.Code} is stale.");
+            throw new ReservationQuoteConflictException($"Extra option {option.Code} is stale.");
         }
         if (selection.Quantity > option.MaxQuantity)
         {
-            throw new ArgumentException($"Extra option {option.Code} exceeds its maximum quantity.");
+            throw new ReservationQuoteConflictException($"Extra option {option.Code} exceeds its maximum quantity.");
         }
         if (option.VehicleGroups.All(group => group.VehicleGroupId != vehicleGroupId))
         {
-            throw new ArgumentException($"Extra option {option.Code} is not available for this vehicle group.");
+            throw new ReservationQuoteConflictException($"Extra option {option.Code} is not available for this vehicle group.");
         }
     }
 

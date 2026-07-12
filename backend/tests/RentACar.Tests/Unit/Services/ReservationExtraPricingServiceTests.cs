@@ -53,6 +53,26 @@ public sealed class ReservationExtraPricingServiceTests
         await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Duplicate*");
     }
 
+    [Fact]
+    public async Task CalculateAsync_RejectsMissingOptionAsQuoteConflict()
+    {
+        using var factory = new TestDbContextFactory();
+        await using var context = factory.CreateContext();
+        var service = new ReservationExtraPricingService(context);
+
+        var act = () => service.CalculateAsync(Guid.NewGuid(), "tr", 2,
+        [
+            new SelectedReservationExtraInput
+            {
+                OptionId = Guid.NewGuid(),
+                Quantity = 1,
+                OptionVersion = 1
+            }
+        ]);
+
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*no longer exist*");
+    }
+
     [Theory]
     [InlineData(false, false, 1, 1, 9, "not active")]
     [InlineData(true, true, 1, 1, 9, "not active")]
@@ -86,7 +106,7 @@ public sealed class ReservationExtraPricingServiceTests
             }
         ]);
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage($"*{message}*");
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage($"*{message}*");
     }
 
     [Fact]
@@ -101,7 +121,7 @@ public sealed class ReservationExtraPricingServiceTests
 
         var act = () => service.CalculateAsync(Guid.NewGuid(), "tr", 2, [Input(option, 1)]);
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*vehicle group*");
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*vehicle group*");
     }
 
     [Fact]

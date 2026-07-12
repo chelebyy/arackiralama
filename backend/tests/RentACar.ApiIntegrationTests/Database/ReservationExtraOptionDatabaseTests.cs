@@ -75,6 +75,32 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
     }
 
     [Fact]
+    public async Task LateInventoryBackfill_SkipsDeletedBuiltInOptions()
+    {
+        await WithDbContextAsync(async dbContext =>
+        {
+            await dbContext.ReservationExtraOptionVehicleGroups.ExecuteDeleteAsync();
+            var deletedOption = await dbContext.ReservationExtraOptions.SingleAsync(option => option.Code == "child_seat");
+            dbContext.ReservationExtraOptions.Remove(deletedOption);
+            await dbContext.SaveChangesAsync();
+            return true;
+        });
+
+        var act = () => Services.ApplyReservationExtraOptionsBackfillAsync();
+
+        await act.Should().NotThrowAsync();
+        var result = await WithDbContextAsync(async dbContext => new
+        {
+            OptionCount = await dbContext.ReservationExtraOptions.CountAsync(),
+            GroupCount = await dbContext.VehicleGroups.CountAsync(),
+            AssignmentCount = await dbContext.ReservationExtraOptionVehicleGroups.CountAsync(),
+            DeletedOptionExists = await dbContext.ReservationExtraOptions.AnyAsync(option => option.Code == "child_seat")
+        });
+        result.DeletedOptionExists.Should().BeFalse();
+        result.AssignmentCount.Should().Be(result.OptionCount * result.GroupCount);
+    }
+
+    [Fact]
     public async Task UsedOption_CannotBeHardDeleted()
     {
         var ids = await CreateReservationWithSelectedExtraAsync();

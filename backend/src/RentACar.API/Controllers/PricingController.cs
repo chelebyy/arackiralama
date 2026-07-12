@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using RentACar.API.Configuration;
+using RentACar.API.Contracts;
 using RentACar.API.Contracts.Pricing;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
 
 namespace RentACar.API.Controllers;
 
@@ -10,7 +12,8 @@ namespace RentACar.API.Controllers;
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
 public sealed class PricingController(
     IPricingService pricingService,
-    IReservationQuoteService? reservationQuoteService = null) : BaseApiController
+    IReservationQuoteService? reservationQuoteService = null,
+    IReservationExtraPricingService? reservationExtraPricingService = null) : BaseApiController
 {
     [HttpPost("quote")]
     public async Task<IActionResult> CreateQuote(
@@ -28,6 +31,10 @@ public sealed class PricingController(
         {
             var quote = await reservationQuoteService.CreateAsync(request, sessionId, cancellationToken);
             return OkResponse(quote);
+        }
+        catch (ReservationQuoteConflictException exception)
+        {
+            return Conflict(ApiResponse<object>.Fail(exception.Message));
         }
         catch (ArgumentException exception)
         {
@@ -105,6 +112,8 @@ public sealed class PricingController(
             }
         }
 
+        var useCatalogLegacyPricing = reservationExtraPricingService is not null &&
+            (extraDriverCount > 0 || childSeatCount > 0);
         var breakdown = await pricingService.CalculateBreakdownAsync(
             vehicleGroupId,
             pickupOfficeId,
@@ -112,8 +121,8 @@ public sealed class PricingController(
             pickupDateTimeUtc,
             returnDateTimeUtc,
             campaignCode,
-            extraDriverCount,
-            childSeatCount,
+            useCatalogLegacyPricing ? 0 : extraDriverCount,
+            useCatalogLegacyPricing ? 0 : childSeatCount,
             driverAge,
             fullCoverageWaiver,
             cancellationToken);
@@ -121,6 +130,33 @@ public sealed class PricingController(
         if (breakdown is null)
         {
             return BadRequestResponse("Secilen tarih araliginda fiyatlandirma kurali bulunamadi.");
+        }
+
+        if (useCatalogLegacyPricing)
+        {
+            try
+            {
+                var quotedExtras = await reservationExtraPricingService!.CalculateLegacyAsync(
+                    vehicleGroupId,
+                    "tr",
+                    breakdown.RentalDays,
+                    extraDriverCount,
+                    childSeatCount,
+                    cancellationToken);
+                breakdown = ApplyLegacyCatalogExtras(breakdown, quotedExtras);
+            }
+            catch (ReservationQuoteConflictException exception)
+            {
+                return Conflict(ApiResponse<object>.Fail(exception.Message));
+            }
+            catch (ArgumentException exception)
+            {
+                return BadRequestResponse(exception.Message);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return BadRequestResponse(exception.Message);
+            }
         }
 
         return OkResponse(breakdown);
@@ -162,6 +198,67 @@ public sealed class PricingController(
         var returnDate = DateOnly.FromDateTime(returnDateTimeUtc);
         return Math.Max(1, returnDate.DayNumber - pickupDate.DayNumber);
     }
+
+    private static PriceBreakdownDto ApplyLegacyCatalogExtras(
+        PriceBreakdownDto baseBreakdown,
+        IReadOnlyList<ReservationQuotedExtraV1> quotedExtras)
+    {
+        var extraDriverFee = Round(quotedExtras
+            .Where(item => item.Code == "additional_driver")
+            .Sum(item => item.Total));
+        var childSeatFee = Round(quotedExtras
+            .Where(item => item.Code == "child_seat")
+            .Sum(item => item.Total));
+        var catalogExtraTotal = Round(quotedExtras.Sum(item => item.Total));
+        var subtotalBeforeDiscount = Round(
+            baseBreakdown.FinalTotal + baseBreakdown.CampaignDiscount + catalogExtraTotal);
+        var campaignDiscount = CalculateCampaignDiscount(baseBreakdown, subtotalBeforeDiscount);
+
+        return baseBreakdown with
+        {
+            ExtraDriverFee = extraDriverFee,
+            ChildSeatFee = childSeatFee,
+            ExtrasTotal = Round(baseBreakdown.ExtrasTotal + catalogExtraTotal),
+            CampaignDiscount = campaignDiscount,
+            FinalTotal = Round(subtotalBeforeDiscount - campaignDiscount),
+            ExtraItems = quotedExtras.Select(ToLineItem).ToArray()
+        };
+    }
+
+    private static decimal CalculateCampaignDiscount(
+        PriceBreakdownDto pricing,
+        decimal subtotalBeforeDiscount)
+    {
+        if (string.IsNullOrWhiteSpace(pricing.AppliedCampaignCode))
+        {
+            return 0m;
+        }
+
+        var discount = pricing.AppliedCampaignDiscountType?.Trim().ToLowerInvariant() switch
+        {
+            "percentage" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                subtotalBeforeDiscount * Math.Min(pricing.AppliedCampaignDiscountValue.Value, 100m) / 100m,
+            "fixed" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                pricing.AppliedCampaignDiscountValue.Value,
+            _ => pricing.CampaignDiscount
+        };
+
+        return Math.Clamp(Round(discount), 0m, subtotalBeforeDiscount);
+    }
+
+    private static ReservationExtraLineItemDto ToLineItem(ReservationQuotedExtraV1 item) => new(
+        item.ExtraOptionId,
+        item.OptionVersion,
+        item.Code,
+        item.Name,
+        item.Description,
+        item.UnitPrice,
+        item.PricingMode,
+        item.Quantity,
+        item.RentalDays,
+        item.Total);
+
+    private static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 }
 
 public sealed record ValidateCampaignRequest(
