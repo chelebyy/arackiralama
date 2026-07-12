@@ -128,7 +128,7 @@ function normalizeReservation(reservation: AdminReservation): AdminReservation {
           rawBreakdown.childSeatFee,
           rawBreakdown.youngDriverFee,
           rawBreakdown.fullCoverageWaiverFee
-        ].reduce((total, fee) => total + (fee ?? 0), 0);
+        ].reduce<number>((total, fee) => total + (fee ?? 0), 0);
         const extrasTotal = rawBreakdown.extrasTotal ?? legacyFeeTotal;
         const baseTotal = rawBreakdown.baseTotal ?? raw.totalAmount ?? 0;
 
