@@ -1,23 +1,36 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Services;
+using RentACar.Infrastructure.Services.Payments;
 
 namespace RentACar.API.Controllers;
 
 [Route("api/admin/v1/payments")]
 [Authorize(Policy = AuthPolicyNames.AdminOnly)]
 [EnableRateLimiting(RateLimitPolicyNames.Payment)]
-public sealed class AdminPaymentsController(IPaymentService paymentService) : BaseApiController
+public sealed class AdminPaymentsController(
+    IPaymentService paymentService,
+    IOptions<PaymentOptions> paymentOptions) : BaseApiController
 {
+    private readonly PaymentOptions _paymentOptions = paymentOptions.Value;
+
     [HttpPost("retry")]
     public async Task<IActionResult> RetryPayment(
         [FromBody] AdminPaymentRetryApiRequest request,
         CancellationToken cancellationToken)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                ApiResponse<object>.Fail("Ödeme altyapısı geçici olarak devre dışıdır."));
+        }
+
         if (request.ReservationId == Guid.Empty)
         {
             return BadRequestResponse("Geçerli bir rezervasyon ID gereklidir.");

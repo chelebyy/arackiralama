@@ -100,7 +100,7 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 | Public reservation read | Allowlisted public DTO, strict rate limit, `no-store` | Backend unit/integration suites pass | Browser network inspection in production-like Docker |
 | Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Ownership unit tests included in focused pass | Docker HTTP proof that anonymous route performs no write |
 | Production payment configuration | `ValidateOnStart`; Mock/unknown/sandbox/incomplete/disabled rejected | Validator regression tests pass | Production-like container startup proof |
-| Payment state integrity | Kill switch returns `503` when disabled | Containment only | Real provider selection, server-to-server verification, negative/replay tests, sandbox success |
+| Payment state integrity | Payments default disabled; intent, 3DS return, webhook, and admin retry paths return `503` before service mutation | Unit proof plus local Docker HTTP/database-count proof | Keep disabled until a real provider is selected; then require server-to-server verification, negative/replay tests, and sandbox success |
 | Secret artifacts | Generated Ship-Safe artifacts removed and scanner outputs ignored | Working-tree policy change present | Provider-side rotation, access-log review, active/history secret scans |
 | Dependency review | Dependabot auto-merge workflow removed | Repository workflow change present | Branch protection and test PR evidence requiring human approval |
 

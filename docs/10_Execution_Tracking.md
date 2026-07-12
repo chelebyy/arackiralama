@@ -1990,10 +1990,10 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 ## 12 July 2026 - Codex Security Findings Implementation Follow-up
 
-**Implementation status:** WP1 account claim and WP2 public reservation/cancellation boundaries are backend-implemented; WP0/WP4 containment changes are present; WP3 production configuration fail-closed validation is implemented, but provider-authenticated payment completion is not complete.
+**Implementation status:** WP1 account claim and WP2 public reservation/cancellation boundaries are backend-implemented; WP0/WP4 containment changes are present. No payment provider is selected yet, so WP3 is intentionally deferred and contained: payments default disabled and intent, 3DS return, webhook, and admin retry paths fail closed before service mutation.
 
-**Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; focused security set passed 43/43; full backend passed 757/757 unit and 51/51 API integration tests. `git diff --check` found no whitespace errors.
+**Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; full backend passed 762/762 unit and 51/51 API integration tests. Frontend lint passed with 0 errors and 1 existing warning, TypeScript passed, Vitest passed 61/61 files and 288/288 tests, and the Next.js production build passed. Local Docker requests to intent creation, forged 3DS return, and forged webhook each returned `503`; payment-intent/payment-webhook-job counts stayed `4,0` before and after.
 
-**Open gates:** frontend install/typecheck/test/build did not complete because dependency restoration exceeded the 300-second tool window; production-like Docker/browser proof, real-provider sandbox proof, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. This slice is implementation-progress, not acceptance-complete or release-ready.
+**Open gates:** the remaining Docker/browser matrix, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

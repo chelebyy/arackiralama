@@ -35,7 +35,8 @@ public sealed class ApiWebApplicationFactory(
                 ["Jwt:Issuer"] = TestJwtFactory.JwtIssuer,
                 ["Jwt:Audience"] = TestJwtFactory.JwtAudience,
                 ["Jwt:Secret"] = TestJwtFactory.JwtSecret,
-                ["Database:AutoMigrateOnStartup"] = "false"
+                ["Database:AutoMigrateOnStartup"] = "false",
+                ["Payment:EnablePayments"] = "true"
             };
 
             if (additionalConfiguration is not null)

@@ -505,21 +505,22 @@ Until these decisions are recorded, WP0 may proceed, but the affected design sli
 
 | Work package | State | Implemented | Still required |
 | --- | --- | --- | --- |
-| WP0 | Partial | Anonymous cancellation removed; payment kill switch added; Dependabot auto-merge removed; generated Ship-Safe artifacts removed/ignored | Credential rotation and access-log evidence; production containment proof |
+| WP0 | Partial | Anonymous cancellation removed; payment kill switch defaults off and covers intent, 3DS return, webhook, and admin retry paths; Dependabot auto-merge removed; generated Ship-Safe artifacts removed/ignored | Credential rotation and access-log evidence; production containment proof |
 | WP1 | Backend implemented, acceptance partial | Purpose-specific hashed/expiring/single-use tokens, supersession, email dispatch, claim page, audit actions, focused tests | Account-normalized abuse control review, cleanup policy, production email and browser proof |
 | WP2 | Backend implemented, acceptance partial | Allowlisted public DTO, strict rate limit, no-store, anonymous cancellation removal, owner/admin paths preserved | Production-like HTTP/no-write proof and five-locale browser confirmation |
-| WP3 | Partial | Production `ValidateOnStart`, unsafe-provider rejection, payment kill-switch `503` containment | Selected provider/API version, authoritative server-to-server verification, mismatch/replay tests, sandbox success |
+| WP3 | Deferred and contained | No payment provider is selected yet; payments default disabled; production `ValidateOnStart` rejects unsafe configuration; intent, 3DS return, and webhook paths return `503` without mutation | When payments are introduced: select provider/API version, implement authoritative server-to-server verification, mismatch/replay tests, and sandbox success |
 | WP4 | Partial | Generated artifact ignore/removal and auto-merge workflow removal | Sanitized/history scan, rotation evidence, branch protection and test Dependabot PR proof |
-| WP5 | Blocked | Backend build and full backend suites pass | Frontend gates, Docker/browser matrix, provider sandbox, operational evidence, focused final security review |
+| WP5 | Blocked | Backend build and full backend suites pass; frontend lint/typecheck/test/build pass; local Docker disabled-payment HTTP/no-write proof passes | Remaining Docker/browser matrix, operational evidence, focused final security review; provider sandbox evidence is deferred until payments are introduced |
 
 ### 18.1 Fresh Automated Evidence
 
 - Backend build: 0 warnings, 0 errors.
 - Focused account-claim/configuration/customer-reservation tests: 43/43 passed.
-- Full backend: 757/757 unit and 51/51 API integration tests passed.
+- Full backend: 762/762 unit and 51/51 API integration tests passed.
 - `git diff --check`: no whitespace errors.
-- Frontend typecheck/test/build: unknown; frozen dependency restoration exceeded the 300-second tool window and did not materialize `frontend/node_modules/.bin/tsc.cmd`.
+- Frontend lint passed with 0 errors and 1 existing unused-disable warning; TypeScript passed; Vitest passed 61/61 files and 288/288 tests; Next.js production build passed.
+- Local Docker disabled-payment proof: intent creation, forged 3DS return, and forged webhook each returned `503`; `payment_intents` and payment-webhook job counts remained `4,0` before and after.
 
 ### 18.2 Current Release Decision
 
-No finding is declared fully closed by this snapshot. The original arbitrary-client-data-to-paid-state path remains unresolved until provider-authenticated verification is implemented and proven. Credential/branch-protection operations and the combined Docker/browser matrix also remain release blockers.
+No finding is declared fully closed by this snapshot. The original arbitrary-client-data-to-paid-state path is not reachable while payments remain disabled, but it must not be enabled until provider-authenticated verification is implemented and proven. Credential/branch-protection operations and the remaining Docker/browser matrix also remain release blockers.

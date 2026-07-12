@@ -1,17 +1,38 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Moq;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
+using RentACar.Infrastructure.Services.Payments;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Controllers;
 
 public sealed class AdminPaymentsControllerTests
 {
+    [Fact]
+    public async Task RetryPayment_WhenPaymentsDisabled_ReturnsServiceUnavailableWithoutCallingService()
+    {
+        var serviceMock = new Mock<IPaymentService>(MockBehavior.Strict);
+        var controller = CreateController(serviceMock.Object, enablePayments: false);
+
+        var result = await controller.RetryPayment(
+            new AdminPaymentRetryApiRequest
+            {
+                ReservationId = Guid.NewGuid(),
+                Card = new PaymentCardApiRequest { HolderName = "Test", Number = "411111" }
+            },
+            CancellationToken.None);
+
+        var unavailable = result.Should().BeOfType<ObjectResult>().Subject;
+        unavailable.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
+        serviceMock.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task RetryPayment_WithEmptyReservationId_ReturnsBadRequest()
     {
@@ -157,9 +178,13 @@ public sealed class AdminPaymentsControllerTests
         response.Success.Should().BeTrue();
     }
 
-    private static AdminPaymentsController CreateController(IPaymentService service)
+    private static AdminPaymentsController CreateController(
+        IPaymentService service,
+        bool enablePayments = true)
     {
-        return new AdminPaymentsController(service)
+        return new AdminPaymentsController(
+            service,
+            Options.Create(new PaymentOptions { EnablePayments = enablePayments }))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

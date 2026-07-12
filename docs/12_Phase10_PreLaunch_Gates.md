@@ -1555,11 +1555,12 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 | Public reservation PII boundary | PARTIAL | Allowlisted DTO, strict rate limit, no-store, and backend suites pass; browser payload inspection open |
 | Anonymous cancellation containment | PARTIAL | Public route removed and owner/admin tests pass; production-like no-write HTTP proof open |
 | Production payment fail-closed configuration | PARTIAL | `ValidateOnStart` regression tests pass; production-like container startup matrix open |
-| Provider-authenticated paid transition | NO-GO | Real provider/API contract, replay/mismatch negatives, and sandbox success evidence missing |
+| Provider-authenticated paid transition | DEFERRED / NO-GO TO ENABLE | No provider is selected; payments default disabled and all new-payment entry paths are contained. Real provider/API contract, replay/mismatch negatives, and sandbox success are mandatory before enablement |
 | Credential incident closure | NO-GO | Rotation, provider access-log review, and active/history scan evidence missing |
 | Dependabot human review enforcement | PARTIAL | Auto-merge workflow removed; branch protection and test PR evidence missing |
-| Frontend automated verification | UNKNOWN | Dependency restoration exceeded 300-second tool window before typecheck/test/build |
-| Backend automated verification | GO | Build 0 warnings/errors; 757 unit + 51 integration tests pass |
-| Combined Docker/browser/security review | NO-GO | Not run for this security slice |
+| Frontend automated verification | GO | Lint 0 errors/1 existing warning; TypeScript pass; Vitest 61 files/288 tests pass; Next.js production build pass |
+| Backend automated verification | GO | Build 0 warnings/errors; 762 unit + 51 integration tests pass |
+| Disabled-payment Docker proof | GO | Intent creation, forged 3DS return, and forged webhook each return `503`; payment-intent/payment-webhook-job counts remain `4,0` before and after |
+| Combined Docker/browser/security review | NO-GO | Remaining account-claim, public reservation/cancellation, five-locale browser, and focused final security review matrix is not complete |
 
 Release remains blocked. Implementation-complete, acceptance-complete, and release-ready must continue to be reported separately.

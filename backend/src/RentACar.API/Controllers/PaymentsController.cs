@@ -93,6 +93,13 @@ public sealed class PaymentsController(
         string provider,
         CancellationToken cancellationToken)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                ApiResponse<object>.Fail("Ödeme altyapısı geçici olarak devre dışıdır."));
+        }
+
         if (string.IsNullOrWhiteSpace(provider))
         {
             return BadRequestResponse("Provider bilgisi zorunludur.");

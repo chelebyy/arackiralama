@@ -14,10 +14,9 @@ public sealed class PaymentOptions
     public IyzicoProviderOptions Iyzico { get; init; } = new();
 
     // Emergency containment kill switch (WP0). When false, payment intent
-    // creation and 3DS completion endpoints return 503 without mutating state.
-    // Defaults to true; in production the startup hardening forces it back to
-    // false unless explicitly enabled (see PaymentOptionsHardening).
-    public bool EnablePayments { get; set; } = true;
+    // creation, 3DS completion, and webhook endpoints return 503 without mutating state.
+    // Defaults to false until a real payment provider is selected and configured.
+    public bool EnablePayments { get; set; }
 }
 
 public sealed class MockProviderOptions

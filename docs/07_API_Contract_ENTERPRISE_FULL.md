@@ -777,6 +777,6 @@ END OF DOCUMENT
 
 ### Payment containment
 
-- Payment intent creation and 3DS completion return `503` without mutation when `Payment:EnablePayments` is false.
+- Payment intent creation, 3DS completion, provider webhook processing, and admin payment retry return `503` before service mutation when `Payment:EnablePayments` is false.
 - Production startup rejects Mock, unknown, sandbox, incomplete, or disabled payment configuration.
-- Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.
+- No payment provider is currently selected; payment activation is deferred. Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Before activation, final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.
