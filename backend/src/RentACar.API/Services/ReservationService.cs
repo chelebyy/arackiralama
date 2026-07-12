@@ -630,11 +630,11 @@ public sealed class ReservationService : IReservationService
             newReturnOfficeId,
             newPickupDateTime,
             newReturnDateTime,
-            null,
+            reservation.PricingSnapshot?.CampaignCode,
             0,
             0,
-            null,
-            false,
+            CalculateAgeAt(reservation.DriverDateOfBirth, newPickupDateTime),
+            reservation.PricingSnapshot?.CoverageWaiverFee > 0m,
             cancellationToken);
 
         if (pricing == null)
@@ -658,6 +658,29 @@ public sealed class ReservationService : IReservationService
         reservation.ReturnDateTime = newReturnDateTime;
         reservation.PickupOfficeId = newPickupOfficeId;
         reservation.ReturnOfficeId = newReturnOfficeId;
+        if (reservation.PricingSnapshot is { } existingSnapshot)
+        {
+            var quotedExtras = RepriceSelectedExtras(reservation.SelectedExtras, pricing.RentalDays);
+            var catalogExtraTotal = RoundAmount(quotedExtras.Sum(item => item.Total));
+            var extrasTotal = RoundAmount(pricing.ExtrasTotal + catalogExtraTotal);
+            var subtotalBeforeDiscount = RoundAmount(pricing.FinalTotal + pricing.CampaignDiscount + catalogExtraTotal);
+            var campaignDiscount = CalculateLegacyCampaignDiscount(pricing, subtotalBeforeDiscount);
+            var finalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount);
+            pricing = pricing with
+            {
+                ExtrasTotal = extrasTotal,
+                CampaignDiscount = campaignDiscount,
+                FinalTotal = finalTotal,
+                ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
+            };
+            reservation.PricingSnapshot = CreatePricingSnapshot(
+                existingSnapshot.QuoteId,
+                existingSnapshot.IssuedAtUtc,
+                existingSnapshot.ExpiresAtUtc,
+                pricing,
+                quotedExtras);
+        }
+
         reservation.TotalAmount = pricing.FinalTotal;
 
         if (request.Customer is not null)
@@ -1614,6 +1637,49 @@ public sealed class ReservationService : IReservationService
         };
 
         return Math.Clamp(RoundAmount(discount), 0m, subtotalBeforeDiscount);
+    }
+
+    private static IReadOnlyList<ReservationQuotedExtraV1> RepriceSelectedExtras(
+        IEnumerable<ReservationSelectedExtra> selectedExtras,
+        int rentalDays) => selectedExtras.Select(item =>
+        {
+            var total = item.PricingModeSnapshot == ReservationExtraPricingMode.PerDay
+                ? item.UnitPriceSnapshot * item.Quantity * rentalDays
+                : item.UnitPriceSnapshot * item.Quantity;
+            item.RentalDaysSnapshot = rentalDays;
+            item.TotalPriceSnapshot = RoundAmount(total);
+            return new ReservationQuotedExtraV1
+            {
+                ExtraOptionId = item.ExtraOptionId,
+                OptionVersion = item.OptionVersionSnapshot,
+                Code = item.OptionCodeSnapshot,
+                Locale = item.Locale,
+                Name = item.NameSnapshot,
+                Description = item.DescriptionSnapshot,
+                UnitPrice = item.UnitPriceSnapshot,
+                PricingMode = item.PricingModeSnapshot == ReservationExtraPricingMode.PerDay ? "PER_DAY" : "PER_RENTAL",
+                Quantity = item.Quantity,
+                RentalDays = rentalDays,
+                Total = item.TotalPriceSnapshot
+            };
+        }).ToArray();
+
+    private static int? CalculateAgeAt(DateTime? dateOfBirth, DateTime date)
+    {
+        if (!dateOfBirth.HasValue)
+        {
+            return null;
+        }
+
+        var birthDate = dateOfBirth.Value.Date;
+        var targetDate = date.Date;
+        var age = targetDate.Year - birthDate.Year;
+        if (birthDate > targetDate.AddYears(-age))
+        {
+            age--;
+        }
+
+        return Math.Max(0, age);
     }
 
     private async Task<Reservation?> FindReservationByQuoteIdAsync(

@@ -62,13 +62,14 @@ public sealed class ReservationQuoteService(
             baseBreakdown.RentalDays,
             request.SelectedExtras ?? [],
             cancellationToken);
-        var extraTotal = Round(quotedExtras.Sum(item => item.Total));
-        var subtotalBeforeDiscount = Round(baseBreakdown.FinalTotal + baseBreakdown.CampaignDiscount + extraTotal);
+        var catalogExtraTotal = Round(quotedExtras.Sum(item => item.Total));
+        var extrasTotal = Round(baseBreakdown.ExtrasTotal + catalogExtraTotal);
+        var subtotalBeforeDiscount = Round(baseBreakdown.FinalTotal + baseBreakdown.CampaignDiscount + catalogExtraTotal);
         var campaignDiscount = CalculateCampaignDiscount(baseBreakdown, subtotalBeforeDiscount);
         var finalTotal = Round(subtotalBeforeDiscount - campaignDiscount);
         var responseBreakdown = baseBreakdown with
         {
-            ExtrasTotal = extraTotal,
+            ExtrasTotal = extrasTotal,
             CampaignDiscount = campaignDiscount,
             FinalTotal = finalTotal,
             ExtraItems = quotedExtras.Select(ToDto).ToArray()
@@ -82,7 +83,7 @@ public sealed class ReservationQuoteService(
             expiresAtUtc,
             responseBreakdown,
             quotedExtras,
-            extraTotal,
+            extrasTotal,
             finalTotal);
 
         var quote = new ReservationQuoteV1

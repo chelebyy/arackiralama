@@ -62,6 +62,45 @@ public sealed class ReservationQuoteServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_PreservesBuiltInFeesInExtrasTotal()
+    {
+        var request = ValidRequest();
+        SetupValidReferences(request);
+        _pricingService
+            .Setup(service => service.CalculateBreakdownAsync(
+                request.VehicleGroupId,
+                request.PickupOfficeId,
+                request.ReturnOfficeId,
+                request.PickupDateTimeUtc,
+                request.ReturnDateTimeUtc,
+                "SAVE10",
+                0,
+                0,
+                request.DriverAge,
+                request.FullCoverageWaiver,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BaseBreakdown() with { ExtrasTotal = 75m, AirportFee = 75m, FinalTotal = 1525m });
+        _extraPricingService
+            .Setup(service => service.CalculateAsync(
+                request.VehicleGroupId,
+                request.Locale,
+                3,
+                request.SelectedExtras,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([QuotedExtra(48m)]);
+        ReservationQuoteV1? stored = null;
+        _quoteStore
+            .Setup(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>()))
+            .Callback<ReservationQuoteV1, CancellationToken>((quote, _) => stored = quote)
+            .Returns(Task.CompletedTask);
+
+        var result = await CreateService().CreateAsync(request, "public-session-123");
+
+        result.ExtrasTotal.Should().Be(123m);
+        stored!.PricingSnapshot.ExtrasTotal.Should().Be(123m);
+    }
+
+    [Fact]
     public async Task CreateAsync_AppliesPercentageCampaignToGenericExtras()
     {
         var request = ValidRequest();

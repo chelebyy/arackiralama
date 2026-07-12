@@ -51,6 +51,17 @@ const noPaymentMethods: PublicPaymentMethods = {
   anyEnabled: false,
 };
 
+const calculateAgeAtDate = (dateOfBirth: string, targetDate: string) => {
+  const [birthYear, birthMonth, birthDay] = dateOfBirth.split("-").map(Number);
+  const [targetYear, targetMonth, targetDay] = targetDate.split("-").map(Number);
+  if (![birthYear, birthMonth, birthDay, targetYear, targetMonth, targetDay].every(Number.isFinite)) {
+    return undefined;
+  }
+
+  const beforeBirthday = targetMonth < birthMonth || (targetMonth === birthMonth && targetDay < birthDay);
+  return Math.max(0, targetYear - birthYear - (beforeBirthday ? 1 : 0));
+};
+
 
 export default function BookingStep4Page() {
   const params = useParams();
@@ -203,8 +214,8 @@ export default function BookingStep4Page() {
     }
     return sessionIdRef.current;
   };
-  const driverAge = booking.driver?.dateOfBirth
-    ? Math.max(0, Math.floor((Date.now() - new Date(booking.driver.dateOfBirth).getTime()) / 31_556_952_000))
+  const driverAge = booking.driver?.dateOfBirth && pickupDate
+    ? calculateAgeAtDate(booking.driver.dateOfBirth, pickupDate)
     : undefined;
   const quoteExpired = !quote || new Date(quote.expiresAtUtc).getTime() <= Date.now();
 

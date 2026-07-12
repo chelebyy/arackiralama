@@ -2116,7 +2116,30 @@ public sealed class ReservationServiceTests
             PickupDateTime = originalPickupDateTime,
             ReturnDateTime = originalReturnDateTime,
             Status = ReservationStatus.Confirmed,
-            TotalAmount = 1500m
+            TotalAmount = 1500m,
+            PricingSnapshot = new ReservationPricingSnapshotV1
+            {
+                QuoteId = Guid.NewGuid(),
+                IssuedAtUtc = DateTime.UtcNow.AddMinutes(-5),
+                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+                CampaignCode = "SAVE10"
+            },
+            SelectedExtras =
+            [
+                new ReservationSelectedExtra
+                {
+                    ExtraOptionId = Guid.NewGuid(),
+                    OptionVersionSnapshot = 2,
+                    Locale = "tr",
+                    OptionCodeSnapshot = "gps",
+                    NameSnapshot = "GPS",
+                    UnitPriceSnapshot = 10m,
+                    PricingModeSnapshot = ReservationExtraPricingMode.PerDay,
+                    Quantity = 2,
+                    RentalDaysSnapshot = 2,
+                    TotalPriceSnapshot = 40m
+                }
+            ]
         };
 
         var request = new UpdateReservationRequest
@@ -2159,13 +2182,17 @@ public sealed class ReservationServiceTests
                 newReturnOfficeId,
                 request.PickupDateTimeUtc.Value,
                 request.ReturnDateTimeUtc.Value,
-                null,
+                "SAVE10",
                 0,
                 0,
                 null,
                 false,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1500m, 2000m, 2000m, "TRY", null));
+            .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 150m, 0m, 0m, 0m, 0m, 0m, 0m, 1350m, 2000m, 2000m, "TRY", "SAVE10")
+            {
+                AppliedCampaignDiscountType = "percentage",
+                AppliedCampaignDiscountValue = 10m
+            });
 
         // Act
         var result = await _sut.UpdateReservationAsync(reservationId, request, CancellationToken.None);
@@ -2176,6 +2203,11 @@ public sealed class ReservationServiceTests
         result.ReturnDateTime.Should().Be(request.ReturnDateTimeUtc!.Value);
         reservation.VehicleId.Should().Be(originalVehicleId);
         reservation.Customer.Should().BeSameAs(originalCustomer);
+        reservation.TotalAmount.Should().Be(1404m);
+        reservation.PricingSnapshot!.FinalTotal.Should().Be(1404m);
+        reservation.PricingSnapshot.ExtrasTotal.Should().Be(60m);
+        reservation.SelectedExtras.Should().ContainSingle(item =>
+            item.RentalDaysSnapshot == 3 && item.TotalPriceSnapshot == 60m);
         _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

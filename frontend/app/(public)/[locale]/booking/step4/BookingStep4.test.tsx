@@ -260,6 +260,19 @@ describe("BookingStep4Page", () => {
     expect(screen.getByText("Full coverage waiver fee")).toBeInTheDocument();
   });
 
+  it("calculates driver age at the pickup date", async () => {
+    bookingState.driver = { ...bookingState.driver, dateOfBirth: "2001-05-11" };
+
+    render(<BookingStep4Page />);
+
+    await waitFor(() => {
+      expect(createReservationQuoteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ driverAge: 24 }),
+        "uuid-123"
+      );
+    });
+  });
+
   it("reconciles stale extras and prepares a refreshed quote after an initial 409", async () => {
     updateExtrasMock.mockImplementationOnce((extras) => {
       bookingState.selectedExtras = extras;
