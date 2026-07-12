@@ -21,7 +21,7 @@ namespace RentACar.Tests.Unit.Services;
 public sealed class ReservationServiceQuotePersistenceTests
 {
     [Fact]
-    public async Task CreateDraftReservationAsync_PersistsQuoteSnapshotAndSelectedExtrasAtomicallyAndReplaysExisting()
+    public async Task CreateDraftReservationAsync_PersistsQuoteProofAndReplaysExistingAfterRedisExpiry()
     {
         using var factory = new TestDbContextFactory();
         await using var context = factory.CreateContext();
@@ -104,16 +104,25 @@ public sealed class ReservationServiceQuotePersistenceTests
         };
 
         var created = await service.CreateDraftReservationAsync(request);
+        quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ReservationQuoteV1?)null);
         var replayed = await service.CreateDraftReservationAsync(request with { IdempotencyKey = "idempotency-456" });
         var crossSessionReplay = () => service.CreateDraftReservationAsync(request with
         {
             SessionId = "attacker-session",
             IdempotencyKey = "idempotency-789"
         });
+        var changedInputReplay = () => service.CreateDraftReservationAsync(request with
+        {
+            ReturnDateTimeUtc = request.ReturnDateTimeUtc.AddDays(1),
+            IdempotencyKey = "idempotency-input-change"
+        });
 
         created.Id.Should().Be(replayed.Id);
         await crossSessionReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
             .WithMessage("*session*");
+        await changedInputReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
+            .WithMessage("*inputs*");
         created.TotalAmount.Should().Be(1548m);
         created.BreakdownSource.Should().Be("SNAPSHOT");
         created.SelectedExtras.Should().ContainSingle(item => item.Code == "gps" && item.Total == 48m);
@@ -124,13 +133,24 @@ public sealed class ReservationServiceQuotePersistenceTests
         var storedReservation = context.Reservations.Single();
         storedReservation.QuoteId.Should().Be(quote.QuoteId);
         storedReservation.PricingSnapshot!.FinalTotal.Should().Be(1548m);
+        storedReservation.QuoteReplayProof.Should().NotBeNull();
+        storedReservation.QuoteReplayProof!.SessionHash.Should().NotBe("session-123");
+        storedReservation.QuoteReplayProof.RequestFingerprint.Should().NotBeNullOrWhiteSpace();
         context.ReservationSelectedExtras.Should().ContainSingle(item =>
             item.ReservationId == storedReservation.Id &&
             item.OptionCodeSnapshot == "gps" &&
             item.TotalPriceSnapshot == 48m);
         quoteStore.Verify(store => store.TryClaimAsync(quote.QuoteId, It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
         quoteStore.Verify(store => store.MarkConsumedAsync(quote.QuoteId, It.IsAny<string>(), storedReservation.Id, It.IsAny<CancellationToken>()), Times.Once);
-        quoteStore.Verify(store => store.ReconcileConsumedAsync(quote.QuoteId, storedReservation.Id, It.IsAny<CancellationToken>()), Times.Once);
+        quoteStore.Verify(store => store.ReconcileConsumedAsync(quote.QuoteId, storedReservation.Id, It.IsAny<CancellationToken>()), Times.Never);
+
+        storedReservation.QuoteReplayProof = null;
+        var prooflessReplay = () => service.CreateDraftReservationAsync(request with
+        {
+            IdempotencyKey = "idempotency-proofless"
+        });
+        await prooflessReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
+            .WithMessage("*cannot be verified*");
     }
 
     [Fact]

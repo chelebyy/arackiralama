@@ -36,68 +36,25 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
     }
 
     [Fact]
-    public async Task LateInventoryBackfill_AssignsAndActivatesBuiltInsOnlyOnce()
+    public async Task AdminDisabledBuiltIns_RemainDisabledAndUnassigned()
     {
         await WithDbContextAsync(async dbContext =>
         {
             await dbContext.ReservationExtraOptionVehicleGroups.ExecuteDeleteAsync();
             await dbContext.ReservationExtraOptions.ExecuteUpdateAsync(setters => setters.SetProperty(option => option.IsActive, false));
-            dbContext.VehicleGroups.Add(CreateVehicleGroup());
-            await dbContext.SaveChangesAsync();
             return true;
         });
-
-        await Services.ApplyReservationExtraOptionsBackfillAsync();
-        var versionsAfterFirstBackfill = await WithDbContextAsync(dbContext =>
-            dbContext.ReservationExtraOptions
-                .OrderBy(option => option.Id)
-                .Select(option => new { option.Id, option.Version, option.UpdatedAt })
-                .ToListAsync());
-
-        await Services.ApplyReservationExtraOptionsBackfillAsync();
-        var versionsAfterSecondBackfill = await WithDbContextAsync(dbContext =>
-            dbContext.ReservationExtraOptions
-                .OrderBy(option => option.Id)
-                .Select(option => new { option.Id, option.Version, option.UpdatedAt })
-                .ToListAsync());
 
         var result = await WithDbContextAsync(async dbContext => new
         {
             OptionCount = await dbContext.ReservationExtraOptions.CountAsync(),
-            GroupCount = await dbContext.VehicleGroups.CountAsync(),
             AssignmentCount = await dbContext.ReservationExtraOptionVehicleGroups.CountAsync(),
             ActiveCount = await dbContext.ReservationExtraOptions.CountAsync(option => option.IsActive)
         });
 
-        result.AssignmentCount.Should().Be(result.OptionCount * result.GroupCount);
-        result.ActiveCount.Should().Be(result.OptionCount);
-        versionsAfterSecondBackfill.Should().BeEquivalentTo(versionsAfterFirstBackfill, options => options.WithStrictOrdering());
-    }
-
-    [Fact]
-    public async Task LateInventoryBackfill_SkipsDeletedBuiltInOptions()
-    {
-        await WithDbContextAsync(async dbContext =>
-        {
-            await dbContext.ReservationExtraOptionVehicleGroups.ExecuteDeleteAsync();
-            var deletedOption = await dbContext.ReservationExtraOptions.SingleAsync(option => option.Code == "child_seat");
-            dbContext.ReservationExtraOptions.Remove(deletedOption);
-            await dbContext.SaveChangesAsync();
-            return true;
-        });
-
-        var act = () => Services.ApplyReservationExtraOptionsBackfillAsync();
-
-        await act.Should().NotThrowAsync();
-        var result = await WithDbContextAsync(async dbContext => new
-        {
-            OptionCount = await dbContext.ReservationExtraOptions.CountAsync(),
-            GroupCount = await dbContext.VehicleGroups.CountAsync(),
-            AssignmentCount = await dbContext.ReservationExtraOptionVehicleGroups.CountAsync(),
-            DeletedOptionExists = await dbContext.ReservationExtraOptions.AnyAsync(option => option.Code == "child_seat")
-        });
-        result.DeletedOptionExists.Should().BeFalse();
-        result.AssignmentCount.Should().Be(result.OptionCount * result.GroupCount);
+        result.OptionCount.Should().Be(4);
+        result.AssignmentCount.Should().Be(0);
+        result.ActiveCount.Should().Be(0);
     }
 
     [Fact]
@@ -371,19 +328,6 @@ public sealed class ReservationExtraOptionDatabaseTests(RedisFixture redisFixtur
             .ToList());
 
     private static ReservationExtraOptionAuditContext AuditContext() => new("integration-admin", "127.0.0.1");
-
-    private static VehicleGroup CreateVehicleGroup() => new()
-    {
-        NameTr = "Geç Grup",
-        NameEn = "Late Group",
-        NameDe = "Späte Gruppe",
-        NameRu = "Поздняя группа",
-        NameAr = "مجموعة متأخرة",
-        DepositAmount = 2500m,
-        MinAge = 21,
-        MinLicenseYears = 2,
-        IsActive = true
-    };
 
     private sealed class HardDeleteRaceDbContext(
         DbContextOptions<RentACarDbContext> options,

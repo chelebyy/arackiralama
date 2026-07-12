@@ -33,4 +33,33 @@ public static class ReservationQuoteSecurity
             return false;
         }
     }
+
+    public static string HashRequestFingerprint(string canonicalRequest)
+    {
+        if (string.IsNullOrWhiteSpace(canonicalRequest))
+        {
+            throw new ArgumentException("Canonical request is required.", nameof(canonicalRequest));
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)));
+    }
+
+    public static bool RequestFingerprintMatches(string expectedHash, string canonicalRequest)
+    {
+        if (string.IsNullOrWhiteSpace(expectedHash) || string.IsNullOrWhiteSpace(canonicalRequest))
+        {
+            return false;
+        }
+
+        try
+        {
+            var expected = Convert.FromHexString(expectedHash);
+            var actual = Convert.FromHexString(HashRequestFingerprint(canonicalRequest));
+            return CryptographicOperations.FixedTimeEquals(expected, actual);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 }

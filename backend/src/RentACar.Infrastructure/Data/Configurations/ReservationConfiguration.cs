@@ -51,6 +51,16 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
             (left, right) => SerializeSnapshot(left) == SerializeSnapshot(right),
             snapshot => snapshot == null ? 0 : SerializeSnapshot(snapshot)!.GetHashCode(StringComparison.Ordinal),
             snapshot => DeserializeSnapshot(SerializeSnapshot(snapshot))));
+        var quoteReplayProofProperty = builder.Property(x => x.QuoteReplayProof)
+            .HasColumnName("quote_replay_proof")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                proof => SerializeReplayProof(proof),
+                json => DeserializeReplayProof(json));
+        quoteReplayProofProperty.Metadata.SetValueComparer(new ValueComparer<ReservationQuoteReplayProofV1?>(
+            (left, right) => SerializeReplayProof(left) == SerializeReplayProof(right),
+            proof => proof == null ? 0 : SerializeReplayProof(proof)!.GetHashCode(StringComparison.Ordinal),
+            proof => DeserializeReplayProof(SerializeReplayProof(proof))));
         builder.Property(x => x.Version)
             .HasColumnName("xmin")
             .IsRowVersion();
@@ -98,4 +108,12 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         string.IsNullOrWhiteSpace(json)
             ? null
             : JsonSerializer.Deserialize<ReservationPricingSnapshotV1>(json, SnapshotSerializerOptions);
+
+    private static string? SerializeReplayProof(ReservationQuoteReplayProofV1? proof) =>
+        proof == null ? null : JsonSerializer.Serialize(proof, SnapshotSerializerOptions);
+
+    private static ReservationQuoteReplayProofV1? DeserializeReplayProof(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<ReservationQuoteReplayProofV1>(json, SnapshotSerializerOptions);
 }

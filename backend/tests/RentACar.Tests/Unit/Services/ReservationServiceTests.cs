@@ -2153,7 +2153,8 @@ public sealed class ReservationServiceTests
                 FirstName = "Changed",
                 LastName = "Customer",
                 Email = "changed@example.com",
-                Phone = "+90 555 111 1111"
+                Phone = "+90 555 111 1111",
+                DateOfBirth = updatedPickupDateTime.Date.AddYears(-20)
             },
             Notes = "Ignored by current implementation"
         };
@@ -2185,7 +2186,7 @@ public sealed class ReservationServiceTests
                 "SAVE10",
                 0,
                 0,
-                null,
+                20,
                 false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 150m, 0m, 0m, 0m, 0m, 0m, 0m, 1350m, 2000m, 2000m, "TRY", "SAVE10")

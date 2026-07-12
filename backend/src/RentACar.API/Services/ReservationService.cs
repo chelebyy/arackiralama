@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -312,7 +313,8 @@ public sealed class ReservationService : IReservationService
             TotalAmount = pricingContext.Pricing.FinalTotal,
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
-            PricingSnapshot = pricingContext.Snapshot
+            PricingSnapshot = pricingContext.Snapshot,
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot)
         };
         ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
         AddSelectedExtraSnapshots(reservation, pricingContext.QuotedExtras);
@@ -416,6 +418,7 @@ public sealed class ReservationService : IReservationService
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
             PricingSnapshot = pricingContext.Snapshot,
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot),
             UnpaidRequestExpiresAtUtc = now.AddHours(24),
             CreatedAt = now,
             UpdatedAt = now
@@ -633,7 +636,9 @@ public sealed class ReservationService : IReservationService
             reservation.PricingSnapshot?.CampaignCode,
             0,
             0,
-            CalculateAgeAt(reservation.DriverDateOfBirth, newPickupDateTime),
+            CalculateAgeAt(
+                request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
+                newPickupDateTime),
             reservation.PricingSnapshot?.CoverageWaiverFee > 0m,
             cancellationToken);
 
@@ -1710,14 +1715,21 @@ public sealed class ReservationService : IReservationService
         {
             return null;
         }
-        if (_quoteStore is null || !request.QuoteId.HasValue || string.IsNullOrWhiteSpace(request.SessionId))
+        if (!request.QuoteId.HasValue || string.IsNullOrWhiteSpace(request.SessionId))
         {
             throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
         }
 
-        var quote = await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken)
-            ?? throw new ReservationQuoteConflictException("Reservation quote retry is expired or unavailable.");
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty ? request.PickupOfficeId : request.ReturnOfficeId;
+        var quote = _quoteStore is null
+            ? null
+            : await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken);
+        if (quote is null)
+        {
+            ValidatePersistedQuoteReplayProof(reservation, request, returnOfficeId);
+            return reservation;
+        }
+
         ValidateQuoteMatchesRequest(quote, request, returnOfficeId);
         if (!ReservationQuoteSecurity.SessionHashMatches(quote.SessionHash, request.SessionId))
         {
@@ -1727,7 +1739,7 @@ public sealed class ReservationService : IReservationService
 
         try
         {
-            await _quoteStore.ReconcileConsumedAsync(quote.QuoteId, reservation.Id, cancellationToken);
+            await _quoteStore!.ReconcileConsumedAsync(quote.QuoteId, reservation.Id, cancellationToken);
         }
         catch (Exception exception)
         {
@@ -1738,6 +1750,85 @@ public sealed class ReservationService : IReservationService
         }
 
         return reservation;
+    }
+
+    private static ReservationQuoteReplayProofV1? CreateQuoteReplayProof(
+        CreateReservationRequest request,
+        Guid returnOfficeId,
+        ReservationPricingSnapshotV1? snapshot)
+    {
+        if (!request.QuoteId.HasValue || snapshot is null || string.IsNullOrWhiteSpace(request.SessionId))
+        {
+            return null;
+        }
+
+        var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
+        return new ReservationQuoteReplayProofV1
+        {
+            SchemaVersion = 1,
+            SessionHash = ReservationQuoteSecurity.HashSessionId(request.SessionId),
+            RequestFingerprint = ReservationQuoteSecurity.HashRequestFingerprint(canonicalRequest),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+    }
+
+    private static void ValidatePersistedQuoteReplayProof(
+        Reservation reservation,
+        CreateReservationRequest request,
+        Guid returnOfficeId)
+    {
+        var proof = reservation.QuoteReplayProof;
+        var snapshot = reservation.PricingSnapshot;
+        if (proof is null || proof.SchemaVersion != 1 || snapshot is null ||
+            reservation.QuoteId != request.QuoteId || snapshot.QuoteId != request.QuoteId)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
+        }
+
+        if (!ReservationQuoteSecurity.SessionHashMatches(proof.SessionHash, request.SessionId!))
+        {
+            throw new ReservationQuoteConflictException("Reservation quote does not belong to this session.");
+        }
+
+        var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
+        if (!ReservationQuoteSecurity.RequestFingerprintMatches(proof.RequestFingerprint, canonicalRequest))
+        {
+            throw new ReservationQuoteConflictException("Reservation inputs no longer match the issued quote.");
+        }
+    }
+
+    private static string BuildQuoteReplayCanonicalRequest(
+        CreateReservationRequest request,
+        Guid returnOfficeId,
+        ReservationPricingSnapshotV1 snapshot)
+    {
+        var campaignCode = string.IsNullOrWhiteSpace(request.CampaignCode)
+            ? string.Empty
+            : request.CampaignCode.Trim().ToUpperInvariant();
+        var extras = string.Join(",", snapshot.ExtraItems
+            .OrderBy(item => item.ExtraOptionId)
+            .Select(item => string.Join(":",
+                item.ExtraOptionId.ToString("N"),
+                item.OptionVersion.ToString(CultureInfo.InvariantCulture),
+                item.Quantity.ToString(CultureInfo.InvariantCulture),
+                item.UnitPrice.ToString(CultureInfo.InvariantCulture),
+                item.PricingMode)));
+
+        return string.Join("|",
+            "reservation-quote-replay-v1",
+            request.QuoteId?.ToString("N") ?? string.Empty,
+            request.VehicleGroupId.ToString("N"),
+            request.PickupOfficeId.ToString("N"),
+            returnOfficeId.ToString("N"),
+            NormalizeUtc(request.PickupDateTimeUtc).Ticks.ToString(CultureInfo.InvariantCulture),
+            NormalizeUtc(request.ReturnDateTimeUtc).Ticks.ToString(CultureInfo.InvariantCulture),
+            campaignCode,
+            request.DriverAge?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            request.FullCoverageWaiver ? "1" : "0",
+            NormalizeLocale(request.Locale),
+            snapshot.SchemaVersion.ToString(CultureInfo.InvariantCulture),
+            snapshot.FinalTotal.ToString(CultureInfo.InvariantCulture),
+            extras);
     }
 
     private static void ValidateQuoteAndLegacyCombination(CreateReservationRequest request)

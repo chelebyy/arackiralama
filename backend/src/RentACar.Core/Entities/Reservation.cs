@@ -24,6 +24,7 @@ public class Reservation : BaseEntity
     public DateTime? DriverLicenseExpiryDate { get; set; }
     public Guid? QuoteId { get; set; }
     public ReservationPricingSnapshotV1? PricingSnapshot { get; set; }
+    public ReservationQuoteReplayProofV1? QuoteReplayProof { get; set; }
     public uint Version { get; set; }
 
     public Customer? Customer { get; set; }
