@@ -1987,3 +1987,13 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Son Güncelleme:** 17 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü, deterministic payment + reservation application-service coverage slice'ları eklendi, frontend %25 ara hedefi kapatıldı ve son tamamlama slice'ı Phase 10.1 frontend coverage gate'i kapattı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` önce **574/574 PASS** + `RentACar.ApiIntegrationTests` **32/32 PASS** ile merged backend line coverage **91.09%** overall üretti; sonra payment follow-up ile `PaymentServiceTests` **33/33 PASS** ve `RentACar.Tests` **582/582 PASS**, ardından reservation follow-up ile `ReservationServiceTests` **64/64 PASS** ve `RentACar.Tests` **590/590 PASS** oldu. Unit-project Cobertura aggregates payment için **%91.71** (564/615) ve reservation için **%82.47** (320/388) gösterdi. Frontend Vitest **190/190 PASS**, overall frontend coverage **63.17%**, `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, `frontend/hooks/admin` **97.23%**, admin fleet/pricing/report page surfaces mostly **85–97%**, and public routes remain high. docs/12 bu güncel durumu yansıtacak şekilde hizalandı; PR follow-through handoff `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md` altında kaydedildi.)
 
 **Durum:** Aktif Takip
+
+## 12 July 2026 - Codex Security Findings Implementation Follow-up
+
+**Implementation status:** WP1 account claim and WP2 public reservation/cancellation boundaries are backend-implemented; WP0/WP4 containment changes are present; WP3 production configuration fail-closed validation is implemented, but provider-authenticated payment completion is not complete.
+
+**Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; focused security set passed 43/43; full backend passed 757/757 unit and 51/51 API integration tests. `git diff --check` found no whitespace errors.
+
+**Open gates:** frontend install/typecheck/test/build did not complete because dependency restoration exceeded the 300-second tool window; production-like Docker/browser proof, real-provider sandbox proof, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. This slice is implementation-progress, not acceptance-complete or release-ready.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

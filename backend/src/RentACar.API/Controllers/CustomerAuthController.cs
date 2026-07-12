@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,6 +14,7 @@ using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
+using RentACar.Infrastructure.Services.Notifications;
 
 namespace RentACar.API.Controllers;
 
@@ -23,11 +25,22 @@ public sealed class CustomerAuthController(
     IJwtTokenService jwtTokenService,
     IRefreshTokenCookieService refreshTokenCookieService,
     IAuditLogService auditLogService,
-    IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings) : BaseApiController
+    IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings,
+    ICustomerAccountClaimEmailDispatcher accountClaimEmailDispatcher,
+    IOptions<NotificationOptions> notificationOptions,
+    ILogger<CustomerAuthController> logger) : BaseApiController
 {
     private const int LockoutThreshold = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan ClaimTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly string[] SupportedLocales = ["tr-TR", "en-US", "ru-RU", "ar-SA", "de-DE"];
+
     private readonly string _refreshTokenCookieName = refreshTokenCookieSettings.Value.Name;
+    private readonly ICustomerAccountClaimEmailDispatcher _accountClaimEmailDispatcher = accountClaimEmailDispatcher;
+    private readonly string _defaultLocale = string.IsNullOrWhiteSpace(notificationOptions.Value.DefaultLocale)
+        ? "tr-TR"
+        : notificationOptions.Value.DefaultLocale;
+    private readonly ILogger<CustomerAuthController> _logger = logger;
 
     [HttpPost("register")]
     [AllowAnonymous]
@@ -59,33 +72,44 @@ public sealed class CustomerAuthController(
             return OkResponse(new { success = true }, "Kayit basarili.");
         }
 
+        if (existingCustomer is not null && !existingCustomer.HasPassword)
+        {
+            // Account claim path: knowledge of an email is NOT sufficient to install
+            // credentials on an existing passwordless customer. Issue a single-use
+            // claim token and dispatch a verification email. The customer record is
+            // left untouched and the request body fields are ignored.
+            await CreateAndDispatchClaimTokenAsync(existingCustomer.Id, existingCustomer.Email, cancellationToken);
+
+            await auditLogService.LogAsync(
+                "CustomerClaimRequested",
+                "CustomerAuth",
+                existingCustomer.Id.ToString(),
+                null,
+                null,
+                null,
+                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken);
+
+            return OkResponse(new { success = true }, "Kayit basarili.");
+        }
+
         var passwordHash = passwordHasher.HashPassword(request.Password);
-
-        if (existingCustomer is not null)
+        var newCustomer = new Customer
         {
-            existingCustomer.Email = email;
-            existingCustomer.PasswordHash = passwordHash;
-            ApplyProfileUpdates(existingCustomer, request);
-        }
-        else
-        {
-            var newCustomer = new Customer
-            {
-                Email = email,
-                PasswordHash = passwordHash,
-                FullName = request.FullName?.Trim() ?? string.Empty,
-                Phone = request.Phone?.Trim() ?? string.Empty,
-                IdentityNumber = string.Empty,
-                Nationality = "TR",
-                LicenseYear = 0
-            };
+            Email = email,
+            PasswordHash = passwordHash,
+            FullName = request.FullName?.Trim() ?? string.Empty,
+            Phone = request.Phone?.Trim() ?? string.Empty,
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0
+        };
 
-            dbContext.Customers.Add(newCustomer);
-        }
+        dbContext.Customers.Add(newCustomer);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var persistedCustomer = existingCustomer ?? dbContext.Customers.Local.First(customer => customer.NormalizedEmail == normalizedEmail);
+        var persistedCustomer = dbContext.Customers.Local.First(customer => customer.NormalizedEmail == normalizedEmail);
         await auditLogService.LogAsync(
             "Register",
             "CustomerAuth",
@@ -97,6 +121,84 @@ public sealed class CustomerAuthController(
             cancellationToken);
 
         return OkResponse(new { success = true }, "Kayit basarili.");
+    }
+
+    [HttpPost("claim")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
+    public async Task<IActionResult> Claim([FromBody] CustomerAccountClaimRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequestResponse("Token ve yeni parola zorunludur.");
+        }
+
+        var utcNow = DateTime.UtcNow;
+        var tokenHash = jwtTokenService.HashRefreshToken(request.Token);
+
+        var claimToken = await dbContext.CustomerAccountClaimTokens
+            .FirstOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
+
+        if (claimToken is null || !claimToken.IsActive(utcNow) || !claimToken.TryConsume(utcNow))
+        {
+            await auditLogService.LogAsync(
+                "CustomerClaimRejected",
+                "CustomerAuth",
+                claimToken?.CustomerId.ToString() ?? "unknown",
+                null,
+                null,
+                null,
+                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken);
+
+            return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
+        }
+
+        var customer = await dbContext.Customers
+            .FirstOrDefaultAsync(existingCustomer => existingCustomer.Id == claimToken.CustomerId, cancellationToken);
+
+        if (customer is null || customer.HasPassword)
+        {
+            // Reject claims against customers that no longer exist or already have a
+            // password, preventing a previously stolen token from overwriting a real
+            // account's credentials.
+            if (customer is not null)
+            {
+                claimToken.ConsumedAtUtc = utcNow;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            await auditLogService.LogAsync(
+                "CustomerClaimRejected",
+                "CustomerAuth",
+                claimToken.CustomerId.ToString(),
+                null,
+                null,
+                null,
+                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken);
+
+            return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
+        }
+
+        customer.PasswordHash = passwordHasher.HashPassword(request.NewPassword);
+        customer.TokenVersion += 1;
+
+        await SupersedeOtherActiveClaimTokensAsync(customer.Id, claimToken.Id, utcNow, cancellationToken);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await auditLogService.LogAsync(
+            "CustomerClaimCompleted",
+            "CustomerAuth",
+            customer.Id.ToString(),
+            null,
+            null,
+            null,
+            ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            cancellationToken);
+
+        return OkResponse(new { success = true }, "Hesap sahiplenmesi tamamlandi.");
     }
 
     [HttpPost("login")]
@@ -383,16 +485,115 @@ public sealed class CustomerAuthController(
         return Guid.TryParse(principalIdClaim, out principalId);
     }
 
-    private static void ApplyProfileUpdates(Customer customer, CustomerRegisterRequest request)
+    private async Task CreateAndDispatchClaimTokenAsync(
+        Guid customerId,
+        string destinationEmail,
+        CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(request.FullName))
+        var utcNow = DateTime.UtcNow;
+        var rawToken = GenerateClaimToken();
+        var tokenHash = jwtTokenService.HashRefreshToken(rawToken);
+        var expiresAtUtc = utcNow.Add(ClaimTokenLifetime);
+
+        var activeTokens = await dbContext.CustomerAccountClaimTokens
+            .Where(token =>
+                token.CustomerId == customerId
+                && !token.ConsumedAtUtc.HasValue
+                && !token.SupersededAtUtc.HasValue)
+            .ToListAsync(cancellationToken);
+
+        foreach (var activeToken in activeTokens)
         {
-            customer.FullName = request.FullName.Trim();
+            activeToken.SupersededAtUtc = utcNow;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Phone))
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
         {
-            customer.Phone = request.Phone.Trim();
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            TokenHash = tokenHash,
+            ExpiresAtUtc = expiresAtUtc,
+            IssuedFromIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            IssuedUserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _accountClaimEmailDispatcher.DispatchAsync(
+                destinationEmail,
+                rawToken,
+                expiresAtUtc,
+                ResolveLocaleFromRequest(),
+                cancellationToken);
         }
+        catch (Exception ex)
+        {
+            // Email dispatch failure must not surface account existence. The
+            // caller still receives a generic success response.
+            _logger.LogWarning(
+                ex,
+                "Customer account claim email dispatch failed for customer_id={CustomerId}",
+                customerId);
+        }
+    }
+
+    private async Task SupersedeOtherActiveClaimTokensAsync(
+        Guid customerId,
+        Guid consumedTokenId,
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var otherActiveTokens = await dbContext.CustomerAccountClaimTokens
+            .Where(token =>
+                token.CustomerId == customerId
+                && token.Id != consumedTokenId
+                && !token.ConsumedAtUtc.HasValue
+                && !token.SupersededAtUtc.HasValue)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in otherActiveTokens)
+        {
+            token.SupersededAtUtc = utcNow;
+        }
+    }
+
+    private string ResolveLocaleFromRequest()
+    {
+        var acceptLanguage = ControllerContext.HttpContext?.Request.Headers.AcceptLanguage.ToString();
+        if (string.IsNullOrWhiteSpace(acceptLanguage))
+        {
+            return _defaultLocale;
+        }
+
+        foreach (var entry in acceptLanguage.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var candidate = entry.Split(';', StringSplitOptions.TrimEntries).FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            foreach (var supported in SupportedLocales)
+            {
+                if (candidate.StartsWith(supported, StringComparison.OrdinalIgnoreCase)
+                    || supported.StartsWith(candidate, StringComparison.OrdinalIgnoreCase))
+                {
+                    return supported;
+                }
+            }
+        }
+
+        return _defaultLocale;
+    }
+
+    private static string GenerateClaimToken()
+    {
+        var tokenBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(tokenBytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
     }
 }

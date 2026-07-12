@@ -761,3 +761,22 @@ X-RateLimit-Reset: 1647356400
 ------------------------------------------------------------------------
 
 END OF DOCUMENT
+
+## Security Contract Addendum (12 July 2026)
+
+### Customer account claim
+
+- `POST /api/customer/v1/auth/register`: for an existing passwordless guest customer, returns the same generic success response but does not install credentials or update profile fields; it queues an email claim token.
+- `POST /api/customer/v1/auth/claim`: accepts `{ token, newPassword }`; only an active, unexpired, unused token may install the first password. Invalid, expired, replayed, superseded, or already-claimed cases return a generic bad request and perform no credential overwrite.
+
+### Public reservation access
+
+- `GET /api/v1/reservations/{publicCode}` returns `PublicReservationSummaryDto` only: public code, status, pickup/return office names and times, vehicle-group name, total/deposit, and currency.
+- The response must not include internal IDs, customer/driver PII, plate, notes, hold/session data, provider identifiers, internal pricing metadata, or customer statistics. It is strict-rate-limited and non-cacheable.
+- `POST /api/v1/reservations/{reservationId}/cancel` is intentionally unavailable. Customer self-service cancellation is accepted only through the authenticated customer reservation controller with ownership enforcement; admin cancellation remains admin-only.
+
+### Payment containment
+
+- Payment intent creation and 3DS completion return `503` without mutation when `Payment:EnablePayments` is false.
+- Production startup rejects Mock, unknown, sandbox, incomplete, or disabled payment configuration.
+- Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.

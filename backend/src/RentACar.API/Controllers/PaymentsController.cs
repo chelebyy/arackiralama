@@ -1,21 +1,35 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using RentACar.API.Configuration;
+using RentACar.API.Contracts;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Services;
+using RentACar.Infrastructure.Services.Payments;
 
 namespace RentACar.API.Controllers;
 
 [Route("api/v1/payments")]
 [EnableRateLimiting(RateLimitPolicyNames.Payment)]
-public sealed class PaymentsController(IPaymentService paymentService) : BaseApiController
+public sealed class PaymentsController(
+    IPaymentService paymentService,
+    IOptions<PaymentOptions> paymentOptions) : BaseApiController
 {
+    private readonly PaymentOptions _paymentOptions = paymentOptions.Value;
+
     [HttpPost("intents")]
     public async Task<IActionResult> CreateIntent(
         [FromBody] CreatePaymentIntentApiRequest request,
         CancellationToken cancellationToken)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                ApiResponse<object>.Fail("Ödeme altyapısı geçici olarak devre dışıdır."));
+        }
+
         if (request.ReservationId == Guid.Empty)
         {
             return BadRequestResponse("Geçerli bir rezervasyon ID gereklidir.");
@@ -48,6 +62,13 @@ public sealed class PaymentsController(IPaymentService paymentService) : BaseApi
         [FromBody] ThreeDsReturnApiRequest request,
         CancellationToken cancellationToken)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                ApiResponse<object>.Fail("Ödeme altyapısı geçici olarak devre dışıdır."));
+        }
+
         if (intentId == Guid.Empty)
         {
             return BadRequestResponse("Geçerli bir payment intent ID gereklidir.");

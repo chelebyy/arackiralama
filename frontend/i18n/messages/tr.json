@@ -799,6 +799,37 @@
       }
     }
   },
+  "accountClaim": {
+    "title": "Hesap Sahiplenme",
+    "subtitle": "Gonderilen dogrulama baglantisiyla parolanizi olusturun",
+    "description": "Bu baglanti tek kullaniliklik ve surelidir. Parolanizi olusturarak hesabinizi guvenli kilabilirsiniz.",
+    "fields": {
+      "newPassword": "Yeni Parola",
+      "confirmPassword": "Yeni Parola (Tekrar)",
+      "passwordHint": "En az 8 karakter icermeli"
+    },
+    "buttons": {
+      "submit": "Parolayi Olustur",
+      "submitting": "Isleniyor",
+      "backToHome": "Ana Sayfaya Don"
+    },
+    "validation": {
+      "tokenRequired": "Dogrulama baglantisi eksik",
+      "passwordRequired": "Parola zorunludur",
+      "passwordMinLength": "Parola en az 8 karakter olmalidir",
+      "passwordMismatch": "Parolalar eslesmiyor"
+    },
+    "status": {
+      "idle": "Parolanizi olusturmak icin bilgileri doldurun",
+      "success": "Hesabiniz basariyla sahiplenildi. Simdi giris yapabilirsiniz",
+      "failed": "Dogrulama baglantisi gecersiz veya suresi dolmus",
+      "unknownError": "Beklenmeyen bir hata olustu. Lutfen tekrar deneyin"
+    },
+    "successLink": {
+      "text": "Giris sayfasina git",
+      "href": "/tr/login"
+    }
+  },
   "legal": {
     "sectionLabel": "Bölüm {number}",
     "terms": {

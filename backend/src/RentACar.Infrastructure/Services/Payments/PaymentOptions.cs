@@ -2,14 +2,22 @@ namespace RentACar.Infrastructure.Services.Payments;
 
 public sealed class PaymentOptions
 {
-    public string Provider { get; init; } = "Mock";
-    public string Currency { get; init; } = "TRY";
+    public const string SectionName = "Payment";
+
+    public string Provider { get; set; } = "Mock";
+    public string Currency { get; set; } = "TRY";
     public int IntentExpiresMinutes { get; init; } = 15;
     public int RetryLimit { get; init; } = 3;
     public int TimeoutRetryCount { get; init; } = 2;
     public int WebhookJobBatchSize { get; init; } = 20;
     public MockProviderOptions Mock { get; init; } = new();
     public IyzicoProviderOptions Iyzico { get; init; } = new();
+
+    // Emergency containment kill switch (WP0). When false, payment intent
+    // creation and 3DS completion endpoints return 503 without mutating state.
+    // Defaults to true; in production the startup hardening forces it back to
+    // false unless explicitly enabled (see PaymentOptionsHardening).
+    public bool EnablePayments { get; set; } = true;
 }
 
 public sealed class MockProviderOptions
@@ -19,8 +27,8 @@ public sealed class MockProviderOptions
 
 public sealed class IyzicoProviderOptions
 {
-    public string ApiKey { get; init; } = string.Empty;
-    public string SecretKey { get; init; } = string.Empty;
-    public string BaseUrl { get; init; } = "https://sandbox-api.iyzipay.com";
-    public string WebhookSecret { get; init; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;
+    public string SecretKey { get; set; } = string.Empty;
+    public string BaseUrl { get; set; } = "https://sandbox-api.iyzipay.com";
+    public string WebhookSecret { get; set; } = string.Empty;
 }

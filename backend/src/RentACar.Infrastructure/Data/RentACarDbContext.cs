@@ -24,6 +24,7 @@ public class RentACarDbContext(DbContextOptions<RentACarDbContext> options)
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<CustomerAccountClaimToken> CustomerAccountClaimTokens => Set<CustomerAccountClaimToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();

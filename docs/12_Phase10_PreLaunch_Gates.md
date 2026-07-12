@@ -1546,3 +1546,20 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 **Oluşturulma:** 25 Nisan 2026  
 **Son Güncelleme:** 4 Mayıs 2026 (Phase 10.5 Security Audit — dependency vulnerabilities fixed, manual OWASP scan completed, security findings documented)  
 **Durum:** Aktif Takip
+
+## 12 July 2026 Security Remediation Gate Addendum
+
+| Gate | State | Evidence / blocker |
+| --- | --- | --- |
+| Guest account claim boundary | PARTIAL | Backend implementation and focused tests pass; production email/browser proof open |
+| Public reservation PII boundary | PARTIAL | Allowlisted DTO, strict rate limit, no-store, and backend suites pass; browser payload inspection open |
+| Anonymous cancellation containment | PARTIAL | Public route removed and owner/admin tests pass; production-like no-write HTTP proof open |
+| Production payment fail-closed configuration | PARTIAL | `ValidateOnStart` regression tests pass; production-like container startup matrix open |
+| Provider-authenticated paid transition | NO-GO | Real provider/API contract, replay/mismatch negatives, and sandbox success evidence missing |
+| Credential incident closure | NO-GO | Rotation, provider access-log review, and active/history scan evidence missing |
+| Dependabot human review enforcement | PARTIAL | Auto-merge workflow removed; branch protection and test PR evidence missing |
+| Frontend automated verification | UNKNOWN | Dependency restoration exceeded 300-second tool window before typecheck/test/build |
+| Backend automated verification | GO | Build 0 warnings/errors; 757 unit + 51 integration tests pass |
+| Combined Docker/browser/security review | NO-GO | Not run for this security slice |
+
+Release remains blocked. Implementation-complete, acceptance-complete, and release-ready must continue to be reported separately.

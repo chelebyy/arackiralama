@@ -233,12 +233,53 @@ public sealed class ReservationService : IReservationService
         return availableGroups.Any(g => g.GroupId == vehicleGroupId && g.AvailableCount > 0);
     }
 
-    public async Task<ReservationDto?> GetReservationByPublicCodeAsync(
+    public async Task<PublicReservationSummaryDto?> GetReservationByPublicCodeAsync(
         string publicCode,
         CancellationToken cancellationToken = default)
     {
         var reservation = await _reservationRepository.GetByPublicCodeAsync(publicCode, cancellationToken);
-        return reservation != null ? MapToDto(reservation) : null;
+        return reservation != null ? MapToPublicSummary(reservation) : null;
+    }
+
+    private PublicReservationSummaryDto MapToPublicSummary(Reservation reservation)
+    {
+        // Public lookup surface — see PublicReservationSummaryDto. Only fields
+        // explicitly allowlisted here may leave this method, to prevent leaking
+        // customer/driver PII, plates, internal ids, or stats through an
+        // unauthenticated route.
+        var vehicleGroupName =
+            reservation.Vehicle?.Group?.NameTr
+            ?? reservation.Vehicle?.Brand
+            ?? string.Empty;
+
+        var pickupOfficeName =
+            reservation.PickupOffice?.Name
+            ?? reservation.Vehicle?.Office?.Name
+            ?? string.Empty;
+
+        var returnOfficeName =
+            reservation.ReturnOffice?.Name
+            ?? reservation.Vehicle?.Office?.Name
+            ?? string.Empty;
+
+        var depositAmount =
+            reservation.PricingSnapshot?.DepositAmount
+            ?? reservation.Vehicle?.Group?.DepositAmount
+            ?? 0m;
+
+        return new PublicReservationSummaryDto
+        {
+            PublicCode = reservation.PublicCode,
+            Status = reservation.Status.ToString(),
+            PickupOfficeName = pickupOfficeName,
+            ReturnOfficeName = returnOfficeName,
+            PickupDateTime = reservation.PickupDateTime,
+            ReturnDateTime = reservation.ReturnDateTime,
+            VehicleGroupName = vehicleGroupName,
+            TotalAmount = reservation.TotalAmount,
+            DepositAmount = depositAmount,
+            Currency = "TRY"
+        };
     }
 
     public async Task<ReservationDto?> GetReservationByIdAsync(

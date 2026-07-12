@@ -912,5 +912,36 @@
         }
       ]
     }
+  },
+  "accountClaim": {
+    "title": "Konto beanspruchen",
+    "subtitle": "Richten Sie Ihr Passwort mit dem zugesandten Bestatigungslink ein",
+    "description": "Dieser Link ist einmalig und zeitlich begrenzt. Mit der Einrichtung Ihres Passworts beanspruchen Sie Ihr Konto sicher.",
+    "fields": {
+      "newPassword": "Neues Passwort",
+      "confirmPassword": "Neues Passwort (wiederholen)",
+      "passwordHint": "Muss mindestens 8 Zeichen lang sein"
+    },
+    "buttons": {
+      "submit": "Passwort festlegen",
+      "submitting": "Verarbeite",
+      "backToHome": "Zur Startseite"
+    },
+    "validation": {
+      "tokenRequired": "Bestatigungslink fehlt",
+      "passwordRequired": "Passwort ist erforderlich",
+      "passwordMinLength": "Passwort muss mindestens 8 Zeichen lang sein",
+      "passwordMismatch": "Passworter stimmen nicht uberein"
+    },
+    "status": {
+      "idle": "Fullen Sie das Formular aus, um Ihr Passwort einzurichten",
+      "success": "Ihr Konto wurde erfolgreich beansprucht. Sie konnnen sich jetzt anmelden",
+      "failed": "Bestatigungslink ist ungultig oder abgelaufen",
+      "unknownError": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut"
+    },
+    "successLink": {
+      "text": "Zur Anmeldung gehen",
+      "href": "/de/login"
+    }
   }
 }

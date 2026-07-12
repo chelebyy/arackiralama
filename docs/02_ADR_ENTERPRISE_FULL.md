@@ -437,3 +437,21 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 - Public/admin catalog and generic quote/reservation contracts are implemented. Admin and public frontend phases remain governed by `docs/16_Reservation_Extra_Options_Plan.md`.
 - Full Docker browser evidence remains open until the admin and public UI phases are implemented.
 - The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.
+
+## 13. Security Boundary Decisions (12 July 2026)
+
+### 13.1 Verified Guest-Account Claim
+
+Existing passwordless guest customers are not upgraded by knowledge of an email address. Registration returns a generic response and issues a purpose-specific, hashed, expiring, single-use `CustomerAccountClaimToken`; installing the first password requires possession of the emailed token. Issuing a replacement token supersedes older active tokens. Raw tokens are never persisted.
+
+### 13.2 Public Reservation Boundary
+
+Unauthenticated lookup returns only `PublicReservationSummaryDto`, an explicit allowlist without internal identifiers, customer/driver PII, plate, notes, hold data, or provider metadata. The route is strict-rate-limited and non-cacheable. Anonymous cancellation is removed; customer cancellation remains behind `CustomerOnly` ownership checks and admin cancellation remains admin-only.
+
+### 13.3 Payment Fail-Closed Boundary
+
+Production payment configuration is bound and validated with `ValidateOnStart`. Mock, unknown, sandbox, incomplete, or disabled configurations prevent startup. The browser return remains a navigation signal only in the target architecture: no paid transition is considered secure until the selected provider is verified server-to-server and bound to provider intent, reservation, amount, currency, status, and unique transaction/event identity.
+
+### 13.4 Acceptance State
+
+These decisions are implemented for account claim, public reservation exposure/cancellation containment, and production configuration validation. They do not close the payment-integrity finding or establish release readiness. Canonical implementation and remaining evidence gates are tracked in `docs/18_Codex_Security_Findings_Implementation.md`.

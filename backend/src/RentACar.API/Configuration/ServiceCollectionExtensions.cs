@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenCookieService, RefreshTokenCookieService>();
         services.AddScoped<IPasswordResetEmailDispatcher, PasswordResetEmailDispatcher>();
+        services.AddScoped<ICustomerAccountClaimEmailDispatcher, CustomerAccountClaimEmailDispatcher>();
         services.AddScoped<IAccessTokenSessionValidator, AccessTokenSessionValidator>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
@@ -56,7 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPublicSiteSettingsService, PublicSiteSettingsService>();
         services.AddScoped<IReservationExtraOptionCatalogService, ReservationExtraOptionCatalogService>();
         services.AddScoped<IReportsService, ReportsService>();
-        services.AddPaymentIntegration(configuration);
+        services.AddPaymentIntegration(configuration, environment);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration, environment);
         services.AddAdminAuthorization();
@@ -110,9 +111,19 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddPaymentIntegration(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddPaymentIntegration(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        services.Configure<PaymentOptions>(configuration.GetSection("Payment"));
+        var paymentOptions = services.AddOptions<PaymentOptions>()
+            .Bind(configuration.GetSection(PaymentOptions.SectionName));
+
+        if (environment.IsProduction())
+        {
+            paymentOptions
+                .Validate(
+                    PaymentOptionsValidator.IsValidForProduction,
+                    "Production payment configuration is incomplete or unsafe.")
+                .ValidateOnStart();
+        }
         services.AddScoped<MockPaymentProvider>();
         services.AddScoped<IyzicoPaymentProvider>();
         services.AddScoped<IPaymentProvider>(serviceProvider =>
@@ -121,6 +132,21 @@ public static class ServiceCollectionExtensions
             return options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase)
                 ? serviceProvider.GetRequiredService<IyzicoPaymentProvider>()
                 : serviceProvider.GetRequiredService<MockPaymentProvider>();
+        });
+
+        // Emergency containment hardening (WP0). In production, payment completion
+        // is fail-closed unless Payment:EnablePayments is explicitly set to true.
+        services.PostConfigure<PaymentOptions>(options =>
+        {
+            var enablePaymentsConfigured = bool.TryParse(
+                configuration.GetSection("Payment:EnablePayments").Value,
+                out var enablePaymentsValue);
+
+            if (environment.IsProduction() && (!enablePaymentsConfigured || !enablePaymentsValue))
+            {
+                options.EnablePayments = false;
+            }
+
         });
 
         return services;

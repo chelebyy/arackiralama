@@ -82,6 +82,27 @@ export async function callRegisterEndpoint(payload: {
   };
 }
 
+export async function callAccountClaimEndpoint(payload: {
+  token: string;
+  newPassword: string;
+}) {
+  const backendResponse = await fetch(buildBackendUrl("/api/customer/v1/auth/claim"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+
+  const envelope = await parseEnvelope<Record<string, unknown>>(backendResponse);
+
+  return {
+    backendResponse,
+    envelope
+  };
+}
+
 export async function callPasswordResetRequest(payload: {
   email: string;
   principalScope: PrincipalScope;

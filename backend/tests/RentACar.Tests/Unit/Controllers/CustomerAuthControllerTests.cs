@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using RentACar.API.Authentication;
@@ -16,6 +17,7 @@ using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Security;
+using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Tests.TestFixtures;
 using Xunit;
 
@@ -54,7 +56,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
-    public async Task Register_WhenGuestCustomerExists_UpgradesExistingCustomer()
+    public async Task Register_WhenGuestCustomerExists_QueuesClaimTokenWithoutMutatingCustomer()
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var passwordHasher = new BcryptPasswordHasher();
@@ -70,9 +72,25 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         };
 
         dbContext.Customers.Add(existingCustomer);
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = existingCustomer.Id,
+            TokenHash = "sha256:previous-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+        });
         await dbContext.SaveChangesAsync();
 
-        var controller = CreateController(dbContext, passwordHasher: passwordHasher);
+        var claimDispatcher = new Mock<ICustomerAccountClaimEmailDispatcher>();
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken(It.IsAny<string>()))
+            .Returns((string value) => $"sha256:{value}-hash");
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            accountClaimEmailDispatcher: claimDispatcher.Object,
+            jwtTokenService: jwtTokenService.Object);
 
         var result = await controller.Register(
             new CustomerRegisterRequest("GUEST@Test.com", "Secure123!", "Registered Person", "05009998877"),
@@ -80,13 +98,300 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
 
         result.Should().BeOfType<OkObjectResult>();
 
-        dbContext.Customers.Should().HaveCount(1);
-        var upgradedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
-        upgradedCustomer.Id.Should().Be(existingCustomer.Id);
-        upgradedCustomer.HasPassword.Should().BeTrue();
-        passwordHasher.VerifyPassword("Secure123!", upgradedCustomer.PasswordHash!).Should().BeTrue();
-        upgradedCustomer.FullName.Should().Be("Registered Person");
-        upgradedCustomer.Phone.Should().Be("05009998877");
+        // Customer profile must NOT be mutated.
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.Id.Should().Be(existingCustomer.Id);
+        persistedCustomer.HasPassword.Should().BeFalse();
+        persistedCustomer.PasswordHash.Should().BeNull();
+        persistedCustomer.FullName.Should().Be("Guest Person");
+        persistedCustomer.Phone.Should().Be("05000000000");
+
+        // A single-use claim token must be persisted.
+        dbContext.CustomerAccountClaimTokens.Should().HaveCount(2);
+        var token = dbContext.CustomerAccountClaimTokens.Single(item => item.TokenHash != "sha256:previous-token-hash");
+        token.CustomerId.Should().Be(existingCustomer.Id);
+        token.ConsumedAtUtc.Should().BeNull();
+        token.SupersededAtUtc.Should().BeNull();
+        token.ExpiresAtUtc.Should().BeAfter(DateTime.UtcNow);
+        dbContext.CustomerAccountClaimTokens
+            .Single(item => item.TokenHash == "sha256:previous-token-hash")
+            .SupersededAtUtc.Should().NotBeNull();
+
+        // Email should be dispatched exactly once.
+        claimDispatcher.Verify(
+            dispatcher => dispatcher.DispatchAsync(
+                existingCustomer.Email,
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Claim_WithValidToken_InstallsPasswordAndConsumesToken()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var customer = new Customer
+        {
+            Email = "claim@test.com",
+            FullName = "Claim Customer",
+            Phone = "05001112233",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("valid-claim-token"))
+            .Returns("sha256:valid-claim-token-hash");
+
+        // The controller also calls jwtTokenService.HashRefreshToken for the raw
+        // generated claim token (during registration), so make any unhandled
+        // hashes return a deterministic value not matching any token record.
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken(It.Is<string>(value => value != "valid-claim-token")))
+            .Returns((string value) => $"sha256:{value}-hash");
+
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:valid-claim-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            jwtTokenService: jwtTokenService.Object);
+
+        var result = await controller.Claim(
+            new CustomerAccountClaimRequest("valid-claim-token", "NewSecurePassword1!"),
+            CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.HasPassword.Should().BeTrue();
+        passwordHasher.VerifyPassword("NewSecurePassword1!", persistedCustomer.PasswordHash!).Should().BeTrue();
+        persistedCustomer.TokenVersion.Should().Be(1);
+
+        var token = dbContext.CustomerAccountClaimTokens.Should().ContainSingle().Subject;
+        token.ConsumedAtUtc.Should().NotBeNull();
+        token.SupersededAtUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Claim_WithExpiredToken_ReturnsBadRequestAndDoesNotMutateCustomer()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var customer = new Customer
+        {
+            Email = "expired-claim@test.com",
+            FullName = "Customer",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken(It.IsAny<string>()))
+            .Returns("sha256:expired-claim-token-hash");
+
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:expired-claim-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-5)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            jwtTokenService: jwtTokenService.Object);
+
+        var result = await controller.Claim(
+            new CustomerAccountClaimRequest("expired-claim-token", "NewSecurePassword1!"),
+            CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.HasPassword.Should().BeFalse();
+        persistedCustomer.TokenVersion.Should().Be(0);
+
+        var token = dbContext.CustomerAccountClaimTokens.Should().ContainSingle().Subject;
+        token.ConsumedAtUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Claim_WithReplayedToken_ReturnsBadRequestAndDoesNotMutateCustomer()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var customer = new Customer
+        {
+            Email = "replay-claim@test.com",
+            FullName = "Customer",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("replay-claim-token"))
+            .Returns("sha256:replay-claim-token-hash");
+
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:replay-claim-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            ConsumedAtUtc = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            jwtTokenService: jwtTokenService.Object);
+
+        var result = await controller.Claim(
+            new CustomerAccountClaimRequest("replay-claim-token", "NewSecurePassword1!"),
+            CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        persistedCustomer.HasPassword.Should().BeFalse();
+        persistedCustomer.TokenVersion.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Claim_WhenCustomerAlreadyHasPassword_ReturnsBadRequestAndConsumesToken()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var existingHash = passwordHasher.HashPassword("OriginalPassword1!");
+        var customer = new Customer
+        {
+            Email = "already-claimed@test.com",
+            FullName = "Customer",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = existingHash
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("already-claimed-token"))
+            .Returns("sha256:already-claimed-token-hash");
+
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:already-claimed-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            jwtTokenService: jwtTokenService.Object);
+
+        var result = await controller.Claim(
+            new CustomerAccountClaimRequest("already-claimed-token", "AttemptedPassword1!"),
+            CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+
+        var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
+        passwordHasher.VerifyPassword("OriginalPassword1!", persistedCustomer.PasswordHash!).Should().BeTrue();
+        persistedCustomer.TokenVersion.Should().Be(0);
+
+        // Token must be consumed to prevent repetitive attempts.
+        var token = dbContext.CustomerAccountClaimTokens.Should().ContainSingle().Subject;
+        token.ConsumedAtUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Claim_CompletesSuccessfully_ForSupersededPreviousActiveTokens()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var passwordHasher = new BcryptPasswordHasher();
+        var customer = new Customer
+        {
+            Email = "supersede@test.com",
+            FullName = "Customer",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(customer);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("first-token"))
+            .Returns("sha256:first-token-hash");
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken("second-token"))
+            .Returns("sha256:second-token-hash");
+
+        var firstToken = new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:first-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+        };
+        var secondToken = new CustomerAccountClaimToken
+        {
+            CustomerId = customer.Id,
+            TokenHash = "sha256:second-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+        };
+        dbContext.CustomerAccountClaimTokens.AddRange(firstToken, secondToken);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(
+            dbContext,
+            passwordHasher: passwordHasher,
+            jwtTokenService: jwtTokenService.Object);
+
+        // Use the second token — first should be superseded.
+        await controller.Claim(
+            new CustomerAccountClaimRequest("second-token", "NewSecurePassword1!"),
+            CancellationToken.None);
+
+        var tokens = dbContext.CustomerAccountClaimTokens.ToList();
+        tokens.Single(token => token.TokenHash == "sha256:second-token-hash").ConsumedAtUtc.Should().NotBeNull();
+        tokens.Single(token => token.TokenHash == "sha256:first-token-hash").SupersededAtUtc.Should().NotBeNull();
+        tokens.Single(token => token.TokenHash == "sha256:first-token-hash").ConsumedAtUtc.Should().BeNull();
     }
 
     [Fact]
@@ -676,13 +981,24 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         IJwtTokenService? jwtTokenService = null,
         IRefreshTokenCookieService? refreshTokenCookieService = null,
         IAuditLogService? auditLogService = null,
-        RefreshTokenCookieSettings? refreshTokenCookieSettings = null)
+        RefreshTokenCookieSettings? refreshTokenCookieSettings = null,
+        ICustomerAccountClaimEmailDispatcher? accountClaimEmailDispatcher = null,
+        NotificationOptions? notificationOptions = null,
+        ILogger<CustomerAuthController>? logger = null)
     {
         passwordHasher ??= new Mock<IPasswordHasher>().Object;
-        jwtTokenService ??= Mock.Of<IJwtTokenService>();
+        var jwtMock = new Mock<IJwtTokenService>();
+        if (jwtTokenService is not null)
+        {
+            jwtMock = Mock.Get(jwtTokenService);
+        }
+        jwtTokenService ??= jwtMock.Object;
         refreshTokenCookieService ??= Mock.Of<IRefreshTokenCookieService>();
         auditLogService ??= Mock.Of<IAuditLogService>();
         refreshTokenCookieSettings ??= new RefreshTokenCookieSettings();
+        accountClaimEmailDispatcher ??= Mock.Of<ICustomerAccountClaimEmailDispatcher>();
+        notificationOptions ??= new NotificationOptions { DefaultLocale = "tr-TR" };
+        logger ??= Mock.Of<ILogger<CustomerAuthController>>();
 
         return new CustomerAuthController(
             dbContext,
@@ -690,7 +1006,10 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             jwtTokenService,
             refreshTokenCookieService,
             auditLogService,
-            Options.Create(refreshTokenCookieSettings))
+            Options.Create(refreshTokenCookieSettings),
+            accountClaimEmailDispatcher,
+            Options.Create(notificationOptions),
+            logger)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -942,6 +1261,5 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         (string)(ReadProperty(value, propertyName) ?? throw new InvalidOperationException($"Missing property: {propertyName}"));
     #endregion
 }
-
 
 
