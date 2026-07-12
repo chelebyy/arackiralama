@@ -1,4 +1,4 @@
-﻿using RentACar.Core.Enums;
+using RentACar.Core.Enums;
 
 namespace RentACar.Core.Entities;
 

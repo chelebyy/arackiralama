@@ -710,7 +710,7 @@ public sealed class ReservationServiceTests
         result.Status.Should().Be("Draft");
         result.TotalAmount.Should().Be(1700);
         result.CustomerEmail.Should().Be(request.Customer.Email);
-        
+
         _reservationRepositoryMock.Verify(x => x.AddAsync(
             It.Is<Reservation>(r =>
                 r.Status == ReservationStatus.Draft
@@ -2071,8 +2071,8 @@ public sealed class ReservationServiceTests
     [InlineData(ReservationStatus.Completed, ReservationStatus.Draft, false)]
     [InlineData(ReservationStatus.Cancelled, ReservationStatus.Hold, false)]
     public async Task IsValidStatusTransitionAsync_VariousTransitions_ReturnsExpected(
-        ReservationStatus current, 
-        ReservationStatus target, 
+        ReservationStatus current,
+        ReservationStatus target,
         bool expected)
     {
         // Act
@@ -2829,7 +2829,7 @@ public sealed class ReservationServiceTests
             LastName = "Yilmaz",
             Email = "ahmet@example.com",
             Phone = "+90 555 123 4567"
-            }
+        }
     };
 
     private static DbUpdateException CreateOverlapDbUpdateException()

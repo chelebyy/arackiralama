@@ -286,8 +286,15 @@ public sealed class FleetServiceTests : IDisposable
     {
         var group = new VehicleGroup
         {
-            NameTr = name, NameEn = name, NameRu = name, NameAr = name, NameDe = name,
-            DepositAmount = 2000m, MinAge = 21, MinLicenseYears = 2, Features = ["Klima"]
+            NameTr = name,
+            NameEn = name,
+            NameRu = name,
+            NameAr = name,
+            NameDe = name,
+            DepositAmount = 2000m,
+            MinAge = 21,
+            MinLicenseYears = 2,
+            Features = ["Klima"]
         };
         _dbContext.VehicleGroups.Add(group);
         await _dbContext.SaveChangesAsync();
@@ -321,8 +328,14 @@ public sealed class FleetServiceTests : IDisposable
     {
         var vehicle = new Vehicle
         {
-            Plate = plate, Brand = "Toyota", Model = "Corolla", Year = 2024,
-            Color = "Beyaz", GroupId = groupId, OfficeId = officeId, Status = VehicleStatus.Available
+            Plate = plate,
+            Brand = "Toyota",
+            Model = "Corolla",
+            Year = 2024,
+            Color = "Beyaz",
+            GroupId = groupId,
+            OfficeId = officeId,
+            Status = VehicleStatus.Available
         };
         _dbContext.Vehicles.Add(vehicle);
         await _dbContext.SaveChangesAsync();
