@@ -204,7 +204,7 @@ describe("admin reservations API", () => {
     mockedPost.mockResolvedValue({ data: { id: "refund-1" } } as never);
   });
 
-  it("normalizes persisted pricing snapshots without double counting extras", async () => {
+  it("normalizes persisted pricing snapshots without double counting built-in fees", async () => {
     mockedGet.mockResolvedValueOnce({
       data: {
         id: "reservation-snapshot",
@@ -214,7 +214,7 @@ describe("admin reservations API", () => {
           dailyRate: 1200,
           rentalDays: 3,
           baseTotal: 3600,
-          extrasTotal: 225,
+          extrasTotal: 975,
           campaignDiscount: 0,
           airportFee: 250,
           oneWayFee: 500,
@@ -233,13 +233,37 @@ describe("admin reservations API", () => {
 
     expect(reservation.priceBreakdown).toMatchObject({
       basePrice: 3600,
-      extrasTotal: 225,
+      extrasTotal: 975,
       insuranceTotal: 0,
       subtotal: 4575,
       discountAmount: 0,
       totalAmount: 4575,
       depositAmount: 2000,
       currency: "TRY"
+    });
+  });
+
+  it("reconstructs legacy extras when the aggregate field is absent", async () => {
+    mockedGet.mockResolvedValueOnce({
+      data: {
+        id: "legacy-reservation",
+        totalAmount: 4350,
+        priceBreakdown: {
+          baseTotal: 3600,
+          airportFee: 250,
+          oneWayFee: 500,
+          finalTotal: 4350,
+          currency: "TRY"
+        }
+      }
+    } as never);
+
+    const reservation = await getReservationById("legacy-reservation");
+
+    expect(reservation.priceBreakdown).toMatchObject({
+      extrasTotal: 750,
+      subtotal: 4350,
+      totalAmount: 4350
     });
   });
 

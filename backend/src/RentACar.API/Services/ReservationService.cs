@@ -1599,7 +1599,7 @@ public sealed class ReservationService : IReservationService
         var campaignDiscount = CalculateLegacyCampaignDiscount(basePricing, subtotalBeforeDiscount);
         var pricing = basePricing with
         {
-            ExtrasTotal = extraTotal,
+            ExtrasTotal = RoundAmount(basePricing.ExtrasTotal + extraTotal),
             CampaignDiscount = campaignDiscount,
             FinalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount),
             ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()

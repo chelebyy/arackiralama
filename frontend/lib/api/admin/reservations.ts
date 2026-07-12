@@ -120,39 +120,43 @@ function normalizeReservation(reservation: AdminReservation): AdminReservation {
     "";
   const rawBreakdown = raw.priceBreakdown;
   const normalizedPriceBreakdown = rawBreakdown
-    ? {
-        basePrice:
-          rawBreakdown.basePrice ??
-          rawBreakdown.baseTotal ??
-          rawBreakdown.finalTotal ??
-          raw.totalAmount ??
-          0,
-        dailyRate: rawBreakdown.dailyRate,
-        rentalDays: rawBreakdown.rentalDays ?? raw.rentalDays ?? 1,
-        baseTotal: rawBreakdown.baseTotal,
-        extraFees: rawBreakdown.extraFees ?? [],
-        extrasTotal: rawBreakdown.extrasTotal ?? 0,
-        insuranceTotal: rawBreakdown.insuranceTotal ?? rawBreakdown.fullCoverageWaiverFee ?? 0,
-        subtotal:
-          rawBreakdown.subtotal ??
-          (rawBreakdown.baseTotal ?? raw.totalAmount ?? 0) +
-            (rawBreakdown.extrasTotal ?? 0) +
-            (rawBreakdown.airportFee ?? 0) +
-            (rawBreakdown.oneWayFee ?? 0) +
-            (rawBreakdown.extraDriverFee ?? 0) +
-            (rawBreakdown.childSeatFee ?? 0) +
-            (rawBreakdown.youngDriverFee ?? 0) +
-            (rawBreakdown.fullCoverageWaiverFee ?? 0),
-        taxRate: rawBreakdown.taxRate ?? 0,
-        taxAmount: rawBreakdown.taxAmount ?? 0,
-        discountAmount: rawBreakdown.discountAmount ?? rawBreakdown.campaignDiscount ?? 0,
-        campaignDiscount: rawBreakdown.campaignDiscount,
-        totalAmount: rawBreakdown.totalAmount ?? rawBreakdown.finalTotal ?? raw.totalAmount ?? 0,
-        finalTotal: rawBreakdown.finalTotal,
-        currency: rawBreakdown.currency ?? "TRY",
-        depositAmount: rawBreakdown.depositAmount ?? 0,
-        appliedCampaignCode: rawBreakdown.appliedCampaignCode
-      }
+    ? (() => {
+        const legacyFeeTotal = [
+          rawBreakdown.airportFee,
+          rawBreakdown.oneWayFee,
+          rawBreakdown.extraDriverFee,
+          rawBreakdown.childSeatFee,
+          rawBreakdown.youngDriverFee,
+          rawBreakdown.fullCoverageWaiverFee
+        ].reduce((total, fee) => total + (fee ?? 0), 0);
+        const extrasTotal = rawBreakdown.extrasTotal ?? legacyFeeTotal;
+        const baseTotal = rawBreakdown.baseTotal ?? raw.totalAmount ?? 0;
+
+        return {
+          basePrice:
+            rawBreakdown.basePrice ??
+            rawBreakdown.baseTotal ??
+            rawBreakdown.finalTotal ??
+            raw.totalAmount ??
+            0,
+          dailyRate: rawBreakdown.dailyRate,
+          rentalDays: rawBreakdown.rentalDays ?? raw.rentalDays ?? 1,
+          baseTotal: rawBreakdown.baseTotal,
+          extraFees: rawBreakdown.extraFees ?? [],
+          extrasTotal,
+          insuranceTotal: rawBreakdown.insuranceTotal ?? rawBreakdown.fullCoverageWaiverFee ?? 0,
+          subtotal: rawBreakdown.subtotal ?? baseTotal + extrasTotal,
+          taxRate: rawBreakdown.taxRate ?? 0,
+          taxAmount: rawBreakdown.taxAmount ?? 0,
+          discountAmount: rawBreakdown.discountAmount ?? rawBreakdown.campaignDiscount ?? 0,
+          campaignDiscount: rawBreakdown.campaignDiscount,
+          totalAmount: rawBreakdown.totalAmount ?? rawBreakdown.finalTotal ?? raw.totalAmount ?? 0,
+          finalTotal: rawBreakdown.finalTotal,
+          currency: rawBreakdown.currency ?? "TRY",
+          depositAmount: rawBreakdown.depositAmount ?? 0,
+          appliedCampaignCode: rawBreakdown.appliedCampaignCode
+        };
+      })()
     : reservation.priceBreakdown;
 
   return {

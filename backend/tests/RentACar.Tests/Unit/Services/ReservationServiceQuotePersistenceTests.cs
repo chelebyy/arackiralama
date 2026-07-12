@@ -203,8 +203,8 @@ public sealed class ReservationServiceQuotePersistenceTests
                 false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PriceBreakdownDto(
-                500m, 2, 1000m, 0m, 100m, 0m, 0m, 0m, 0m, 0m, 0m,
-                900m, 1000m, 1000m, "TRY", "SAVE10")
+                500m, 2, 1000m, 100m, 110m, 100m, 0m, 0m, 0m, 0m, 0m,
+                990m, 1000m, 1000m, "TRY", "SAVE10")
             {
                 AppliedCampaignDiscountType = "percentage",
                 AppliedCampaignDiscountValue = 10m
@@ -282,10 +282,11 @@ public sealed class ReservationServiceQuotePersistenceTests
             }
         });
 
-        result.PriceBreakdown!.ExtrasTotal.Should().Be(200m);
-        result.PriceBreakdown.CampaignDiscount.Should().Be(120m);
-        result.PriceBreakdown.FinalTotal.Should().Be(1080m);
-        result.TotalAmount.Should().Be(1080m);
+        result.PriceBreakdown!.ExtrasTotal.Should().Be(300m);
+        result.PriceBreakdown.AirportFee.Should().Be(100m);
+        result.PriceBreakdown.CampaignDiscount.Should().Be(130m);
+        result.PriceBreakdown.FinalTotal.Should().Be(1170m);
+        result.TotalAmount.Should().Be(1170m);
     }
 
     private static ReservationQuoteV1 CreateQuote(Guid groupId, Guid officeId, DateTime pickup)
