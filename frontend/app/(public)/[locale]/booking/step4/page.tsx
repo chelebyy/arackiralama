@@ -43,6 +43,17 @@ type PaymentMethodOption = {
   icon: ReactNode;
 };
 
+const isRefreshableQuoteConflict = (error: unknown) => {
+  if (!(error instanceof ApiError) || error.statusCode !== 409) return false;
+
+  return error.message === "Reservation quote is missing or expired." ||
+    error.message === "Reservation quote has expired." ||
+    error.message === "Reservation inputs no longer match the issued quote." ||
+    error.message.startsWith("A quoted extra option ") ||
+    error.message.startsWith("One or more reservation extra options ") ||
+    error.message.startsWith("Extra option ");
+};
+
 const noPaymentMethods: PublicPaymentMethods = {
   creditCardEnabled: false,
   debitCardEnabled: false,
@@ -410,7 +421,7 @@ export default function BookingStep4Page() {
       try {
         reservation = await createForQuote(quote!);
       } catch (error) {
-        if (!(error instanceof ApiError) || error.statusCode !== 409) {
+        if (!isRefreshableQuoteConflict(error)) {
           throw error;
         }
 

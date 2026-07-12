@@ -188,25 +188,49 @@ public sealed class ReservationExtraOptionCatalogService(IApplicationDbContext d
         option.SortOrder = request.SortOrder;
         option.UpdatedAt = DateTime.UtcNow;
 
-        dbContext.ReservationExtraOptionTranslations.RemoveRange(option.Translations);
-        option.Translations = normalized.Translations
-            .Select(translation => new ReservationExtraOptionTranslation
+        var translationsByLocale = normalized.Translations.ToDictionary(translation => translation.Locale);
+        foreach (var translation in option.Translations.ToList())
+        {
+            if (!translationsByLocale.Remove(translation.Locale, out var updatedTranslation))
+            {
+                option.Translations.Remove(translation);
+                dbContext.ReservationExtraOptionTranslations.Remove(translation);
+                continue;
+            }
+
+            translation.Name = updatedTranslation.Name;
+            translation.Description = updatedTranslation.Description;
+        }
+        foreach (var translation in translationsByLocale.Values)
+        {
+            option.Translations.Add(new ReservationExtraOptionTranslation
             {
                 OptionId = option.Id,
                 Locale = translation.Locale,
                 Name = translation.Name,
                 Description = translation.Description
-            })
-            .ToList();
+            });
+        }
 
-        dbContext.ReservationExtraOptionVehicleGroups.RemoveRange(option.VehicleGroups);
-        option.VehicleGroups = normalized.VehicleGroupIds
-            .Select(vehicleGroupId => new ReservationExtraOptionVehicleGroup
+        var requestedVehicleGroupIds = normalized.VehicleGroupIds.ToHashSet();
+        foreach (var assignment in option.VehicleGroups.ToList())
+        {
+            if (requestedVehicleGroupIds.Remove(assignment.VehicleGroupId))
+            {
+                continue;
+            }
+
+            option.VehicleGroups.Remove(assignment);
+            dbContext.ReservationExtraOptionVehicleGroups.Remove(assignment);
+        }
+        foreach (var vehicleGroupId in requestedVehicleGroupIds)
+        {
+            option.VehicleGroups.Add(new ReservationExtraOptionVehicleGroup
             {
                 OptionId = option.Id,
                 VehicleGroupId = vehicleGroupId
-            })
-            .ToList();
+            });
+        }
 
         AddAudit("ReservationExtraOptionUpdated", option, changedFields, auditContext);
         if (assignmentsChanged)

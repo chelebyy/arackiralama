@@ -271,6 +271,46 @@ public sealed class ReservationExtraOptionCatalogServiceTests : IClassFixture<Te
     }
 
     [Fact]
+    public async Task UpdateAsync_UpdatesRetainedChildKeysWithoutTrackingConflicts()
+    {
+        using var dbContext = _factory.CreateContext();
+        var retainedGroup = CreateVehicleGroup();
+        var addedGroup = CreateVehicleGroup();
+        var option = CreateOption(version: 9, translations: CompleteTranslations());
+        option.VehicleGroups.Add(new ReservationExtraOptionVehicleGroup
+        {
+            OptionId = option.Id,
+            VehicleGroupId = retainedGroup.Id
+        });
+        dbContext.AddRange(retainedGroup, addedGroup, option);
+        await dbContext.SaveChangesAsync();
+        var retainedTranslation = option.Translations.Single(translation => translation.Locale == "en");
+        var retainedAssignment = option.VehicleGroups.Single();
+        var service = new ReservationExtraOptionCatalogService(dbContext);
+
+        var result = await service.UpdateAsync(
+            option.Id,
+            new UpdateReservationExtraOptionRequest(
+                option.Version,
+                25,
+                ReservationExtraPricingMode.PerRental,
+                3,
+                "users",
+                15,
+                [retainedGroup.Id, addedGroup.Id],
+                CompleteTranslations("Updated")),
+            AuditContext(),
+            CancellationToken.None);
+
+        result.VehicleGroupIds.Should().BeEquivalentTo([retainedGroup.Id, addedGroup.Id]);
+        result.Translations.Should().OnlyContain(translation => translation.Name == "Updated");
+        option.Translations.Single(translation => translation.Locale == "en")
+            .Should().BeSameAs(retainedTranslation);
+        option.VehicleGroups.Single(group => group.VehicleGroupId == retainedGroup.Id)
+            .Should().BeSameAs(retainedAssignment);
+    }
+
+    [Fact]
     public async Task RestoreAsync_AlwaysRestoresToInactiveDraft()
     {
         using var dbContext = _factory.CreateContext();

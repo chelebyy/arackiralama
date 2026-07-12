@@ -456,11 +456,40 @@ describe("BookingStep4Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it("does not mint a new quote when the current quote is already in use", async () => {
+    const user = userEvent.setup();
+    createReservationMock.mockRejectedValueOnce(new ApiError({
+      statusCode: 409,
+      message: "Reservation quote is already being used or was consumed.",
+      code: "CONFLICT",
+      timestamp: "2026-07-12T14:00:00Z",
+      path: "/api/reservations",
+    }));
+
+    render(<BookingStep4Page />);
+
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("Reservation quote is already being used or was consumed.");
+    });
+    expect(createReservationMock).toHaveBeenCalledTimes(1);
+    expect(getPublicReservationExtraOptionsMock).not.toHaveBeenCalled();
+    expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
+    expect(updateExtrasMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it("requires explicit quote confirmation when a 409 refresh changes option terms", async () => {
     const user = userEvent.setup();
     createReservationMock.mockRejectedValueOnce(new ApiError({
       statusCode: 409,
-      message: "Quote is stale",
+      message: "A quoted extra option is no longer available.",
       code: "CONFLICT",
       timestamp: "2026-07-11T18:00:00Z",
       path: "/api/reservations",
