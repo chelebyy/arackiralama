@@ -1847,6 +1847,8 @@ public sealed class ReservationService : IReservationService
         var campaignCode = string.IsNullOrWhiteSpace(request.CampaignCode)
             ? null
             : request.CampaignCode.Trim().ToUpperInvariant();
+        var submittedDateOfBirth = request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth;
+        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, request.PickupDateTimeUtc);
         if (quote.VehicleGroupId != request.VehicleGroupId ||
             quote.PickupOfficeId != request.PickupOfficeId ||
             quote.ReturnOfficeId != returnOfficeId ||
@@ -1854,6 +1856,7 @@ public sealed class ReservationService : IReservationService
             NormalizeUtc(quote.ReturnDateTimeUtc) != NormalizeUtc(request.ReturnDateTimeUtc) ||
             !string.Equals(quote.CampaignCode, campaignCode, StringComparison.Ordinal) ||
             quote.DriverAge != request.DriverAge ||
+            (submittedDateOfBirth.HasValue && quote.DriverAge != submittedDriverAge) ||
             quote.FullCoverageWaiver != request.FullCoverageWaiver ||
             !string.Equals(quote.Locale, NormalizeLocale(request.Locale), StringComparison.Ordinal))
         {

@@ -188,6 +188,51 @@ public sealed class ReservationServiceQuotePersistenceTests
     }
 
     [Fact]
+    public async Task CreateDraftReservationAsync_RejectsQuoteAgeHigherThanSubmittedDateOfBirthAge()
+    {
+        var act = () => CreateQuotedReservationWithDateOfBirthAsync(
+            25,
+            new DateTime(2003, 8, 2, 0, 0, 0, DateTimeKind.Utc));
+
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>()
+            .WithMessage("*inputs no longer match*");
+    }
+
+    [Fact]
+    public async Task CreateDraftReservationAsync_RejectsSubmittedDateOfBirthUnder18AtPickup()
+    {
+        var act = () => CreateQuotedReservationWithDateOfBirthAsync(
+            25,
+            new DateTime(2009, 8, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>()
+            .WithMessage("*inputs no longer match*");
+    }
+
+    [Fact]
+    public async Task CreateDraftReservationAsync_AcceptsAgeOnExactBirthdayAtPickup()
+    {
+        var result = await CreateQuotedReservationWithDateOfBirthAsync(
+            25,
+            new DateTime(2001, 8, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        result.Should().NotBeNull();
+        result.TotalAmount.Should().Be(1548m);
+    }
+
+    [Fact]
+    public async Task CreateDraftReservationAsync_AcceptsMatchingDriverDateOfBirthAge()
+    {
+        var result = await CreateQuotedReservationWithDateOfBirthAsync(
+            25,
+            new DateTime(2000, 12, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(1996, 8, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        result.Should().NotBeNull();
+        result.TotalAmount.Should().Be(1548m);
+    }
+
+    [Fact]
     public async Task CreateDraftReservationAsync_AppliesPercentageCampaignToAdaptedLegacyExtras()
     {
         using var factory = new TestDbContextFactory();
@@ -309,7 +354,97 @@ public sealed class ReservationServiceQuotePersistenceTests
         result.TotalAmount.Should().Be(1170m);
     }
 
-    private static ReservationQuoteV1 CreateQuote(Guid groupId, Guid officeId, DateTime pickup)
+    private static async Task<ReservationDto> CreateQuotedReservationWithDateOfBirthAsync(
+        int quoteAge,
+        DateTime driverDateOfBirth,
+        DateTime? customerDateOfBirth = null)
+    {
+        using var factory = new TestDbContextFactory();
+        await using var context = factory.CreateContext();
+        var office = new Office { Name = "Office", Code = $"DOB-{Guid.NewGuid():N}" };
+        var group = new VehicleGroup { NameTr = "Group", NameEn = "Group", DepositAmount = 1000m };
+        var vehicle = new Vehicle
+        {
+            Plate = $"DOB-{Guid.NewGuid():N}"[..16],
+            Brand = "Test",
+            Model = "Car",
+            Group = group,
+            GroupId = group.Id,
+            Office = office,
+            OfficeId = office.Id,
+            Status = VehicleStatus.Available
+        };
+        context.AddRange(office, group, vehicle);
+        await context.SaveChangesAsync();
+
+        var pickup = new DateTime(2026, 8, 1, 10, 0, 0, DateTimeKind.Utc);
+        var quote = CreateQuote(group.Id, office.Id, pickup, quoteAge);
+        var quoteStore = new Mock<IReservationQuoteStore>();
+        quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>())).ReturnsAsync(quote);
+        quoteStore.Setup(store => store.TryClaimAsync(quote.QuoteId, It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        quoteStore.Setup(store => store.MarkConsumedAsync(quote.QuoteId, It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var extraPricing = new Mock<IReservationExtraPricingService>();
+        extraPricing.Setup(service => service.ValidateCurrentAvailabilityAsync(group.Id, quote.SelectedExtras, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var fleet = new Mock<IFleetService>();
+        fleet.Setup(service => service.SearchAvailableVehicleGroupsAsync(
+                office.Id,
+                pickup,
+                pickup.AddDays(3),
+                group.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new RentACar.API.Contracts.Fleet.AvailableVehicleGroupDto(
+                group.Id, "Group", "Group", 1, 500m, "TRY", 1000m, 21, 2, [], null)]);
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var service = new ReservationService(
+            new ReservationRepository(context),
+            new CustomerRepository(context),
+            new VehicleRepository(context),
+            new VehicleRepository(context),
+            new OfficeRepository(context),
+            Mock.Of<IReservationHoldService>(),
+            context,
+            fleet.Object,
+            Mock.Of<IPricingService>(),
+            Mock.Of<IPaymentService>(),
+            Mock.Of<INotificationQueueService>(),
+            memoryCache,
+            new AvailabilityCacheInvalidationSignal(),
+            Mock.Of<IConnectionMultiplexer>(),
+            new ConfigurationBuilder().Build(),
+            NullLogger<ReservationService>.Instance,
+            quoteStore.Object,
+            extraPricing.Object);
+
+        return await service.CreateDraftReservationAsync(new CreateReservationRequest
+        {
+            VehicleGroupId = group.Id,
+            PickupOfficeId = office.Id,
+            ReturnOfficeId = office.Id,
+            PickupDateTimeUtc = pickup,
+            ReturnDateTimeUtc = pickup.AddDays(3),
+            QuoteId = quote.QuoteId,
+            DriverAge = quoteAge,
+            Locale = "tr",
+            SessionId = "session-123",
+            IdempotencyKey = Guid.NewGuid().ToString("N"),
+            Customer = new CustomerInfoRequest
+            {
+                FirstName = "Test",
+                LastName = "Customer",
+                Email = $"dob-{Guid.NewGuid():N}@example.test",
+                Phone = "+900000000000",
+                DateOfBirth = customerDateOfBirth
+            },
+            Driver = new DriverInfoRequest
+            {
+                FirstName = "Test",
+                LastName = "Driver",
+                DateOfBirth = driverDateOfBirth
+            }
+        });
+    }
+
+    private static ReservationQuoteV1 CreateQuote(Guid groupId, Guid officeId, DateTime pickup, int? driverAge = null)
     {
         var quoteId = Guid.NewGuid();
         var extraId = Guid.NewGuid();
@@ -337,6 +472,7 @@ public sealed class ReservationServiceQuotePersistenceTests
             ReturnOfficeId = officeId,
             PickupDateTimeUtc = pickup,
             ReturnDateTimeUtc = pickup.AddDays(3),
+            DriverAge = driverAge,
             Locale = "tr",
             SelectedExtras = [extra],
             PricingSnapshot = new ReservationPricingSnapshotV1
