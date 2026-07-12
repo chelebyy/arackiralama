@@ -332,6 +332,35 @@ describe("ReservationDetailPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("renders persisted selected-extra snapshots independently from the live catalog", () => {
+    mockReservation({
+      breakdownSource: "SNAPSHOT",
+      selectedExtras: [
+        {
+          optionId: "extra-1",
+          optionVersion: 4,
+          code: "gps",
+          locale: "en",
+          name: "GPS Navigation",
+          description: "Navigation device",
+          unitPrice: 10,
+          pricingMode: "PER_DAY",
+          quantity: 2,
+          rentalDays: 4,
+          total: 80,
+          currency: "TRY",
+        },
+      ],
+    });
+
+    render(<ReservationDetailPage />);
+
+    expect(screen.getByText("Ek Seçenekler")).toBeInTheDocument();
+    expect(screen.getByText("GPS Navigation")).toBeInTheDocument();
+    expect(screen.getByText(/2 adet.*gün/i)).toBeInTheDocument();
+    expect(screen.getByText("₺80,00")).toBeInTheDocument();
+  });
+
   it("renders fallback sections for completed reservations with sparse optional data", () => {
     mockReservation({
       status: ReservationStatus.COMPLETED,
@@ -349,6 +378,7 @@ describe("ReservationDetailPage", () => {
       refundAmount: undefined,
       checkedInAt: undefined,
       checkedOutAt: undefined,
+      breakdownSource: "LEGACY_TOTAL_ONLY",
     });
 
     render(<ReservationDetailPage />);
@@ -358,6 +388,7 @@ describe("ReservationDetailPage", () => {
     expect(screen.getByText("İade Edildi")).toBeInTheDocument();
     expect(screen.getByText("Sürücü bilgisi bulunmuyor")).toBeInTheDocument();
     expect(screen.getByText("Fiyat bilgisi bulunmuyor")).toBeInTheDocument();
+    expect(screen.getByText("Eski rezervasyon: yalnızca toplam tutar kaydı bulunuyor.")).toBeInTheDocument();
     expect(screen.getByText("Admin notu bulunmuyor")).toBeInTheDocument();
     expect(screen.getByText("Check-In bekleniyor")).toBeInTheDocument();
     expect(screen.getByText("Check-Out bekleniyor")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-﻿using RentACar.Core.Entities;
+using RentACar.Core.Entities;
 
 namespace RentACar.Core.Interfaces;
 

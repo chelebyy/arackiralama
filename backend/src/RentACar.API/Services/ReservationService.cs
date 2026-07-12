@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -34,11 +35,14 @@ public sealed class ReservationService : IReservationService
     private readonly AvailabilityCacheInvalidationSignal _availabilityCacheInvalidationSignal;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<ReservationService> _logger;
+    private readonly IReservationQuoteStore? _quoteStore;
+    private readonly IReservationExtraPricingService? _extraPricingService;
     private readonly bool _allowLoadTestSessionPartition;
     private readonly TimeSpan _defaultHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _maxHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _availabilityCacheTtl = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _holdCreationLockTtl = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan _quoteClaimTtl = TimeSpan.FromMinutes(2);
 
     public ReservationService(
         IReservationRepository reservationRepository,
@@ -56,7 +60,9 @@ public sealed class ReservationService : IReservationService
         AvailabilityCacheInvalidationSignal availabilityCacheInvalidationSignal,
         IConnectionMultiplexer redis,
         IConfiguration configuration,
-        ILogger<ReservationService> logger)
+        ILogger<ReservationService> logger,
+        IReservationQuoteStore? quoteStore = null,
+        IReservationExtraPricingService? extraPricingService = null)
     {
         _reservationRepository = reservationRepository;
         _customerRepository = customerRepository;
@@ -74,6 +80,8 @@ public sealed class ReservationService : IReservationService
         _redis = redis;
         _allowLoadTestSessionPartition = configuration.GetValue<bool>("RateLimiting:LoadTestSessionPartition");
         _logger = logger;
+        _quoteStore = quoteStore;
+        _extraPricingService = extraPricingService;
     }
 
     public async Task<IReadOnlyList<AvailableVehicleGroupDto>> SearchAvailabilityAsync(
@@ -142,14 +150,14 @@ public sealed class ReservationService : IReservationService
                     new() { Description = "Günlük Kiralama", Amount = pricing.BaseTotal, Type = "base" },
                     new() { Description = "Ekstralar", Amount = pricing.ExtrasTotal, Type = "fee" }
                 };
-                
+
                 if (pricing.CampaignDiscount > 0)
                 {
-                    priceBreakdown.Add(new PriceBreakdownItemDto 
-                    { 
-                        Description = "Kampanya İndirimi", 
-                        Amount = -pricing.CampaignDiscount, 
-                        Type = "discount" 
+                    priceBreakdown.Add(new PriceBreakdownItemDto
+                    {
+                        Description = "Kampanya İndirimi",
+                        Amount = -pricing.CampaignDiscount,
+                        Type = "discount"
                     });
                 }
 
@@ -245,6 +253,13 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default)
     {
+        ValidateQuoteAndLegacyCombination(request);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        if (existingReservation is not null)
+        {
+            return MapToDto(existingReservation);
+        }
+
         // Validate vehicle group availability
         var isAvailable = await IsVehicleGroupAvailableAsync(
             request.VehicleGroupId,
@@ -261,27 +276,10 @@ public sealed class ReservationService : IReservationService
         // Get or create customer
         var customer = await GetOrCreateCustomerAsync(request, cancellationToken);
 
-        // Calculate pricing
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
-        var pricing = await _pricingService.CalculateBreakdownAsync(
-            request.VehicleGroupId,
-            request.PickupOfficeId,
-            returnOfficeId,
-            request.PickupDateTimeUtc,
-            request.ReturnDateTimeUtc,
-            request.CampaignCode,
-            request.ExtraDriverCount,
-            request.ChildSeatCount,
-            request.DriverAge,
-            request.FullCoverageWaiver,
-            cancellationToken);
-
-        if (pricing == null)
-        {
-            throw new InvalidOperationException("Could not calculate pricing for the reservation");
-        }
+        var pricingContext = await ResolveReservationPricingAsync(request, returnOfficeId, cancellationToken);
 
         var vehicle = await FindAvailableVehicleAsync(
             request.VehicleGroupId,
@@ -293,11 +291,11 @@ public sealed class ReservationService : IReservationService
 
         if (vehicle is null)
         {
+            await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-        // Create reservation
-        // Persist the concrete vehicle that matched the selected group.
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
@@ -312,14 +310,37 @@ public sealed class ReservationService : IReservationService
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Draft,
-            TotalAmount = pricing.FinalTotal,
-            Notes = request.Notes
+            TotalAmount = pricingContext.Pricing.FinalTotal,
+            Notes = request.Notes,
+            QuoteId = pricingContext.QuoteId,
+            PricingSnapshot = pricingContext.Snapshot,
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot)
         };
         ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
+        AddSelectedExtraSnapshots(reservation, pricingContext.QuotedExtras);
 
-        await _reservationRepository.AddAsync(reservation, cancellationToken);
-        await _applicationDbContext.SaveChangesAsync(cancellationToken);
-        InvalidateAvailabilityCache();
+        try
+        {
+            await _reservationRepository.AddAsync(reservation, cancellationToken);
+            await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            InvalidateAvailabilityCache();
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
+            throw;
+        }
+
+        await FinalizeQuoteAsync(pricingContext, reservation.Id, cancellationToken);
 
         _logger.LogInformation(
             "Created draft reservation {PublicCode} for customer {CustomerId}",
@@ -332,6 +353,13 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default)
     {
+        ValidateQuoteAndLegacyCombination(request);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        if (existingReservation is not null)
+        {
+            return MapToDto(existingReservation);
+        }
+
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(_applicationDbContext, cancellationToken);
         if (!paymentMethods.UnpaidRequestEnabled)
         {
@@ -354,23 +382,7 @@ public sealed class ReservationService : IReservationService
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
-        var pricing = await _pricingService.CalculateBreakdownAsync(
-            request.VehicleGroupId,
-            request.PickupOfficeId,
-            returnOfficeId,
-            request.PickupDateTimeUtc,
-            request.ReturnDateTimeUtc,
-            request.CampaignCode,
-            request.ExtraDriverCount,
-            request.ChildSeatCount,
-            request.DriverAge,
-            request.FullCoverageWaiver,
-            cancellationToken);
-
-        if (pricing == null)
-        {
-            throw new InvalidOperationException("Could not calculate pricing for the reservation");
-        }
+        var pricingContext = await ResolveReservationPricingAsync(request, returnOfficeId, cancellationToken);
 
         var vehicle = await FindAvailableVehicleAsync(
             request.VehicleGroupId,
@@ -382,6 +394,7 @@ public sealed class ReservationService : IReservationService
 
         if (vehicle is null)
         {
+            await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
@@ -401,13 +414,17 @@ public sealed class ReservationService : IReservationService
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.UnpaidRequest,
-            TotalAmount = pricing.FinalTotal,
+            TotalAmount = pricingContext.Pricing.FinalTotal,
             Notes = request.Notes,
+            QuoteId = pricingContext.QuoteId,
+            PricingSnapshot = pricingContext.Snapshot,
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot),
             UnpaidRequestExpiresAtUtc = now.AddHours(24),
             CreatedAt = now,
             UpdatedAt = now
         };
         ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
+        AddSelectedExtraSnapshots(reservation, pricingContext.QuotedExtras);
 
         try
         {
@@ -428,8 +445,20 @@ public sealed class ReservationService : IReservationService
                 await transaction.RollbackAsync(cancellationToken);
             }
 
+            await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
             throw new InvalidOperationException("Selected vehicle is no longer available for these dates.", ex);
         }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
+            throw;
+        }
+
+        await FinalizeQuoteAsync(pricingContext, reservation.Id, cancellationToken);
 
         _logger.LogInformation(
             "Created unpaid reservation request {PublicCode} for customer {CustomerId}",
@@ -604,11 +633,13 @@ public sealed class ReservationService : IReservationService
             newReturnOfficeId,
             newPickupDateTime,
             newReturnDateTime,
-            null,
+            reservation.PricingSnapshot?.CampaignCode,
             0,
             0,
-            null,
-            false,
+            CalculateAgeAt(
+                request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
+                newPickupDateTime),
+            reservation.PricingSnapshot?.CoverageWaiverFee > 0m,
             cancellationToken);
 
         if (pricing == null)
@@ -632,6 +663,29 @@ public sealed class ReservationService : IReservationService
         reservation.ReturnDateTime = newReturnDateTime;
         reservation.PickupOfficeId = newPickupOfficeId;
         reservation.ReturnOfficeId = newReturnOfficeId;
+        if (reservation.PricingSnapshot is { } existingSnapshot)
+        {
+            var quotedExtras = RepriceSelectedExtras(reservation.SelectedExtras, pricing.RentalDays);
+            var catalogExtraTotal = RoundAmount(quotedExtras.Sum(item => item.Total));
+            var extrasTotal = RoundAmount(pricing.ExtrasTotal + catalogExtraTotal);
+            var subtotalBeforeDiscount = RoundAmount(pricing.FinalTotal + pricing.CampaignDiscount + catalogExtraTotal);
+            var campaignDiscount = CalculateLegacyCampaignDiscount(pricing, subtotalBeforeDiscount);
+            var finalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount);
+            pricing = pricing with
+            {
+                ExtrasTotal = extrasTotal,
+                CampaignDiscount = campaignDiscount,
+                FinalTotal = finalTotal,
+                ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
+            };
+            reservation.PricingSnapshot = CreatePricingSnapshot(
+                existingSnapshot.QuoteId,
+                existingSnapshot.IssuedAtUtc,
+                existingSnapshot.ExpiresAtUtc,
+                pricing,
+                quotedExtras);
+        }
+
         reservation.TotalAmount = pricing.FinalTotal;
 
         if (request.Customer is not null)
@@ -1258,7 +1312,7 @@ public sealed class ReservationService : IReservationService
     {
         // Parse status string to enum if provided
         ReservationStatus? statusFilter = null;
-        if (!string.IsNullOrEmpty(filter?.Status) && 
+        if (!string.IsNullOrEmpty(filter?.Status) &&
             Enum.TryParse<ReservationStatus>(filter.Status, true, out var parsedStatus))
         {
             statusFilter = parsedStatus;
@@ -1461,6 +1515,546 @@ public sealed class ReservationService : IReservationService
 
     #region Helper Methods
 
+    private async Task<ReservationPricingContext> ResolveReservationPricingAsync(
+        CreateReservationRequest request,
+        Guid returnOfficeId,
+        CancellationToken cancellationToken)
+    {
+        if (request.QuoteId.HasValue)
+        {
+            if (_quoteStore is null || _extraPricingService is null)
+            {
+                throw new InvalidOperationException("Reservation quote services are unavailable.");
+            }
+            if (string.IsNullOrWhiteSpace(request.SessionId) || string.IsNullOrWhiteSpace(request.IdempotencyKey))
+            {
+                throw new InvalidOperationException("X-Session-Id and Idempotency-Key headers are required for quoted reservations.");
+            }
+
+            var quote = await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken)
+                ?? throw new ReservationQuoteConflictException("Reservation quote is missing or expired.");
+            ValidateQuoteMatchesRequest(quote, request, returnOfficeId);
+            if (quote.ExpiresAtUtc <= DateTime.UtcNow)
+            {
+                throw new ReservationQuoteConflictException("Reservation quote has expired.");
+            }
+            if (!ReservationQuoteSecurity.SessionHashMatches(quote.SessionHash, request.SessionId))
+            {
+                _logger.LogWarning("Reservation quote {QuoteId} rejected for session mismatch", quote.QuoteId);
+                throw new ReservationQuoteConflictException("Reservation quote does not belong to this session.");
+            }
+
+            var claimOwner = ReservationQuoteSecurity.HashSessionId($"idempotency:{request.IdempotencyKey}");
+            if (!await _quoteStore.TryClaimAsync(quote.QuoteId, claimOwner, _quoteClaimTtl, cancellationToken))
+            {
+                _logger.LogWarning("Reservation quote {QuoteId} replay or concurrent claim rejected", quote.QuoteId);
+                throw new ReservationQuoteConflictException("Reservation quote is already being used or was consumed.");
+            }
+
+            try
+            {
+                await _extraPricingService.ValidateCurrentAvailabilityAsync(
+                    quote.VehicleGroupId,
+                    quote.SelectedExtras,
+                    cancellationToken);
+            }
+            catch
+            {
+                await SafeReleaseQuoteClaimAsync(quote.QuoteId, claimOwner, cancellationToken);
+                throw;
+            }
+
+            return new ReservationPricingContext(
+                BuildSnapshotPriceBreakdown(quote.PricingSnapshot, quote.SelectedExtras),
+                quote.PricingSnapshot,
+                quote.SelectedExtras,
+                quote.QuoteId,
+                claimOwner);
+        }
+
+        var basePricing = await _pricingService.CalculateBreakdownAsync(
+            request.VehicleGroupId,
+            request.PickupOfficeId,
+            returnOfficeId,
+            request.PickupDateTimeUtc,
+            request.ReturnDateTimeUtc,
+            request.CampaignCode,
+            _extraPricingService is null ? request.ExtraDriverCount : 0,
+            _extraPricingService is null ? request.ChildSeatCount : 0,
+            request.DriverAge,
+            request.FullCoverageWaiver,
+            cancellationToken)
+            ?? throw new InvalidOperationException("Could not calculate pricing for the reservation");
+
+        if (_extraPricingService is null)
+        {
+            return new ReservationPricingContext(basePricing, null, [], null, null);
+        }
+
+        var quotedExtras = await _extraPricingService.CalculateLegacyAsync(
+            request.VehicleGroupId,
+            request.Locale,
+            basePricing.RentalDays,
+            request.ExtraDriverCount,
+            request.ChildSeatCount,
+            cancellationToken);
+        var extraTotal = RoundAmount(quotedExtras.Sum(item => item.Total));
+        var subtotalBeforeDiscount = RoundAmount(
+            basePricing.FinalTotal + basePricing.CampaignDiscount + extraTotal);
+        var campaignDiscount = CalculateLegacyCampaignDiscount(basePricing, subtotalBeforeDiscount);
+        var pricing = basePricing with
+        {
+            ExtrasTotal = RoundAmount(basePricing.ExtrasTotal + extraTotal),
+            CampaignDiscount = campaignDiscount,
+            FinalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount),
+            ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
+        };
+        var now = DateTime.UtcNow;
+        var snapshot = CreatePricingSnapshot(Guid.Empty, now, now, pricing, quotedExtras);
+
+        if (quotedExtras.Count > 0)
+        {
+            _logger.LogInformation(
+                "Legacy reservation extras adapted for vehicle group {VehicleGroupId} with {ExtraCount} selections",
+                request.VehicleGroupId,
+                quotedExtras.Count);
+        }
+
+        return new ReservationPricingContext(pricing, snapshot, quotedExtras, null, null);
+    }
+
+    private static decimal CalculateLegacyCampaignDiscount(
+        PriceBreakdownDto pricing,
+        decimal subtotalBeforeDiscount)
+    {
+        if (string.IsNullOrWhiteSpace(pricing.AppliedCampaignCode))
+        {
+            return 0m;
+        }
+
+        var discount = pricing.AppliedCampaignDiscountType?.Trim().ToLowerInvariant() switch
+        {
+            "percentage" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                subtotalBeforeDiscount * Math.Min(pricing.AppliedCampaignDiscountValue.Value, 100m) / 100m,
+            "fixed" when pricing.AppliedCampaignDiscountValue.HasValue =>
+                pricing.AppliedCampaignDiscountValue.Value,
+            _ => pricing.CampaignDiscount
+        };
+
+        return Math.Clamp(RoundAmount(discount), 0m, subtotalBeforeDiscount);
+    }
+
+    private static IReadOnlyList<ReservationQuotedExtraV1> RepriceSelectedExtras(
+        IEnumerable<ReservationSelectedExtra> selectedExtras,
+        int rentalDays) => selectedExtras.Select(item =>
+        {
+            var total = item.PricingModeSnapshot == ReservationExtraPricingMode.PerDay
+                ? item.UnitPriceSnapshot * item.Quantity * rentalDays
+                : item.UnitPriceSnapshot * item.Quantity;
+            item.RentalDaysSnapshot = rentalDays;
+            item.TotalPriceSnapshot = RoundAmount(total);
+            return new ReservationQuotedExtraV1
+            {
+                ExtraOptionId = item.ExtraOptionId,
+                OptionVersion = item.OptionVersionSnapshot,
+                Code = item.OptionCodeSnapshot,
+                Locale = item.Locale,
+                Name = item.NameSnapshot,
+                Description = item.DescriptionSnapshot,
+                UnitPrice = item.UnitPriceSnapshot,
+                PricingMode = item.PricingModeSnapshot == ReservationExtraPricingMode.PerDay ? "PER_DAY" : "PER_RENTAL",
+                Quantity = item.Quantity,
+                RentalDays = rentalDays,
+                Total = item.TotalPriceSnapshot
+            };
+        }).ToArray();
+
+    private static int? CalculateAgeAt(DateTime? dateOfBirth, DateTime date)
+    {
+        if (!dateOfBirth.HasValue)
+        {
+            return null;
+        }
+
+        var birthDate = dateOfBirth.Value.Date;
+        var targetDate = date.Date;
+        var age = targetDate.Year - birthDate.Year;
+        if (birthDate > targetDate.AddYears(-age))
+        {
+            age--;
+        }
+
+        return Math.Max(0, age);
+    }
+
+    private async Task<Reservation?> FindReservationByQuoteIdAsync(
+        Guid? quoteId,
+        CancellationToken cancellationToken)
+    {
+        if (!quoteId.HasValue)
+        {
+            return null;
+        }
+
+        return await _applicationDbContext.Reservations
+            .Include(reservation => reservation.Customer)
+            .Include(reservation => reservation.Vehicle)
+                .ThenInclude(vehicle => vehicle!.Group)
+            .Include(reservation => reservation.PickupOffice)
+            .Include(reservation => reservation.ReturnOffice)
+            .Include(reservation => reservation.SelectedExtras)
+            .FirstOrDefaultAsync(reservation => reservation.QuoteId == quoteId.Value, cancellationToken);
+    }
+
+    private async Task<Reservation?> ResolveExistingQuoteReservationAsync(
+        CreateReservationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var reservation = await FindReservationByQuoteIdAsync(request.QuoteId, cancellationToken);
+        if (reservation is null)
+        {
+            return null;
+        }
+        if (!request.QuoteId.HasValue || string.IsNullOrWhiteSpace(request.SessionId))
+        {
+            throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
+        }
+
+        var returnOfficeId = request.ReturnOfficeId == Guid.Empty ? request.PickupOfficeId : request.ReturnOfficeId;
+        var quote = _quoteStore is null
+            ? null
+            : await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken);
+        if (quote is null)
+        {
+            ValidatePersistedQuoteReplayProof(reservation, request, returnOfficeId);
+            return reservation;
+        }
+
+        ValidateQuoteMatchesRequest(quote, request, returnOfficeId);
+        if (!ReservationQuoteSecurity.SessionHashMatches(quote.SessionHash, request.SessionId))
+        {
+            _logger.LogWarning("Reservation quote retry {QuoteId} rejected for session mismatch", quote.QuoteId);
+            throw new ReservationQuoteConflictException("Reservation quote does not belong to this session.");
+        }
+
+        try
+        {
+            await _quoteStore!.ReconcileConsumedAsync(quote.QuoteId, reservation.Id, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Reservation quote {QuoteId} replay resolved from database but Redis reconciliation failed",
+                quote.QuoteId);
+        }
+
+        return reservation;
+    }
+
+    private static ReservationQuoteReplayProofV1? CreateQuoteReplayProof(
+        CreateReservationRequest request,
+        Guid returnOfficeId,
+        ReservationPricingSnapshotV1? snapshot)
+    {
+        if (!request.QuoteId.HasValue || snapshot is null || string.IsNullOrWhiteSpace(request.SessionId))
+        {
+            return null;
+        }
+
+        var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
+        return new ReservationQuoteReplayProofV1
+        {
+            SchemaVersion = 1,
+            SessionHash = ReservationQuoteSecurity.HashSessionId(request.SessionId),
+            RequestFingerprint = ReservationQuoteSecurity.HashRequestFingerprint(canonicalRequest),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+    }
+
+    private static void ValidatePersistedQuoteReplayProof(
+        Reservation reservation,
+        CreateReservationRequest request,
+        Guid returnOfficeId)
+    {
+        var proof = reservation.QuoteReplayProof;
+        var snapshot = reservation.PricingSnapshot;
+        if (proof is null || proof.SchemaVersion != 1 || snapshot is null ||
+            reservation.QuoteId != request.QuoteId || snapshot.QuoteId != request.QuoteId)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
+        }
+
+        if (!ReservationQuoteSecurity.SessionHashMatches(proof.SessionHash, request.SessionId!))
+        {
+            throw new ReservationQuoteConflictException("Reservation quote does not belong to this session.");
+        }
+
+        var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
+        if (!ReservationQuoteSecurity.RequestFingerprintMatches(proof.RequestFingerprint, canonicalRequest))
+        {
+            throw new ReservationQuoteConflictException("Reservation inputs no longer match the issued quote.");
+        }
+    }
+
+    private static string BuildQuoteReplayCanonicalRequest(
+        CreateReservationRequest request,
+        Guid returnOfficeId,
+        ReservationPricingSnapshotV1 snapshot)
+    {
+        var campaignCode = string.IsNullOrWhiteSpace(request.CampaignCode)
+            ? string.Empty
+            : request.CampaignCode.Trim().ToUpperInvariant();
+        var extras = string.Join(",", snapshot.ExtraItems
+            .OrderBy(item => item.ExtraOptionId)
+            .Select(item => string.Join(":",
+                item.ExtraOptionId.ToString("N"),
+                item.OptionVersion.ToString(CultureInfo.InvariantCulture),
+                item.Quantity.ToString(CultureInfo.InvariantCulture),
+                item.UnitPrice.ToString(CultureInfo.InvariantCulture),
+                item.PricingMode)));
+
+        return string.Join("|",
+            "reservation-quote-replay-v1",
+            request.QuoteId?.ToString("N") ?? string.Empty,
+            request.VehicleGroupId.ToString("N"),
+            request.PickupOfficeId.ToString("N"),
+            returnOfficeId.ToString("N"),
+            NormalizeUtc(request.PickupDateTimeUtc).Ticks.ToString(CultureInfo.InvariantCulture),
+            NormalizeUtc(request.ReturnDateTimeUtc).Ticks.ToString(CultureInfo.InvariantCulture),
+            campaignCode,
+            request.DriverAge?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            request.FullCoverageWaiver ? "1" : "0",
+            NormalizeLocale(request.Locale),
+            snapshot.SchemaVersion.ToString(CultureInfo.InvariantCulture),
+            snapshot.FinalTotal.ToString(CultureInfo.InvariantCulture),
+            extras);
+    }
+
+    private static void ValidateQuoteAndLegacyCombination(CreateReservationRequest request)
+    {
+        if (request.QuoteId.HasValue && (request.ExtraDriverCount != 0 || request.ChildSeatCount != 0))
+        {
+            throw new InvalidOperationException("Legacy extra quantities cannot be combined with QuoteId.");
+        }
+    }
+
+    private static void ValidateQuoteMatchesRequest(
+        ReservationQuoteV1 quote,
+        CreateReservationRequest request,
+        Guid returnOfficeId)
+    {
+        var campaignCode = string.IsNullOrWhiteSpace(request.CampaignCode)
+            ? null
+            : request.CampaignCode.Trim().ToUpperInvariant();
+        var submittedDateOfBirth = request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth;
+        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, request.PickupDateTimeUtc);
+        if (quote.VehicleGroupId != request.VehicleGroupId ||
+            quote.PickupOfficeId != request.PickupOfficeId ||
+            quote.ReturnOfficeId != returnOfficeId ||
+            NormalizeUtc(quote.PickupDateTimeUtc) != NormalizeUtc(request.PickupDateTimeUtc) ||
+            NormalizeUtc(quote.ReturnDateTimeUtc) != NormalizeUtc(request.ReturnDateTimeUtc) ||
+            !string.Equals(quote.CampaignCode, campaignCode, StringComparison.Ordinal) ||
+            quote.DriverAge != request.DriverAge ||
+            (submittedDateOfBirth.HasValue && quote.DriverAge != submittedDriverAge) ||
+            quote.FullCoverageWaiver != request.FullCoverageWaiver ||
+            !string.Equals(quote.Locale, NormalizeLocale(request.Locale), StringComparison.Ordinal))
+        {
+            throw new ReservationQuoteConflictException("Reservation inputs no longer match the issued quote.");
+        }
+    }
+
+    private static ReservationPricingSnapshotV1 CreatePricingSnapshot(
+        Guid quoteId,
+        DateTime issuedAtUtc,
+        DateTime expiresAtUtc,
+        PriceBreakdownDto pricing,
+        IReadOnlyList<ReservationQuotedExtraV1> quotedExtras) => new()
+        {
+            SchemaVersion = 1,
+            DailyRate = pricing.DailyRate,
+            RentalDays = pricing.RentalDays,
+            BaseTotal = pricing.BaseTotal,
+            AirportFee = pricing.AirportFee,
+            OneWayFee = pricing.OneWayFee,
+            YoungDriverFee = pricing.YoungDriverFee,
+            CoverageWaiverFee = pricing.FullCoverageWaiverFee,
+            OtherFees = pricing.ExtraDriverFee + pricing.ChildSeatFee,
+            CampaignId = pricing.AppliedCampaignId,
+            CampaignCode = pricing.AppliedCampaignCode,
+            DiscountType = pricing.AppliedCampaignDiscountType,
+            DiscountValue = pricing.AppliedCampaignDiscountValue,
+            DiscountTotal = pricing.CampaignDiscount,
+            ExtraItems = quotedExtras.Select(item => new ReservationPricingExtraSnapshot
+            {
+                ExtraOptionId = item.ExtraOptionId,
+                OptionVersion = item.OptionVersion,
+                Code = item.Code,
+                Name = item.Name,
+                UnitPrice = item.UnitPrice,
+                PricingMode = item.PricingMode,
+                Quantity = item.Quantity,
+                RentalDays = item.RentalDays,
+                Total = item.Total
+            }).ToList(),
+            ExtrasTotal = pricing.ExtrasTotal,
+            DepositAmount = pricing.DepositAmount,
+            PreAuthorizationAmount = pricing.PreAuthorizationAmount,
+            Currency = pricing.Currency,
+            FinalTotal = pricing.FinalTotal,
+            QuoteId = quoteId,
+            IssuedAtUtc = issuedAtUtc,
+            ExpiresAtUtc = expiresAtUtc
+        };
+
+    private static PriceBreakdownDto BuildSnapshotPriceBreakdown(
+        ReservationPricingSnapshotV1 snapshot,
+        IReadOnlyList<ReservationQuotedExtraV1> quotedExtras) => new(
+            DailyRate: snapshot.DailyRate,
+            RentalDays: snapshot.RentalDays,
+            BaseTotal: snapshot.BaseTotal,
+            ExtrasTotal: snapshot.ExtrasTotal,
+            CampaignDiscount: snapshot.DiscountTotal,
+            AirportFee: snapshot.AirportFee,
+            OneWayFee: snapshot.OneWayFee,
+            ExtraDriverFee: 0m,
+            ChildSeatFee: 0m,
+            YoungDriverFee: snapshot.YoungDriverFee,
+            FullCoverageWaiverFee: snapshot.CoverageWaiverFee,
+            FinalTotal: snapshot.FinalTotal,
+            DepositAmount: snapshot.DepositAmount,
+            PreAuthorizationAmount: snapshot.PreAuthorizationAmount,
+            Currency: snapshot.Currency,
+            AppliedCampaignCode: snapshot.CampaignCode)
+        {
+            AppliedCampaignId = snapshot.CampaignId,
+            AppliedCampaignDiscountType = snapshot.DiscountType,
+            AppliedCampaignDiscountValue = snapshot.DiscountValue,
+            ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
+        };
+
+    private static void AddSelectedExtraSnapshots(
+        Reservation reservation,
+        IReadOnlyList<ReservationQuotedExtraV1> quotedExtras)
+    {
+        foreach (var item in quotedExtras)
+        {
+            reservation.SelectedExtras.Add(new ReservationSelectedExtra
+            {
+                ReservationId = reservation.Id,
+                ExtraOptionId = item.ExtraOptionId,
+                OptionVersionSnapshot = item.OptionVersion,
+                Locale = item.Locale,
+                OptionCodeSnapshot = item.Code,
+                NameSnapshot = item.Name,
+                DescriptionSnapshot = item.Description,
+                UnitPriceSnapshot = item.UnitPrice,
+                PricingModeSnapshot = item.PricingMode == "PER_DAY"
+                    ? ReservationExtraPricingMode.PerDay
+                    : ReservationExtraPricingMode.PerRental,
+                Quantity = item.Quantity,
+                RentalDaysSnapshot = item.RentalDays,
+                TotalPriceSnapshot = item.Total,
+                Currency = "TRY"
+            });
+        }
+    }
+
+    private async Task ReleaseQuoteClaimAsync(
+        ReservationPricingContext pricingContext,
+        CancellationToken cancellationToken)
+    {
+        if (pricingContext.QuoteId.HasValue && !string.IsNullOrWhiteSpace(pricingContext.ClaimOwner))
+        {
+            await SafeReleaseQuoteClaimAsync(pricingContext.QuoteId.Value, pricingContext.ClaimOwner, cancellationToken);
+        }
+    }
+
+    private async Task SafeReleaseQuoteClaimAsync(
+        Guid quoteId,
+        string claimOwner,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_quoteStore is not null)
+            {
+                await _quoteStore.ReleaseClaimAsync(quoteId, claimOwner, cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to release reservation quote claim {QuoteId}", quoteId);
+        }
+    }
+
+    private async Task FinalizeQuoteAsync(
+        ReservationPricingContext pricingContext,
+        Guid reservationId,
+        CancellationToken cancellationToken)
+    {
+        if (!pricingContext.QuoteId.HasValue || string.IsNullOrWhiteSpace(pricingContext.ClaimOwner) || _quoteStore is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var finalized = await _quoteStore.MarkConsumedAsync(
+                pricingContext.QuoteId.Value,
+                pricingContext.ClaimOwner,
+                reservationId,
+                cancellationToken);
+            if (!finalized)
+            {
+                _logger.LogWarning(
+                    "Reservation quote {QuoteId} committed as reservation {ReservationId} but Redis finalization did not acquire ownership",
+                    pricingContext.QuoteId.Value,
+                    reservationId);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Reservation quote {QuoteId} committed as reservation {ReservationId} but Redis finalization failed",
+                pricingContext.QuoteId.Value,
+                reservationId);
+        }
+    }
+
+    private static ReservationExtraLineItemDto ToExtraLineItemDto(ReservationQuotedExtraV1 item) => new(
+        item.ExtraOptionId,
+        item.OptionVersion,
+        item.Code,
+        item.Name,
+        item.Description,
+        item.UnitPrice,
+        item.PricingMode,
+        item.Quantity,
+        item.RentalDays,
+        item.Total);
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    private static string NormalizeLocale(string locale) =>
+        string.IsNullOrWhiteSpace(locale) ? "tr" : locale.Trim().ToLowerInvariant();
+
+    private static decimal RoundAmount(decimal amount) =>
+        Math.Round(amount, 2, MidpointRounding.AwayFromZero);
+
+    private sealed record ReservationPricingContext(
+        PriceBreakdownDto Pricing,
+        ReservationPricingSnapshotV1? Snapshot,
+        IReadOnlyList<ReservationQuotedExtraV1> QuotedExtras,
+        Guid? QuoteId,
+        string? ClaimOwner);
+
     private ReservationDto MapToDto(Reservation reservation)
     {
         var rentalDays = (int)Math.Ceiling((reservation.ReturnDateTime - reservation.PickupDateTime).TotalDays);
@@ -1496,12 +2090,16 @@ public sealed class ReservationService : IReservationService
             ReturnDateTime = reservation.ReturnDateTime,
             Status = reservation.Status.ToString(),
             TotalAmount = reservation.TotalAmount,
-            DepositAmount = reservation.Vehicle?.Group?.DepositAmount ?? 0,
+            DepositAmount = reservation.PricingSnapshot?.DepositAmount ?? reservation.Vehicle?.Group?.DepositAmount ?? 0,
             RentalDays = rentalDays,
             CustomerReservationCount = customerStats.ReservationCount,
             CustomerTotalSpent = customerStats.TotalSpent,
             Driver = BuildDriverDto(reservation),
             PriceBreakdown = BuildReservationPriceBreakdown(reservation, rentalDays),
+            SelectedExtras = reservation.SelectedExtras.Select(MapSelectedExtraToDto).ToArray(),
+            BreakdownSource = reservation.PricingSnapshot is null ? "LEGACY_TOTAL_ONLY" : "SNAPSHOT",
+            CampaignCode = reservation.PricingSnapshot?.CampaignCode,
+            DiscountAmount = reservation.PricingSnapshot?.DiscountTotal ?? 0m,
             CreatedAt = reservation.CreatedAt,
             UpdatedAt = reservation.UpdatedAt,
             UnpaidRequestExpiresAtUtc = reservation.UnpaidRequestExpiresAtUtc,
@@ -1549,6 +2147,48 @@ public sealed class ReservationService : IReservationService
 
     private static PriceBreakdownDto BuildReservationPriceBreakdown(Reservation reservation, int rentalDays)
     {
+        if (reservation.PricingSnapshot is { } snapshot)
+        {
+            var selectedExtrasById = reservation.SelectedExtras.ToDictionary(item => item.ExtraOptionId);
+            return new PriceBreakdownDto(
+                DailyRate: snapshot.DailyRate,
+                RentalDays: snapshot.RentalDays,
+                BaseTotal: snapshot.BaseTotal,
+                ExtrasTotal: snapshot.ExtrasTotal,
+                CampaignDiscount: snapshot.DiscountTotal,
+                AirportFee: snapshot.AirportFee,
+                OneWayFee: snapshot.OneWayFee,
+                ExtraDriverFee: 0m,
+                ChildSeatFee: 0m,
+                YoungDriverFee: snapshot.YoungDriverFee,
+                FullCoverageWaiverFee: snapshot.CoverageWaiverFee,
+                FinalTotal: snapshot.FinalTotal,
+                DepositAmount: snapshot.DepositAmount,
+                PreAuthorizationAmount: snapshot.PreAuthorizationAmount,
+                Currency: snapshot.Currency,
+                AppliedCampaignCode: snapshot.CampaignCode)
+            {
+                AppliedCampaignId = snapshot.CampaignId,
+                AppliedCampaignDiscountType = snapshot.DiscountType,
+                AppliedCampaignDiscountValue = snapshot.DiscountValue,
+                ExtraItems = snapshot.ExtraItems.Select(item =>
+                {
+                    selectedExtrasById.TryGetValue(item.ExtraOptionId, out var selectedExtra);
+                    return new ReservationExtraLineItemDto(
+                        item.ExtraOptionId,
+                        item.OptionVersion,
+                        item.Code,
+                        item.Name,
+                        selectedExtra?.DescriptionSnapshot ?? string.Empty,
+                        item.UnitPrice,
+                        item.PricingMode,
+                        item.Quantity,
+                        item.RentalDays,
+                        item.Total);
+                }).ToArray()
+            };
+        }
+
         var depositAmount = reservation.Vehicle?.Group?.DepositAmount ?? 0m;
         var dailyRate = rentalDays > 0 ? Math.Round(reservation.TotalAmount / rentalDays, 2) : reservation.TotalAmount;
 
@@ -1571,6 +2211,22 @@ public sealed class ReservationService : IReservationService
             AppliedCampaignCode: null);
     }
 
+    private static ReservationSelectedExtraDto MapSelectedExtraToDto(ReservationSelectedExtra item) => new()
+    {
+        OptionId = item.ExtraOptionId,
+        OptionVersion = item.OptionVersionSnapshot,
+        Code = item.OptionCodeSnapshot,
+        Locale = item.Locale,
+        Name = item.NameSnapshot,
+        Description = item.DescriptionSnapshot,
+        UnitPrice = item.UnitPriceSnapshot,
+        PricingMode = item.PricingModeSnapshot == ReservationExtraPricingMode.PerDay ? "PER_DAY" : "PER_RENTAL",
+        Quantity = item.Quantity,
+        RentalDays = item.RentalDaysSnapshot,
+        Total = item.TotalPriceSnapshot,
+        Currency = item.Currency
+    };
+
     private static void ApplyDriverSnapshot(
         Reservation reservation,
         CustomerInfoRequest? customer,
@@ -1578,11 +2234,29 @@ public sealed class ReservationService : IReservationService
     {
         reservation.DriverFirstName = ValueOrNull(driver?.FirstName) ?? customer?.FirstName ?? reservation.DriverFirstName;
         reservation.DriverLastName = ValueOrNull(driver?.LastName) ?? customer?.LastName ?? reservation.DriverLastName;
-        reservation.DriverDateOfBirth = driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth;
+        reservation.DriverDateOfBirth = NormalizeUtc(
+            driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth);
         reservation.DriverLicenseNumber = ValueOrNull(driver?.LicenseNumber) ?? customer?.DriverLicenseNumber ?? reservation.DriverLicenseNumber;
         reservation.DriverLicenseCountry = ValueOrNull(driver?.LicenseCountry) ?? reservation.DriverLicenseCountry;
-        reservation.DriverLicenseIssueDate = driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate;
-        reservation.DriverLicenseExpiryDate = driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate;
+        reservation.DriverLicenseIssueDate = NormalizeUtc(
+            driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate);
+        reservation.DriverLicenseExpiryDate = NormalizeUtc(
+            driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate);
+    }
+
+    private static DateTime? NormalizeUtc(DateTime? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return value.Value.Kind switch
+        {
+            DateTimeKind.Utc => value.Value,
+            DateTimeKind.Local => value.Value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+        };
     }
 
     private async Task ApplyCustomerUpdateAsync(
@@ -1655,12 +2329,12 @@ public sealed class ReservationService : IReservationService
             FullName = fullName,
             Email = request.Customer.Email,
             Phone = request.Customer.Phone,
-            BirthDate = request.Customer.DateOfBirth.HasValue 
-                ? DateOnly.FromDateTime(request.Customer.DateOfBirth.Value) 
+            BirthDate = request.Customer.DateOfBirth.HasValue
+                ? DateOnly.FromDateTime(request.Customer.DateOfBirth.Value)
                 : null,
             IdentityNumber = request.Customer.IdentityNumber ?? string.Empty,
-            LicenseYear = request.Customer.DriverLicenseIssueDate.HasValue 
-                ? request.Customer.DriverLicenseIssueDate.Value.Year 
+            LicenseYear = request.Customer.DriverLicenseIssueDate.HasValue
+                ? request.Customer.DriverLicenseIssueDate.Value.Year
                 : 0,
             Nationality = "TR" // Default nationality, can be updated later
         };
@@ -2146,7 +2820,7 @@ public sealed class ReservationService : IReservationService
 
     private async Task<IDbContextTransaction?> TryBeginTransactionAsync(CancellationToken cancellationToken)
     {
-        if (_applicationDbContext is not DbContext dbContext)
+        if (_applicationDbContext is not DbContext dbContext || !dbContext.Database.IsRelational())
         {
             return null;
         }

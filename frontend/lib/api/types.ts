@@ -176,6 +176,8 @@ export interface Reservation {
   paymentStatus: PaymentStatus;
   paymentIntentId?: string;
   notes?: string;
+  selectedExtras?: ReservationSelectedExtra[];
+  breakdownSource?: 'SNAPSHOT' | 'LEGACY_TOTAL_ONLY';
 }
 
 export enum ReservationStatus {
@@ -236,6 +238,82 @@ export interface ReservationExtra {
   quantity: number;
   dailyPrice: number;
   totalPrice: number;
+}
+
+export interface ReservationSelectedExtra {
+  optionId: string;
+  optionVersion: number;
+  code: string;
+  locale: string;
+  name: string;
+  description: string;
+  unitPrice: number;
+  pricingMode: ReservationExtraPricingMode;
+  quantity: number;
+  rentalDays: number;
+  total: number;
+  currency: string;
+}
+
+export type ReservationExtraPricingMode = 'PER_DAY' | 'PER_RENTAL';
+
+export interface PublicReservationExtraOption {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  unitPrice: number;
+  pricingMode: ReservationExtraPricingMode;
+  maxQuantity: number;
+  iconKey: string;
+  sortOrder: number;
+  version: number;
+}
+
+export interface SelectedBookingExtra {
+  optionId: string;
+  quantity: number;
+  optionVersion: number;
+  code: string;
+  name: string;
+  description: string;
+  unitPrice: number;
+  pricingMode: ReservationExtraPricingMode;
+}
+
+export interface ReservationQuoteExtraItem {
+  optionId: string;
+  optionVersion: number;
+  code: string;
+  name: string;
+  description: string;
+  unitPrice: number;
+  pricingMode: ReservationExtraPricingMode;
+  quantity: number;
+  rentalDays: number;
+  total: number;
+}
+
+export interface ReservationQuote {
+  quoteId: string;
+  expiresAtUtc: string;
+  dailyRate: number;
+  rentalDays: number;
+  baseTotal: number;
+  extrasTotal: number;
+  campaignDiscount: number;
+  airportFee: number;
+  oneWayFee: number;
+  extraDriverFee: number;
+  childSeatFee: number;
+  youngDriverFee: number;
+  fullCoverageWaiverFee: number;
+  finalTotal: number;
+  depositAmount: number;
+  preAuthorizationAmount: number;
+  currency: string;
+  appliedCampaignCode?: string | null;
+  extraItems: ReservationQuoteExtraItem[];
 }
 
 export interface PriceBreakdown {
@@ -372,7 +450,14 @@ export interface CreateReservationData {
   childSeatCount?: number;
   driverAge?: number;
   fullCoverageWaiver?: boolean;
+  quoteId?: string;
+  locale?: string;
   notes?: string;
+}
+
+export interface ReservationRequestOptions {
+  sessionId: string;
+  idempotencyKey: string;
 }
 
 export interface HoldReservationData {

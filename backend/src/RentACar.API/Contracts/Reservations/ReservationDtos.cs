@@ -30,6 +30,8 @@ public record ReservationDto
     public decimal CustomerTotalSpent { get; init; }
     public ReservationDriverDto? Driver { get; init; }
     public PriceBreakdownDto? PriceBreakdown { get; init; }
+    public IReadOnlyList<ReservationSelectedExtraDto> SelectedExtras { get; init; } = [];
+    public string BreakdownSource { get; init; } = "LEGACY_TOTAL_ONLY";
     public string? CampaignCode { get; init; }
     public decimal DiscountAmount { get; init; }
     public DateTime CreatedAt { get; init; }
@@ -39,6 +41,22 @@ public record ReservationDto
     public DateTime? CheckedOutAt { get; init; }
     public string? Notes { get; init; }
     public ReservationHoldDto? ActiveHold { get; init; }
+}
+
+public record ReservationSelectedExtraDto
+{
+    public Guid OptionId { get; init; }
+    public uint OptionVersion { get; init; }
+    public string Code { get; init; } = string.Empty;
+    public string Locale { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public decimal UnitPrice { get; init; }
+    public string PricingMode { get; init; } = string.Empty;
+    public int Quantity { get; init; }
+    public int RentalDays { get; init; }
+    public decimal Total { get; init; }
+    public string Currency { get; init; } = "TRY";
 }
 
 public record ReservationDriverDto

@@ -17,7 +17,9 @@ public sealed class ReservationsController(IReservationService reservationServic
     [Idempotent(ExpirationHours = 24)]
     public async Task<IActionResult> Create(
         [FromBody] CreateReservationRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromHeader(Name = "X-Session-Id")] string? sessionId = null,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
     {
         if (request.VehicleGroupId == Guid.Empty)
         {
@@ -41,10 +43,23 @@ public sealed class ReservationsController(IReservationService reservationServic
 
         try
         {
+            request = request with
+            {
+                SessionId = string.IsNullOrWhiteSpace(sessionId) ? request.SessionId : sessionId.Trim(),
+                IdempotencyKey = idempotencyKey?.Trim()
+            };
             var reservation = await reservationService.CreateDraftReservationAsync(request, cancellationToken);
             return OkResponse(reservation, "Rezervasyon başarıyla oluşturuldu.");
         }
+        catch (ReservationQuoteConflictException ex)
+        {
+            return Conflict(ApiResponse<object>.Fail(ex.Message));
+        }
         catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (ArgumentException ex)
         {
             return BadRequestResponse(ex.Message);
         }
@@ -55,7 +70,9 @@ public sealed class ReservationsController(IReservationService reservationServic
     [Idempotent(ExpirationHours = 24)]
     public async Task<IActionResult> CreateUnpaidRequest(
         [FromBody] CreateReservationRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromHeader(Name = "X-Session-Id")] string? sessionId = null,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
     {
         if (vehicleGroupOrOfficeInvalid(request))
         {
@@ -74,10 +91,23 @@ public sealed class ReservationsController(IReservationService reservationServic
 
         try
         {
+            request = request with
+            {
+                SessionId = string.IsNullOrWhiteSpace(sessionId) ? request.SessionId : sessionId.Trim(),
+                IdempotencyKey = idempotencyKey?.Trim()
+            };
             var reservation = await reservationService.CreateUnpaidRequestAsync(request, cancellationToken);
             return OkResponse(reservation, "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
         }
+        catch (ReservationQuoteConflictException ex)
+        {
+            return Conflict(ApiResponse<object>.Fail(ex.Message));
+        }
         catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (ArgumentException ex)
         {
             return BadRequestResponse(ex.Message);
         }
@@ -99,7 +129,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         }
 
         var reservation = await reservationService.GetReservationByPublicCodeAsync(publicCode, cancellationToken);
-        
+
         if (reservation == null)
         {
             return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
@@ -123,7 +153,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         try
         {
             var hold = await reservationService.CreateHoldAsync(reservationId, sessionId, cancellationToken);
-            
+
             if (hold == null)
             {
                 return BadRequestResponse("Rezervasyon tutma işlemi başarısız oldu.");
@@ -144,7 +174,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         CancellationToken cancellationToken)
     {
         var hold = await reservationService.ExtendHoldAsync(reservationId, cancellationToken);
-        
+
         if (hold == null)
         {
             return BadRequestResponse("Tutma süresi uzatılamadı. Süre dolmuş veya geçersiz rezervasyon.");
@@ -159,7 +189,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         CancellationToken cancellationToken)
     {
         var success = await reservationService.ReleaseHoldByReservationIdAsync(reservationId, cancellationToken);
-        
+
         if (!success)
         {
             return BadRequestResponse("Tutma serbest bırakılamadı.");
@@ -175,7 +205,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         CancellationToken cancellationToken)
     {
         var success = await reservationService.CancelReservationAsync(reservationId, reason, cancellationToken);
-        
+
         if (!success)
         {
             return BadRequestResponse("Rezervasyon iptal edilemedi.");

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces;
 
@@ -12,6 +12,10 @@ public class RentACarDbContext(DbContextOptions<RentACarDbContext> options)
     public DbSet<Office> Offices => Set<Office>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
+    public DbSet<ReservationExtraOption> ReservationExtraOptions => Set<ReservationExtraOption>();
+    public DbSet<ReservationExtraOptionTranslation> ReservationExtraOptionTranslations => Set<ReservationExtraOptionTranslation>();
+    public DbSet<ReservationExtraOptionVehicleGroup> ReservationExtraOptionVehicleGroups => Set<ReservationExtraOptionVehicleGroup>();
+    public DbSet<ReservationSelectedExtra> ReservationSelectedExtras => Set<ReservationSelectedExtra>();
     public DbSet<PaymentIntent> PaymentIntents => Set<PaymentIntent>();
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
     public DbSet<PricingRule> PricingRules => Set<PricingRule>();

@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using RentACar.Core.Entities;
 using RentACar.Core.Specifications;
 using RentACar.Infrastructure.Data;

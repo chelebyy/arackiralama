@@ -14,20 +14,47 @@
 
 ---
 
+## Fresh Feature Update — 10 Temmuz 2026
+
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented, all eight local section 6.6 Docker/Chromium rows pass, and PR #386 CI is green. Aikido, deployment/rollback, and the production legacy-adapter observation gates remain open.
+
+- Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
+- Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
+- Added four deterministic built-ins, 20 locale rows, migration-time group assignment, and zero-assignment-only idempotent startup backfill.
+- Added admin/public catalog contracts and endpoints, `AdminOnly` authorization, standard rate limiting, `Cache-Control: no-store`, bounded validation, five-locale activation checks, archive/restore, conditional hard delete, and stable PII-free audit actions.
+- Real API authorization tests prove Admin/SuperAdmin access and unauthenticated/customer rejection. Real PostgreSQL tests prove stale `xmin` rejection, parent-version advancement after child mutation, and archive fallback when a reservation reference races hard delete.
+- Added server-authoritative generic extra calculation, flat `POST /api/v1/pricing/quote`, 15-minute session-hashed Redis quotes, atomic owner-bound claim/release/finalization, database `QuoteId` replay reconciliation, immutable selected-extra rows, and complete versioned price snapshots.
+- Draft and unpaid creation now reject mixed quote/legacy inputs, revalidate quote expiry/session/booking inputs/current option structure, preserve valid quote prices across price-only changes, and return snapshot-backed reservation reads with explicit `SNAPSHOT` / `LEGACY_TOTAL_ONLY` sources.
+- Backend build passed with 0 warnings / 0 errors.
+- Latest backend validation passed: `RentACar.Tests` 730/730 and `RentACar.ApiIntegrationTests` 51/51. Focused Phase 3 filters passed 20/20 and 3/3 respectively.
+- Docker Desktop full compose build passed; API and web returned HTTP 200. Running PostgreSQL confirmed 4 active built-ins, 20 translations, 8 migration-time assignments, and the expected latest migration. API restart preserved built-in `xmin`/`UpdatedAt` state.
+- Phase 3 integration validation reused healthy Docker PostgreSQL and Redis services and proved the real quote-to-reservation/replay path; CI has not run for the local feature branch.
+- Phase 4 admin catalog and Phase 5 booking UI are now implemented. The public flow fetches only active group/locale catalog entries, persists identifier/version/quantity selections, requests a session-bound server quote, submits the quote ID plus matching non-price booking inputs with the same session/idempotency headers, maps the measured legacy URL codes only during compatibility, and renders immutable selected-extra snapshots in admin reservation detail.
+- Latest Phase 5 local frontend evidence from `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript PASS; focused Vitest 42/42; full Vitest 60 files / 274 tests PASS; ESLint 0 errors with the existing `SearchForm.test.tsx` warning; Next.js production build PASS. This full-suite/build evidence predates the final one-line `driverAge` contract-alignment correction; the final TypeScript and Step 4 focused suite (15/15) passed. The 2026-07-11 continuation then reran the exact-current Docker Chromium booking/payment/i18n/mobile bundle at 16/16 and expanded the reservation-extra acceptance spec to 9/9, including the Step 3 state/quantity/legacy matrix, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, bounded availability-conflict recovery without payment-form loss, immutable selected-extra/full-pricing history, and explicit real `LEGACY_TOTAL_ONLY` rendering. The snapshot pass exposed and fixed raw backend price-breakdown fields bypassing admin-client normalization; TypeScript, ESLint, focused admin API Vitest 13/13, and the rebuilt Next.js production image passed. No repository-local `node_modules` success is claimed because that tree remains incomplete.
+- A fresh `docker compose -f backend/docker-compose.yml up -d --build` passed on 11 July 2026; PostgreSQL/Redis were healthy, API `/health` and `/tr` returned 200, and `/` redirected 307 to `/tr`. Chromium booking/payment smoke passed 6/6 after aligning stale E2E selectors and seed-office assumptions. A focused Docker browser proof also passed 6/6: admin catalog load, selected child-seat line in the server quote, no generated `extras` URL parameter, quote-expiry status, terms validation, unpaid reservation creation/confirmation, and the new reservation's non-legacy no-extra admin detail.
+- The browser pass exposed and fixed a real backend blocker: date-only driver snapshot values arrived as `DateTimeKind.Unspecified` and caused PostgreSQL `timestamptz` writes to fail with 500. Driver birth/license dates are now normalized to UTC; the focused backend regression test passed 1/1 and the rebuilt API completed the real unpaid-request flow. The test-created local holds were cancelled after evidence collection.
+- Quote expiry/cross-session/replay is now closed with a real Docker Chromium + Redis + PostgreSQL gate: expired and mismatched-session submissions returned `409` with zero rows, replay returned the original reservation ID, and the unique `quote_id` count remained one. Current-source browser validation passed as the existing scenarios 9/9 plus focused quote lifecycle 1/1 in separate clean API rate-limit windows; focused .NET replay integration passed 1/1.
+- Section 6.6 is complete locally at 8/8 rows. The final focused Chromium pass captured and visually inspected Step 3/4 at desktop, tablet, and mobile widths, asserted no horizontal overflow or inaccessible icon action, and stored non-sensitive console/network evidence under `docs/test-evidence/2026-07-11-reservation-extra-options-responsive/`.
+- The current comprehensive implementation handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; it remains the historical continuation entry point, while the canonical docs now record local acceptance at 8/8 and keep CI/Aikido/deployment/observation gates separate.
+- PR #386 Codex review follow-up closed three valid findings: invalid legacy quantities now return 400, adapted legacy extras retain campaign-discount semantics, and changed selections require explicit confirmation before resubmission. Focused backend 34/34, full backend 733/733, TypeScript, Step 4 Vitest 15/15, rebuilt Docker build, and focused Chromium 1/1 passed.
+- PR #386 re-review closed four additional behavioral gaps: quote-backed campaigns discount the subtotal including generic extras; repeated legacy URL codes aggregate into one bounded selection; Step 3 reconciles persisted selections with the current catalog; and Step 4 requires explicit confirmation for version/unit-price/pricing-mode/final-total changes. Focused quote tests passed 4/4, full backend unit tests passed 734/734, focused Step 3/4 Vitest passed 22/22, full Vitest passed 60 files / 278 tests, TypeScript and focused ESLint passed, rebuilt Docker API/web returned HTTP 200, and focused Chromium conflict recovery passed 1/1. The repeated `xmin` migration comment is non-actionable because provider-generated SQL and the applied Docker schema contain no physical user column.
+- Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
+- Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.
+
 ## 📊 Executive Dashboard
 
-| Metric | Value |
-|--------|-------|
-| Toplam Faz | 10 |
-| Tamamlanan Faz | 8 |
-| Devam Eden Faz | 1 |
-| Bekleyen Faz | 1 |
-| Toplam Görev | ~320+ (yaklaşık) |
-| Tamamlanan Görev | 225+ |
-| Devam Eden Görev | 3+ |
-| Genel İlerleme | 94% |
+| Metric           | Value            |
+| ---------------- | ---------------- |
+| Toplam Faz       | 10               |
+| Tamamlanan Faz   | 8                |
+| Devam Eden Faz   | 1                |
+| Bekleyen Faz     | 1                |
+| Toplam Görev     | ~320+ (yaklaşık) |
+| Tamamlanan Görev | 225+             |
+| Devam Eden Görev | 3+               |
+| Genel İlerleme   | 94%              |
 
-Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Critical Fixes tamamlandı (8/8 fix uygulandı): W2-P004, W2-P005, W2-F004, W2-F005, W2-I001, W2-I002, W2-I004. Tüm testler geçti (backend 480/480, frontend 63/63). Build ve type-check temiz. Frontend public sayfalar artık hardcoded veri kullanmıyor. API contract'lar frontend-backend arasında uyumlu. Wave 2 Additional Fixes (validateCampaign contract + OfficeDto Code field) tamamlandı. **Wave 3 COMPLETED** — CRITICAL (4), HIGH (9), MEDIUM (backend 7, frontend 5), LOW (7) tümü kapatıldı. Backend test: 480/480 ✅. Frontend TypeScript: clean ✅. 4 commit push edildi: `9b67335`, `fad8c8d`, `fa5b3e2`, `beeb79f`. **Wave 4 DEFERRED** (admin settings/system page stub + fleet/maintenance action stub — launch kritik değil). **Wave 5 Migration Safety COMPLETED ✅** — 3 migration fix uygulandı: Phase4OverlapConstraint `Down()` extension drop, AddAuditLogDetailColumns duplicate column ve duplicate feature flag temizlendi. 12/12 migration reversibility doğrulandı. **EF Migration Fix COMPLETED ✅** — Phase7BackgroundJobAndFeatureFlagHardening Designer.cs eksikligi giderildi: AddMissingBackgroundJobColumns migration ile background_jobs tablosuna last_error ve failed_at sutunlari eklendi. CI Integration Tests artık gecerli: 29/29 PASS (`46ddef2`). **Wave 6+ Infrastructure DEFERRED** (Dokploy kurulumu, load testing, security audit, monitoring — deployment zamanlamasına bağlı). 11 May 2026 local backend coverage rebaseline ile `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` komutu local Postgres (`5433`) ve Redis (`6379`) açıkken yeniden doğrulandı; service ve infrastructure coverage genişletmeleri sonrası sonuç **534/534 PASS** ve aggregate backend line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**). Bu son rebaseline ile Infrastructure coverage düşük kalmaya devam etse de aktif slice ölçülebilir biçimde ilerledi; provider ve hold-service testleri eklendi. Frontend overall coverage ise shell ortamındaki pnpm build-script approval blokajı nedeniyle henüz güvenilir şekilde yeniden alınamadı.
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Critical Fixes tamamlandı (8/8 fix uygulandı): W2-P004, W2-P005, W2-F004, W2-F005, W2-I001, W2-I002, W2-I004. Tüm testler geçti (backend 480/480, frontend 63/63). Build ve type-check temiz. Frontend public sayfalar artık hardcoded veri kullanmıyor. API contract'lar frontend-backend arasında uyumlu. Wave 2 Additional Fixes (validateCampaign contract + OfficeDto Code field) tamamlandı. **Wave 3 COMPLETED** — CRITICAL (4), HIGH (9), MEDIUM (backend 7, frontend 5), LOW (7) tümü kapatıldı. Backend test: 480/480 ✅. Frontend TypeScript: clean ✅. 4 commit push edildi: `9b67335`, `fad8c8d`, `fa5b3e2`, `beeb79f`. **Wave 4 DEFERRED** (admin settings/system page stub + fleet/maintenance action stub — launch kritik değil). **Wave 5 Migration Safety COMPLETED ✅** — 3 migration fix uygulandı: Phase4OverlapConstraint `Down()` extension drop, AddAuditLogDetailColumns duplicate column ve duplicate feature flag temizlendi. 12/12 migration reversibility doğrulandı. **EF Migration Fix COMPLETED ✅** — Phase7BackgroundJobAndFeatureFlagHardening Designer.cs eksikligi giderildi: AddMissingBackgroundJobColumns migration ile background_jobs tablosuna last_error ve failed_at sutunlari eklendi. CI Integration Tests artık gecerli: 29/29 PASS (`46ddef2`). **Wave 6+ Infrastructure DEFERRED** (Dokploy kurulumu, load testing, security audit, monitoring — deployment zamanlamasına bağlı). 11 May 2026 local backend coverage rebaseline ile `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` komutu local Postgres (`5433`) ve Redis (`6379`) açıkken yeniden doğrulandı; service ve infrastructure coverage genişletmeleri sonrası sonuç **534/534 PASS** ve aggregate backend line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38\*\*). Bu son rebaseline ile Infrastructure coverage düşük kalmaya devam etse de aktif slice ölçülebilir biçimde ilerledi; provider ve hold-service testleri eklendi. Frontend overall coverage ise shell ortamındaki pnpm build-script approval blokajı nedeniyle henüz güvenilir şekilde yeniden alınamadı.
 
 **27 Jun 2026 Fresh Update:** Admin Public Site Settings now supports five-language managed public content for legal/contact/navigation surfaces. `PublicSiteSettings` link/contact DTOs gained optional `translations` maps for TR/EN/RU/AR/DE while base fields remain backward-compatible fallbacks. Verification: `dotnet test backend\tests\RentACar.Tests\RentACar.Tests.csproj --filter PublicSiteSettings --no-restore` **12/12 PASS**, `corepack pnpm -C frontend exec tsc --noEmit` PASS, `corepack pnpm -C frontend lint` PASS with **0 errors / 1 pre-existing warning**, `corepack pnpm -C frontend test` **52 files / 228 tests PASS**, Docker web rebuild PASS, Docker Playwright smoke/i18n/mobile/admin-public-settings **17/17 PASS**, and Aikido MCP `aikido_full_scan` on 23 modified/added first-party code/config/test files returned **0 issues**. Residual environment note: full `dotnet test backend\RentACar.sln --no-restore` reached `RentACar.Tests` **665/665 PASS** but `RentACar.ApiIntegrationTests` failed in this sandbox because Windows EventLog denied `.NET Runtime` log writes.
 
@@ -1608,9 +1635,9 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 **Süre:** Hafta 19-20
 
-**Başlangıç:** \***\*\_\_\_\*\*
+**Başlangıç:** \*\*\*\*\_\_\_\*\*
 
-**Hedef Bitiş:** \***\*\_\_\_\*\*
+**Hedef Bitiş:** \*\*\*\*\_\_\_\*\*
 
 **Durum:** 🟨 In Progress
 
@@ -1631,27 +1658,28 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 ### 📋 Faz 10 Phase Özeti
 
-| Phase | Adı | Durum | Maddeler | Tamamlanan |
-|-------|-----|-------|----------|------------|
-| 10.0 | Code Quality Assessment | 🟨 | 15 | 12 |
-| 10.1 | Test Coverage & Gap Analysis | 🟨 | 21 | 21 |
-| 10.2 | Integration Tests | ✅ | 24 | 24 |
-| 10.3 | E2E Tests | ✅ | 17 | 17 |
-| 10.4 | Load Testing | 🟨 | 6 | 3 |
-| 10.5 | Security Final Audit | ⬜ | 26 | 0 |
-| 10.6 | Performance Baseline | ⬜ | 19 | 0 |
-| 10.7 | Infrastructure Readiness | ⬜ | 26 | 0 |
-| 10.8 | Monitoring & Alerting | ⬜ | 22 | 0 |
-| 10.9 | Data Integrity & Migration | ⬜ | 9 | 0 |
-| 10.10 | Rollback & Incident Response | ⬜ | 12 | 0 |
-| 10.11 | Launch Execution | ⬜ | 23 | 0 |
-| **TOPLAM** | | | **220** | **74** |
+| Phase      | Adı                          | Durum | Maddeler | Tamamlanan |
+| ---------- | ---------------------------- | ----- | -------- | ---------- |
+| 10.0       | Code Quality Assessment      | 🟨    | 15       | 12         |
+| 10.1       | Test Coverage & Gap Analysis | 🟨    | 21       | 21         |
+| 10.2       | Integration Tests            | ✅    | 24       | 24         |
+| 10.3       | E2E Tests                    | ✅    | 17       | 17         |
+| 10.4       | Load Testing                 | 🟨    | 6        | 3          |
+| 10.5       | Security Final Audit         | ⬜    | 26       | 0          |
+| 10.6       | Performance Baseline         | ⬜    | 19       | 0          |
+| 10.7       | Infrastructure Readiness     | ⬜    | 26       | 0          |
+| 10.8       | Monitoring & Alerting        | ⬜    | 22       | 0          |
+| 10.9       | Data Integrity & Migration   | ⬜    | 9        | 0          |
+| 10.10      | Rollback & Incident Response | ⬜    | 12       | 0          |
+| 10.11      | Launch Execution             | ⬜    | 23       | 0          |
+| **TOPLAM** |                              |       | **220**  | **74**     |
 
 ### 📝 Faz 10 İlerleme Notları
 
 > **Kaynak önceliği notu:** Bu bölümdeki kısa özetler ve aşağıdaki ilerleme sayaçları tarihsel takip kolaylığı içindir. Launch sequencing ve gate kararı için birincil kaynak `docs/12_Phase10_PreLaunch_Gates.md` olmalıdır; overall/full-solution backend coverage yüzdeleri için `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md`, 14 May unit-side Infrastructure ilerlemesi için `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md` kullanılmalıdır.
 
 **10.0 Code Quality Assessment:**
+
 - Wave 1 (Auth + Reservation + Payment + Booking Flow): ✅ 8/8 critical fix tamamlandı
 - Wave 2 (Pricing + Fleet + Offices + Public Inventory): ✅ 8/8 critical fix tamamlandı
 - Wave 2 Additional Fixes: ✅ validateCampaign contract alignment + OfficeDto Code field
@@ -1660,19 +1688,23 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
+
 - Backend: fresh full-solution rerun succeeded on **16 May 2026** after restarting the previously stopped `rentacar-postgres` and `rentacar-redis` containers. New Release evidence: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, merged backend line coverage **91.09%** overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**). Same-day deterministic application-service follow-ups then expanded `PaymentServiceTests` to **33/33 PASS** and `ReservationServiceTests` to **64/64 PASS**, lifting `RentACar.Tests` first to **582/582 PASS** and then to **590/590 PASS**. Fresh unit-project Cobertura aggregates now show **payment module %91.71** (564/615) and **reservation module %82.47** (320/388); backend-side Phase 10.1 coverage gates are closed.
 - Frontend: **190/190 PASS**. Project-wide frontend coverage is now **%63.17** (Phase 10.1 target **%60** closed). Public layout + booking entry/layout slices remain high; `TrackReservationPage` **%100 / 85.71% branch**, `BookingStep2Page` **%99 / 62.06% branch**, `BookingStep4Page` **%98.02 / 78% branch**, `VehiclesPage` **%99.7 / 92.42% branch**, SearchForm **%100 statements / 78.04% branches**, admin `ReservationsPage` **%97.42 / 75.55% branch**, admin `ReservationDetailPage` **%97.37 / 72.09% branch**, `frontend/hooks/admin` **%97.23**, `frontend/components/ui` **%83.52**, and `frontend/hooks` **%92.16**.
 
 **10.2 Integration Tests:**
+
 - ✅ 32/32 integration test pass in the fresh **16 May 2026** full-environment backend rerun. Endpoint, Database, Redis, and Payment Provider integration coverage were revalidated with local Postgres/Redis healthy.
 - Build 0 warning/error.
 
 **10.3 E2E Tests:**
+
 - ✅ All 5 blockers FIXED (4 May 2026): Step4 payment flow wired (createReservation → placeHold → createPaymentIntent → redirect), 3DS return page fixed (`useParams()`), `placeHold` `X-Session-Id` header support, admin refund UI dialog + E2E tests, `BookingStep4.test.tsx` mock fix.
 - Flaky `data-search-form-hydrated` wait in `i18n.spec.ts` replaced with `networkidle` + `#pickupLocation` visible check.
 - E2E CI strategy updated: PR trigger REMOVED (`.github/workflows/e2e.yml`). E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only.
 
 **10.4 Load Testing:**
+
 - 🟨 6 k6 scripts created in `backend/tests/k6/` (availability-query, concurrent-search, concurrent-booking, payment-intent, admin-dashboard, mixed-traffic) + README + run-all.sh.
 - CodeQL HIGH severity (`Math.random()` in `concurrent-booking.js`) fixed in commit `3d3b2f1`. Proactive fix applied to `payment-intent.js`.
 - Local Docker smoke validation completed for `concurrent-booking`, `payment-intent`, `mixed-traffic`, `availability-query`, `concurrent-search`, and `admin-dashboard` after the host-header and local-admin-seed adjustments.
@@ -1682,30 +1714,30 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 Tüm kriterlerin detaylı tanımları ve eşik değerleri `docs/12_Phase10_PreLaunch_Gates.md` içindedir.
 
-| # | Gate | Eşik | Durum |
-|---|------|------|-------|
-| 1 | Code Quality | Critical smell = 0 | ⬜ |
-| 2 | Backend Coverage | ≥ %70 | ⬜ |
-| 3 | Frontend Coverage | ≥ %60 | ✅ |
-| 4 | Payment Coverage | ≥ %80 | ⬜ |
-| 5 | Reservation Coverage | ≥ %80 | ⬜ |
-| 6 | Integration Tests | 100% pass | ⬜ |
-| 7 | E2E Tests | 100% pass localde | ✅ |
-| 8 | Load Test (p95) | < 300ms | 🟨 SCRIPTS READY |
-| 9 | Load Test (Concurrent) | 100 users, 0 double-book | 🟨 SCRIPTS READY |
-| 10 | OWASP Scan | 0 critical/high | ⬜ |
-| 11 | Dependency Scan | 0 critical/high | ⬜ |
-| 12 | Lighthouse Perf | ≥ 90 | ⬜ |
-| 13 | Lighthouse A11y | ≥ 90 | ⬜ |
-| 14 | API Health | < 100ms | ⬜ |
-| 15 | Services Healthy | 200 OK | ⬜ |
-| 16 | SSL Rating | A+ | ⬜ |
-| 17 | Backup Verified | Daily, restorable | ⬜ |
-| 18 | Uptime Monitor | Active | ⬜ |
-| 19 | Alerts Configured | Email/Slack | ⬜ |
-| 20 | Migration Rollback | Tested | ⬜ |
-| 21 | Rollback Plan | Documented | ⬜ |
-| 22 | Incident Response | Escalation matrix | ⬜ |
+| #   | Gate                   | Eşik                     | Durum            |
+| --- | ---------------------- | ------------------------ | ---------------- |
+| 1   | Code Quality           | Critical smell = 0       | ⬜               |
+| 2   | Backend Coverage       | ≥ %70                    | ⬜               |
+| 3   | Frontend Coverage      | ≥ %60                    | ✅               |
+| 4   | Payment Coverage       | ≥ %80                    | ⬜               |
+| 5   | Reservation Coverage   | ≥ %80                    | ⬜               |
+| 6   | Integration Tests      | 100% pass                | ⬜               |
+| 7   | E2E Tests              | 100% pass localde        | ✅               |
+| 8   | Load Test (p95)        | < 300ms                  | 🟨 SCRIPTS READY |
+| 9   | Load Test (Concurrent) | 100 users, 0 double-book | 🟨 SCRIPTS READY |
+| 10  | OWASP Scan             | 0 critical/high          | ⬜               |
+| 11  | Dependency Scan        | 0 critical/high          | ⬜               |
+| 12  | Lighthouse Perf        | ≥ 90                     | ⬜               |
+| 13  | Lighthouse A11y        | ≥ 90                     | ⬜               |
+| 14  | API Health             | < 100ms                  | ⬜               |
+| 15  | Services Healthy       | 200 OK                   | ⬜               |
+| 16  | SSL Rating             | A+                       | ⬜               |
+| 17  | Backup Verified        | Daily, restorable        | ⬜               |
+| 18  | Uptime Monitor         | Active                   | ⬜               |
+| 19  | Alerts Configured      | Email/Slack              | ⬜               |
+| 20  | Migration Rollback     | Tested                   | ⬜               |
+| 21  | Rollback Plan          | Documented               | ⬜               |
+| 22  | Incident Response      | Escalation matrix        | ⬜               |
 
 **Karar Kuralı:** 22 maddenin tamamı "Go" olmadan launch yapılamaz.
 

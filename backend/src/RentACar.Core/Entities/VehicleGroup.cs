@@ -15,4 +15,5 @@ public class VehicleGroup : BaseEntity
 
     public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
     public ICollection<PricingRule> PricingRules { get; set; } = new List<PricingRule>();
+    public ICollection<ReservationExtraOptionVehicleGroup> ReservationExtraOptions { get; set; } = new List<ReservationExtraOptionVehicleGroup>();
 }

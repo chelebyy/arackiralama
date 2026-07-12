@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RentACar.API.Contracts.Reservations;
 
 public record CreateReservationRequest
@@ -14,8 +16,12 @@ public record CreateReservationRequest
     public int ChildSeatCount { get; init; }
     public int? DriverAge { get; init; }
     public bool FullCoverageWaiver { get; init; }
+    public Guid? QuoteId { get; init; }
+    public string Locale { get; init; } = "tr";
     public string? Notes { get; init; }
     public string? SessionId { get; init; }
+    [JsonIgnore]
+    public string? IdempotencyKey { get; init; }
 }
 
 public record CustomerInfoRequest

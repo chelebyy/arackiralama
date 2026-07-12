@@ -619,7 +619,20 @@ public sealed class ReservationServiceTests
         // Arrange
         var groupId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
-        var request = CreateValidReservationRequest() with { VehicleGroupId = groupId };
+        var request = CreateValidReservationRequest() with
+        {
+            VehicleGroupId = groupId,
+            Driver = new DriverInfoRequest
+            {
+                FirstName = "Ahmet",
+                LastName = "Yilmaz",
+                DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
+                LicenseNumber = "TR12345678",
+                LicenseCountry = "Turkey",
+                LicenseIssueDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
+                LicenseExpiryDate = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Unspecified)
+            }
+        };
         var availableVehicle = new Vehicle
         {
             Id = vehicleId,
@@ -697,12 +710,18 @@ public sealed class ReservationServiceTests
         result.Status.Should().Be("Draft");
         result.TotalAmount.Should().Be(1700);
         result.CustomerEmail.Should().Be(request.Customer.Email);
-        
+
         _reservationRepositoryMock.Verify(x => x.AddAsync(
             It.Is<Reservation>(r =>
                 r.Status == ReservationStatus.Draft
                 && r.TotalAmount == 1700
-                && r.VehicleId == vehicleId),
+                && r.VehicleId == vehicleId
+                && r.DriverDateOfBirth.HasValue
+                && r.DriverDateOfBirth.Value.Kind == DateTimeKind.Utc
+                && r.DriverLicenseIssueDate.HasValue
+                && r.DriverLicenseIssueDate.Value.Kind == DateTimeKind.Utc
+                && r.DriverLicenseExpiryDate.HasValue
+                && r.DriverLicenseExpiryDate.Value.Kind == DateTimeKind.Utc),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -2052,8 +2071,8 @@ public sealed class ReservationServiceTests
     [InlineData(ReservationStatus.Completed, ReservationStatus.Draft, false)]
     [InlineData(ReservationStatus.Cancelled, ReservationStatus.Hold, false)]
     public async Task IsValidStatusTransitionAsync_VariousTransitions_ReturnsExpected(
-        ReservationStatus current, 
-        ReservationStatus target, 
+        ReservationStatus current,
+        ReservationStatus target,
         bool expected)
     {
         // Act
@@ -2097,7 +2116,30 @@ public sealed class ReservationServiceTests
             PickupDateTime = originalPickupDateTime,
             ReturnDateTime = originalReturnDateTime,
             Status = ReservationStatus.Confirmed,
-            TotalAmount = 1500m
+            TotalAmount = 1500m,
+            PricingSnapshot = new ReservationPricingSnapshotV1
+            {
+                QuoteId = Guid.NewGuid(),
+                IssuedAtUtc = DateTime.UtcNow.AddMinutes(-5),
+                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+                CampaignCode = "SAVE10"
+            },
+            SelectedExtras =
+            [
+                new ReservationSelectedExtra
+                {
+                    ExtraOptionId = Guid.NewGuid(),
+                    OptionVersionSnapshot = 2,
+                    Locale = "tr",
+                    OptionCodeSnapshot = "gps",
+                    NameSnapshot = "GPS",
+                    UnitPriceSnapshot = 10m,
+                    PricingModeSnapshot = ReservationExtraPricingMode.PerDay,
+                    Quantity = 2,
+                    RentalDaysSnapshot = 2,
+                    TotalPriceSnapshot = 40m
+                }
+            ]
         };
 
         var request = new UpdateReservationRequest
@@ -2111,7 +2153,8 @@ public sealed class ReservationServiceTests
                 FirstName = "Changed",
                 LastName = "Customer",
                 Email = "changed@example.com",
-                Phone = "+90 555 111 1111"
+                Phone = "+90 555 111 1111",
+                DateOfBirth = updatedPickupDateTime.Date.AddYears(-20)
             },
             Notes = "Ignored by current implementation"
         };
@@ -2140,13 +2183,17 @@ public sealed class ReservationServiceTests
                 newReturnOfficeId,
                 request.PickupDateTimeUtc.Value,
                 request.ReturnDateTimeUtc.Value,
-                null,
+                "SAVE10",
                 0,
                 0,
-                null,
+                20,
                 false,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1500m, 2000m, 2000m, "TRY", null));
+            .ReturnsAsync(new PriceBreakdownDto(500m, 3, 1500m, 0m, 150m, 0m, 0m, 0m, 0m, 0m, 0m, 1350m, 2000m, 2000m, "TRY", "SAVE10")
+            {
+                AppliedCampaignDiscountType = "percentage",
+                AppliedCampaignDiscountValue = 10m
+            });
 
         // Act
         var result = await _sut.UpdateReservationAsync(reservationId, request, CancellationToken.None);
@@ -2157,6 +2204,11 @@ public sealed class ReservationServiceTests
         result.ReturnDateTime.Should().Be(request.ReturnDateTimeUtc!.Value);
         reservation.VehicleId.Should().Be(originalVehicleId);
         reservation.Customer.Should().BeSameAs(originalCustomer);
+        reservation.TotalAmount.Should().Be(1404m);
+        reservation.PricingSnapshot!.FinalTotal.Should().Be(1404m);
+        reservation.PricingSnapshot.ExtrasTotal.Should().Be(60m);
+        reservation.SelectedExtras.Should().ContainSingle(item =>
+            item.RentalDaysSnapshot == 3 && item.TotalPriceSnapshot == 60m);
         _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -2777,7 +2829,7 @@ public sealed class ReservationServiceTests
             LastName = "Yilmaz",
             Email = "ahmet@example.com",
             Phone = "+90 555 123 4567"
-            }
+        }
     };
 
     private static DbUpdateException CreateOverlapDbUpdateException()

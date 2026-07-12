@@ -45,6 +45,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IReservationExtraPricingService, ReservationExtraPricingService>();
+        services.AddScoped<IReservationQuoteService, ReservationQuoteService>();
         services.AddSingleton<AvailabilityCacheInvalidationSignal>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();
@@ -52,6 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
         services.AddScoped<IPublicSiteSettingsService, PublicSiteSettingsService>();
+        services.AddScoped<IReservationExtraOptionCatalogService, ReservationExtraOptionCatalogService>();
         services.AddScoped<IReportsService, ReportsService>();
         services.AddPaymentIntegration(configuration);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();

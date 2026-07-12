@@ -22,6 +22,9 @@ public class Reservation : BaseEntity
     public string? DriverLicenseCountry { get; set; }
     public DateTime? DriverLicenseIssueDate { get; set; }
     public DateTime? DriverLicenseExpiryDate { get; set; }
+    public Guid? QuoteId { get; set; }
+    public ReservationPricingSnapshotV1? PricingSnapshot { get; set; }
+    public ReservationQuoteReplayProofV1? QuoteReplayProof { get; set; }
     public uint Version { get; set; }
 
     public Customer? Customer { get; set; }
@@ -30,4 +33,5 @@ public class Reservation : BaseEntity
     public Office? ReturnOffice { get; set; }
     public ICollection<PaymentIntent> PaymentIntents { get; set; } = new List<PaymentIntent>();
     public ICollection<ReservationHold> Holds { get; set; } = new List<ReservationHold>();
+    public ICollection<ReservationSelectedExtra> SelectedExtras { get; set; } = new List<ReservationSelectedExtra>();
 }
