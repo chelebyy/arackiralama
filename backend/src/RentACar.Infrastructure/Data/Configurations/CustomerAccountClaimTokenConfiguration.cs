@@ -30,5 +30,9 @@ public sealed class CustomerAccountClaimTokenConfiguration : IEntityTypeConfigur
             .HasDatabaseName("idx_customer_account_claim_tokens_expires_at_utc");
         builder.HasIndex(x => new { x.CustomerId, x.SupersededAtUtc, x.ConsumedAtUtc })
             .HasDatabaseName("idx_customer_account_claim_tokens_active_lookup");
+        builder.HasIndex(x => x.CustomerId)
+            .HasDatabaseName("ux_customer_account_claim_tokens_one_active")
+            .HasFilter("consumed_at_utc IS NULL AND superseded_at_utc IS NULL")
+            .IsUnique();
     }
 }

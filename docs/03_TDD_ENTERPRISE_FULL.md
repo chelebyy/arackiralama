@@ -1826,6 +1826,14 @@ Tests that exercise reservation editability rules must avoid fixed calendar date
 
 Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern for future reservation fixtures. Keep assertions focused on behavior, not on a hardcoded calendar day.
 
+## 14.6 Account-Claim Abuse Control and Retention
+
+`AccountClaimSecurityOptions` binds the request cooldown, retention period, cleanup interval, and cleanup batch size from configuration. Registration resolves the normalized email to the customer before applying the five-minute cooldown, preserving the generic response for both issued and suppressed requests. PostgreSQL enforces one active claim token per customer through the partial unique index `ux_customer_account_claim_tokens_one_active`; the migration supersedes legacy duplicates before creating that index. A unique-constraint race is handled as a suppressed request without exposing account state, and the failed EF change tracker is cleared before audit persistence.
+
+`CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. The production delivery adapter is intentionally unchanged until Resend is integrated; local acceptance uses the queued email job and does not claim real delivery.
+
+The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales.
+
 ---
 
 END OF DOCUMENT

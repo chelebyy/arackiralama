@@ -96,7 +96,7 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 
 | Boundary | Implemented control | Current evidence | Remaining gate |
 | --- | --- | --- | --- |
-| Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response | Backend build clean; focused auth/security tests included in 43/43 pass | Production email-delivery/browser proof and abuse-monitoring review |
+| Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response; normalized-account cooldown; one-active-token database invariant; bounded retention cleanup | Focused abuse/cleanup tests 29/29; full backend 765/765 unit and 51/51 integration; Docker concurrency, worker cleanup, and five-locale Chromium claim/replay/login proof pass | Resend integration and real production email-delivery proof, deferred until the provider is introduced |
 | Public reservation read | Allowlisted public DTO, strict rate limit, `no-store` | Backend unit/integration suites pass | Browser network inspection in production-like Docker |
 | Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Ownership unit tests included in focused pass | Docker HTTP proof that anonymous route performs no write |
 | Production payment configuration | `ValidateOnStart`; Mock/unknown/sandbox/incomplete/disabled rejected | Validator regression tests pass | Production-like container startup proof |

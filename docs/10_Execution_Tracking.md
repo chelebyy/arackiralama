@@ -1997,3 +1997,13 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Open gates:** the remaining Docker/browser matrix, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Account-Claim Abuse-Control and Cleanup Follow-up
+
+**Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production delivery remains intentionally deferred until Resend is integrated.
+
+**Fresh verification:** focused account-claim and cleanup tests passed 29/29; full backend suites passed 765/765 unit and 51/51 API integration tests; build passed with 0 warnings/errors; EF reports no pending model changes. Docker PostgreSQL contains migration `20260712214328_HardenAccountClaimAbuseControls` and its partial unique index. Two simultaneous requests returned `200,200` while creating one active token and one email job; worker cleanup deleted an isolated 20-day-old token. The self-cleaning Chromium scenario passed claim, replay rejection, login, and unchanged-profile checks across `tr`, `en`, `ru`, `ar`, and `de`.
+
+**Open gates:** Resend production delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Credential rotation/access-log/history evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

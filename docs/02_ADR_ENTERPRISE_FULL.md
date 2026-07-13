@@ -442,7 +442,7 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 
 ### 13.1 Verified Guest-Account Claim
 
-Existing passwordless guest customers are not upgraded by knowledge of an email address. Registration returns a generic response and issues a purpose-specific, hashed, expiring, single-use `CustomerAccountClaimToken`; installing the first password requires possession of the emailed token. Issuing a replacement token supersedes older active tokens. Raw tokens are never persisted.
+Existing passwordless guest customers are not upgraded by knowledge of an email address. Registration returns a generic response and issues a purpose-specific, hashed, expiring, single-use `CustomerAccountClaimToken`; installing the first password requires possession of the emailed token. Requests are throttled against the normalized customer identity with a five-minute cooldown, and the database permits at most one active token per customer. Issuing a replacement token supersedes older active tokens. Raw tokens are never persisted. Expired, consumed, and superseded records are removed by the worker in bounded batches after a 14-day retention window.
 
 ### 13.2 Public Reservation Boundary
 
@@ -454,4 +454,4 @@ No payment provider is selected at this stage. `Payment:EnablePayments` therefor
 
 ### 13.4 Acceptance State
 
-These decisions are implemented for account claim, public reservation exposure/cancellation containment, default-disabled payment containment, and production configuration validation. The reachable paid-transition attack path is contained while payments remain disabled, but payment-integrity acceptance is deferred until a real provider contract and sandbox evidence exist. This does not establish release readiness. Canonical implementation and remaining evidence gates are tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
+These decisions are implemented for account claim, public reservation exposure/cancellation containment, default-disabled payment containment, and production configuration validation. Account-claim abuse controls, retention cleanup, concurrency behavior, and five-locale Docker-browser behavior have local evidence; production email delivery remains deferred until Resend is integrated. The reachable paid-transition attack path is contained while payments remain disabled, but payment-integrity acceptance is deferred until a real provider contract and sandbox evidence exist. This does not establish release readiness. Canonical implementation and remaining evidence gates are tracked in `docs/18_Codex_Security_Findings_Implementation.md`.

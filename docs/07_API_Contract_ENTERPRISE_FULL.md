@@ -766,7 +766,7 @@ END OF DOCUMENT
 
 ### Customer account claim
 
-- `POST /api/customer/v1/auth/register`: for an existing passwordless guest customer, returns the same generic success response but does not install credentials or update profile fields; it queues an email claim token.
+- `POST /api/customer/v1/auth/register`: for an existing passwordless guest customer, returns the same generic success response but does not install credentials or update profile fields; it queues an email claim token. Repeated or concurrent requests suppressed by the normalized-account cooldown or one-active-token invariant return that same generic success contract and do not queue another message.
 - `POST /api/customer/v1/auth/claim`: accepts `{ token, newPassword }`; only an active, unexpired, unused token may install the first password. Invalid, expired, replayed, superseded, or already-claimed cases return a generic bad request and perform no credential overwrite.
 
 ### Public reservation access

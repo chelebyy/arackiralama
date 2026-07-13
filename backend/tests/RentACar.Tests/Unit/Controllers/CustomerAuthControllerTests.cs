@@ -17,6 +17,7 @@ using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Security;
+using RentACar.Infrastructure.Services;
 using RentACar.Infrastructure.Services.Notifications;
 using RentACar.Tests.TestFixtures;
 using Xunit;
@@ -76,7 +77,8 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         {
             CustomerId = existingCustomer.Id,
             TokenHash = "sha256:previous-token-hash",
-            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30)
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            CreatedAt = DateTime.UtcNow.AddMinutes(-10)
         });
         await dbContext.SaveChangesAsync();
 
@@ -91,6 +93,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             passwordHasher: passwordHasher,
             accountClaimEmailDispatcher: claimDispatcher.Object,
             jwtTokenService: jwtTokenService.Object);
+        controller.ControllerContext.HttpContext.Request.Headers.UserAgent = new string('a', 600);
 
         var result = await controller.Register(
             new CustomerRegisterRequest("GUEST@Test.com", "Secure123!", "Registered Person", "05009998877"),
@@ -113,6 +116,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         token.ConsumedAtUtc.Should().BeNull();
         token.SupersededAtUtc.Should().BeNull();
         token.ExpiresAtUtc.Should().BeAfter(DateTime.UtcNow);
+        token.IssuedUserAgent.Should().HaveLength(512);
         dbContext.CustomerAccountClaimTokens
             .Single(item => item.TokenHash == "sha256:previous-token-hash")
             .SupersededAtUtc.Should().NotBeNull();
@@ -126,6 +130,50 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Register_WhenClaimWasRecentlyIssued_ReturnsGenericSuccessWithoutDispatchingAgain()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var existingCustomer = new Customer
+        {
+            Email = "cooldown@test.com",
+            FullName = "Guest Person",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(existingCustomer);
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = existingCustomer.Id,
+            TokenHash = "sha256:recent-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var claimDispatcher = new Mock<ICustomerAccountClaimEmailDispatcher>();
+        var controller = CreateController(dbContext, accountClaimEmailDispatcher: claimDispatcher.Object);
+
+        var result = await controller.Register(
+            new CustomerRegisterRequest("COOLDOWN@test.com", "Ignored123!", null, null),
+            CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        ReadStringProperty(okResult.Value!, nameof(ApiResponse<object>.Message)).Should().Be("Kayit basarili.");
+        dbContext.CustomerAccountClaimTokens.Should().ContainSingle();
+        claimDispatcher.Verify(
+            dispatcher => dispatcher.DispatchAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -984,6 +1032,8 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         RefreshTokenCookieSettings? refreshTokenCookieSettings = null,
         ICustomerAccountClaimEmailDispatcher? accountClaimEmailDispatcher = null,
         NotificationOptions? notificationOptions = null,
+        AccountClaimSecurityOptions? accountClaimSecurityOptions = null,
+        TimeProvider? timeProvider = null,
         ILogger<CustomerAuthController>? logger = null)
     {
         passwordHasher ??= new Mock<IPasswordHasher>().Object;
@@ -998,6 +1048,8 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         refreshTokenCookieSettings ??= new RefreshTokenCookieSettings();
         accountClaimEmailDispatcher ??= Mock.Of<ICustomerAccountClaimEmailDispatcher>();
         notificationOptions ??= new NotificationOptions { DefaultLocale = "tr-TR" };
+        accountClaimSecurityOptions ??= new AccountClaimSecurityOptions();
+        timeProvider ??= TimeProvider.System;
         logger ??= Mock.Of<ILogger<CustomerAuthController>>();
 
         return new CustomerAuthController(
@@ -1009,6 +1061,8 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             Options.Create(refreshTokenCookieSettings),
             accountClaimEmailDispatcher,
             Options.Create(notificationOptions),
+            Options.Create(accountClaimSecurityOptions),
+            timeProvider,
             logger)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -1261,5 +1315,3 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         (string)(ReadProperty(value, propertyName) ?? throw new InvalidOperationException($"Missing property: {propertyName}"));
     #endregion
 }
-
-

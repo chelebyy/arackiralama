@@ -501,16 +501,16 @@ Completion of this plan does not imply that the repository has received a comple
 
 Until these decisions are recorded, WP0 may proceed, but the affected design slice must not be treated as implementation-ready.
 
-## 18. Implementation Status Snapshot (12 July 2026)
+## 18. Implementation Status Snapshot (13 July 2026)
 
 | Work package | State | Implemented | Still required |
 | --- | --- | --- | --- |
 | WP0 | Partial | Anonymous cancellation removed; payment kill switch defaults off and covers intent, 3DS return, webhook, and admin retry paths; Dependabot auto-merge removed; generated Ship-Safe artifacts removed/ignored | Credential rotation and access-log evidence; production containment proof |
-| WP1 | Backend implemented, acceptance partial | Purpose-specific hashed/expiring/single-use tokens, supersession, email dispatch, claim page, audit actions, focused tests | Account-normalized abuse control review, cleanup policy, production email and browser proof |
+| WP1 | Backend implemented, acceptance partial | Purpose-specific hashed/expiring/single-use tokens, supersession, generic response, five-minute normalized-account cooldown, database-enforced single-active-token concurrency boundary, bounded metadata, 14-day/200-row worker cleanup, email dispatch, claim page, focused tests, and self-cleaning Docker Chromium proof across all five locales | Resend integration and real production email-delivery proof, deliberately deferred until the provider is introduced |
 | WP2 | Backend implemented, acceptance partial | Allowlisted public DTO, strict rate limit, no-store, anonymous cancellation removal, owner/admin paths preserved | Production-like HTTP/no-write proof and five-locale browser confirmation |
 | WP3 | Deferred and contained | No payment provider is selected yet; payments default disabled; production `ValidateOnStart` rejects unsafe configuration; intent, 3DS return, and webhook paths return `503` without mutation | When payments are introduced: select provider/API version, implement authoritative server-to-server verification, mismatch/replay tests, and sandbox success |
 | WP4 | Partial | Generated artifact ignore/removal and auto-merge workflow removal | Sanitized/history scan, rotation evidence, branch protection and test Dependabot PR proof |
-| WP5 | Blocked | Backend build and full backend suites pass; frontend lint/typecheck/test/build pass; local Docker disabled-payment HTTP/no-write proof passes | Remaining Docker/browser matrix, operational evidence, focused final security review; provider sandbox evidence is deferred until payments are introduced |
+| WP5 | Blocked | Backend build and full backend suites pass; frontend lint/typecheck/test/build pass; local Docker disabled-payment HTTP/no-write proof passes; account-claim Chromium proof passes across all five locales with replay rejection and profile-preservation evidence | Remaining public reservation/cancellation Docker-browser matrix, operational evidence, focused final security review; provider sandbox evidence is deferred until payments are introduced |
 
 ### 18.1 Fresh Automated Evidence
 
@@ -520,7 +520,9 @@ Until these decisions are recorded, WP0 may proceed, but the affected design sli
 - `git diff --check`: no whitespace errors.
 - Frontend lint passed with 0 errors and 1 existing unused-disable warning; TypeScript passed; Vitest passed 61/61 files and 288/288 tests; Next.js production build passed.
 - Local Docker disabled-payment proof: intent creation, forged 3DS return, and forged webhook each returned `503`; `payment_intents` and payment-webhook job counts remained `4,0` before and after.
+- Local Docker account-claim proof: `account-claim-security.spec.ts` passed in Chromium; all five localized claim pages rendered, the queued link completed once, replay returned `400`, the new credential logged in successfully, ignored registration profile fields remained unchanged, and the isolated customer/token/job/session/audit rows were removed in `finally`.
+- Account-claim abuse/retention proof: focused tests passed 29/29; full backend passed 765/765 unit and 51/51 API integration tests; two simultaneous Docker registration requests returned `200,200` while persisting one active token and one email job; the worker deleted an isolated 20-day-old token; migration `20260712214328_HardenAccountClaimAbuseControls` and its partial unique index were verified in Docker PostgreSQL.
 
 ### 18.2 Current Release Decision
 
-No finding is declared fully closed by this snapshot. The original arbitrary-client-data-to-paid-state path is not reachable while payments remain disabled, but it must not be enabled until provider-authenticated verification is implemented and proven. Credential/branch-protection operations and the remaining Docker/browser matrix also remain release blockers.
+No finding is declared fully closed by this snapshot. The account-claim abuse-control and cleanup-policy gates are implemented and locally proven; real email delivery is intentionally deferred until Resend is integrated. The original arbitrary-client-data-to-paid-state path is not reachable while payments remain disabled, but it must not be enabled until provider-authenticated verification is implemented and proven. Credential/branch-protection operations and the remaining Docker/browser matrix also remain release blockers.

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using RentACar.API.Authentication;
 using RentACar.API.Configuration;
 using RentACar.API.Contracts.Auth;
@@ -14,6 +15,7 @@ using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
+using RentACar.Infrastructure.Services;
 using RentACar.Infrastructure.Services.Notifications;
 
 namespace RentACar.API.Controllers;
@@ -28,6 +30,8 @@ public sealed class CustomerAuthController(
     IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings,
     ICustomerAccountClaimEmailDispatcher accountClaimEmailDispatcher,
     IOptions<NotificationOptions> notificationOptions,
+    IOptions<AccountClaimSecurityOptions> accountClaimSecurityOptions,
+    TimeProvider timeProvider,
     ILogger<CustomerAuthController> logger) : BaseApiController
 {
     private const int LockoutThreshold = 5;
@@ -41,6 +45,7 @@ public sealed class CustomerAuthController(
         ? "tr-TR"
         : notificationOptions.Value.DefaultLocale;
     private readonly ILogger<CustomerAuthController> _logger = logger;
+    private readonly TimeSpan _claimRequestCooldown = TimeSpan.FromMinutes(accountClaimSecurityOptions.Value.RequestCooldownMinutes);
 
     [HttpPost("register")]
     [AllowAnonymous]
@@ -78,10 +83,13 @@ public sealed class CustomerAuthController(
             // credentials on an existing passwordless customer. Issue a single-use
             // claim token and dispatch a verification email. The customer record is
             // left untouched and the request body fields are ignored.
-            await CreateAndDispatchClaimTokenAsync(existingCustomer.Id, existingCustomer.Email, cancellationToken);
+            var claimIssued = await CreateAndDispatchClaimTokenAsync(
+                existingCustomer.Id,
+                existingCustomer.Email,
+                cancellationToken);
 
             await auditLogService.LogAsync(
-                "CustomerClaimRequested",
+                claimIssued ? "CustomerClaimRequested" : "CustomerClaimSuppressed",
                 "CustomerAuth",
                 existingCustomer.Id.ToString(),
                 null,
@@ -485,12 +493,22 @@ public sealed class CustomerAuthController(
         return Guid.TryParse(principalIdClaim, out principalId);
     }
 
-    private async Task CreateAndDispatchClaimTokenAsync(
+    private async Task<bool> CreateAndDispatchClaimTokenAsync(
         Guid customerId,
         string destinationEmail,
         CancellationToken cancellationToken)
     {
-        var utcNow = DateTime.UtcNow;
+        var utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        var cooldownCutoff = utcNow.Subtract(_claimRequestCooldown);
+        var recentlyIssued = await dbContext.CustomerAccountClaimTokens
+            .AsNoTracking()
+            .AnyAsync(token => token.CustomerId == customerId && token.CreatedAt >= cooldownCutoff, cancellationToken);
+        if (recentlyIssued)
+        {
+            _logger.LogInformation("Customer account claim request suppressed by cooldown.");
+            return false;
+        }
+
         var rawToken = GenerateClaimToken();
         var tokenHash = jwtTokenService.HashRefreshToken(rawToken);
         var expiresAtUtc = utcNow.Add(ClaimTokenLifetime);
@@ -514,10 +532,28 @@ public sealed class CustomerAuthController(
             TokenHash = tokenHash,
             ExpiresAtUtc = expiresAtUtc,
             IssuedFromIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-            IssuedUserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
+            IssuedUserAgent = Truncate(ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString(), 512)
         });
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "ux_customer_account_claim_tokens_one_active"
+            })
+        {
+            _logger.LogInformation("Customer account claim request suppressed by concurrent issuance.");
+            if (dbContext is DbContext efDbContext)
+            {
+                efDbContext.ChangeTracker.Clear();
+            }
+
+            return false;
+        }
 
         try
         {
@@ -537,6 +573,8 @@ public sealed class CustomerAuthController(
                 "Customer account claim email dispatch failed for customer_id={CustomerId}",
                 customerId);
         }
+
+        return true;
     }
 
     private async Task SupersedeOtherActiveClaimTokensAsync(
@@ -596,4 +634,9 @@ public sealed class CustomerAuthController(
             .Replace('/', '_')
             .TrimEnd('=');
     }
+
+    private static string? Truncate(string? value, int maximumLength) =>
+        string.IsNullOrEmpty(value) || value.Length <= maximumLength
+            ? value
+            : value[..maximumLength];
 }
