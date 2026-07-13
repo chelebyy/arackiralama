@@ -149,6 +149,19 @@ export interface Location {
   };
 }
 
+export interface PublicReservationSummary {
+  publicCode: string;
+  status: string;
+  pickupOfficeName: string;
+  returnOfficeName: string;
+  pickupDateTime: string;
+  returnDateTime: string;
+  vehicleGroupName: string;
+  totalAmount: number;
+  depositAmount: number;
+  currency: string;
+}
+
 export interface Reservation {
   id: string;
   publicCode: string;

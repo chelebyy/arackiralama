@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using RentACar.API.Authentication;
@@ -145,14 +146,44 @@ public sealed class CustomerAuthController(
         var tokenHash = jwtTokenService.HashRefreshToken(request.Token);
 
         var claimToken = await dbContext.CustomerAccountClaimTokens
+            .AsNoTracking()
             .FirstOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
 
-        if (claimToken is null || !claimToken.IsActive(utcNow) || !claimToken.TryConsume(utcNow))
+        if (claimToken is null)
         {
             await auditLogService.LogAsync(
                 "CustomerClaimRejected",
                 "CustomerAuth",
                 claimToken?.CustomerId.ToString() ?? "unknown",
+                null,
+                null,
+                null,
+                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                cancellationToken);
+
+            return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
+        }
+
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
+        var consumedCount = transaction is null
+            ? await ConsumeActiveClaimTokenWithNonRelationalProviderAsync(claimToken.Id, utcNow, cancellationToken)
+            : await dbContext.CustomerAccountClaimTokens
+                .Where(token =>
+                    token.Id == claimToken.Id
+                    && token.TokenHash == tokenHash
+                    && !token.ConsumedAtUtc.HasValue
+                    && !token.SupersededAtUtc.HasValue
+                    && token.ExpiresAtUtc > utcNow)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(token => token.ConsumedAtUtc, utcNow),
+                    cancellationToken);
+
+        if (consumedCount != 1)
+        {
+            await auditLogService.LogAsync(
+                "CustomerClaimRejected",
+                "CustomerAuth",
+                claimToken.CustomerId.ToString(),
                 null,
                 null,
                 null,
@@ -170,10 +201,13 @@ public sealed class CustomerAuthController(
             // Reject claims against customers that no longer exist or already have a
             // password, preventing a previously stolen token from overwriting a real
             // account's credentials.
-            if (customer is not null)
+            if (transaction is null)
             {
-                claimToken.ConsumedAtUtc = utcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                await transaction.CommitAsync(cancellationToken);
             }
 
             await auditLogService.LogAsync(
@@ -195,6 +229,11 @@ public sealed class CustomerAuthController(
         await SupersedeOtherActiveClaimTokensAsync(customer.Id, claimToken.Id, utcNow, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
         await auditLogService.LogAsync(
             "CustomerClaimCompleted",
@@ -595,6 +634,27 @@ public sealed class CustomerAuthController(
         {
             token.SupersededAtUtc = utcNow;
         }
+    }
+
+    private async Task<int> ConsumeActiveClaimTokenWithNonRelationalProviderAsync(
+        Guid claimTokenId,
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var claimToken = await dbContext.CustomerAccountClaimTokens
+            .FirstOrDefaultAsync(token => token.Id == claimTokenId, cancellationToken);
+
+        return claimToken is not null && claimToken.TryConsume(utcNow) ? 1 : 0;
+    }
+
+    private async Task<IDbContextTransaction?> TryBeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        if (dbContext is not DbContext efDbContext || !efDbContext.Database.IsRelational())
+        {
+            return null;
+        }
+
+        return await efDbContext.Database.BeginTransactionAsync(cancellationToken);
     }
 
     private string ResolveLocaleFromRequest()

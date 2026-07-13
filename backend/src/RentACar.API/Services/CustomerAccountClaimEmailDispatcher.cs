@@ -13,6 +13,7 @@ public sealed class CustomerAccountClaimEmailDispatcher(
     private readonly string _defaultLocale = string.IsNullOrWhiteSpace(notificationOptions.Value.DefaultLocale)
         ? "tr-TR"
         : notificationOptions.Value.DefaultLocale;
+    private readonly string _publicFrontendBaseUrl = notificationOptions.Value.PublicFrontendBaseUrl;
 
     public async Task DispatchAsync(
         string destinationEmail,
@@ -41,11 +42,27 @@ public sealed class CustomerAccountClaimEmailDispatcher(
         logger.LogInformation("Customer account claim email queued.");
     }
 
-    private static string BuildClaimUrl(string locale, string rawToken)
+    private string BuildClaimUrl(string locale, string rawToken)
     {
         // Locale values are app-controlled (tr-TR/en-US/ru-RU/ar-SA/de-DE) and the
         // token is opaque base64url, so embedding it in the URL is safe.
         var localeSegment = locale.Trim().Split('-', 2)[0].ToLowerInvariant();
-        return $"/{localeSegment}/account-claim?token={Uri.EscapeDataString(rawToken)}";
+        var publicFrontendBaseUri = CreatePublicFrontendBaseUri(_publicFrontendBaseUrl);
+        var claimUri = new Uri(publicFrontendBaseUri, $"{localeSegment}/account-claim");
+        return $"{claimUri.AbsoluteUri}?token={Uri.EscapeDataString(rawToken)}";
+    }
+
+    private static Uri CreatePublicFrontendBaseUri(string configuredBaseUrl)
+    {
+        if (!Uri.TryCreate(configuredBaseUrl, UriKind.Absolute, out var publicFrontendBaseUri)
+            || (publicFrontendBaseUri.Scheme != Uri.UriSchemeHttp && publicFrontendBaseUri.Scheme != Uri.UriSchemeHttps)
+            || !string.IsNullOrEmpty(publicFrontendBaseUri.Query)
+            || !string.IsNullOrEmpty(publicFrontendBaseUri.Fragment))
+        {
+            throw new InvalidOperationException(
+                "Notifications:PublicFrontendBaseUrl must be an absolute HTTP or HTTPS URL without a query or fragment.");
+        }
+
+        return new Uri($"{publicFrontendBaseUri.AbsoluteUri.TrimEnd('/')}/", UriKind.Absolute);
     }
 }

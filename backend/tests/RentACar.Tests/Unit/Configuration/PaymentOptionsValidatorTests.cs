@@ -23,9 +23,20 @@ public sealed class PaymentOptionsValidatorTests
         PaymentOptionsValidator.IsValidForProduction(options).Should().BeTrue();
     }
 
+    [Fact]
+    public void ValidateForProduction_WithSafeIyzicoConfigurationAndPaymentsDisabled_Succeeds()
+    {
+        var options = CreateSafeOptions();
+        options.EnablePayments = false;
+
+        var action = () => PaymentOptionsValidator.ValidateForProduction(options);
+
+        action.Should().NotThrow();
+        PaymentOptionsValidator.IsValidForProduction(options).Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("Mock", true, "https://api.iyzipay.com")]
-    [InlineData("Iyzico", false, "https://api.iyzipay.com")]
     [InlineData("Iyzico", true, "https://sandbox-api.iyzipay.com")]
     [InlineData("Unknown", true, "https://api.iyzipay.com")]
     public void ValidateForProduction_WithUnsafeConfiguration_Fails(
@@ -68,6 +79,18 @@ public sealed class PaymentOptionsValidatorTests
     public async Task ProductionStartup_WithSafePaymentConfiguration_Succeeds()
     {
         using var host = CreatePaymentHost(Environments.Production, CreateSafeConfiguration());
+
+        var action = () => host.StartAsync();
+
+        await action.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task ProductionStartup_WithSafePaymentConfigurationAndPaymentsDisabled_Succeeds()
+    {
+        var configuration = CreateSafeConfiguration();
+        configuration["Payment:EnablePayments"] = "false";
+        using var host = CreatePaymentHost(Environments.Production, configuration);
 
         var action = () => host.StartAsync();
 

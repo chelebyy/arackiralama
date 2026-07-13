@@ -60,11 +60,6 @@ public static class PaymentOptionsValidator
                 "Iyzico BaseUrl must point to the production endpoint, not a sandbox URL.");
         }
 
-        if (!options.EnablePayments)
-        {
-            throw new InvalidOperationException(
-                "Payment:EnablePayments must be explicitly set to 'true' in production after the kill-switch is reviewed.");
-        }
     }
 
     public static bool IsValidForProduction(PaymentOptions options)
