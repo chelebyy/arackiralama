@@ -71,6 +71,9 @@ public sealed class CustomerAuthEndpointTests(RedisFixture redisFixture) : ApiIn
             customer.HasPassword.Should().BeTrue();
             customer.TokenVersion.Should().Be(1);
             token.ConsumedAtUtc.Should().NotBeNull();
+            (await dbContext.AuditLogs.CountAsync(candidate =>
+                candidate.Action == "CustomerClaimRejected"
+                && candidate.EntityId == customerId.ToString())).Should().Be(1);
 
             return true;
         });

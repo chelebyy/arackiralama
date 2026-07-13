@@ -164,88 +164,109 @@ public sealed class CustomerAuthController(
             return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
         }
 
-        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
-        var consumedCount = transaction is null
-            ? await ConsumeActiveClaimTokenWithNonRelationalProviderAsync(claimToken.Id, utcNow, cancellationToken)
-            : await dbContext.CustomerAccountClaimTokens
-                .Where(token =>
-                    token.Id == claimToken.Id
-                    && token.TokenHash == tokenHash
-                    && !token.ConsumedAtUtc.HasValue
-                    && !token.SupersededAtUtc.HasValue
-                    && token.ExpiresAtUtc > utcNow)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(token => token.ConsumedAtUtc, utcNow),
+        var transaction = await TryBeginTransactionAsync(cancellationToken);
+        try
+        {
+            var consumedCount = transaction is null
+                ? await ConsumeActiveClaimTokenWithNonRelationalProviderAsync(claimToken.Id, utcNow, cancellationToken)
+                : await dbContext.CustomerAccountClaimTokens
+                    .Where(token =>
+                        token.Id == claimToken.Id
+                        && token.TokenHash == tokenHash
+                        && !token.ConsumedAtUtc.HasValue
+                        && !token.SupersededAtUtc.HasValue
+                        && token.ExpiresAtUtc > utcNow)
+                    .ExecuteUpdateAsync(
+                        setters => setters.SetProperty(token => token.ConsumedAtUtc, utcNow),
+                        cancellationToken);
+
+            if (consumedCount != 1)
+            {
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    await transaction.DisposeAsync();
+                    transaction = null;
+                }
+
+                await auditLogService.LogAsync(
+                    "CustomerClaimRejected",
+                    "CustomerAuth",
+                    claimToken.CustomerId.ToString(),
+                    null,
+                    null,
+                    null,
+                    ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
                     cancellationToken);
 
-        if (consumedCount != 1)
-        {
-            await auditLogService.LogAsync(
-                "CustomerClaimRejected",
-                "CustomerAuth",
-                claimToken.CustomerId.ToString(),
-                null,
-                null,
-                null,
-                ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-                cancellationToken);
-
-            return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
-        }
-
-        var customer = await dbContext.Customers
-            .FirstOrDefaultAsync(existingCustomer => existingCustomer.Id == claimToken.CustomerId, cancellationToken);
-
-        if (customer is null || customer.HasPassword)
-        {
-            // Reject claims against customers that no longer exist or already have a
-            // password, preventing a previously stolen token from overwriting a real
-            // account's credentials.
-            if (transaction is null)
-            {
-                await dbContext.SaveChangesAsync(cancellationToken);
+                return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
             }
-            else
+
+            var customer = await dbContext.Customers
+                .FirstOrDefaultAsync(existingCustomer => existingCustomer.Id == claimToken.CustomerId, cancellationToken);
+
+            if (customer is null || customer.HasPassword)
+            {
+                // Reject claims against customers that no longer exist or already have a
+                // password, preventing a previously stolen token from overwriting a real
+                // account's credentials.
+                if (transaction is null)
+                {
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    await transaction.DisposeAsync();
+                    transaction = null;
+                }
+
+                await auditLogService.LogAsync(
+                    "CustomerClaimRejected",
+                    "CustomerAuth",
+                    claimToken.CustomerId.ToString(),
+                    null,
+                    null,
+                    null,
+                    ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                    cancellationToken);
+
+                return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
+            }
+
+            customer.PasswordHash = passwordHasher.HashPassword(request.NewPassword);
+            customer.TokenVersion += 1;
+
+            await SupersedeOtherActiveClaimTokensAsync(customer.Id, claimToken.Id, utcNow, cancellationToken);
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
             {
                 await transaction.CommitAsync(cancellationToken);
+                await transaction.DisposeAsync();
+                transaction = null;
             }
 
             await auditLogService.LogAsync(
-                "CustomerClaimRejected",
+                "CustomerClaimCompleted",
                 "CustomerAuth",
-                claimToken.CustomerId.ToString(),
+                customer.Id.ToString(),
                 null,
                 null,
                 null,
                 ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
                 cancellationToken);
 
-            return BadRequestResponse("Gecersiz veya suresi dolmus dogrulama baglantisi.");
+            return OkResponse(new { success = true }, "Hesap sahiplenmesi tamamlandi.");
         }
-
-        customer.PasswordHash = passwordHasher.HashPassword(request.NewPassword);
-        customer.TokenVersion += 1;
-
-        await SupersedeOtherActiveClaimTokensAsync(customer.Id, claimToken.Id, utcNow, cancellationToken);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        if (transaction is not null)
+        finally
         {
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
-
-        await auditLogService.LogAsync(
-            "CustomerClaimCompleted",
-            "CustomerAuth",
-            customer.Id.ToString(),
-            null,
-            null,
-            null,
-            ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-            cancellationToken);
-
-        return OkResponse(new { success = true }, "Hesap sahiplenmesi tamamlandi.");
     }
 
     [HttpPost("login")]
@@ -551,32 +572,47 @@ public sealed class CustomerAuthController(
         var rawToken = GenerateClaimToken();
         var tokenHash = jwtTokenService.HashRefreshToken(rawToken);
         var expiresAtUtc = utcNow.Add(ClaimTokenLifetime);
-
-        var activeTokens = await dbContext.CustomerAccountClaimTokens
-            .Where(token =>
-                token.CustomerId == customerId
-                && !token.ConsumedAtUtc.HasValue
-                && !token.SupersededAtUtc.HasValue)
-            .ToListAsync(cancellationToken);
-
-        foreach (var activeToken in activeTokens)
-        {
-            activeToken.SupersededAtUtc = utcNow;
-        }
-
-        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
-        {
-            Id = Guid.NewGuid(),
-            CustomerId = customerId,
-            TokenHash = tokenHash,
-            ExpiresAtUtc = expiresAtUtc,
-            IssuedFromIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-            IssuedUserAgent = Truncate(ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString(), 512)
-        });
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
 
         try
         {
+            var activeTokens = await dbContext.CustomerAccountClaimTokens
+                .Where(token =>
+                    token.CustomerId == customerId
+                    && !token.ConsumedAtUtc.HasValue
+                    && !token.SupersededAtUtc.HasValue)
+                .ToListAsync(cancellationToken);
+
+            foreach (var activeToken in activeTokens)
+            {
+                activeToken.SupersededAtUtc = utcNow;
+            }
+
+            dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = customerId,
+                TokenHash = tokenHash,
+                ExpiresAtUtc = expiresAtUtc,
+                IssuedFromIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                IssuedUserAgent = Truncate(ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString(), 512)
+            });
+
+            await _accountClaimEmailDispatcher.DispatchAsync(
+                destinationEmail,
+                rawToken,
+                expiresAtUtc,
+                ResolveLocaleFromRequest(),
+                cancellationToken);
+
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return true;
         }
         catch (DbUpdateException ex) when (
             ex.InnerException is PostgresException
@@ -585,6 +621,11 @@ public sealed class CustomerAuthController(
                 ConstraintName: "ux_customer_account_claim_tokens_one_active"
             })
         {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             _logger.LogInformation("Customer account claim request suppressed by concurrent issuance.");
             if (dbContext is DbContext efDbContext)
             {
@@ -593,27 +634,27 @@ public sealed class CustomerAuthController(
 
             return false;
         }
-
-        try
-        {
-            await _accountClaimEmailDispatcher.DispatchAsync(
-                destinationEmail,
-                rawToken,
-                expiresAtUtc,
-                ResolveLocaleFromRequest(),
-                cancellationToken);
-        }
         catch (Exception ex)
         {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            if (dbContext is DbContext efDbContext)
+            {
+                efDbContext.ChangeTracker.Clear();
+            }
+
             // Email dispatch failure must not surface account existence. The
             // caller still receives a generic success response.
             _logger.LogWarning(
                 ex,
                 "Customer account claim email dispatch failed for customer_id={CustomerId}",
                 customerId);
-        }
 
-        return true;
+            return false;
+        }
     }
 
     private async Task SupersedeOtherActiveClaimTokensAsync(

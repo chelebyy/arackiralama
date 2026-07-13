@@ -63,6 +63,13 @@ public sealed class AdminPaymentsController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                ApiResponse<object>.Fail("Ödeme altyapısı geçici olarak devre dışıdır."));
+        }
+
         if (id == Guid.Empty)
         {
             return BadRequestResponse("Geçerli bir payment intent ID gereklidir.");

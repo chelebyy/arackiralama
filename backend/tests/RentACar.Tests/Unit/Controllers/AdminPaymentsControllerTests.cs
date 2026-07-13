@@ -149,6 +149,19 @@ public sealed class AdminPaymentsControllerTests
     }
 
     [Fact]
+    public async Task GetPaymentStatus_WhenPaymentsDisabled_ReturnsServiceUnavailableWithoutCallingService()
+    {
+        var serviceMock = new Mock<IPaymentService>(MockBehavior.Strict);
+        var controller = CreateController(serviceMock.Object, enablePayments: false);
+
+        var result = await controller.GetPaymentStatus(Guid.NewGuid(), CancellationToken.None);
+
+        var unavailable = result.Should().BeOfType<ObjectResult>().Subject;
+        unavailable.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
+        serviceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task GetPaymentStatus_WhenNotFound_ReturnsNotFound()
     {
         var serviceMock = new Mock<IPaymentService>();

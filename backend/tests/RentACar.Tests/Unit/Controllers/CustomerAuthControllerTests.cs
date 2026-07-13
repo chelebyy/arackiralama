@@ -133,6 +133,67 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task Register_WhenClaimDispatchFails_PreservesExistingActiveToken()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var existingCustomer = new Customer
+        {
+            Email = "dispatch-failure@test.com",
+            FullName = "Guest Person",
+            Phone = "05000000000",
+            IdentityNumber = string.Empty,
+            Nationality = "TR",
+            LicenseYear = 0,
+            PasswordHash = null
+        };
+        dbContext.Customers.Add(existingCustomer);
+        dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
+        {
+            CustomerId = existingCustomer.Id,
+            TokenHash = "sha256:existing-token-hash",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            CreatedAt = DateTime.UtcNow.AddMinutes(-10)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var claimDispatcher = new Mock<ICustomerAccountClaimEmailDispatcher>();
+        claimDispatcher
+            .Setup(dispatcher => dispatcher.DispatchAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Notification queue unavailable"));
+        var jwtTokenService = new Mock<IJwtTokenService>();
+        jwtTokenService
+            .Setup(service => service.HashRefreshToken(It.IsAny<string>()))
+            .Returns((string value) => $"sha256:{value}-hash");
+        var controller = CreateController(
+            dbContext,
+            accountClaimEmailDispatcher: claimDispatcher.Object,
+            jwtTokenService: jwtTokenService.Object);
+
+        var result = await controller.Register(
+            new CustomerRegisterRequest("DISPATCH-FAILURE@test.com", "Ignored123!", null, null),
+            CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        dbContext.ChangeTracker.Clear();
+        var token = dbContext.CustomerAccountClaimTokens.Should().ContainSingle().Subject;
+        token.TokenHash.Should().Be("sha256:existing-token-hash");
+        token.SupersededAtUtc.Should().BeNull();
+        claimDispatcher.Verify(
+            dispatcher => dispatcher.DispatchAsync(
+                existingCustomer.Email,
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Register_WhenClaimWasRecentlyIssued_ReturnsGenericSuccessWithoutDispatchingAgain()
     {
         using var dbContext = _dbContextFactory.CreateContext();

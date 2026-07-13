@@ -36,6 +36,9 @@ interface ReservationDetails {
   currency: string;
 };
 
+const formatAmount = (amount: number, currency: string) =>
+  `${currency === "TRY" ? "₺" : `${currency} `}${amount}`;
+
 export default function TrackReservationPage() {
   const t = useTranslations("trackReservation");
   const locale = useLocale();
@@ -128,9 +131,6 @@ export default function TrackReservationPage() {
       year: "numeric"
     });
   };
-
-  const formatAmount = (amount: number, currency: string) =>
-    `${currency === "TRY" ? "₺" : `${currency} `}${amount}`;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
