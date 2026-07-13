@@ -2007,3 +2007,13 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Open gates:** Resend production delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Credential rotation/access-log/history evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Public Reservation and Cancellation Boundary Acceptance
+
+**Implementation status:** WP2 production code was already repository-safe: the unauthenticated lookup maps directly to `PublicReservationSummaryDto`, uses the Strict limiter and `no-store`, while cancellation remains available only through customer ownership checks and the admin route. This slice added repeatable production-like acceptance evidence without changing the production boundary.
+
+**Fresh verification:** `reservation-boundary-security.spec.ts` passed 1/1 in Docker Chromium. The browser captured `GET /api/v1/reservations/{publicCode}` from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages; each payload had exactly the documented 10-field allowlist, excluded the isolated reservation/customer/vehicle/office identifiers, customer PII, and private notes, and preserved `Cache-Control: no-store`. Anonymous cancellation returned `404/405` and non-owner cancellation returned `404`; both left `status`, `xmin`, and `updated_at` unchanged. Owner cancellation returned `200` and persisted `Cancelled`. Post-test customer/reservation/job/audit counts were all zero. Focused backend tests passed 103/103, focused frontend tests passed 5/5, TypeScript and scoped ESLint passed, and the production-like Docker build completed.
+
+**Open gates:** WP2 is locally acceptance-proven, but release remains blocked by credential rotation/access-log/history evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

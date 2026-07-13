@@ -1834,6 +1834,16 @@ Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern 
 
 The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales.
 
+## 14.7 Public Reservation and Cancellation Boundary Validation
+
+The unauthenticated lookup path must terminate in `PublicReservationSummaryDto`; it must never create a broad `ReservationDto` and remove fields afterward. The response contract contains only public code, coarse status, pickup/return office names and timestamps, vehicle-group name, customer-facing total and deposit, and currency. Strict rate limiting and `Cache-Control: no-store` apply at the HTTP boundary.
+
+Cancellation has no unauthenticated public route. `POST /api/customer/v1/reservations/{id}/cancel` requires the `CustomerOnly` policy and returns the same not-found response for a missing reservation and a reservation owned by another customer. The ownership check must complete before `CancelReservationAsync` is called. The admin cancellation route remains independently protected by its admin controller policy.
+
+`frontend/e2e/tests/reservation-boundary-security.spec.ts` is the repeatable production-like acceptance harness. It creates isolated customers and a reservation, captures the real public response from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages, compares the response keys to the exact allowlist, checks that fixture-specific PII and internal values are absent, and confirms the non-cacheable header. For rejected anonymous and non-owner mutations, it compares PostgreSQL `status`, `xmin`, and `updated_at` before and after the HTTP request; owner cancellation is the positive control and must persist `Cancelled`. Cleanup runs in `finally`, and post-run test-owned customer, reservation, background-job, and audit counts must be zero.
+
+This harness establishes local acceptance for WP2, not release readiness. Deployment rerun, operational evidence, production payment gates, and the focused final security review remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
+
 ---
 
 END OF DOCUMENT
