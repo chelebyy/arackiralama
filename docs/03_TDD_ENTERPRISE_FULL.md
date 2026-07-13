@@ -1844,6 +1844,14 @@ Cancellation has no unauthenticated public route. `POST /api/customer/v1/reserva
 
 This harness establishes local acceptance for WP2, not release readiness. Deployment rerun, operational evidence, production payment gates, and the focused final security review remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
 
+## 14.8 Production Payment Configuration Startup Validation
+
+`PaymentOptionsValidatorTests` includes a host-start matrix that invokes the repository's real private `AddPaymentIntegration` registration and starts an `IHost`, so `ValidateOnStart` behavior is exercised rather than inferred from direct validator calls. Production startup must raise `OptionsValidationException` for a missing provider, Mock, an unknown provider, a sandbox base URL, or incomplete Iyzico credentials. A fully configured Production Iyzico host and an explicitly selected Development Mock host are positive controls and must start successfully.
+
+The current Release image also passes a disposable production-like Docker matrix without recreating the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage. A syntactically valid synthetic secret-injected Iyzico configuration stays running and returns `/health` `200` through a random loopback port. Migration and local seed switches remain disabled, and the selected migration/admin/customer/payment/job/audit database-count fingerprint is unchanged.
+
+This is provider-independent local acceptance for configuration registration and container startup only. Deployment rerun and real-provider sandbox verification remain separate gates in `docs/18_Codex_Security_Findings_Implementation.md`.
+
 ---
 
 END OF DOCUMENT

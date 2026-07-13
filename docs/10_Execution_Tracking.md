@@ -1998,6 +1998,18 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
+## 13 July 2026 - Production Payment Configuration Startup Matrix
+
+**Implementation status:** The provider-independent WP5 payment-configuration gate now exercises the actual `ValidateOnStart` host path instead of only calling `PaymentOptionsValidator` directly. Production startup rejects missing, Mock, unknown, sandbox, and incomplete configurations; a fully configured Iyzico Production host and an intentional Development Mock host remain valid controls. No provider-specific paid-transition behavior was introduced and payments remain default disabled in tracked deployment configuration.
+
+**Fresh verification:** `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore --filter "FullyQualifiedName~PaymentOptionsValidatorTests"` passed 12/12. The five unsafe Production cases each raised `OptionsValidationException` during `IHost.StartAsync`; the safe Production and Development controls started successfully.
+
+**Production-like Docker evidence:** the current Release API image was exercised in disposable containers without replacing or stopping the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations all exited `139`, emitted the expected general payment-validation error, and did not log synthetic credential values. A syntactically valid synthetic secret-injected Iyzico configuration stayed running and returned `/health` `200` through a random loopback port. Migrations and local seeds were disabled; the selected migration/admin/customer/payment/job/audit count fingerprint was unchanged before and after.
+
+**Open gates:** deployment rerun, real-provider contract/sandbox proof before enablement, credential and GitHub operational evidence, and the focused final security review remain open. This closes the local code and production-like container startup matrices only; it is not provider acceptance or release readiness.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
 ## 13 July 2026 - Account-Claim Abuse-Control and Cleanup Follow-up
 
 **Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production delivery remains intentionally deferred until Resend is integrated.
