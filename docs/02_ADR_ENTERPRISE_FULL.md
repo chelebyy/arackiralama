@@ -437,7 +437,6 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 - Public/admin catalog and generic quote/reservation contracts are implemented. Admin and public frontend phases remain governed by `docs/16_Reservation_Extra_Options_Plan.md`.
 - Full Docker browser evidence remains open until the admin and public UI phases are implemented.
 - The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.
-
 ## 13. Security Boundary Decisions (12 July 2026)
 
 ### 13.1 Verified Guest-Account Claim
