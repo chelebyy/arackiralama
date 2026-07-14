@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddApiCors(configuration, environment);
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
-        services.AddNotificationOptions(configuration);
+        services.AddNotificationOptions(configuration, environment);
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<RefreshTokenCookieSettings>(configuration.GetSection(RefreshTokenCookieSettings.SectionName));
         services.AddInfrastructure(configuration);
@@ -69,18 +69,21 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddNotificationOptions(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.AddOptions<NotificationOptions>()
             .Bind(configuration.GetSection(NotificationOptions.SectionName))
             .Validate(
                 options =>
                     Uri.TryCreate(options.PublicFrontendBaseUrl, UriKind.Absolute, out var publicFrontendBaseUri)
-                    && (publicFrontendBaseUri.Scheme == Uri.UriSchemeHttp
-                        || publicFrontendBaseUri.Scheme == Uri.UriSchemeHttps)
+                    && (publicFrontendBaseUri.Scheme == Uri.UriSchemeHttps
+                        || (environment.IsDevelopment()
+                            && publicFrontendBaseUri.Scheme == Uri.UriSchemeHttp
+                            && publicFrontendBaseUri.IsLoopback))
                     && string.IsNullOrEmpty(publicFrontendBaseUri.Query)
                     && string.IsNullOrEmpty(publicFrontendBaseUri.Fragment),
-                "Notifications:PublicFrontendBaseUrl must be an absolute HTTP or HTTPS URL without a query or fragment.")
+                "Notifications:PublicFrontendBaseUrl must be an absolute HTTPS URL without a query or fragment. Development may use HTTP only for loopback origins.")
             .ValidateOnStart();
 
         return services;

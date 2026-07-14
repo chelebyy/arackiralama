@@ -13,20 +13,21 @@ namespace RentACar.Tests.Unit.Configuration;
 public sealed class PaymentOptionsValidatorTests
 {
     [Fact]
-    public void ValidateForProduction_WithSafeIyzicoConfiguration_Succeeds()
+    public void ValidateForProduction_WithConfiguredIyzicoAndPaymentsEnabled_Fails()
     {
-        var options = CreateSafeOptions();
+        var options = CreateConfiguredIyzicoOptions();
 
         var action = () => PaymentOptionsValidator.ValidateForProduction(options);
 
-        action.Should().NotThrow();
-        PaymentOptionsValidator.IsValidForProduction(options).Should().BeTrue();
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*simulated*EnablePayments must remain false*");
+        PaymentOptionsValidator.IsValidForProduction(options).Should().BeFalse();
     }
 
     [Fact]
     public void ValidateForProduction_WithSafeIyzicoConfigurationAndPaymentsDisabled_Succeeds()
     {
-        var options = CreateSafeOptions();
+        var options = CreateConfiguredIyzicoOptions();
         options.EnablePayments = false;
 
         var action = () => PaymentOptionsValidator.ValidateForProduction(options);
@@ -44,7 +45,7 @@ public sealed class PaymentOptionsValidatorTests
         bool enablePayments,
         string baseUrl)
     {
-        var options = CreateSafeOptions();
+        var options = CreateConfiguredIyzicoOptions();
         options.Provider = provider;
         options.EnablePayments = enablePayments;
         options.Iyzico.BaseUrl = baseUrl;
@@ -65,7 +66,7 @@ public sealed class PaymentOptionsValidatorTests
         string configurationKey,
         string configurationValue)
     {
-        var configuration = CreateSafeConfiguration();
+        var configuration = CreateConfiguredIyzicoConfiguration();
         configuration[configurationKey] = configurationValue;
         using var host = CreatePaymentHost(Environments.Production, configuration);
 
@@ -76,19 +77,22 @@ public sealed class PaymentOptionsValidatorTests
     }
 
     [Fact]
-    public async Task ProductionStartup_WithSafePaymentConfiguration_Succeeds()
+    public async Task ProductionStartup_WithConfiguredIyzicoAndPaymentsEnabled_Fails()
     {
-        using var host = CreatePaymentHost(Environments.Production, CreateSafeConfiguration());
+        using var host = CreatePaymentHost(
+            Environments.Production,
+            CreateConfiguredIyzicoConfiguration());
 
         var action = () => host.StartAsync();
 
-        await action.Should().NotThrowAsync();
+        await action.Should().ThrowAsync<OptionsValidationException>()
+            .WithMessage("*Production payment configuration is incomplete or unsafe.*");
     }
 
     [Fact]
     public async Task ProductionStartup_WithSafePaymentConfigurationAndPaymentsDisabled_Succeeds()
     {
-        var configuration = CreateSafeConfiguration();
+        var configuration = CreateConfiguredIyzicoConfiguration();
         configuration["Payment:EnablePayments"] = "false";
         using var host = CreatePaymentHost(Environments.Production, configuration);
 
@@ -100,7 +104,7 @@ public sealed class PaymentOptionsValidatorTests
     [Fact]
     public async Task DevelopmentStartup_WithExplicitMockProviderAndPaymentsDisabled_Succeeds()
     {
-        var configuration = CreateSafeConfiguration();
+        var configuration = CreateConfiguredIyzicoConfiguration();
         configuration["Payment:Provider"] = "Mock";
         configuration["Payment:EnablePayments"] = "false";
         configuration["Payment:Iyzico:BaseUrl"] = "https://sandbox-api.iyzipay.com";
@@ -132,7 +136,7 @@ public sealed class PaymentOptionsValidatorTests
             .Build();
     }
 
-    private static Dictionary<string, string?> CreateSafeConfiguration() => new()
+    private static Dictionary<string, string?> CreateConfiguredIyzicoConfiguration() => new()
     {
         ["Payment:Provider"] = "Iyzico",
         ["Payment:Currency"] = "TRY",
@@ -143,7 +147,7 @@ public sealed class PaymentOptionsValidatorTests
         ["Payment:Iyzico:WebhookSecret"] = "test-webhook-secret"
     };
 
-    private static PaymentOptions CreateSafeOptions() => new()
+    private static PaymentOptions CreateConfiguredIyzicoOptions() => new()
     {
         Provider = "Iyzico",
         Currency = "TRY",

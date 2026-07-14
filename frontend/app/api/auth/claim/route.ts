@@ -8,10 +8,10 @@ interface AccountClaimBody {
 }
 
 export async function POST(request: NextRequest) {
-  let body: AccountClaimBody;
+  let body: unknown;
 
   try {
-    body = (await request.json()) as AccountClaimBody;
+    body = await request.json();
   } catch {
     return NextResponse.json(
       {
@@ -22,8 +22,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const token = body.token?.trim();
-  const newPassword = body.newPassword;
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Geçersiz istek gövdesi."
+      },
+      { status: 400 }
+    );
+  }
+
+  const claimBody = body as AccountClaimBody;
+  const token =
+    typeof claimBody.token === "string" ? claimBody.token.trim() : "";
+  const newPassword =
+    typeof claimBody.newPassword === "string" ? claimBody.newPassword : "";
 
   if (!token || !newPassword) {
     return NextResponse.json(

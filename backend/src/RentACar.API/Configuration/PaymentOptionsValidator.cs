@@ -60,6 +60,11 @@ public static class PaymentOptionsValidator
                 "Iyzico BaseUrl must point to the production endpoint, not a sandbox URL.");
         }
 
+        if (options.EnablePayments)
+        {
+            throw new InvalidOperationException(
+                "The Iyzico payment provider is currently simulated and cannot be enabled in production. Payment:EnablePayments must remain false until a real provider integration is implemented.");
+        }
     }
 
     public static bool IsValidForProduction(PaymentOptions options)

@@ -28,6 +28,27 @@ describe("POST /api/auth/claim", () => {
     expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
   });
 
+  it.each(["null", "[]", '"claim-token"', "42"])(
+    "rejects the valid JSON non-object body %s without calling the backend",
+    async body => {
+      const response = await POST(claimRequest(body) as never);
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ success: false });
+      expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
+    }
+  );
+
+  it("rejects object bodies with non-string claim fields", async () => {
+    const response = await POST(
+      claimRequest(JSON.stringify({ token: 42, newPassword: [] })) as never
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ success: false });
+    expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
+  });
+
   it("forwards a valid claim and preserves the backend status", async () => {
     vi.mocked(callAccountClaimBackendEndpoint).mockResolvedValueOnce({
       backendResponse: new Response(null, { status: 400 }),
