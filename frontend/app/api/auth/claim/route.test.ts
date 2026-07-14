@@ -33,6 +33,7 @@ describe("POST /api/auth/claim", () => {
       backendResponse: new Response(null, { status: 400 }),
       envelope: {
         success: false,
+        data: null,
         message: "Hesap talep bağlantısı geçersiz veya süresi dolmuş."
       }
     });
