@@ -1,24 +1,54 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { callAccountClaimEndpoint } from "@/lib/auth/backend";
 
 export const dynamic = "force-dynamic";
 
-type Status = "idle" | "submitting" | "success" | "failed" | "invalid";
+type Status = "loading" | "idle" | "submitting" | "success" | "failed" | "invalid";
 
 export default function AccountClaimPage() {
   const t = useTranslations("accountClaim");
+  const locale = useLocale();
   const searchParams = useSearchParams();
-  const token = searchParams?.get("token") ?? "";
+  const legacyQueryToken = searchParams?.get("token")?.trim() ?? "";
 
+  const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [status, setStatus] = useState<Status>(token ? "idle" : "invalid");
+  const [status, setStatus] = useState<Status>("loading");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const tokenInitialized = useRef(false);
+
+  useEffect(() => {
+    if (tokenInitialized.current) {
+      return;
+    }
+    tokenInitialized.current = true;
+
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const fragmentToken = hashParams.get("token")?.trim() ?? "";
+    const resolvedToken = fragmentToken || legacyQueryToken;
+
+    const queryParams = new URLSearchParams(window.location.search);
+    queryParams.delete("token");
+    hashParams.delete("token");
+
+    const query = queryParams.toString();
+    const hash = hashParams.toString();
+    const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`;
+    window.history.replaceState(window.history.state, "", cleanUrl);
+
+    setToken(resolvedToken);
+    setStatus(resolvedToken ? "idle" : "invalid");
+  }, [legacyQueryToken]);
+
+  if (status === "loading") {
+    return null;
+  }
 
   if (!token) {
     return (
@@ -29,7 +59,7 @@ export default function AccountClaimPage() {
           </h1>
           <p className="text-[#64748B] mb-6">{t("validation.tokenRequired")}</p>
           <Link
-            href="/"
+            href={`/${locale}`}
             className="inline-flex items-center justify-center rounded-full border border-[#E2E8F0] px-5 py-2.5 text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC]"
           >
             {t("buttons.backToHome")}
@@ -81,7 +111,7 @@ export default function AccountClaimPage() {
           </h1>
           <p className="text-[#475569] mb-6">{t("status.success")}</p>
           <Link
-            href="/"
+            href={`/${locale}`}
             className="inline-flex items-center justify-center rounded-full bg-[#0369A1] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#075985]"
           >
             {t("buttons.backToHome")}

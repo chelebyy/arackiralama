@@ -44,12 +44,10 @@ public sealed class CustomerAccountClaimEmailDispatcher(
 
     private string BuildClaimUrl(string locale, string rawToken)
     {
-        // Locale values are app-controlled (tr-TR/en-US/ru-RU/ar-SA/de-DE) and the
-        // token is opaque base64url, so embedding it in the URL is safe.
         var localeSegment = locale.Trim().Split('-', 2)[0].ToLowerInvariant();
         var publicFrontendBaseUri = CreatePublicFrontendBaseUri(_publicFrontendBaseUrl);
         var claimUri = new Uri(publicFrontendBaseUri, $"{localeSegment}/account-claim");
-        return $"{claimUri.AbsoluteUri}?token={Uri.EscapeDataString(rawToken)}";
+        return $"{claimUri.AbsoluteUri}#token={Uri.EscapeDataString(rawToken)}";
     }
 
     private static Uri CreatePublicFrontendBaseUri(string configuredBaseUrl)

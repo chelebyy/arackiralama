@@ -43,6 +43,72 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RefundReservationAsync_WhenPaymentsDisabled_BlocksProviderAndStateMutation()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider, enablePayments: false);
+        var reservation = await SeedReservationAsync(ReservationStatus.Paid, 1000m);
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "disabled-refund",
+            PaymentStatus.Succeeded,
+            providerIntentId: "disabled-refund-provider-intent");
+
+        var action = () => sut.RefundReservationAsync(
+            reservation.Id,
+            new AdminRefundApiRequest { Amount = 500m, IdempotencyKey = "disabled-refund-key" },
+            CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Ödeme altyapısı geçici olarak devre dışıdır.");
+        provider.RefundCallCount.Should().Be(0);
+        intent.Status.Should().Be(PaymentStatus.Succeeded);
+        reservation.Status.Should().Be(ReservationStatus.Paid);
+    }
+
+    [Fact]
+    public async Task ReleaseDepositAsync_WhenPaymentsDisabled_BlocksProviderAndStateMutation()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider, enablePayments: false);
+        var reservation = await SeedReservationAsync(ReservationStatus.Completed);
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "disabled-release",
+            PaymentStatus.Authorized,
+            provider: "Mock:Deposit",
+            providerIntentId: "disabled-release-provider-intent");
+
+        var action = () => sut.ReleaseDepositAsync(reservation.Id, "disabled", CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Ödeme altyapısı geçici olarak devre dışıdır.");
+        provider.ReleaseDepositCallCount.Should().Be(0);
+        intent.Status.Should().Be(PaymentStatus.Authorized);
+    }
+
+    [Fact]
+    public async Task ProcessPendingWebhookJobsAsync_WhenPaymentsDisabled_LeavesJobsPending()
+    {
+        var sut = CreateSut(enablePayments: false);
+        var job = new BackgroundJob
+        {
+            Type = "payment-webhook-process",
+            Payload = "{}",
+            Status = BackgroundJobStatus.Pending,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+        _dbContext.BackgroundJobs.Add(job);
+        await _dbContext.SaveChangesAsync();
+
+        var processedCount = await sut.ProcessPendingWebhookJobsAsync(CancellationToken.None);
+
+        processedCount.Should().Be(0);
+        job.Status.Should().Be(BackgroundJobStatus.Pending);
+        job.RetryCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task CreateIntentAsync_WhenFeatureFlagDisabled_ThrowsInvalidOperationException()
     {
         var reservation = await SeedReservationAsync();
@@ -1041,7 +1107,9 @@ public sealed class PaymentServiceTests : IDisposable
         reservation.Status.Should().Be(ReservationStatus.Active);
     }
 
-    private PaymentService CreateSut(FakePaymentProvider? paymentProvider = null)
+    private PaymentService CreateSut(
+        FakePaymentProvider? paymentProvider = null,
+        bool enablePayments = true)
     {
         return new PaymentService(
             _dbContext,
@@ -1053,7 +1121,8 @@ public sealed class PaymentServiceTests : IDisposable
                 Currency = "TRY",
                 RetryLimit = 3,
                 TimeoutRetryCount = 2,
-                WebhookJobBatchSize = 10
+                WebhookJobBatchSize = 10,
+                EnablePayments = enablePayments
             }),
             NullLogger<PaymentService>.Instance);
     }
@@ -1217,6 +1286,7 @@ public sealed class PaymentServiceTests : IDisposable
         public int VerifyPaymentCallCount { get; private set; }
         public int CaptureDepositCallCount { get; private set; }
         public int RefundCallCount { get; private set; }
+        public int ReleaseDepositCallCount { get; private set; }
         public CreatePaymentIntentProviderRequest? LastCreatePaymentIntentRequest { get; private set; }
         public CreatePreAuthorizationProviderRequest? LastCreatePreAuthorizationRequest { get; private set; }
         public PaymentCallbackProviderRequest? LastVerifyPaymentRequest { get; private set; }
@@ -1292,8 +1362,11 @@ public sealed class PaymentServiceTests : IDisposable
             return Task.FromResult(new ProviderRefundResult { Success = true, ReferenceId = "refund-1" });
         }
 
-        public Task<ProviderReleaseDepositResult> ReleaseDepositAsync(ProviderReleaseDepositRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProviderReleaseDepositResult { Success = true });
+        public Task<ProviderReleaseDepositResult> ReleaseDepositAsync(ProviderReleaseDepositRequest request, CancellationToken cancellationToken = default)
+        {
+            ReleaseDepositCallCount++;
+            return Task.FromResult(new ProviderReleaseDepositResult { Success = true });
+        }
 
         public Task<ProviderCaptureDepositResult> CaptureDepositAsync(ProviderCaptureDepositRequest request, CancellationToken cancellationToken = default)
         {

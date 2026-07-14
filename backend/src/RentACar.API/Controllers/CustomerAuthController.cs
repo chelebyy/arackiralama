@@ -588,6 +588,11 @@ public sealed class CustomerAuthController(
                 activeToken.SupersededAtUtc = utcNow;
             }
 
+            if (transaction is not null && activeTokens.Count > 0)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             dbContext.CustomerAccountClaimTokens.Add(new CustomerAccountClaimToken
             {
                 Id = Guid.NewGuid(),

@@ -12,9 +12,9 @@ namespace RentACar.Tests.Unit.Services;
 public sealed class CustomerAccountClaimEmailDispatcherTests
 {
     [Theory]
-    [InlineData("tr-TR", "https://rental.example.test/tr/account-claim?token=claim-token")]
-    [InlineData("en-US", "https://rental.example.test/en/account-claim?token=claim-token")]
-    [InlineData("de-DE", "https://rental.example.test/de/account-claim?token=claim-token")]
+    [InlineData("tr-TR", "https://rental.example.test/tr/account-claim#token=claim-token")]
+    [InlineData("en-US", "https://rental.example.test/en/account-claim#token=claim-token")]
+    [InlineData("de-DE", "https://rental.example.test/de/account-claim#token=claim-token")]
     public async Task DispatchAsync_UsesAbsoluteSupportedPublicLocaleRoute(string locale, string expectedUrl)
     {
         var queue = new Mock<INotificationQueueService>();
