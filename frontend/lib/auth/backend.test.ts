@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildBackendUrl,
+  callAccountClaimEndpoint,
   callLoginEndpoint,
   callLogoutEndpoint,
   callPasswordResetConfirm,
@@ -108,6 +109,27 @@ describe("auth backend helpers", () => {
           token: "reset-token",
           newPassword: "new-secret",
           principalScope: "Admin",
+        }),
+      })
+    );
+  });
+
+  it("posts account claims through the same-origin auth route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await callAccountClaimEndpoint({
+      token: "claim-token",
+      newPassword: "new-secret",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/claim",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          token: "claim-token",
+          newPassword: "new-secret",
         }),
       })
     );

@@ -36,6 +36,7 @@ public sealed class ApiWebApplicationFactory(
                 ["Jwt:Audience"] = TestJwtFactory.JwtAudience,
                 ["Jwt:Secret"] = TestJwtFactory.JwtSecret,
                 ["Database:AutoMigrateOnStartup"] = "false",
+                ["Notifications:PublicFrontendBaseUrl"] = "https://rental.example.test",
                 ["Payment:EnablePayments"] = "true"
             };
 

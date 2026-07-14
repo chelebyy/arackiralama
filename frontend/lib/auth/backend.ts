@@ -86,7 +86,24 @@ export async function callAccountClaimEndpoint(payload: {
   token: string;
   newPassword: string;
 }) {
-  const backendResponse = await fetch(buildBackendUrl("/api/customer/v1/auth/claim"), {
+  return postAccountClaim("/api/auth/claim", payload);
+}
+
+export async function callAccountClaimBackendEndpoint(payload: {
+  token: string;
+  newPassword: string;
+}) {
+  return postAccountClaim(
+    buildBackendUrl("/api/customer/v1/auth/claim"),
+    payload
+  );
+}
+
+async function postAccountClaim(
+  url: string,
+  payload: { token: string; newPassword: string }
+) {
+  const backendResponse = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json"

@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddApiCors(configuration, environment);
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
-        services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+        services.AddNotificationOptions(configuration);
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<RefreshTokenCookieSettings>(configuration.GetSection(RefreshTokenCookieSettings.SectionName));
         services.AddInfrastructure(configuration);
@@ -63,6 +63,25 @@ public static class ServiceCollectionExtensions
         services.AddAdminAuthorization();
         services.AddApiRateLimiting(configuration);
         services.AddAdminAuditLogging();
+
+        return services;
+    }
+
+    private static IServiceCollection AddNotificationOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<NotificationOptions>()
+            .Bind(configuration.GetSection(NotificationOptions.SectionName))
+            .Validate(
+                options =>
+                    Uri.TryCreate(options.PublicFrontendBaseUrl, UriKind.Absolute, out var publicFrontendBaseUri)
+                    && (publicFrontendBaseUri.Scheme == Uri.UriSchemeHttp
+                        || publicFrontendBaseUri.Scheme == Uri.UriSchemeHttps)
+                    && string.IsNullOrEmpty(publicFrontendBaseUri.Query)
+                    && string.IsNullOrEmpty(publicFrontendBaseUri.Fragment),
+                "Notifications:PublicFrontendBaseUrl must be an absolute HTTP or HTTPS URL without a query or fragment.")
+            .ValidateOnStart();
 
         return services;
     }
