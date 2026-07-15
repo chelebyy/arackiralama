@@ -353,8 +353,6 @@ public sealed class PaymentService(
         string? note,
         CancellationToken cancellationToken = default)
     {
-        EnsurePaymentsEnabled();
-
         var reservation = await _dbContext.Reservations
             .FirstOrDefaultAsync(x => x.Id == reservationId, cancellationToken);
         if (reservation == null)
@@ -372,6 +370,8 @@ public sealed class PaymentService(
                     ? "Depozito ön provizyon kaydı bulunamadığı için bırakma işlemi atlandı."
                     : note);
         }
+
+        EnsurePaymentsEnabled();
 
         var providerResult = await _paymentProvider.ReleaseDepositAsync(
             new ProviderReleaseDepositRequest

@@ -939,6 +939,22 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReleaseDepositAsync_WhenPaymentsDisabledAndNoDepositIntentExists_ReturnsSkippedOperation()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider, enablePayments: false);
+        var reservation = await SeedReservationWithDepositAmountAsync(500m);
+
+        var result = await sut.ReleaseDepositAsync(reservation.Id, "checkout");
+
+        result.Should().NotBeNull();
+        result!.Operation.Should().Be("ReleaseDeposit");
+        result.Status.Should().Be("Skipped");
+        result.PaymentIntentId.Should().Be(Guid.Empty);
+        provider.ReleaseDepositCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task RefundReservationAsync_WhenIntentAlreadyRefunded_Throws()
     {
         var reservation = new Reservation

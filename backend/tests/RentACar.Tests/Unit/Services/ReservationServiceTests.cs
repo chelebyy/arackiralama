@@ -1990,7 +1990,7 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
-    public async Task CheckOutAsync_WhenReservationActive_TransitionsToCompleted()
+    public async Task CheckOutAsync_WhenDepositReleaseIsSkipped_TransitionsToCompleted()
     {
         // Arrange
         var reservationId = Guid.NewGuid();
@@ -2012,6 +2012,17 @@ public sealed class ReservationServiceTests
 
         _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);
+        _paymentServiceMock
+            .Setup(x => x.ReleaseDepositAsync(reservationId, request.Notes, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationApiDto
+            {
+                ReservationId = reservationId,
+                PaymentIntentId = Guid.Empty,
+                PaymentKind = "DepositPreAuthorization",
+                Operation = "ReleaseDeposit",
+                Status = "Skipped",
+                Reason = "Depozito ön provizyon kaydı bulunamadığı için bırakma işlemi atlandı."
+            });
 
         // Act
         var result = await _sut.CheckOutAsync(reservationId, request);
