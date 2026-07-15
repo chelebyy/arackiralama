@@ -2049,3 +2049,13 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Open gates:** GitHub's post-merge SBOM lists only the patched target versions, but its Dependabot alert API still reports all 11 records open with unchanged alert timestamps after the update jobs completed. Treat alert closure as pending until GitHub reconciles those records to fixed, or investigate the platform state if they persist. Provider credential/access-log evidence, deployment rerun, and focused final security validation remain separate release blockers.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - Dependabot Alert Reconciliation Investigation (External State Pending)
+
+**Investigation result:** No new package, lockfile, or source-code change is required. A complete live GraphQL traversal of `frontend/pnpm-lock.yaml` returned 1,069 dependencies across 11 pages and found only `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the five old target versions remained. The default-branch SBOM generated at `2026-07-15T14:39:33Z` reported the same patched set.
+
+**Alert-record evidence:** At the same checkpoint, original alert numbers `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` were still open and none was fixed. Their GraphQL alert objects retained the old vulnerable requirements (`7.29.0`, `7.3.2`, `0.27.7`, `7.25.0`, and `4.1.1`) with null fixed/dismissal fields. This graph-versus-alert mismatch is recorded as GitHub alert-record reconciliation lag, not residual repository exposure.
+
+**Decision and next gate:** Preserve the patched graph and avoid dependency churn or manual dismissal. Wait 12-24 hours, then re-query the original alert numbers. If they remain open while the graph stays patched, request GitHub backend resynchronization only after explicit user authorization. No GitHub Support request was submitted; the temporary support text is an unsent draft and not operational evidence.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
