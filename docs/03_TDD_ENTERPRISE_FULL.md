@@ -1868,6 +1868,19 @@ The solo-developer approval threshold is zero. This avoids requiring an unavaila
 
 Acceptance evidence must distinguish execution from enforcement. A successful Actions run proves that a workflow executed successfully; the active ruleset response for `main` proves that the required result is enforced. For Dependabot, retain at least one observable post-ruleset PR lifecycle showing the branch update, required checks, and manual merge or close decision. A pre-ruleset PR reporting `BEHIND` is useful strict-update evidence but is not a complete post-ruleset lifecycle.
 
+### 14.9.1 Dependency-Alert Reconciliation Acceptance
+
+A dependency remediation is acceptance-complete only when all of these independently observable gates pass:
+
+1. The committed manifest and lockfile resolve every affected package outside the advisory's vulnerable range.
+2. The pull-request head passes the repository ruleset, including the authoritative Node 22 frontend job for frontend lockfile changes, and receives an exact-head review outcome.
+3. After squash merge, the default-branch GitHub SBOM reports the patched versions and the post-merge workflow set succeeds.
+4. The live Dependabot alert API reports each affected record as `fixed`, or a separately reviewed risk decision records a non-fix disposition with rationale.
+
+These gates must not be collapsed into one claim. A patched SBOM with still-open alert records is `remediation merged; alert reconciliation pending`, not closed. Preserve the alert numbers, package grouping, merge SHA, SBOM timestamp, and workflow URLs as evidence; re-query the alert API before changing the state. Do not manually dismiss an alert to simulate reconciliation, and do not treat a failed or unavailable secondary audit endpoint as a zero-vulnerability result.
+
+While gate 4 is pending, capture both GitHub data planes: the fully paginated default-branch dependency graph/SBOM and the alert records' `vulnerableRequirements`, `state`, `fixedAt`, and dismissal fields. A graph that contains only patched requirements while alerts retain the old vulnerable requirements proves an alert-record reconciliation mismatch, not a reason for further repository changes. Preserve the patched graph, wait 12-24 hours, and re-query the original alert numbers. If the mismatch persists, GitHub Support or backend resynchronization is a separately authorized external escalation; a local draft does not count as a submitted request.
+
 ---
 
 END OF DOCUMENT
