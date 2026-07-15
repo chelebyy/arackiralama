@@ -213,16 +213,39 @@ Track reservation by public code (no auth required).
 {
   "success": true,
   "data": {
-    "public_code": "ABC123",
+    "publicCode": "ABC123",
     "status": "Paid",
-    "pickup_datetime": "2026-04-01T10:00:00Z",
-    "return_datetime": "2026-04-05T10:00:00Z",
-    "vehicle_group": "Ekonomi",
-    "total_amount": 3750.00,
-    "deposit_status": "PreAuthorized"
+    "pickupOfficeName": "Alanya Merkez",
+    "returnOfficeName": "Gazipaşa Havalimanı",
+    "pickupDateTime": "2026-04-01T10:00:00Z",
+    "returnDateTime": "2026-04-05T10:00:00Z",
+    "vehicleGroupName": "Ekonomi",
+    "totalAmount": 3750.00,
+    "depositAmount": 5000.00,
+    "currency": "TRY"
   }
 }
 ```
+
+The `data` object is an exact allowlist. It does not include internal IDs, customer or driver PII, vehicle plate, notes, hold/session state, provider identifiers, internal pricing metadata, or customer statistics. Successful and not-found responses are non-cacheable (`Cache-Control: no-store`) and the endpoint uses the Strict rate-limit policy.
+
+### Error Responses
+
+- `404 Not Found` - Public code is unknown; no internal reservation state is disclosed.
+- `429 Too Many Requests` - Strict rate limit exceeded.
+
+## POST /api/customer/v1/reservations/{id}/cancel
+
+Cancel the authenticated customer's own reservation. Requires the `CustomerOnly` policy.
+
+### Authorization and Response Semantics
+
+- `200 OK` - The caller owns the reservation and its state permits cancellation.
+- `401 Unauthorized` - No valid customer principal is present.
+- `404 Not Found` - The reservation is missing or belongs to another customer; both cases use the same response.
+- `400 Bad Request` - The owned reservation exists but its current state cannot be cancelled.
+
+`POST /api/v1/reservations/{id}/cancel` is intentionally unavailable. Anonymous and non-owner attempts must not invoke the cancellation service or mutate the reservation.
 
 ------------------------------------------------------------------------
 
@@ -761,3 +784,23 @@ X-RateLimit-Reset: 1647356400
 ------------------------------------------------------------------------
 
 END OF DOCUMENT
+
+## Security Contract Addendum (12 July 2026)
+
+### Customer account claim
+
+- `POST /api/customer/v1/auth/register`: for an existing passwordless guest customer, returns the same generic success response but does not install credentials or update profile fields; it queues an email claim token. Repeated or concurrent requests suppressed by the normalized-account cooldown or one-active-token invariant return that same generic success contract and do not queue another message.
+- `POST /api/customer/v1/auth/claim`: accepts `{ token, newPassword }`; only an active, unexpired, unused token may install the first password. Invalid, expired, replayed, superseded, or already-claimed cases return a generic bad request and perform no credential overwrite.
+
+### Public reservation access
+
+- `GET /api/v1/reservations/{publicCode}` returns `PublicReservationSummaryDto` only: public code, status, pickup/return office names and times, vehicle-group name, total/deposit, and currency.
+- The response must not include internal IDs, customer/driver PII, plate, notes, hold/session data, provider identifiers, internal pricing metadata, or customer statistics. It is strict-rate-limited and non-cacheable.
+- `POST /api/v1/reservations/{reservationId}/cancel` is intentionally unavailable. Customer self-service cancellation is accepted only through the authenticated customer reservation controller with ownership enforcement; admin cancellation remains admin-only.
+- Local production-like acceptance is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: the five localized confirmation pages returned the exact allowlist with `no-store`; anonymous and non-owner attempts left `status`, `xmin`, and `updated_at` unchanged; authenticated owner cancellation persisted `Cancelled`.
+
+### Payment containment
+
+- Payment intent creation, 3DS completion, provider webhook processing, and admin payment retry return `503` before service mutation when `Payment:EnablePayments` is false.
+- Production startup rejects Mock, unknown, sandbox, incomplete, or disabled payment configuration.
+- No payment provider is currently selected; payment activation is deferred. Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Before activation, final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.

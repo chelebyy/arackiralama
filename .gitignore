@@ -111,6 +111,14 @@ codex-temp/
 frontend/test-results/
 admin-default-dashboard.png
 
+# Security scanner / report artifacts (must never be tracked; may contain secrets)
+.ship-safe/
+ship-safe-report.html
+ship-safe-*.html
+*-security-report.html
+security-scan-*.json
+security-scan-*.html
+
 # ── GSD baseline (auto-generated) ──
 .gsd/activity/
 .gsd/runtime/

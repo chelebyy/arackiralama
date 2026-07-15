@@ -9,6 +9,7 @@ using RentACar.Core.Interfaces.Notifications;
 using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Services.Notifications;
+using RentACar.Infrastructure.Services;
 
 namespace RentACar.Worker;
 
@@ -20,11 +21,14 @@ public sealed class Worker(
     IServiceProvider serviceProvider,
     IOptions<DailyBackupOptions> dailyBackupOptions,
     ILogger<Worker> logger,
-    IOptions<BackgroundJobProcessorOptions>? backgroundJobProcessorOptions = null) : BackgroundService
+    IOptions<BackgroundJobProcessorOptions>? backgroundJobProcessorOptions = null,
+    IOptions<AccountClaimSecurityOptions>? accountClaimSecurityOptions = null) : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
     private const int HoldReleaseRetryLimit = 3;
     private readonly BackgroundJobProcessorOptions _backgroundJobProcessorOptions = backgroundJobProcessorOptions?.Value ?? new();
+    private readonly AccountClaimSecurityOptions _accountClaimSecurityOptions = accountClaimSecurityOptions?.Value ?? new();
+    private DateTime _nextAccountClaimTokenCleanupUtc = DateTime.MinValue;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -40,6 +44,7 @@ public sealed class Worker(
                 await ProcessExpiredUnpaidRequestsAsync(stoppingToken);
                 await EnsureDailyBackupJobScheduledAsync(stoppingToken);
                 await ProcessDailyBackupJobsAsync(stoppingToken);
+                await CleanupAccountClaimTokensAsync(stoppingToken);
             }
             catch (Exception ex)
             {
@@ -47,6 +52,25 @@ public sealed class Worker(
             }
 
             await Task.Delay(PollInterval, stoppingToken);
+        }
+    }
+
+    private async Task CleanupAccountClaimTokensAsync(CancellationToken cancellationToken)
+    {
+        var utcNow = DateTime.UtcNow;
+        if (utcNow < _nextAccountClaimTokenCleanupUtc)
+        {
+            return;
+        }
+
+        using var scope = serviceProvider.CreateScope();
+        var cleanupService = scope.ServiceProvider.GetRequiredService<CustomerAccountClaimTokenCleanupService>();
+        var deletedCount = await cleanupService.CleanupAsync(cancellationToken);
+        _nextAccountClaimTokenCleanupUtc = utcNow.AddMinutes(_accountClaimSecurityOptions.CleanupIntervalMinutes);
+
+        if (deletedCount > 0)
+        {
+            logger.LogInformation("Deleted {DeletedCount} stale customer account claim tokens", deletedCount);
         }
     }
 

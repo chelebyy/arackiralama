@@ -437,3 +437,20 @@ Catalog lifecycle is explicit: create produces an inactive draft, activation req
 - Public/admin catalog and generic quote/reservation contracts are implemented. Admin and public frontend phases remain governed by `docs/16_Reservation_Extra_Options_Plan.md`.
 - Full Docker browser evidence remains open until the admin and public UI phases are implemented.
 - The repository-required Aikido full-content scan remains a separate release gate when the MCP scanner is available.
+## 13. Security Boundary Decisions (12 July 2026)
+
+### 13.1 Verified Guest-Account Claim
+
+Existing passwordless guest customers are not upgraded by knowledge of an email address. Registration returns a generic response and issues a purpose-specific, hashed, expiring, single-use `CustomerAccountClaimToken`; installing the first password requires possession of the emailed token. Requests are throttled against the normalized customer identity with a five-minute cooldown, and the database permits at most one active token per customer. Issuing a replacement token supersedes older active tokens. Raw tokens are never persisted. Expired, consumed, and superseded records are removed by the worker in bounded batches after a 14-day retention window.
+
+### 13.2 Public Reservation Boundary
+
+Unauthenticated lookup returns only `PublicReservationSummaryDto`, an explicit allowlist without internal identifiers, customer/driver PII, plate, notes, hold data, or provider metadata. The route is strict-rate-limited and non-cacheable. Anonymous cancellation is removed; customer cancellation remains behind `CustomerOnly` ownership checks and admin cancellation remains admin-only.
+
+### 13.3 Payment Fail-Closed Boundary
+
+No payment provider is selected at this stage. `Payment:EnablePayments` therefore defaults to `false`, and public intent creation, 3DS return, provider webhook processing, and admin payment retry fail closed with `503` before reaching payment services. Production payment configuration remains bound and validated with `ValidateOnStart`; Mock, unknown, sandbox, incomplete, or disabled configurations prevent a payment-enabled production startup. The local host-start acceptance matrix exercises this registration boundary directly: five unsafe Production configurations fail during `IHost.StartAsync`, while fully configured Production Iyzico and intentional Development Mock controls start. The same boundary is proven on the current Release image: five disposable unsafe Production containers exit non-zero with a non-secret validation error, while a syntactically valid synthetic secret-injected Iyzico container reaches `/health` `200` without migration, seed, or selected database-fingerprint changes. When a provider is introduced, the browser return remains a navigation signal only: no paid transition is considered secure until provider evidence is verified server-to-server and bound to provider intent, reservation, amount, currency, status, and unique transaction/event identity.
+
+### 13.4 Acceptance State
+
+These decisions are implemented for account claim, public reservation exposure/cancellation containment, default-disabled payment containment, and production configuration validation. Account-claim abuse controls, retention cleanup, concurrency behavior, and five-locale Docker-browser behavior have local evidence; production email delivery remains deferred until Resend is integrated. The public reservation boundary is also locally acceptance-proven: the production-like Chromium flow captured the exact allowlisted response through all five localized confirmation pages, and database `status`/`xmin`/`updated_at` fingerprints proved that anonymous and non-owner cancellation attempts performed no write while authenticated owner cancellation remained functional. The reachable paid-transition attack path is contained while payments remain disabled, but payment-integrity acceptance is deferred until a real provider contract and sandbox evidence exist. This does not establish release readiness. Canonical implementation and remaining evidence gates are tracked in `docs/18_Codex_Security_Findings_Implementation.md`.

@@ -50,6 +50,26 @@ public sealed class NotificationTemplateService(IOptions<NotificationOptions>? n
                 "Yonetici parola sifirlama",
                 "Yonetici parola sifirlama talebiniz alindi.\n\nToken: {{Token}}\nGecerlilik: {{ExpiresAtUtc}}\n\nBu islemi siz yapmadiysaniz bu mesaji dikkate almayin.",
                 "<p>Yonetici parola sifirlama talebiniz alindi.</p><p><strong>Token:</strong> {{Token}}</p><p><strong>Gecerlilik:</strong> {{ExpiresAtUtc}}</p><p>Bu islemi siz yapmadiysaniz bu mesaji dikkate almayin.</p>"),
+            [BuildKey(NotificationTemplateKeys.CustomerAccountClaim, "en-US")] = new(
+                "Verify your account claim",
+                "We received a request to claim this email address on RentACar.\n\nOpen the verification link to finish setting up your password:\n{{ClaimUrl}}\n\nThe link expires at: {{ExpiresAtUtc}}\n\nIgnore this message if you did not request it.",
+                "<p>We received a request to claim this email address on RentACar.</p><p>Open the verification link to finish setting up your password:</p><p><a href=\"{{ClaimUrl}}\">{{ClaimUrl}}</a></p><p>The link expires at: {{ExpiresAtUtc}}</p><p>Ignore this message if you did not request it.</p>"),
+            [BuildKey(NotificationTemplateKeys.CustomerAccountClaim, "ru-RU")] = new(
+                "Подтвердите владение аккаунтом",
+                "Мы получили запрос на закрепление этого адреса электронной почты в RentACar.\n\nОткройте ссылку подтверждения, чтобы задать пароль:\n{{ClaimUrl}}\n\nСрок действия ссылки истекает: {{ExpiresAtUtc}}\n\nЕсли это были не вы, проигнорируйте сообщение.",
+                "<p>Мы получили запрос на закрепление этого адреса электронной почты в RentACar.</p><p>Откройте ссылку подтверждения, чтобы задать пароль:</p><p><a href=\"{{ClaimUrl}}\">{{ClaimUrl}}</a></p><p>Срок действия ссылки истекает: {{ExpiresAtUtc}}</p><p>Если это были не вы, проигнорируйте сообщение.</p>"),
+            [BuildKey(NotificationTemplateKeys.CustomerAccountClaim, "ar-SA")] = new(
+                "تأكيد ملكية الحساب",
+                "تلقينا طلبًا لربط عنوان بريدك الإلكتروني في RentACar.\n\nافتح رابط التحقق لإعداد كلمة المرور:\n{{ClaimUrl}}\n\nتنتهي صلاحية الرابط في: {{ExpiresAtUtc}}\n\nتجاهل هذه الرسالة إذا لم تطلب ذلك.",
+                "<p>تلقينا طلبًا لربط عنوان بريدك الإلكتروني في RentACar.</p><p>افتح رابط التحقق لإعداد كلمة المرور:</p><p><a href=\"{{ClaimUrl}}\">{{ClaimUrl}}</a></p><p>تنتهي صلاحية الرابط في: {{ExpiresAtUtc}}</p><p>تجاهل هذه الرسالة إذا لم تطلب ذلك.</p>"),
+            [BuildKey(NotificationTemplateKeys.CustomerAccountClaim, "de-DE")] = new(
+                "Kontoinanspruchnahme bestätigen",
+                "Wir haben eine Anfrage erhalten, diese E-Mail-Adresse bei RentACar zu beanspruchen.\n\nÖffnen Sie den Bestätigungslink, um Ihr Passwort einzurichten:\n{{ClaimUrl}}\n\nDer Link läuft ab am: {{ExpiresAtUtc}}\n\nIgnorieren Sie diese Nachricht, wenn Sie die Anfrage nicht gestellt haben.",
+                "<p>Wir haben eine Anfrage erhalten, diese E-Mail-Adresse bei RentACar zu beanspruchen.</p><p>Öffnen Sie den Bestätigungslink, um Ihr Passwort einzurichten:</p><p><a href=\"{{ClaimUrl}}\">{{ClaimUrl}}</a></p><p>Der Link läuft ab am: {{ExpiresAtUtc}}</p><p>Ignorieren Sie diese Nachricht, wenn Sie die Anfrage nicht gestellt haben.</p>"),
+            [BuildKey(NotificationTemplateKeys.CustomerAccountClaim, "tr-TR")] = new(
+                "Hesap sahiplik dogrulama",
+                "RentACar uzerinde bu e-posta adresi sahiplenmek icin talep alindi.\n\nParolanizi olusturmak icin dogrulama baglantisini acin:\n{{ClaimUrl}}\n\nBaglanti suresi: {{ExpiresAtUtc}}\n\nBu islemi siz yapmadiysaniz bu mesaji dikkate almayin.",
+                "<p>RentACar uzerinde bu e-posta adresi sahiplenmek icin talep alindi.</p><p>Parolanizi olusturmak icin dogrulama baglantisini acin:</p><p><a href=\"{{ClaimUrl}}\">{{ClaimUrl}}</a></p><p>Baglanti suresi: {{ExpiresAtUtc}}</p><p>Bu islemi siz yapmadiysaniz bu mesaji dikkate almayin.</p>"),
             [BuildKey(NotificationTemplateKeys.ReservationConfirmed, "en-US")] = new(
                 "Reservation confirmed",
                 "Your reservation has been created. Code: {{PublicCode}}",

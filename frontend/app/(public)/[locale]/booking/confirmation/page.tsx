@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { Check, Car, Calendar, CreditCard, Hash } from "lucide-react";
 import { getReservationByPublicCode } from "@/lib/api/reservations";
-import type { Reservation } from "@/lib/api/types";
+import type { PublicReservationSummary } from "@/lib/api/types";
 
 export default function BookingConfirmationPage() {
   const t = useTranslations();
@@ -14,7 +14,7 @@ export default function BookingConfirmationPage() {
 
   const code = searchParams.get("code");
   const isUnpaidRequest = searchParams.get("request") === "unpaid";
-  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [reservation, setReservation] = useState<PublicReservationSummary | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   useEffect(() => {
@@ -48,36 +48,21 @@ export default function BookingConfirmationPage() {
   const details = useMemo(() => {
     if (!reservation) return null;
 
-    const raw = reservation as Reservation & {
-      vehicleBrand?: string;
-      vehicleModel?: string;
-      vehicleGroupName?: string;
-      pickupDateTime?: string;
-      returnDateTime?: string;
-      totalAmount?: number;
-      depositAmount?: number;
-    };
-
-    const pickupDateTime = raw.pickupDateTime ? new Date(raw.pickupDateTime) : null;
-    const returnDateTime = raw.returnDateTime ? new Date(raw.returnDateTime) : null;
-    const vehicleName =
-      reservation.vehicleName ||
-      [raw.vehicleBrand, raw.vehicleModel].filter(Boolean).join(" ") ||
-      raw.vehicleGroupName ||
-      "";
+    const pickupDateTime = new Date(reservation.pickupDateTime);
+    const returnDateTime = new Date(reservation.returnDateTime);
 
     return {
-      vehicle: vehicleName,
-      pickup: [reservation.pickupOfficeName, reservation.pickupDate || pickupDateTime?.toLocaleDateString("tr-TR"), reservation.pickupTime || pickupDateTime?.toISOString().slice(11, 16)]
+      vehicle: reservation.vehicleGroupName,
+      pickup: [reservation.pickupOfficeName, pickupDateTime.toISOString().slice(0, 10), pickupDateTime.toISOString().slice(11, 16)]
         .filter(Boolean)
         .join(" - "),
-      returnDate: [reservation.returnOfficeName, reservation.returnDate || returnDateTime?.toLocaleDateString("tr-TR"), reservation.returnTime || returnDateTime?.toISOString().slice(11, 16)]
+      returnDate: [reservation.returnOfficeName, returnDateTime.toISOString().slice(0, 10), returnDateTime.toISOString().slice(11, 16)]
         .filter(Boolean)
         .join(" - "),
       total: new Intl.NumberFormat("tr-TR", {
         style: "currency",
-        currency: reservation.priceBreakdown?.currency || "TRY",
-      }).format(reservation.priceBreakdown?.totalAmount ?? raw.totalAmount ?? 0),
+        currency: reservation.currency,
+      }).format(reservation.totalAmount),
     };
   }, [reservation]);
 

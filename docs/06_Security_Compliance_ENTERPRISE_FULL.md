@@ -91,3 +91,17 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 | A08 | Data Integrity Failures | ✅ | Webhook HMAC verification, idempotency keys |
 | A09 | Logging Failures | ✅ | Audit log + request log + error log tam |
 | A10 | SSRF | ✅ | Outbound requests sadece configured payment provider URL'lerine |
+
+## 13. Codex Security Findings Remediation Status (12 July 2026)
+
+| Boundary | Implemented control | Current evidence | Remaining gate |
+| --- | --- | --- | --- |
+| Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response; normalized-account cooldown; one-active-token database invariant; bounded retention cleanup | Focused abuse/cleanup tests 29/29; full backend 765/765 unit and 51/51 integration; Docker concurrency, worker cleanup, and five-locale Chromium claim/replay/login proof pass | Resend integration and real production email-delivery proof, deferred until the provider is introduced |
+| Public reservation read | Allowlisted public DTO, strict rate limit, `no-store` | Production-like Docker Chromium captured the real response through all five localized confirmation pages; the exact 10-field allowlist matched and test-owned PII/internal values were absent | Re-run after deployment as part of the final combined release matrix |
+| Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Production-like browser HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled` | Re-run after deployment and include in the focused final security review |
+| Production payment configuration | `ValidateOnStart`; Mock/unknown/sandbox/incomplete/disabled rejected | 12/12 focused host-start tests plus the current Release-image Docker matrix pass: five unsafe Production configurations exit non-zero without synthetic credential leakage; the safe-shaped control returns `/health` `200` with migrations/seeds disabled and an unchanged selected database fingerprint | GO for local configuration/startup acceptance; deployment rerun and real-provider sandbox proof remain separate gates |
+| Payment state integrity | Payments default disabled; intent, 3DS return, webhook, and admin retry paths return `503` before service mutation | Unit proof plus local Docker HTTP/database-count proof | Keep disabled until a real provider is selected; then require server-to-server verification, negative/replay tests, and sandbox success |
+| Secret artifacts | Generated Ship-Safe artifacts removed and scanner outputs ignored | Working-tree policy change present | Provider-side rotation, access-log review, active/history secret scans |
+| Dependency review | Dependabot auto-merge workflow removed | Repository workflow change present | Branch protection and test PR evidence requiring human approval |
+
+No statement in this table means the repository has received a complete security audit or is production-safe. `docs/18_Codex_Security_Findings_Implementation.md` remains the closure authority.

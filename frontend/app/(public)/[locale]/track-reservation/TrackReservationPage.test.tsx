@@ -10,9 +10,6 @@ const messages: Record<string, string> = {
   "codePlaceholder": "Enter reservation code (e.g., ALN-2025-8842)",
   "copyCode": "Copy reservation code",
   "errors.notFound": "No reservation found with this code. Please check and try again.",
-  "paymentStatus.paid": "Paid",
-  "paymentStatus.pending": "Pending",
-  "paymentStatus.refunded": "Refunded",
   "status.active": "Active",
   "status.cancelled": "Cancelled",
   "status.pending": "Pending",
@@ -41,14 +38,13 @@ describe("TrackReservationPage", () => {
     });
   });
 
-  it("loads and maps reservation details returned by the public tracking API", async () => {
+  it("loads the public tracking summary without rendering surplus customer data", async () => {
     const user = userEvent.setup();
 
     mockedGetReservationByPublicCode.mockResolvedValue({
-      id: "reservation-1",
       publicCode: "ALN-2026-1001",
       status: "ACTIVE",
-      vehicleName: "Renault Clio",
+      vehicleGroupName: "Economy",
       customer: {
         firstName: "Ada",
         lastName: "Lovelace",
@@ -57,17 +53,12 @@ describe("TrackReservationPage", () => {
       },
       pickupOfficeName: "Gazipasa Airport",
       returnOfficeName: "Alanya Center",
-      pickupDate: "2026-06-10",
-      returnDate: "2026-06-14",
-      pickupTime: "09:30",
-      returnTime: "11:00",
+      pickupDateTime: "2026-06-10T09:30:00Z",
+      returnDateTime: "2026-06-14T11:00:00Z",
       paymentStatus: "CAPTURED",
-      createdAt: "2026-05-01T08:00:00Z",
-      updatedAt: "2026-05-02T12:00:00Z",
-      priceBreakdown: {
-        totalAmount: 3200,
-        depositAmount: 5000,
-      },
+      totalAmount: 3200,
+      depositAmount: 5000,
+      currency: "TRY",
     });
 
     render(<TrackReservationPage />);
@@ -80,12 +71,13 @@ describe("TrackReservationPage", () => {
     });
 
     expect(await screen.findByText("ALN-2026-1001")).toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(screen.getByText("Renault Clio")).toBeInTheDocument();
+    expect(screen.getByText("Economy")).toBeInTheDocument();
     expect(screen.getByText("₺3200")).toBeInTheDocument();
     expect(screen.getByText("₺5000")).toBeInTheDocument();
     expect(screen.getByTestId("reservation-timeline")).toHaveTextContent("active");
-    expect(screen.getByText("Paid")).toBeInTheDocument();
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(screen.queryByText("ada@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("Paid")).not.toBeInTheDocument();
   });
 
   it("shows a friendly error when the reservation code lookup fails", async () => {
@@ -102,31 +94,20 @@ describe("TrackReservationPage", () => {
     expect(screen.queryByTestId("reservation-timeline")).not.toBeInTheDocument();
   });
 
-  it("maps cancelled and refunded backend states and copies the reservation code", async () => {
+  it("maps cancelled backend states and copies the reservation code", async () => {
     const user = userEvent.setup();
 
     mockedGetReservationByPublicCode.mockResolvedValue({
-      id: "reservation-2",
       publicCode: "ALN-2026-2002",
       status: "EXPIRED",
-      vehicleName: "Peugeot 3008",
-      customer: {
-        firstName: "Grace",
-        lastName: "Hopper",
-        email: "grace@example.com",
-        phone: "+1 555 0100",
-      },
+      vehicleGroupName: "SUV",
       pickupOfficeName: "Alanya Center",
       returnOfficeName: "Antalya Airport",
-      pickupDate: "2026-07-10",
-      returnDate: "2026-07-11",
-      pickupTime: "08:00",
-      returnTime: "09:00",
-      paymentStatus: "PARTIALLY_REFUNDED",
-      createdAt: "2026-05-03T08:00:00Z",
-      updatedAt: "2026-05-03T09:00:00Z",
+      pickupDateTime: "2026-07-10T08:00:00Z",
+      returnDateTime: "2026-07-11T09:00:00Z",
       totalAmount: 1800,
       depositAmount: 2500,
+      currency: "TRY",
     });
 
     render(<TrackReservationPage />);
@@ -145,7 +126,6 @@ describe("TrackReservationPage", () => {
 
     expect(await screen.findByText("ALN-2026-2002")).toBeInTheDocument();
     expect(screen.getByTestId("reservation-timeline")).toHaveTextContent("cancelled");
-    expect(screen.getByText("Refunded")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /copy reservation code/i }));
 
@@ -159,29 +139,16 @@ describe("TrackReservationPage", () => {
     mockedGetReservationByPublicCode
       .mockRejectedValueOnce(new Error("missing reservation"))
       .mockResolvedValueOnce({
-        id: "reservation-3",
         publicCode: "ALN-2026-3003",
         status: "SOMETHING_NEW",
-        vehicleName: "Toyota Corolla",
-        customer: {
-          firstName: "Alan",
-          lastName: "Turing",
-          email: "alan@example.com",
-          phone: "+44 1234 567890",
-        },
+        vehicleGroupName: "Compact",
         pickupOfficeName: "Gazipasa Airport",
         returnOfficeName: "Gazipasa Airport",
-        pickupDate: "2026-08-01",
-        returnDate: "2026-08-03",
-        pickupTime: "10:00",
-        returnTime: "10:00",
-        paymentStatus: "UNKNOWN",
-        createdAt: "2026-05-04T08:00:00Z",
-        updatedAt: "2026-05-04T09:00:00Z",
-        priceBreakdown: {
-          totalAmount: 2100,
-          depositAmount: 3000,
-        },
+        pickupDateTime: "2026-08-01T10:00:00Z",
+        returnDateTime: "2026-08-03T10:00:00Z",
+        totalAmount: 2100,
+        depositAmount: 3000,
+        currency: "TRY",
       });
 
     render(<TrackReservationPage />);
@@ -201,6 +168,6 @@ describe("TrackReservationPage", () => {
     expect(await screen.findByText("ALN-2026-3003")).toBeInTheDocument();
     expect(screen.queryByText("No reservation found with this code. Please check and try again.")).not.toBeInTheDocument();
     expect(screen.getByTestId("reservation-timeline")).toHaveTextContent("pending");
-    expect(screen.getAllByText("Pending")).toHaveLength(2);
+    expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 });

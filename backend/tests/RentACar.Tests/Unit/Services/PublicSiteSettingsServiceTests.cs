@@ -1,10 +1,12 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RentACar.API.Contracts.PublicSiteSettings;
 using RentACar.API.Services;
 using RentACar.Core.Entities;
 using RentACar.Infrastructure.Data;
+using RentACar.Infrastructure.Services.Payments;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Services;
@@ -15,7 +17,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task GetAdminContentAsync_returns_versioned_page_content()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var content = await service.GetAdminContentAsync();
 
@@ -31,7 +33,7 @@ public sealed class PublicSiteSettingsServiceTests
         var settings = CreateSettingsWithPages("[]");
         dbContext.PublicSiteSettings.Add(settings);
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         await service.GetAdminContentAsync();
         settings.UpdatedAt = storedAt;
         await dbContext.SaveChangesAsync();
@@ -57,7 +59,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UpdatePageDraftAsync_does_not_change_public_page_until_publish()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var before = await service.GetAsync();
         var version = (await service.GetAdminContentAsync()).Version;
 
@@ -112,7 +114,7 @@ public sealed class PublicSiteSettingsServiceTests
         });
         dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var version = (await service.GetAdminContentAsync()).Version;
 
         var adminAfterDraft = await service.UpdatePageDraftAsync(
@@ -175,7 +177,7 @@ public sealed class PublicSiteSettingsServiceTests
         });
         dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var publicPage = (await service.GetAsync()).Pages.Single(page => page.Slug == "privacy" && page.Locale == "tr");
 
@@ -191,7 +193,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task PublishPageAsync_promotes_draft_to_public_page()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var version = (await service.GetAdminContentAsync()).Version;
 
         var afterDraft = await service.UpdatePageDraftAsync(
@@ -223,7 +225,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UnpublishPageAsync_preserves_last_published_snapshot()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var publicBefore = await service.GetAsync();
         var version = (await service.GetAdminContentAsync()).Version;
 
@@ -244,7 +246,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UpdatePageDraftAsync_rejects_stale_version()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var act = () => service.UpdatePageDraftAsync(
             "privacy",
@@ -268,7 +270,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task GetAsync_WhenMissing_CreatesDefaultSettings()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -311,7 +313,7 @@ public sealed class PublicSiteSettingsServiceTests
             ContactPageMapIsVisible = true
         });
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -323,7 +325,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task GetAsync_WhenPaymentMethodFlagsMissing_UsesSafeDefaults()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -344,7 +346,7 @@ public sealed class PublicSiteSettingsServiceTests
             new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
             new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = true, Description = "test" });
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -364,7 +366,7 @@ public sealed class PublicSiteSettingsServiceTests
             new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
             new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = false, Description = "test" });
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -374,11 +376,36 @@ public sealed class PublicSiteSettingsServiceTests
         settings.PaymentMethods.AnyEnabled.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task GetAsync_WhenPaymentsDisabled_HidesCardMethodsAndPreservesUnpaidAvailability(
+        bool unpaidRequestEnabled,
+        bool anyMethodExpected)
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.FeatureFlags.AddRange(
+            new FeatureFlag { Name = "EnableOnlinePayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableCreditCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableDebitCardPayment", Enabled = true, Description = "test" },
+            new FeatureFlag { Name = "EnableUnpaidReservationRequest", Enabled = unpaidRequestEnabled, Description = "test" });
+        await dbContext.SaveChangesAsync();
+        var service = CreateService(dbContext, enablePayments: false);
+
+        var settings = await service.GetAsync(CancellationToken.None);
+
+        settings.PaymentMethods.CreditCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.DebitCardEnabled.Should().BeFalse();
+        settings.PaymentMethods.UnpaidRequestEnabled.Should().Be(unpaidRequestEnabled);
+        settings.PaymentMethods.AnyEnabled.Should().Be(anyMethodExpected);
+        settings.OnlinePaymentEnabled.Should().BeFalse();
+    }
+
     [Fact]
     public async Task UpdateAsync_NormalizesAndPersistsManagedLinks()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var request = new UpdatePublicSiteSettingsRequest(
             " Managed Rent ",
             "Alanya",
@@ -530,7 +557,7 @@ public sealed class PublicSiteSettingsServiceTests
         });
         dbContext.PublicSiteSettings.Add(CreateSettingsWithPages(pagesJson));
         await dbContext.SaveChangesAsync();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var request = CreateSettingsRequest(
         [
             new PublicManagedPageDto(
@@ -566,7 +593,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UpdateAsync_RejectsUnsupportedPublicSettingTranslationLocale()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var request = new UpdatePublicSiteSettingsRequest(
             "Managed Rent",
             "Alanya",
@@ -607,7 +634,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UpdateAsync_RejectsUnsafeInternalHref()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var request = new UpdatePublicSiteSettingsRequest(
             "Managed Rent",
             "Alanya",
@@ -637,7 +664,7 @@ public sealed class PublicSiteSettingsServiceTests
     public async Task UpdateAsync_RejectsUnsafeMapEmbedUrl()
     {
         await using var dbContext = CreateDbContext();
-        var service = new PublicSiteSettingsService(dbContext);
+        var service = CreateService(dbContext);
         var request = new UpdatePublicSiteSettingsRequest(
             "Managed Rent",
             "Alanya",
@@ -671,6 +698,13 @@ public sealed class PublicSiteSettingsServiceTests
 
         return new RentACarDbContext(options);
     }
+
+    private static PublicSiteSettingsService CreateService(
+        RentACarDbContext dbContext,
+        bool enablePayments = true) =>
+        new(
+            dbContext,
+            Options.Create(new PaymentOptions { EnablePayments = enablePayments }));
 
     private static PublicSiteSettings CreateSettingsWithPages(string pagesJson)
     {

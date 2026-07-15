@@ -460,6 +460,73 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.ToTable("customers", (string)null);
                 });
 
+            modelBuilder.Entity("RentACar.Core.Entities.CustomerAccountClaimToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at_utc");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("IssuedFromIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("issued_from_ip");
+
+                    b.Property<string>("IssuedUserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("issued_user_agent");
+
+                    b.Property<DateTime?>("SupersededAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("superseded_at_utc");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_customer_account_claim_tokens_one_active")
+                        .HasFilter("consumed_at_utc IS NULL AND superseded_at_utc IS NULL");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("idx_customer_account_claim_tokens_expires_at_utc");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ux_customer_account_claim_tokens_token_hash");
+
+                    b.HasIndex("CustomerId", "SupersededAtUtc", "ConsumedAtUtc")
+                        .HasDatabaseName("idx_customer_account_claim_tokens_active_lookup");
+
+                    b.ToTable("customer_account_claim_tokens", (string)null);
+                });
+
             modelBuilder.Entity("RentACar.Core.Entities.FeatureFlag", b =>
                 {
                     b.Property<Guid>("Id")

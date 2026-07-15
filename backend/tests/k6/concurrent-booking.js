@@ -8,6 +8,12 @@ const PICKUP_OFFICE_ID = __ENV.PICKUP_OFFICE_ID || '11111111-1111-1111-1111-1111
 const RETURN_OFFICE_ID = __ENV.RETURN_OFFICE_ID || '11111111-1111-1111-1111-111111111112';
 const DEFAULT_VEHICLE_GROUP_ID = __ENV.VEHICLE_GROUP_ID || '22222222-2222-2222-2222-222222222221';
 const SMOKE_MODE = __ENV.SMOKE_MODE === '1';
+const CUSTOMER_EMAIL = __ENV.CUSTOMER_EMAIL || '';
+const CUSTOMER_ACCESS_TOKEN = __ENV.CUSTOMER_ACCESS_TOKEN || '';
+
+if (!CUSTOMER_EMAIL || !CUSTOMER_ACCESS_TOKEN) {
+  throw new Error('CUSTOMER_EMAIL and CUSTOMER_ACCESS_TOKEN are required for authenticated concurrent-booking cleanup.');
+}
 
 export const options = SMOKE_MODE
   ? {
@@ -92,7 +98,7 @@ export default function () {
   }
 
   // 2. Create reservation
-  const customerEmail = `loadtest-${__VU}-${__ITER}@example.com`;
+  const customerEmail = CUSTOMER_EMAIL;
   const reservationPayload = JSON.stringify({
     vehicleGroupId: vehicleGroupId || DEFAULT_VEHICLE_GROUP_ID,
     pickupOfficeId: PICKUP_OFFICE_ID,
@@ -157,10 +163,13 @@ export default function () {
   });
 
   const cancelRes = http.post(
-    `${BASE_URL}/api/v1/reservations/${reservationId}/cancel`,
+    `${BASE_URL}/api/customer/v1/reservations/${reservationId}/cancel`,
     JSON.stringify('k6 concurrent booking cleanup'),
     {
-      headers: requestHeaders(sessionId, { 'Content-Type': 'application/json' }),
+      headers: requestHeaders(sessionId, {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${CUSTOMER_ACCESS_TOKEN}`,
+      }),
     }
   );
 

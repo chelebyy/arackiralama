@@ -1826,6 +1826,31 @@ Tests that exercise reservation editability rules must avoid fixed calendar date
 
 Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern for future reservation fixtures. Keep assertions focused on behavior, not on a hardcoded calendar day.
 
+## 14.6 Account-Claim Abuse Control and Retention
+
+`AccountClaimSecurityOptions` binds the request cooldown, retention period, cleanup interval, and cleanup batch size from configuration. Registration resolves the normalized email to the customer before applying the five-minute cooldown, preserving the generic response for both issued and suppressed requests. PostgreSQL enforces one active claim token per customer through the partial unique index `ux_customer_account_claim_tokens_one_active`; the migration supersedes legacy duplicates before creating that index. A unique-constraint race is handled as a suppressed request without exposing account state, and the failed EF change tracker is cleared before audit persistence.
+
+`CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. The production delivery adapter is intentionally unchanged until Resend is integrated; local acceptance uses the queued email job and does not claim real delivery.
+
+The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales.
+
+## 14.7 Public Reservation and Cancellation Boundary Validation
+
+The unauthenticated lookup path must terminate in `PublicReservationSummaryDto`; it must never create a broad `ReservationDto` and remove fields afterward. The response contract contains only public code, coarse status, pickup/return office names and timestamps, vehicle-group name, customer-facing total and deposit, and currency. Strict rate limiting and `Cache-Control: no-store` apply at the HTTP boundary.
+
+Cancellation has no unauthenticated public route. `POST /api/customer/v1/reservations/{id}/cancel` requires the `CustomerOnly` policy and returns the same not-found response for a missing reservation and a reservation owned by another customer. The ownership check must complete before `CancelReservationAsync` is called. The admin cancellation route remains independently protected by its admin controller policy.
+
+`frontend/e2e/tests/reservation-boundary-security.spec.ts` is the repeatable production-like acceptance harness. It creates isolated customers and a reservation, captures the real public response from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages, compares the response keys to the exact allowlist, checks that fixture-specific PII and internal values are absent, and confirms the non-cacheable header. For rejected anonymous and non-owner mutations, it compares PostgreSQL `status`, `xmin`, and `updated_at` before and after the HTTP request; owner cancellation is the positive control and must persist `Cancelled`. Cleanup runs in `finally`, and post-run test-owned customer, reservation, background-job, and audit counts must be zero.
+
+This harness establishes local acceptance for WP2, not release readiness. Deployment rerun, operational evidence, production payment gates, and the focused final security review remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 14.8 Production Payment Configuration Startup Validation
+
+`PaymentOptionsValidatorTests` includes a host-start matrix that invokes the repository's real private `AddPaymentIntegration` registration and starts an `IHost`, so `ValidateOnStart` behavior is exercised rather than inferred from direct validator calls. Production startup must raise `OptionsValidationException` for a missing provider, Mock, an unknown provider, a sandbox base URL, or incomplete Iyzico credentials. A fully configured Production Iyzico host and an explicitly selected Development Mock host are positive controls and must start successfully.
+
+The current Release image also passes a disposable production-like Docker matrix without recreating the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage. A syntactically valid synthetic secret-injected Iyzico configuration stays running and returns `/health` `200` through a random loopback port. Migration and local seed switches remain disabled, and the selected migration/admin/customer/payment/job/audit database-count fingerprint is unchanged.
+
+This is provider-independent local acceptance for configuration registration and container startup only. Deployment rerun and real-provider sandbox verification remain separate gates in `docs/18_Codex_Security_Findings_Implementation.md`.
 ---
 
 END OF DOCUMENT

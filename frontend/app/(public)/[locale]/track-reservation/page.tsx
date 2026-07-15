@@ -7,7 +7,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  User,
   Car,
   CreditCard,
   CheckCircle,
@@ -23,14 +22,9 @@ import ReservationTimeline from "@/components/public/ReservationTimeline";
 import { getReservationByPublicCode } from "@/lib/api/reservations";
 
 interface ReservationDetails {
-  id: string;
   code: string;
   status: "pending" | "confirmed" | "active" | "completed" | "cancelled";
-  vehicleName: string;
-  vehicleCategory: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  vehicleGroupName: string;
   pickupLocation: string;
   dropoffLocation: string;
   pickupDate: string;
@@ -39,34 +33,11 @@ interface ReservationDetails {
   dropoffTime: string;
   totalAmount: number;
   depositAmount: number;
-  paymentStatus: "pending" | "paid" | "refunded";
-  createdAt: string;
-  confirmedAt?: string;
-  updatedAt: string;
-}
-
-const mockReservation: ReservationDetails = {
-  id: "res_123456789",
-  code: "ALN-2025-8842",
-  status: "confirmed",
-  vehicleName: "Volkswagen Golf",
-  vehicleCategory: "Compact",
-  customerName: "John Smith",
-  customerEmail: "john.smith@email.com",
-  customerPhone: "+44 7700 900001",
-  pickupLocation: "Gazipasa Airport (GZP)",
-  dropoffLocation: "Alanya City Center",
-  pickupDate: "2025-04-15",
-  dropoffDate: "2025-04-22",
-  pickupTime: "14:00",
-  dropoffTime: "10:00",
-  totalAmount: 455,
-  depositAmount: 300,
-  paymentStatus: "paid",
-  createdAt: "2025-03-20T10:30:00Z",
-  confirmedAt: "2025-03-20T11:15:00Z",
-  updatedAt: "2025-03-20T11:15:00Z"
+  currency: string;
 };
+
+const formatAmount = (amount: number, currency: string) =>
+  `${currency === "TRY" ? "₺" : `${currency} `}${amount}`;
 
 export default function TrackReservationPage() {
   const t = useTranslations("trackReservation");
@@ -105,47 +76,23 @@ export default function TrackReservationPage() {
         EXPIRED: "cancelled",
       };
 
-      const paymentStatusMap: Record<string, ReservationDetails["paymentStatus"]> = {
-        PENDING: "pending",
-        AUTHORIZED: "paid",
-        CAPTURED: "paid",
-        SUCCEEDED: "paid",
-        REFUNDED: "refunded",
-        PARTIALLY_REFUNDED: "refunded",
-        PARTIALLYREFUNDED: "refunded",
-        FAILED: "pending",
-        CANCELLED: "pending",
-      };
-
-      const resultAny = result as any;
       const normalizedStatus = String(result.status ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
-      const normalizedPaymentStatus = String(resultAny.paymentStatus ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
-      const pickupDateTime = resultAny.pickupDateTime ? new Date(resultAny.pickupDateTime) : null;
-      const returnDateTime = resultAny.returnDateTime ? new Date(resultAny.returnDateTime) : null;
-      const customerFirstName = result.customer?.firstName ?? resultAny.customerName?.split(" ").slice(0, -1).join(" ") ?? "";
-      const customerLastName = result.customer?.lastName ?? resultAny.customerName?.split(" ").slice(-1).join(" ") ?? "";
+      const pickupDateTime = new Date(result.pickupDateTime);
+      const returnDateTime = new Date(result.returnDateTime);
 
       const mapped: ReservationDetails = {
-        id: result.id,
         code: result.publicCode,
         status: statusMap[normalizedStatus] ?? "pending",
-        vehicleName: result.vehicleName ?? [resultAny.vehicleBrand, resultAny.vehicleModel].filter(Boolean).join(" "),
-        vehicleCategory: resultAny.vehicleGroupName ?? "",
-        customerName: `${customerFirstName} ${customerLastName}`.trim() || resultAny.customerName,
-        customerEmail: result.customer?.email ?? resultAny.customerEmail,
-        customerPhone: result.customer?.phone ?? resultAny.customerPhone,
+        vehicleGroupName: result.vehicleGroupName,
         pickupLocation: result.pickupOfficeName,
         dropoffLocation: result.returnOfficeName,
-        pickupDate: result.pickupDate ?? pickupDateTime?.toISOString().slice(0, 10) ?? "",
-        dropoffDate: result.returnDate ?? returnDateTime?.toISOString().slice(0, 10) ?? "",
-        pickupTime: result.pickupTime ?? pickupDateTime?.toISOString().slice(11, 16) ?? "",
-        dropoffTime: result.returnTime ?? returnDateTime?.toISOString().slice(11, 16) ?? "",
-        totalAmount: resultAny.priceBreakdown?.totalAmount ?? resultAny.totalAmount ?? 0,
-        depositAmount: resultAny.priceBreakdown?.depositAmount ?? resultAny.depositAmount ?? 0,
-        paymentStatus: paymentStatusMap[normalizedPaymentStatus] ?? "pending",
-        createdAt: result.createdAt,
-        updatedAt: result.updatedAt,
-        confirmedAt: result.status === "CONFIRMED" || result.status === "ACTIVE" ? result.updatedAt : undefined,
+        pickupDate: pickupDateTime.toISOString().slice(0, 10),
+        dropoffDate: returnDateTime.toISOString().slice(0, 10),
+        pickupTime: pickupDateTime.toISOString().slice(11, 16),
+        dropoffTime: returnDateTime.toISOString().slice(11, 16),
+        totalAmount: result.totalAmount,
+        depositAmount: result.depositAmount,
+        currency: result.currency,
       };
 
       setReservation(mapped);
@@ -307,8 +254,7 @@ export default function TrackReservationPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="p-4 rounded-xl bg-[#F8FAFC]">
                       <p className="text-sm text-[#64748B] mb-1">{t("details.vehicle")}</p>
-                      <p className="text-base font-semibold text-[#0F172A]">{reservation.vehicleName}</p>
-                      <p className="text-sm text-[#0369A1]">{reservation.vehicleCategory}</p>
+                      <p className="text-base font-semibold text-[#0F172A]">{reservation.vehicleGroupName}</p>
                     </div>
                     <div className="p-4 rounded-xl bg-[#F8FAFC]">
                       <p className="text-sm text-[#64748B] mb-1">{t("rentalPeriod")}</p>
@@ -364,27 +310,6 @@ export default function TrackReservationPage() {
                   </div>
 
                   <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
-                    <User className="h-5 w-5 text-[#0369A1]" />
-                    {t("sections.customer")}
-                  </h2>
-                  <div className="p-4 rounded-xl bg-[#F8FAFC] mb-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-[#64748B] mb-1">{t("customer.name")}</p>
-                        <p className="font-medium text-[#0F172A]">{reservation.customerName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#64748B] mb-1">{t("customer.email")}</p>
-                        <p className="font-medium text-[#0F172A]">{reservation.customerEmail}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#64748B] mb-1">{t("customer.phone")}</p>
-                        <p className="font-medium text-[#0F172A]">{reservation.customerPhone}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-[#0369A1]" />
                     {t("sections.payment")}
                   </h2>
@@ -392,23 +317,12 @@ export default function TrackReservationPage() {
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-[#64748B]">{t("payment.rentalTotal")}</span>
-                        <span className="font-medium text-[#0F172A]">₺{reservation.totalAmount}</span>
+                        <span className="font-medium text-[#0F172A]">{formatAmount(reservation.totalAmount, reservation.currency)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-[#64748B]">{t("payment.securityDeposit")}</span>
-                        <span className="font-medium text-[#0F172A]">₺{reservation.depositAmount}</span>
+                        <span className="font-medium text-[#0F172A]">{formatAmount(reservation.depositAmount, reservation.currency)}</span>
                       </div>
-                    </div>
-                    <div className="pt-4 border-t border-[#E2E8F0] flex justify-between items-center">
-                      <span className="font-semibold text-[#0F172A]">{t("payment.status")}</span>
-                      <span className={cn(
-                        "px-3 py-1 rounded-lg text-sm font-medium",
-                        reservation.paymentStatus === "paid" && "bg-emerald-100 text-emerald-700",
-                        reservation.paymentStatus === "pending" && "bg-amber-100 text-amber-700",
-                        reservation.paymentStatus === "refunded" && "bg-slate-100 text-slate-700"
-                      )}>
-                        {t(`paymentStatus.${reservation.paymentStatus}`)}
-                      </span>
                     </div>
                   </div>
                 </div>

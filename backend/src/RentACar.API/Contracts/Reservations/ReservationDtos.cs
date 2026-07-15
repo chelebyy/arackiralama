@@ -2,6 +2,26 @@ using RentACar.API.Contracts.Pricing;
 
 namespace RentACar.API.Contracts.Reservations;
 
+/// <summary>
+/// Public reservation summary exposed by lookup-by-public-code endpoints.
+/// Intentionally allowlisted: this response is reachable without authentication
+/// and must never leak internal ids, customer/driver PII, plate, provider
+/// identifiers, hold session ids, notes, internal pricing metadata, or stats.
+/// </summary>
+public record PublicReservationSummaryDto
+{
+    public string PublicCode { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public string PickupOfficeName { get; init; } = string.Empty;
+    public string ReturnOfficeName { get; init; } = string.Empty;
+    public DateTime PickupDateTime { get; init; }
+    public DateTime ReturnDateTime { get; init; }
+    public string VehicleGroupName { get; init; } = string.Empty;
+    public decimal TotalAmount { get; init; }
+    public decimal DepositAmount { get; init; }
+    public string Currency { get; init; } = "TRY";
+}
+
 public record ReservationDto
 {
     public Guid Id { get; init; }

@@ -15,7 +15,7 @@ import {
   getReservationByPublicCode,
   placeHold,
 } from "@/lib/api/reservations";
-import type { CreateReservationData, Reservation } from "@/lib/api/types";
+import type { CreateReservationData, PublicReservationSummary, Reservation } from "@/lib/api/types";
 
 vi.mock("@/lib/api/reservations", () => ({
   createReservation: vi.fn(),
@@ -78,6 +78,19 @@ const reservation: Reservation = {
   paymentStatus: "PENDING" as Reservation["paymentStatus"],
 };
 
+const publicReservation: PublicReservationSummary = {
+  publicCode: "ALN-123",
+  status: "PENDING",
+  pickupOfficeName: "Alanya",
+  returnOfficeName: "Gazipasa",
+  pickupDateTime: "2026-05-10T10:00:00Z",
+  returnDateTime: "2026-05-12T09:00:00Z",
+  vehicleGroupName: "Economy",
+  totalAmount: 108,
+  depositAmount: 200,
+  currency: "TRY",
+};
+
 const createData: CreateReservationData = {
   vehicleGroupId: "vehicle-1",
   pickupOfficeId: "ala",
@@ -93,7 +106,7 @@ describe("useReservations", () => {
   });
 
   it("fetches a reservation by public code", async () => {
-    mockedGetReservationByPublicCode.mockResolvedValue(reservation);
+    mockedGetReservationByPublicCode.mockResolvedValue(publicReservation);
 
     const { result } = renderHook(() => useReservation("ALN-123"), { wrapper });
 

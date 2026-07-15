@@ -1546,3 +1546,21 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 **Oluşturulma:** 25 Nisan 2026  
 **Son Güncelleme:** 4 Mayıs 2026 (Phase 10.5 Security Audit — dependency vulnerabilities fixed, manual OWASP scan completed, security findings documented)  
 **Durum:** Aktif Takip
+
+## 13 July 2026 Security Remediation Gate Addendum
+
+| Gate | State | Evidence / blocker |
+| --- | --- | --- |
+| Guest account claim boundary | PARTIAL | Five-minute normalized-account cooldown, one-active-token database constraint, bounded metadata, 14-day worker cleanup, 29/29 focused tests, 765/765 unit tests, 51/51 integration tests, simultaneous Docker request proof, and five-locale Chromium claim/replay/login proof pass. Resend integration and real production delivery are deliberately deferred |
+| Public reservation PII boundary | GO (LOCAL ACCEPTANCE) | Production-like Docker Chromium captured the public response through all five localized confirmation pages; the exact 10-field allowlist matched, test-owned PII/internal values were absent, and `Cache-Control: no-store` was preserved |
+| Anonymous cancellation containment | GO (LOCAL ACCEPTANCE) | Anonymous `404/405` and non-owner `404` left `status/xmin/updated_at` unchanged; authenticated owner cancellation returned `200` and persisted `Cancelled`; the self-cleaning fixture left zero test-owned customer/reservation/job/audit rows |
+| Production payment fail-closed configuration | GO (LOCAL ACCEPTANCE) | Actual host-start `ValidateOnStart` matrix passes 12/12 focused tests. The current Release image also passes the disposable Docker matrix: five unsafe Production configurations exit `139` with the expected general error and no synthetic credential leakage; a syntactically valid synthetic secret-injected Iyzico configuration stays running, returns `/health` `200`, and leaves the selected database fingerprint unchanged. Deployment rerun and real-provider sandbox proof remain separate gates |
+| Provider-authenticated paid transition | DEFERRED / NO-GO TO ENABLE | No provider is selected; payments default disabled and all new-payment entry paths are contained. Real provider/API contract, replay/mismatch negatives, and sandbox success are mandatory before enablement |
+| Credential incident closure | NO-GO | Rotation, provider access-log review, and active/history scan evidence missing |
+| Dependabot human review enforcement | PARTIAL | Auto-merge workflow removed; branch protection and test PR evidence missing |
+| Frontend automated verification | GO | Lint 0 errors/1 existing warning; TypeScript pass; Vitest 61 files/288 tests pass; Next.js production build pass |
+| Backend automated verification | GO | Build 0 warnings/errors; 762 unit + 51 integration tests pass |
+| Disabled-payment Docker proof | GO | Intent creation, forged 3DS return, and forged webhook each return `503`; payment-intent/payment-webhook-job counts remain `4,0` before and after |
+| Combined Docker/browser/security review | NO-GO | Account-claim and public reservation/cancellation five-locale browser proofs plus the production payment startup container matrix pass locally; credential/provider/GitHub operational evidence, deployment rerun, provider-authenticated paid-transition proof, and focused final security review remain incomplete |
+
+Release remains blocked. Implementation-complete, acceptance-complete, and release-ready must continue to be reported separately.

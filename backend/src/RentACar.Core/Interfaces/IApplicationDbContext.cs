@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<AdminUser> AdminUsers { get; }
     DbSet<AuthSession> AuthSessions { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
+    DbSet<CustomerAccountClaimToken> CustomerAccountClaimTokens { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<FeatureFlag> FeatureFlags { get; }

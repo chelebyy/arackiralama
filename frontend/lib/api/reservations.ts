@@ -4,6 +4,7 @@ import type {
   CreateReservationData,
   ExtendHoldData,
   HoldReservationData,
+  PublicReservationSummary,
   ReservationRequestOptions,
   Reservation,
 } from './types';
@@ -35,8 +36,8 @@ export async function createUnpaidReservationRequest(
     : post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
 }
 
-export async function getReservationByPublicCode(code: string): Promise<Reservation> {
-  return get<Reservation>(API_ENDPOINTS.reservations.detail(code));
+export async function getReservationByPublicCode(code: string): Promise<PublicReservationSummary> {
+  return get<PublicReservationSummary>(API_ENDPOINTS.reservations.detail(code));
 }
 
 export async function placeHold(

@@ -1987,3 +1987,45 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Son Güncelleme:** 17 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü, deterministic payment + reservation application-service coverage slice'ları eklendi, frontend %25 ara hedefi kapatıldı ve son tamamlama slice'ı Phase 10.1 frontend coverage gate'i kapattı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` önce **574/574 PASS** + `RentACar.ApiIntegrationTests` **32/32 PASS** ile merged backend line coverage **91.09%** overall üretti; sonra payment follow-up ile `PaymentServiceTests` **33/33 PASS** ve `RentACar.Tests` **582/582 PASS**, ardından reservation follow-up ile `ReservationServiceTests` **64/64 PASS** ve `RentACar.Tests` **590/590 PASS** oldu. Unit-project Cobertura aggregates payment için **%91.71** (564/615) ve reservation için **%82.47** (320/388) gösterdi. Frontend Vitest **190/190 PASS**, overall frontend coverage **63.17%**, `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, `frontend/hooks/admin` **97.23%**, admin fleet/pricing/report page surfaces mostly **85–97%**, and public routes remain high. docs/12 bu güncel durumu yansıtacak şekilde hizalandı; PR follow-through handoff `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md` altında kaydedildi.)
 
 **Durum:** Aktif Takip
+
+## 12 July 2026 - Codex Security Findings Implementation Follow-up
+
+**Implementation status:** WP1 account claim and WP2 public reservation/cancellation boundaries are backend-implemented; WP0/WP4 containment changes are present. No payment provider is selected yet, so WP3 is intentionally deferred and contained: payments default disabled and intent, 3DS return, webhook, and admin retry paths fail closed before service mutation.
+
+**Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; full backend passed 762/762 unit and 51/51 API integration tests. Frontend lint passed with 0 errors and 1 existing warning, TypeScript passed, Vitest passed 61/61 files and 288/288 tests, and the Next.js production build passed. Local Docker requests to intent creation, forged 3DS return, and forged webhook each returned `503`; payment-intent/payment-webhook-job counts stayed `4,0` before and after.
+
+**Open gates:** the remaining Docker/browser matrix, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Production Payment Configuration Startup Matrix
+
+**Implementation status:** The provider-independent WP5 payment-configuration gate now exercises the actual `ValidateOnStart` host path instead of only calling `PaymentOptionsValidator` directly. Production startup rejects missing, Mock, unknown, sandbox, and incomplete configurations; a fully configured Iyzico Production host and an intentional Development Mock host remain valid controls. No provider-specific paid-transition behavior was introduced and payments remain default disabled in tracked deployment configuration.
+
+**Fresh verification:** `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore --filter "FullyQualifiedName~PaymentOptionsValidatorTests"` passed 12/12. The five unsafe Production cases each raised `OptionsValidationException` during `IHost.StartAsync`; the safe Production and Development controls started successfully.
+
+**Production-like Docker evidence:** the current Release API image was exercised in disposable containers without replacing or stopping the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations all exited `139`, emitted the expected general payment-validation error, and did not log synthetic credential values. A syntactically valid synthetic secret-injected Iyzico configuration stayed running and returned `/health` `200` through a random loopback port. Migrations and local seeds were disabled; the selected migration/admin/customer/payment/job/audit count fingerprint was unchanged before and after.
+
+**Open gates:** deployment rerun, real-provider contract/sandbox proof before enablement, credential and GitHub operational evidence, and the focused final security review remain open. This closes the local code and production-like container startup matrices only; it is not provider acceptance or release readiness.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Account-Claim Abuse-Control and Cleanup Follow-up
+
+**Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production delivery remains intentionally deferred until Resend is integrated.
+
+**Fresh verification:** focused account-claim and cleanup tests passed 29/29; full backend suites passed 765/765 unit and 51/51 API integration tests; build passed with 0 warnings/errors; EF reports no pending model changes. Docker PostgreSQL contains migration `20260712214328_HardenAccountClaimAbuseControls` and its partial unique index. Two simultaneous requests returned `200,200` while creating one active token and one email job; worker cleanup deleted an isolated 20-day-old token. The self-cleaning Chromium scenario passed claim, replay rejection, login, and unchanged-profile checks across `tr`, `en`, `ru`, `ar`, and `de`.
+
+**Open gates:** Resend production delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Credential rotation/access-log/history evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Public Reservation and Cancellation Boundary Acceptance
+
+**Implementation status:** WP2 production code was already repository-safe: the unauthenticated lookup maps directly to `PublicReservationSummaryDto`, uses the Strict limiter and `no-store`, while cancellation remains available only through customer ownership checks and the admin route. This slice added repeatable production-like acceptance evidence without changing the production boundary.
+
+**Fresh verification:** `reservation-boundary-security.spec.ts` passed 1/1 in Docker Chromium. The browser captured `GET /api/v1/reservations/{publicCode}` from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages; each payload had exactly the documented 10-field allowlist, excluded the isolated reservation/customer/vehicle/office identifiers, customer PII, and private notes, and preserved `Cache-Control: no-store`. Anonymous cancellation returned `404/405` and non-owner cancellation returned `404`; both left `status`, `xmin`, and `updated_at` unchanged. Owner cancellation returned `200` and persisted `Cancelled`. Post-test customer/reservation/job/audit counts were all zero. Focused backend tests passed 103/103, focused frontend tests passed 5/5, TypeScript and scoped ESLint passed, and the production-like Docker build completed.
+
+**Open gates:** WP2 is locally acceptance-proven, but release remains blocked by credential rotation/access-log/history evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

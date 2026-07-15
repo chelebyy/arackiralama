@@ -119,6 +119,8 @@ public sealed class ReservationsController(IReservationService reservationServic
     }
 
     [HttpGet("{publicCode}")]
+    [EnableRateLimiting(RateLimitPolicyNames.Strict)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> GetByPublicCode(
         string publicCode,
         CancellationToken cancellationToken)
@@ -196,21 +198,5 @@ public sealed class ReservationsController(IReservationService reservationServic
         }
 
         return OkResponse<object?>(null, "Rezervasyon tutması serbest bırakıldı.");
-    }
-
-    [HttpPost("{reservationId:guid}/cancel")]
-    public async Task<IActionResult> Cancel(
-        Guid reservationId,
-        [FromBody] string? reason,
-        CancellationToken cancellationToken)
-    {
-        var success = await reservationService.CancelReservationAsync(reservationId, reason, cancellationToken);
-
-        if (!success)
-        {
-            return BadRequestResponse("Rezervasyon iptal edilemedi.");
-        }
-
-        return OkResponse<object?>(null, "Rezervasyon başarıyla iptal edildi.");
     }
 }

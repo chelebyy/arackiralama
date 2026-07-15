@@ -32,6 +32,15 @@ public static class DependencyInjection
             provider.GetRequiredService<RentACarDbContext>());
 
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddOptions<AccountClaimSecurityOptions>()
+            .Bind(configuration.GetSection(AccountClaimSecurityOptions.SectionName))
+            .Validate(options => options.RequestCooldownMinutes is >= 1 and <= 1440)
+            .Validate(options => options.TokenRetentionDays is >= 1 and <= 365)
+            .Validate(options => options.CleanupIntervalMinutes is >= 1 and <= 1440)
+            .Validate(options => options.CleanupBatchSize is >= 1 and <= 5000)
+            .ValidateOnStart();
+        services.AddScoped<CustomerAccountClaimTokenCleanupService>();
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
         services.Configure<BackgroundJobProcessorOptions>(configuration.GetSection(BackgroundJobProcessorOptions.SectionName));
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
