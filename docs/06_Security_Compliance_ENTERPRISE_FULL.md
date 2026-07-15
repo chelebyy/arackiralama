@@ -55,7 +55,9 @@ Updated: 2026-07-15 (PR #402 merge evidence and main-branch governance added)
 -   PII masked in logs
 -   5-year payment log retention
 
-## 5. Dependency Security
+## 5. Dependency Security (Historical Snapshot)
+
+> The results in sections 5.1 and 5.2 are the 4 May 2026 point-in-time scans. They are retained as historical evidence and must not be used as the current release gate. Section 13 records the live dependency-alert state.
 
 ### 5.1 Backend (4 Mayıs 2026)
 
@@ -77,7 +79,7 @@ Updated: 2026-07-15 (PR #402 merge evidence and main-branch governance added)
 -   5xx alerts
 -   Disk usage alerts
 
-## 7. OWASP Top 10 Değerlendirmesi (Phase 10.5)
+## 7. OWASP Top 10 Değerlendirmesi (Phase 10.5 Historical Snapshot)
 
 | # | Kategori | Durum | Notlar |
 |---|----------|-------|--------|
@@ -86,7 +88,7 @@ Updated: 2026-07-15 (PR #402 merge evidence and main-branch governance added)
 | A03 | Injection | ✅ | EF Core parameterized queries, raw SQL yok (production) |
 | A04 | Insecure Design | 🟡 | CORS eksik, security headers eksik — medium risk |
 | A05 | Security Misconfiguration | 🟡 | `AllowedHosts: "*"`, Swagger unconditionally, `AutoMigrateOnStartup: true` |
-| A06 | Vulnerable Components | ✅ | Dependency scan: 0 vulnerability |
+| A06 | Vulnerable Components | 🟡 | The Phase 10.5 scan was clean at that time; current GitHub alert state is open and tracked in section 13 |
 | A07 | Auth Failures | ✅ | JWT + refresh + session validation + brute force lockout |
 | A08 | Data Integrity Failures | ✅ | Webhook HMAC verification, idempotency keys |
 | A09 | Logging Failures | ✅ | Audit log + request log + error log tam |
@@ -98,7 +100,7 @@ Updated: 2026-07-15 (PR #402 merge evidence and main-branch governance added)
 | --- | --- | --- | --- |
 | Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response; normalized-account cooldown; one-active-token database invariant; bounded retention cleanup | Focused abuse/cleanup tests 29/29; Docker concurrency, worker cleanup, and five-locale Chromium claim/replay/login proof pass; final PR #402 backend run passed 794/794 unit and 53/53 integration | Resend integration and real production email-delivery proof, deferred until the provider is introduced |
 | Public reservation read | Allowlisted public DTO, strict rate limit, `no-store` | Production-like Docker Chromium captured the real response through all five localized confirmation pages; the exact 10-field allowlist matched and test-owned PII/internal values were absent | Re-run after deployment as part of the final combined release matrix |
-| Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Production-like browser HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled`; final PR #402 review found no major issue | Re-run after deployment |
+| Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Production-like browser HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled`; final PR #402 review found no major issue | Re-run after deployment and include in the focused final security validation |
 | Production payment configuration | `ValidateOnStart`; missing/Mock/unknown/sandbox/incomplete configurations rejected; a fully configured real provider may boot with payments disabled | 13/13 focused host-start tests plus the current Release-image Docker matrix pass: five unsafe Production configurations exit non-zero without synthetic credential leakage; the safe-shaped control returns `/health` `200` with migrations/seeds disabled and an unchanged selected database fingerprint | GO for local configuration/startup acceptance; deployment rerun and real-provider sandbox proof remain separate gates |
 | Payment state integrity | Payments default disabled; intent, 3DS return, webhook, and admin retry paths return `503` before service mutation | Unit proof plus local Docker HTTP/database-count proof | Keep disabled until a real provider is selected; then require server-to-server verification, negative/replay tests, and sandbox success |
 | Secret artifacts | Generated Ship-Safe artifacts removed; scanner outputs ignored; Gitleaks scans working tree and Git history | Gitleaks passed on PR #402 and post-merge `main`; uploaded metadata is sanitized and retained for seven days | Provider-side credential rotation and access-log review |
