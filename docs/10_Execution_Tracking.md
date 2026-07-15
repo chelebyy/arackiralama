@@ -277,7 +277,7 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 | 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/ci.yml icindeki docker-push job'u ile GHCR push aktif |
 
-| 1.7.4 | Branch protection rules | ⬜ | | | | Soft main guard kaldirildi; native branch protection aktif degil |
+| 1.7.4 | Branch protection rules | ✅ | AI | 15.07.2026 | 15.07.2026 | Active GitHub ruleset `Protect main - solo developer` (ID `18985047`): PR, resolved threads, strict seven-check gate, squash-only, no bypass, deletion/non-fast-forward blocked |
 
 #### 1.8 Test Infrastructure Setup
 
@@ -1984,7 +1984,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 17 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü, deterministic payment + reservation application-service coverage slice'ları eklendi, frontend %25 ara hedefi kapatıldı ve son tamamlama slice'ı Phase 10.1 frontend coverage gate'i kapattı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` önce **574/574 PASS** + `RentACar.ApiIntegrationTests` **32/32 PASS** ile merged backend line coverage **91.09%** overall üretti; sonra payment follow-up ile `PaymentServiceTests` **33/33 PASS** ve `RentACar.Tests` **582/582 PASS**, ardından reservation follow-up ile `ReservationServiceTests` **64/64 PASS** ve `RentACar.Tests` **590/590 PASS** oldu. Unit-project Cobertura aggregates payment için **%91.71** (564/615) ve reservation için **%82.47** (320/388) gösterdi. Frontend Vitest **190/190 PASS**, overall frontend coverage **63.17%**, `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, `frontend/hooks/admin` **97.23%**, admin fleet/pricing/report page surfaces mostly **85–97%**, and public routes remain high. docs/12 bu güncel durumu yansıtacak şekilde hizalandı; PR follow-through handoff `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md` altında kaydedildi.)
+**Son Güncelleme:** 15 Temmuz 2026 (PR #402 merge, post-merge `main` kontrolleri ve aktif ana dal ruleset kanıtı aşağıdaki güncel kilometre taşında kaydedildi; önceki faz ayrıntıları tarihli bölümlerde korunmaktadır.)
 
 **Durum:** Aktif Takip
 
@@ -2027,5 +2027,15 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Fresh verification:** `reservation-boundary-security.spec.ts` passed 1/1 in Docker Chromium. The browser captured `GET /api/v1/reservations/{publicCode}` from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages; each payload had exactly the documented 10-field allowlist, excluded the isolated reservation/customer/vehicle/office identifiers, customer PII, and private notes, and preserved `Cache-Control: no-store`. Anonymous cancellation returned `404/405` and non-owner cancellation returned `404`; both left `status`, `xmin`, and `updated_at` unchanged. Owner cancellation returned `200` and persisted `Cancelled`. Post-test customer/reservation/job/audit counts were all zero. Focused backend tests passed 103/103, focused frontend tests passed 5/5, TypeScript and scoped ESLint passed, and the production-like Docker build completed.
 
 **Open gates:** WP2 is locally acceptance-proven, but release remains blocked by credential rotation/access-log/history evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - PR #402 Merge and Main Governance Closure
+
+**Implementation status:** PR #402 was squash-merged to `main` as `f0da549b90fc4646267f3a027370c4d2e0a67b90` after the final Codex review reported no major issue at reviewed head `4371fce226`. Repository ruleset `Protect main - solo developer` (ID `18985047`) is active for `refs/heads/main`: pull request and review-thread resolution are required, the branch must be current, seven named CI/security checks are strict, only squash merge is allowed, no bypass actor is configured, and deletion/non-fast-forward updates are blocked. The approving-review threshold is intentionally zero for the solo-developer workflow; merge remains a manual decision.
+
+**Fresh verification:** Final PR validation passed targeted payment/settings/reservation tests 133/133, backend build with 0 warnings/errors, backend suites 794/794 unit and 53/53 integration, frontend lint with 0 errors and 1 existing warning, frontend tests 299/299, and the production build. The post-merge `main` run passed backend unit/integration, frontend lint/test/build, Docker build, and GHCR publication. Secret Scan, React Doctor, CodeQL, and Dependabot Updates also passed. Existing Dependabot PR #401 reports `BEHIND`, demonstrating that strict current-main enforcement requires refresh and check rerun before merge.
+
+**Open gates:** Provider credential rotation/access-log evidence and a production deployment rerun remain release blockers. Real Resend delivery and real-provider payment sandbox evidence remain intentionally deferred feature gates. A Dependabot PR created or refreshed after ruleset activation should be observed through the complete required-check and manual-decision lifecycle. This governance closure is not a complete security audit or a release-readiness declaration.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

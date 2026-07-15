@@ -1851,6 +1851,23 @@ This harness establishes local acceptance for WP2, not release readiness. Deploy
 The current Release image also passes a disposable production-like Docker matrix without recreating the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage. A syntactically valid synthetic secret-injected Iyzico configuration stays running and returns `/health` `200` through a random loopback port. Migration and local seed switches remain disabled, and the selected migration/admin/customer/payment/job/audit database-count fingerprint is unchanged.
 
 This is provider-independent local acceptance for configuration registration and container startup only. Deployment rerun and real-provider sandbox verification remain separate gates in `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 14.9 Main-Branch Ruleset and Required Checks
+
+The `main` branch is governed by GitHub repository ruleset `Protect main - solo developer` (ID `18985047`). Workflow YAML defines how checks execute; the ruleset defines whether their result permits a merge. The ruleset must remain active, target only `refs/heads/main`, have no bypass actor, require a pull request and resolved review threads, permit squash merge only, and block branch deletion and non-fast-forward updates.
+
+The solo-developer approval threshold is zero. This avoids requiring an unavailable second maintainer while preserving a manual merge decision and the technical gates. Strict required-status-check policy requires the pull-request head to be updated against current `main` and binds these exact contexts to the GitHub Actions integration:
+
+1. `Backend Unit Tests`
+2. `Backend Integration Tests`
+3. `Frontend Lint, Test & Build`
+4. `Docker Build`
+5. `Gitleaks`
+6. `CodeQL Analyze (csharp)`
+7. `CodeQL Analyze (javascript-typescript)`
+
+Acceptance evidence must distinguish execution from enforcement. A successful Actions run proves that a workflow executed successfully; the active ruleset response for `main` proves that the required result is enforced. For Dependabot, retain at least one observable post-ruleset PR lifecycle showing the branch update, required checks, and manual merge or close decision. A pre-ruleset PR reporting `BEHIND` is useful strict-update evidence but is not a complete post-ruleset lifecycle.
+
 ---
 
 END OF DOCUMENT

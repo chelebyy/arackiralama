@@ -1,7 +1,7 @@
 # Security & Compliance Document
 
 Date: 2026-02-25
-Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
+Updated: 2026-07-15 (PR #402 merge evidence and main-branch governance added)
 
 ## 1. Network Security
 
@@ -92,16 +92,17 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 | A09 | Logging Failures | ✅ | Audit log + request log + error log tam |
 | A10 | SSRF | ✅ | Outbound requests sadece configured payment provider URL'lerine |
 
-## 13. Codex Security Findings Remediation Status (12 July 2026)
+## 13. Codex Security Findings Remediation Status (15 July 2026)
 
 | Boundary | Implemented control | Current evidence | Remaining gate |
 | --- | --- | --- | --- |
-| Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response; normalized-account cooldown; one-active-token database invariant; bounded retention cleanup | Focused abuse/cleanup tests 29/29; full backend 765/765 unit and 51/51 integration; Docker concurrency, worker cleanup, and five-locale Chromium claim/replay/login proof pass | Resend integration and real production email-delivery proof, deferred until the provider is introduced |
+| Guest account claim | Hashed, expiring, single-use email claim token; previous active tokens superseded; generic registration response; normalized-account cooldown; one-active-token database invariant; bounded retention cleanup | Focused abuse/cleanup tests 29/29; Docker concurrency, worker cleanup, and five-locale Chromium claim/replay/login proof pass; final PR #402 backend run passed 794/794 unit and 53/53 integration | Resend integration and real production email-delivery proof, deferred until the provider is introduced |
 | Public reservation read | Allowlisted public DTO, strict rate limit, `no-store` | Production-like Docker Chromium captured the real response through all five localized confirmation pages; the exact 10-field allowlist matched and test-owned PII/internal values were absent | Re-run after deployment as part of the final combined release matrix |
-| Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Production-like browser HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled` | Re-run after deployment and include in the focused final security review |
-| Production payment configuration | `ValidateOnStart`; Mock/unknown/sandbox/incomplete/disabled rejected | 12/12 focused host-start tests plus the current Release-image Docker matrix pass: five unsafe Production configurations exit non-zero without synthetic credential leakage; the safe-shaped control returns `/health` `200` with migrations/seeds disabled and an unchanged selected database fingerprint | GO for local configuration/startup acceptance; deployment rerun and real-provider sandbox proof remain separate gates |
+| Reservation cancellation | Anonymous route removed; owner/admin routes preserved | Production-like browser HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled`; final PR #402 review found no major issue | Re-run after deployment |
+| Production payment configuration | `ValidateOnStart`; missing/Mock/unknown/sandbox/incomplete configurations rejected; a fully configured real provider may boot with payments disabled | 13/13 focused host-start tests plus the current Release-image Docker matrix pass: five unsafe Production configurations exit non-zero without synthetic credential leakage; the safe-shaped control returns `/health` `200` with migrations/seeds disabled and an unchanged selected database fingerprint | GO for local configuration/startup acceptance; deployment rerun and real-provider sandbox proof remain separate gates |
 | Payment state integrity | Payments default disabled; intent, 3DS return, webhook, and admin retry paths return `503` before service mutation | Unit proof plus local Docker HTTP/database-count proof | Keep disabled until a real provider is selected; then require server-to-server verification, negative/replay tests, and sandbox success |
-| Secret artifacts | Generated Ship-Safe artifacts removed and scanner outputs ignored | Working-tree policy change present | Provider-side rotation, access-log review, active/history secret scans |
-| Dependency review | Dependabot auto-merge workflow removed | Repository workflow change present | Branch protection and test PR evidence requiring human approval |
+| Secret artifacts | Generated Ship-Safe artifacts removed; scanner outputs ignored; Gitleaks scans working tree and Git history | Gitleaks passed on PR #402 and post-merge `main`; uploaded metadata is sanitized and retained for seven days | Provider-side credential rotation and access-log review |
+| Main change governance | Active `Protect main - solo developer` ruleset requires a PR, resolved threads, current branch, seven checks, and squash merge; deletion/non-fast-forward updates blocked; no bypass actors | Ruleset ID `18985047` verified active for `refs/heads/main`; PR #402 required checks and post-merge `main` workflows passed | Preserve exact check names and revalidate the ruleset after workflow renames |
+| Dependency review | Dependabot auto-merge workflow removed; dependency PRs use the same ruleset and require a manual merge/close decision | Existing PR #401 is mergeable at the Git-object level but `BEHIND`, so strict policy requires refresh and check rerun | Observe one Dependabot PR created or refreshed after ruleset activation through the complete gated lifecycle |
 
 No statement in this table means the repository has received a complete security audit or is production-safe. `docs/18_Codex_Security_Findings_Implementation.md` remains the closure authority.
