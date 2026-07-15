@@ -2039,3 +2039,13 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Open gates:** Provider credential rotation/access-log evidence, dependency-alert triage/remediation or explicit risk acceptance, a production deployment rerun, and focused final security validation against the original attack paths remain release blockers. Real Resend delivery and real-provider payment sandbox evidence remain intentionally deferred feature gates. A Dependabot PR created or refreshed after ruleset activation should be observed through the complete required-check and manual-decision lifecycle. This governance closure is not a complete security audit or a release-readiness declaration.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - Frontend Dependabot Alert Remediation (Local)
+
+**Implementation status:** Branch `codex/fix-frontend-dependabot-alerts` converts the 11 open frontend Dependabot alerts into a five-package patched set. The manifest pins Vite 7.3.5 as an explicit development dependency, resolves `@babel/core` 7.29.6, undici 7.28.0, and js-yaml 4.2.0, and applies the narrow `vite@7.3.5>esbuild` override to 0.28.1 because Vite 7.3.5 still declares the vulnerable `^0.27.0` esbuild line. None of the five vulnerable versions remains in the lockfile or installed pnpm store.
+
+**Fresh verification:** pnpm 9.15.9 frozen install passed. TypeScript passed; ESLint reported 0 errors and 1 existing unused-disable warning; Vitest coverage passed 63 files / 299 tests with 80.59% statement coverage; the Next.js production build completed. The local `pnpm audit` client still targets the retired registry endpoint and returned HTTP `410` (`ERR_PNPM_AUDIT_BAD_RESPONSE`), which is recorded as no result rather than a clean scan. Per-alert validation reports and ledger receipts are stored outside the repository under the current temporary Codex Security scan bundle.
+
+**Open gates:** The remediation is local only. A dedicated PR must pass the repository ruleset, required checks, and review; after manual merge, GitHub must recalculate the default-branch dependency graph and report all 11 alerts closed. Provider credential/access-log evidence, deployment rerun, and focused final security validation remain separate release blockers.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
