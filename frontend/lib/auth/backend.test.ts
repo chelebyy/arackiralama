@@ -66,7 +66,7 @@ describe("auth backend helpers", () => {
       password: "secret",
       fullName: "New Customer",
       phone: "+905551112233",
-    });
+    }, "de-DE,de;q=0.9");
     await callPasswordResetRequest({ email: "new@example.test", principalScope: "Customer" });
     await callPasswordResetConfirm({
       token: "reset-token",
@@ -93,6 +93,9 @@ describe("auth backend helpers", () => {
           password: "secret",
           fullName: "New Customer",
           phone: "+905551112233",
+        }),
+        headers: expect.objectContaining({
+          "accept-language": "de-DE,de;q=0.9",
         }),
       })
     );

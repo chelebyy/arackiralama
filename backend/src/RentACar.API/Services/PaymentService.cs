@@ -409,13 +409,19 @@ public sealed class PaymentService(
         Guid reservationId,
         CancellationToken cancellationToken = default)
     {
-        EnsurePaymentsEnabled();
-
         var reservation = await _dbContext.Reservations
             .FirstOrDefaultAsync(x => x.Id == reservationId, cancellationToken);
         if (reservation == null)
         {
             return null;
+        }
+
+        if (!_paymentOptions.EnablePayments)
+        {
+            return BuildSkippedDepositOperation(
+                reservationId,
+                "CreatePreAuthorization",
+                "Ödemeler devre dışıyken depozito ön provizyonu atlandı.");
         }
 
         var mainPaymentIntent = await GetLatestRentalPaymentIntentAsync(reservationId, cancellationToken);

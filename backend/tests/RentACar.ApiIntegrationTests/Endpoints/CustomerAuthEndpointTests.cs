@@ -6,13 +6,59 @@ using Microsoft.Extensions.DependencyInjection;
 using RentACar.API.Contracts.Auth;
 using RentACar.API.Services;
 using RentACar.ApiIntegrationTests.Infrastructure;
+using RentACar.Core.Constants;
 using RentACar.Core.Entities;
+using RentACar.Core.Interfaces.Notifications;
 using Xunit;
 
 namespace RentACar.ApiIntegrationTests.Endpoints;
 
 public sealed class CustomerAuthEndpointTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
+    [Fact]
+    public async Task CustomerRegister_ConcurrentClaimRequests_QueueOnlyOneClaimEmail()
+    {
+        var email = $"claim-register-{Guid.NewGuid():N}@rentacar.test";
+        var customerId = await WithDbContextAsync(async dbContext =>
+        {
+            var customer = new Customer
+            {
+                Email = email,
+                FullName = "Claim Registration Customer",
+                Phone = "+90 555 000 00 07",
+                IdentityNumber = string.Empty,
+                Nationality = "TR",
+                LicenseYear = 0,
+                PasswordHash = null
+            };
+
+            dbContext.Customers.Add(customer);
+            await dbContext.SaveChangesAsync();
+            return customer.Id;
+        });
+
+        var requests = Enumerable.Range(0, 2)
+            .Select(_ => Client.PostAsJsonAsync(
+                "/api/customer/v1/auth/register",
+                new CustomerRegisterRequest(email, "IgnoredPassword1!", null, null)));
+
+        var responses = await Task.WhenAll(requests);
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+
+        await WithDbContextAsync(async dbContext =>
+        {
+            (await dbContext.CustomerAccountClaimTokens.CountAsync(token => token.CustomerId == customerId))
+                .Should().Be(1);
+            (await dbContext.BackgroundJobs.CountAsync(job =>
+                job.Type == BackgroundJobTypes.NotificationEmailSend
+                && job.Payload.Contains(NotificationTemplateKeys.CustomerAccountClaim)
+                && job.Payload.Contains(email)))
+                .Should().Be(1);
+
+            return true;
+        });
+    }
+
     [Fact]
     public async Task CustomerAccountClaim_ConcurrentRequests_OnlyOneSucceeds()
     {

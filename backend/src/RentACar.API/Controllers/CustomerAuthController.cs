@@ -583,6 +583,17 @@ public sealed class CustomerAuthController(
                     && !token.SupersededAtUtc.HasValue)
                 .ToListAsync(cancellationToken);
 
+            if (activeTokens.Any(token => token.CreatedAt >= cooldownCutoff))
+            {
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                _logger.LogInformation("Customer account claim request suppressed by concurrent cooldown check.");
+                return false;
+            }
+
             foreach (var activeToken in activeTokens)
             {
                 activeToken.SupersededAtUtc = utcNow;
@@ -602,6 +613,11 @@ public sealed class CustomerAuthController(
                 IssuedFromIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
                 IssuedUserAgent = Truncate(ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString(), 512)
             });
+
+            if (transaction is not null)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
 
             await _accountClaimEmailDispatcher.DispatchAsync(
                 destinationEmail,

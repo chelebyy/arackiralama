@@ -401,6 +401,23 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDepositPreAuthorizationAsync_WhenPaymentsDisabled_ReturnsSkippedOperationWithoutCallingProvider()
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider, enablePayments: false);
+        var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Confirmed);
+
+        var result = await sut.CreateDepositPreAuthorizationAsync(reservation.Id, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result!.Operation.Should().Be("CreatePreAuthorization");
+        result.Status.Should().Be("Skipped");
+        result.PaymentIntentId.Should().Be(Guid.Empty);
+        result.Reason.Should().Be("Ödemeler devre dışıyken depozito ön provizyonu atlandı.");
+        provider.CreatePreAuthorizationCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task CreateDepositPreAuthorizationAsync_WhenSuccessfulMainPaymentDoesNotExist_ReturnsSkippedOperationWithReason()
     {
         var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Paid);

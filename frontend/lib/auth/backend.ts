@@ -64,11 +64,12 @@ export async function callRegisterEndpoint(payload: {
   password: string;
   fullName?: string;
   phone?: string;
-}) {
+}, acceptLanguage?: string) {
   const backendResponse = await fetch(buildBackendUrl("/api/customer/v1/auth/register"), {
     method: "POST",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
+      ...(acceptLanguage ? { "accept-language": acceptLanguage } : {})
     },
     body: JSON.stringify(payload),
     cache: "no-store"

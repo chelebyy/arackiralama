@@ -37,12 +37,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const acceptLanguage = request.headers.get("accept-language")?.trim();
+
   const { backendResponse, envelope } = await callRegisterEndpoint({
     email,
     password,
     fullName: body.fullName?.trim(),
     phone: body.phone?.trim()
-  });
+  }, acceptLanguage || undefined);
 
   return NextResponse.json(
     {
