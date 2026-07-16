@@ -33,12 +33,14 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 NEXT_PUBLIC_API_BASE_URL=https://your-domain.com
 NEXT_PUBLIC_API_URL=https://your-domain.com/api/v1
 NEXT_PUBLIC_ADMIN_API_URL=/api/admin
+NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com
 AUTH_BACKEND_URL=http://api:8080
 ```
 
 Rules:
 
 - `NEXT_PUBLIC_*` values are browser-facing and are baked into the Next.js client bundle at build time.
+- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` is server-side and must be the public HTTPS site origin used in account-claim links. Keep it equal to the production `NEXT_PUBLIC_APP_URL`, but configure it separately so local HTTP browser targets cannot be injected into the Production API.
 - `AUTH_BACKEND_URL` is server-side only and should stay internal in Dokploy/Docker: `http://api:8080`.
 - After changing any `NEXT_PUBLIC_*` value in Dokploy, rebuild/redeploy the web service.
 - Do not use Tailscale IPs or Docker service names in browser-facing `NEXT_PUBLIC_*` values for production.
@@ -66,7 +68,7 @@ Production hardening before real launch:
    ```
 
 3. Attach the public domain to the `web` service.
-4. Set env values using the production settings above.
+4. Set env values using the production settings above, including `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com`.
 5. Trigger deploy and wait for status `done`.
 6. Verify:
 

@@ -71,7 +71,7 @@ services:
       LocalAdminSeed__AllowOutsideDevelopment: ${LOCAL_ADMIN_SEED_ALLOW_OUTSIDE_DEVELOPMENT:-false}
       Database__AutoMigrateOnStartup: ${DATABASE_AUTO_MIGRATE_ON_STARTUP:-true}
       Cors__AllowedOrigins__0: ${NEXT_PUBLIC_APP_URL}
-      Notifications__PublicFrontendBaseUrl: ${NEXT_PUBLIC_APP_URL}
+      Notifications__PublicFrontendBaseUrl: ${NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL}
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:
