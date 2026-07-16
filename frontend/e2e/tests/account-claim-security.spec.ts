@@ -69,20 +69,21 @@ test("account claim is localized, single-use, and creates a working customer cre
     expect(queuedPayload.Locale).toBe("en-US");
 
     const claimUrl = new URL(queuedPayload.Variables.ClaimUrl, "http://localhost");
-    const token = claimUrl.searchParams.get("token");
+    expect(claimUrl.searchParams.get("token")).toBeNull();
+    const token = new URLSearchParams(claimUrl.hash.slice(1)).get("token");
     expect(token).toBeTruthy();
 
     for (const expectation of localeExpectations) {
-      await page.goto(`/${expectation.locale}/account-claim?token=${encodeURIComponent(token!)}`);
+      await page.goto(`/${expectation.locale}/account-claim#token=${encodeURIComponent(token!)}`);
       await expect(page.getByRole("heading", { name: expectation.title })).toBeVisible();
       await expect(page.getByRole("button", { name: expectation.submit })).toBeVisible();
     }
 
-    await page.goto(`/en/account-claim?token=${encodeURIComponent(token!)}`);
+    await page.goto(`/en/account-claim#token=${encodeURIComponent(token!)}`);
     await page.getByLabel("New password", { exact: true }).fill(password);
     await page.getByLabel("Confirm new password", { exact: true }).fill(password);
     const claimResponsePromise = page.waitForResponse(
-      (response) => response.url().endsWith("/api/customer/v1/auth/claim") && response.request().method() === "POST"
+      (response) => response.url().endsWith("/api/auth/claim") && response.request().method() === "POST"
     );
     await page.getByRole("button", { name: "Set Password" }).click();
     const claimResponse = await claimResponsePromise;

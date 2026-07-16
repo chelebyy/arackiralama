@@ -1547,20 +1547,20 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 **Son Güncelleme:** 4 Mayıs 2026 (Phase 10.5 Security Audit — dependency vulnerabilities fixed, manual OWASP scan completed, security findings documented)  
 **Durum:** Aktif Takip
 
-## 13 July 2026 Security Remediation Gate Addendum
+## 16 July 2026 Security Remediation Gate Addendum
 
 | Gate | State | Evidence / blocker |
 | --- | --- | --- |
-| Guest account claim boundary | PARTIAL | Five-minute normalized-account cooldown, one-active-token database constraint, bounded metadata, 14-day worker cleanup, 29/29 focused tests, 765/765 unit tests, 51/51 integration tests, simultaneous Docker request proof, and five-locale Chromium claim/replay/login proof pass. Resend integration and real production delivery are deliberately deferred |
+| Guest account claim boundary | PARTIAL | Fresh focused final validation passed 143/143 security tests, 794/794 unit tests, 53/53 integration tests, and the five-locale Chromium claim/replay/login/profile-preservation path. The E2E harness was aligned with the secure `#token=` and `/api/auth/claim` contracts. Resend integration and real production delivery are deliberately deferred |
 | Public reservation PII boundary | GO (LOCAL ACCEPTANCE) | Production-like Docker Chromium captured the public response through all five localized confirmation pages; the exact 10-field allowlist matched, test-owned PII/internal values were absent, and `Cache-Control: no-store` was preserved |
 | Anonymous cancellation containment | GO (LOCAL ACCEPTANCE) | Anonymous `404/405` and non-owner `404` left `status/xmin/updated_at` unchanged; authenticated owner cancellation returned `200` and persisted `Cancelled`; the self-cleaning fixture left zero test-owned customer/reservation/job/audit rows |
-| Production payment fail-closed configuration | GO (LOCAL ACCEPTANCE) | Actual host-start `ValidateOnStart` matrix passes 12/12 focused tests. The current Release image also passes the disposable Docker matrix: five unsafe Production configurations exit `139` with the expected general error and no synthetic credential leakage; a syntactically valid synthetic secret-injected Iyzico configuration stays running, returns `/health` `200`, and leaves the selected database fingerprint unchanged. Deployment rerun and real-provider sandbox proof remain separate gates |
+| Production payment fail-closed configuration | GO (LOCAL ACCEPTANCE) | Actual host-start `ValidateOnStart` coverage passes in the 143-test security subset. The current Release image also passes the disposable Docker matrix: missing, Mock, unknown, sandbox, incomplete, and enabled Production configurations exit `139` with the expected general error and no synthetic credential leakage; a syntactically valid synthetic secret-injected Iyzico configuration with payments disabled stays running and returns `/health` `200`. Deployment rerun and real-provider sandbox proof remain separate gates |
 | Provider-authenticated paid transition | DEFERRED / NO-GO TO ENABLE | No provider is selected; payments default disabled and all new-payment entry paths are contained. Real provider/API contract, replay/mismatch negatives, and sandbox success are mandatory before enablement |
-| Credential incident closure | NO-GO | Rotation, provider access-log review, and active/history scan evidence missing |
-| Dependabot human review enforcement | PARTIAL | Auto-merge workflow removed; branch protection and test PR evidence missing |
-| Frontend automated verification | GO | Lint 0 errors/1 existing warning; TypeScript pass; Vitest 61 files/288 tests pass; Next.js production build pass |
-| Backend automated verification | GO | Build 0 warnings/errors; 762 unit + 51 integration tests pass |
-| Disabled-payment Docker proof | GO | Intent creation, forged 3DS return, and forged webhook each return `503`; payment-intent/payment-webhook-job counts remain `4,0` before and after |
-| Combined Docker/browser/security review | NO-GO | Account-claim and public reservation/cancellation five-locale browser proofs plus the production payment startup container matrix pass locally; credential/provider/GitHub operational evidence, deployment rerun, provider-authenticated paid-transition proof, and focused final security review remain incomplete |
+| Credential incident closure | NO-GO | CI-equivalent pinned Gitleaks working-tree/full-history scan passes and generated artifacts are untracked/ignored; provider rotation, old-token rejection, and access-log review remain missing |
+| Dependabot human review enforcement | PARTIAL | Auto-merge workflow is removed; active ruleset `18985047` has no bypass actors and requires a current branch, resolved threads, seven checks, and squash merge. One complete post-ruleset Dependabot lifecycle remains unobserved |
+| Frontend automated verification | GO | Fresh TypeScript pass; ESLint 0 errors/1 existing warning; focused Vitest 27/27 and full Vitest 63 files/299 tests pass; production Docker web build pass |
+| Backend automated verification | GO | Fresh focused security tests 143/143; full unit 794/794 and integration 53/53 pass |
+| Disabled-payment Docker proof | GO | Intent creation, forged 3DS return, and forged webhook each return `503`; payment intent/event/job/paid-reservation fingerprint remains `4|0|0|1` |
+| Combined Docker/browser/security review | PARTIAL / NO-GO RELEASE | Focused final validation completed for all seven original findings: five are suppressed by current evidence and two are deferred. Account-claim and reservation Chromium attacks, payment startup/containment, Gitleaks, and GitHub governance checks pass locally. Provider credential/access-log evidence, deployment rerun, provider-authenticated paid-transition proof, and one post-ruleset Dependabot lifecycle remain open |
 
 Release remains blocked. Implementation-complete, acceptance-complete, and release-ready must continue to be reported separately.

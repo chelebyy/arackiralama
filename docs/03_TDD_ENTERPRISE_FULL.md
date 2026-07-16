@@ -1832,7 +1832,7 @@ Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern 
 
 `CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. The production delivery adapter is intentionally unchanged until Resend is integrated; local acceptance uses the queued email job and does not claim real delivery.
 
-The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales.
+The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales. The browser harness must follow the production contract exactly: the queued link carries the one-time token in `#token=`, the query string must remain token-free, and submission is observed through the same-origin `/api/auth/claim` route rather than by waiting for a direct backend URL.
 
 ## 14.7 Public Reservation and Cancellation Boundary Validation
 
@@ -1842,13 +1842,13 @@ Cancellation has no unauthenticated public route. `POST /api/customer/v1/reserva
 
 `frontend/e2e/tests/reservation-boundary-security.spec.ts` is the repeatable production-like acceptance harness. It creates isolated customers and a reservation, captures the real public response from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages, compares the response keys to the exact allowlist, checks that fixture-specific PII and internal values are absent, and confirms the non-cacheable header. For rejected anonymous and non-owner mutations, it compares PostgreSQL `status`, `xmin`, and `updated_at` before and after the HTTP request; owner cancellation is the positive control and must persist `Cancelled`. Cleanup runs in `finally`, and post-run test-owned customer, reservation, background-job, and audit counts must be zero.
 
-This harness establishes local acceptance for WP2, not release readiness. Deployment rerun, operational evidence, production payment gates, and the focused final security review remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
+This harness establishes local acceptance for WP2, not release readiness. Because the strict limiter uses a process-scoped partition, acceptance runs must start from a clean limiter window or isolated API process; a preceding account-claim scenario may intentionally produce `429` without indicating a reservation-boundary regression. The unchanged reservation harness passed in a clean window during the 16 July focused final validation. Deployment rerun, operational evidence, and production payment gates remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
 
 ## 14.8 Production Payment Configuration Startup Validation
 
-`PaymentOptionsValidatorTests` includes a host-start matrix that invokes the repository's real private `AddPaymentIntegration` registration and starts an `IHost`, so `ValidateOnStart` behavior is exercised rather than inferred from direct validator calls. Production startup must raise `OptionsValidationException` for a missing provider, Mock, an unknown provider, a sandbox base URL, or incomplete Iyzico credentials. A fully configured Production Iyzico host and an explicitly selected Development Mock host are positive controls and must start successfully.
+`PaymentOptionsValidatorTests` includes a host-start matrix that invokes the repository's real private `AddPaymentIntegration` registration and starts an `IHost`, so `ValidateOnStart` behavior is exercised rather than inferred from direct validator calls. Production startup must raise `OptionsValidationException` for a missing provider, Mock, an unknown provider, a sandbox base URL, incomplete Iyzico credentials, or `EnablePayments=true` while provider verification remains simulated. A fully configured Production Iyzico host with `EnablePayments=false` and an explicitly selected Development Mock host are positive controls and must start successfully.
 
-The current Release image also passes a disposable production-like Docker matrix without recreating the active local Compose project. Missing, Mock, unknown, sandbox, and incomplete Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage. A syntactically valid synthetic secret-injected Iyzico configuration stays running and returns `/health` `200` through a random loopback port. Migration and local seed switches remain disabled, and the selected migration/admin/customer/payment/job/audit database-count fingerprint is unchanged.
+The current Release image also passes a disposable production-like Docker matrix without recreating the active local Compose project. Missing, Mock, unknown, sandbox, incomplete, and `EnablePayments=true` Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage. A syntactically valid synthetic secret-injected Iyzico configuration with payments disabled stays running and returns `/health` `200` through a random loopback port. Migration and local seed switches remain disabled, and the selected migration/admin/customer/payment/job/audit database-count fingerprint is unchanged.
 
 This is provider-independent local acceptance for configuration registration and container startup only. Deployment rerun and real-provider sandbox verification remain separate gates in `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -1880,6 +1880,23 @@ A dependency remediation is acceptance-complete only when all of these independe
 These gates must not be collapsed into one claim. A patched SBOM with still-open alert records is `remediation merged; alert reconciliation pending`, not closed. Preserve the alert numbers, package grouping, merge SHA, SBOM timestamp, and workflow URLs as evidence; re-query the alert API before changing the state. Do not manually dismiss an alert to simulate reconciliation, and do not treat a failed or unavailable secondary audit endpoint as a zero-vulnerability result.
 
 While gate 4 is pending, capture both GitHub data planes: the fully paginated default-branch dependency graph/SBOM and the alert records' `vulnerableRequirements`, `state`, `fixedAt`, and dismissal fields. A graph that contains only patched requirements while alerts retain the old vulnerable requirements proves an alert-record reconciliation mismatch, not a reason for further repository changes. Preserve the patched graph, wait 12-24 hours, and re-query the original alert numbers. If the mismatch persists, GitHub Support or backend resynchronization is a separately authorized external escalation; a local draft does not count as a submitted request.
+
+For the dependency slice merged by PR #405, the 16 July 2026 re-check completed gate 4: original alerts `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` all report `fixed` without dismissal, and the fresh SBOM contains only the patched target versions. This result closes alert reconciliation for that slice but does not replace the separate requirement to retain a complete post-ruleset Dependabot PR lifecycle as governance evidence.
+
+## 14.10 Focused Final Security Validation
+
+The final validation harness replays each original attack path against the current tracked configuration and records a per-finding disposition rather than converting a green general test run into a blanket security claim. The 16 July 2026 run used the following minimum evidence set:
+
+- focused backend security tests plus the complete backend unit and API-integration suites;
+- focused frontend tests, complete Vitest, TypeScript, and ESLint;
+- current Release web/API image builds and HTTP health/page probes;
+- production-like Chromium account-claim and reservation-boundary scenarios with database cleanup proof;
+- real disabled-payment intent, forged 3DS, and forged webhook requests with before/after payment-state fingerprints;
+- disposable unsafe-production startup cases with synthetic secret-leakage checks;
+- pinned Gitleaks working-tree and full-history scan; and
+- live ruleset, required-check, Dependabot alert, and default-branch SBOM inspection.
+
+The resulting assessment suppresses the currently disproven account-claim, public disclosure/cancellation, production Mock, Dependabot auto-merge, and reachable callback findings. It defers the historical secret-provider incident until credential/access-log evidence exists and defers payment integrity until the simulated provider verification is replaced by authoritative server-to-server verification with mismatch, replay, and sandbox-success evidence. Detailed commands, counts, and remaining release gates are canonical in `docs/18_Codex_Security_Findings_Implementation.md`; validation artifacts are temporary evidence and are not committed to the repository.
 
 ---
 
