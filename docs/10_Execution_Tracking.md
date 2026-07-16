@@ -2102,7 +2102,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Closure result:** No Resend integration is present or being introduced. The historical Resend-shaped match has no project/provider anchor. The three Upstash-shaped matches are Base64/gzip .NET telemetry false positives and are classified `not_actionable`. No credential rotation or provider access-log review is required for either scanner label.
 
-**Durable repository controls:** The production Compose surface binds the dedicated HTTPS-only `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` value to `Notifications__PublicFrontendBaseUrl`; SMTP logs no longer include recipient, subject, or raw provider exception text; generated `.dotnet/` telemetry is ignored.
+**Durable repository controls:** The production Compose surface binds the dedicated HTTPS-only `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` value to `Notifications__PublicFrontendBaseUrl`; SMTP logs no longer include recipient, subject, or raw provider exception text; all 13 remaining tracked `.dotnet` sentinel/cache/telemetry files were removed and the generated path is ignored.
 
 **External continuation handoff:** `C:\tmp\2026-07-16-210636-security-provider-triage-handoff.md`. The handoff is intentionally outside Git and must be finalized with the published commit SHA, PR URL, check results, and review disposition.
 
