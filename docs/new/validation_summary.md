@@ -24,7 +24,7 @@ Yedi rapor satirinin yedisi de guncel kodda ilgili kok kontrol veya riskli davra
 | `05d3e4b9686c819191d93d5eda4dfc0a` Guest email claim | `CustomerAuthController.cs:32-99` | Dogrulanmamis e-posta -> mevcut passwordless Customer'a parola yazma | reportable | evet | yuksek |
 | `a6b2507e06dc8191a6ac5903fe47d4ea` Public driver PII | `ReservationsController.cs:121-138`, `ReservationDtos.cs:5-43,62-71` | Public code -> genis internal DTO | reportable | evet | yuksek |
 | `1654270941dc8191b5b11c8c4914c536` Production mock provider | `PaymentOptions.cs:3-17`, `ServiceCollectionExtensions.cs:113-124`, `docker-compose.yml:60-74` | Eksik provider config -> Mock fallback | reportable | evet | yuksek |
-| `3f489d713edc81919d8ecd72c4cf1d9c` Secret artifacts | `.ship-safe/context.json`, `ship-safe-report.html` | Taranan acik degerler -> Git tarafindan izlenen raporlar | reportable | evet | yuksek; token gecerliligi belirsiz |
+| `3f489d713edc81919d8ecd72c4cf1d9c` Secret artifacts | `.ship-safe/context.json`, `ship-safe-report.html` | Redakte edilmemis tarayici eslesmeleri -> Git tarafindan izlenen raporlar | historical repository-hygiene finding | hayir | yuksek artefakt riski; Resend/Upstash adaylari credential degil |
 | `151e6b3c84008191953fd8b2022ef645` Forged 3DS | `PaymentsController.cs:45-67`, `PaymentService.cs:132-178`, provider `VerifyPaymentAsync` | Public BankResponse -> reservation `Paid` | reportable | evet | yuksek |
 | `ca53a46832248191b84683a09238392d` Dependabot auto-merge | `.github/workflows/dependabot-auto-merge.yml:3-69` | Bot patch/minor PR -> write token ile auto approve/merge | reportable | evet | yuksek (politika riski) |
 | `6bf4756eec7081919ff3de3060492da7` Public PII and cancellation | `ReservationsController.cs:121-138,201-214`, `ReservationDtos.cs:5-43` | Public code/GUID -> PII okuma veya iptal | reportable | evet | yuksek |
@@ -45,7 +45,9 @@ Provider varsayilani `Mock`; DI taninmayan veya eksik provider degerinde Mock'a 
 
 ### 4. Secret artefaktlari
 
-`.ship-safe/context.json` ve `ship-safe-report.html` halen tracked. Degerler rapora alinmadan yapilan desen kontrolunde her ikisinde de birer Resend anahtari bicimli acik deger ve Upstash secret bulgulari mevcut. Bu nedenle depo/Git ifsasi guncel. Anahtarlarin Resend/Upstash tarafinda rotate edilmis veya iptal edilmis olmasi yerel kanitla dogrulanamadi.
+Ilk tarama aninda `.ship-safe/context.json` ve `ship-safe-report.html` tracked durumdaydi ve tarayici eslesmelerini redakte etmeden tasiyordu. Bu, gecerli bir repository-hygiene bulgusuydu. Artefaktlar daha sonra Git'ten kaldirildi ve uretim yollari ignore edildi; takip eden kaynak/provenans triage'i eslesmelerin proje credential'i olmadigini gostermistir.
+
+**16 Temmuz 2026 provider-candidate triage ek notu:** Resend bicimli aday `frontend/tsconfig.tsbuildinfo` ignored/generated cache dosyasina kadar izlendi. Bu kaynak dosya Git'e hic eklenmemisti; aday commit agacinda yalnizca `.ship-safe/context.json` ve `ship-safe-report.html` icinde, tarayicinin kopyaladigi bulgu olarak bulunuyordu. Kaynak/env/deploy/hesap bagi yoktur ve depo sahibi Resend kurulmadigini dogrulamistir. Uc Upstash bicimli aday ise `.dotnet/.dotnet/TelemetryStorageService/*.trn` dosyalarindaki Base64 satirlarinin icinde bulunan rastgele alt dizilerdi. Satirlar Base64'ten cozuldugunde gzip (`1F8B`) ve ardindan Application Insights JSON elde edildi; eslesen dizilerin hicbiri acilmis telemetri metninde yoktu. Upstash paket/env/kaynak/deploy bagi da bulunmadi. Her iki provider adayi icin sonuc `not_actionable`; rotasyon veya provider log incelemesi gerekmiyor. Asil gecerli sorun tarama artefaktlarinin eslesen degeri redakte etmeden Git'e eklenmesiydi.
 
 ### 6. Dependabot
 
@@ -53,7 +55,7 @@ Workflow halen `pull_request_target`, `contents: write`, `pull-requests: write` 
 
 ## Calistirilan dogrulama
 
-`dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore` komutu ilgili auth/payment filtreleriyle calistirildi: 8/8 basarili. Gercek HTTP servisi, gercek Iyzico hesabi ve canli Resend/Upstash token denemesi yapilmadi.
+`dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore` komutu ilk incelemede ilgili auth/payment filtreleriyle calistirildi: 8/8 basarili. Sonraki odakli dogrulama tam backend ve entegrasyon paketlerini de kapsamistir. Gercek Iyzico hesabi kullanilmadi; Resend/Upstash icin canli token denemesi yapilmadi, cunku statik provenans triage'i eslesmelerin proje credential'i olmadigini gostermistir.
 
 ## Sinirlar
 
