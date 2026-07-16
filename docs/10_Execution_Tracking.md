@@ -2059,3 +2059,27 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Decision and next gate:** Preserve the patched graph and avoid dependency churn or manual dismissal. Wait 12-24 hours, then re-query the original alert numbers. If they remain open while the graph stays patched, request GitHub backend resynchronization only after explicit user authorization. No GitHub Support request was submitted; the temporary support text is an unsent draft and not operational evidence.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Dependabot Alert Reconciliation Completed
+
+**Live alert evidence:** The 12-24 hour re-check queried original alert numbers `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` individually. All 11 now report `state=fixed`. Alerts `39`, `41`, `43`, `44`, `45`, `46`, and `47` have `fixed_at=2026-07-15T15:27:57Z`; alerts `48`, `50`, `51`, and `52` have `fixed_at=2026-07-15T15:27:58Z`. All dismissal and auto-dismissal timestamps remain null, so the closure is provider reconciliation of the technical remediation rather than a manual risk disposition.
+
+**Fresh graph evidence:** The default-branch SBOM generated at `2026-07-16T10:24:16Z` contains 1,121 packages. Its target set is exactly `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the previously vulnerable target versions appears.
+
+**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. Provider credential/access-log evidence, the production deployment rerun, and focused final security validation remain separate release blockers. One complete post-ruleset Dependabot lifecycle should still be retained as operational assurance.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Focused Final Security Validation
+
+**Validation result:** All seven original finding instances were revalidated at `202074fe42b6dbbf288c93d4294af3a3a63e088b`. Guest email claim, public driver PII, production Mock fallback, Dependabot auto-merge, and public PII/cancellation are suppressed by current dynamic/static counterevidence. Secret-artifact incident impact remains deferred until provider rotation/old-token/access-log evidence exists. Forged 3DS remains deferred because the tracked application is safely contained with payments disabled, but `IyzicoPaymentProvider.VerifyPaymentAsync` is still simulated and must not be enabled before real provider verification and sandbox proof.
+
+**Fresh automated and runtime evidence:** Focused backend security tests passed 143/143; full backend passed 794/794 unit and 53/53 API integration tests. Focused frontend passed 27/27; full Vitest passed 63 files / 299 tests; TypeScript passed; ESLint reported 0 errors and one existing warning. The production web/API Docker build completed and `/health` plus `/tr` returned `200`. `account-claim-security.spec.ts` and `reservation-boundary-security.spec.ts` each passed 1/1 in Chromium; cleanup left zero test-owned customer/reservation/job rows. The claim harness was corrected to consume the implemented `#token=` fragment and wait for the same-origin `/api/auth/claim` response. The reservation harness first proved the strict limiter with `429`, then passed unchanged in a clean process-scoped rate-limit window.
+
+**Payment, secret, and governance evidence:** Real Docker intent creation, forged 3DS, and forged webhook requests each returned `503`; the payment intent/event/job/paid-reservation fingerprint remained `4|0|0|1`. The current Release API image rejected missing, Mock, unknown, sandbox, incomplete, and enabled Production payment configurations with the general fail-closed error and no synthetic secret leakage; a synthetic payments-disabled Iyzico control reached health. CI-equivalent pinned Gitleaks working-tree/full-history scan passed. Live ruleset `18985047` remains active with zero bypass actors and seven strict checks; no Dependabot PR was created after activation, so one complete lifecycle remains operational assurance.
+
+**Remaining release gates:** Provider credential rotation, old-token rejection, and access-log review; production deployment rerun; real provider/API implementation with mismatch/replay negatives and sandbox success before payments are enabled. The focused final validation is complete as an assessment, but the product remains not release-ready while these external/deferred gates are open.
+
+**Validation artifacts:** `C:\tmp\codex-security-scans\Arac-Kiralama\202074f_20260716T140519+0300\artifacts\05_findings`.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
