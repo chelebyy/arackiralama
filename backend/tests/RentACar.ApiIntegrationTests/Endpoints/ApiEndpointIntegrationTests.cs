@@ -2,10 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using RentACar.API.Contracts.Auth;
 using RentACar.API.Contracts.Payments;
 using RentACar.API.Contracts.Reservations;
 using RentACar.ApiIntegrationTests.Infrastructure;
+using RentACar.Core.Entities;
+using RentACar.Core.Interfaces;
 using Xunit;
 
 namespace RentACar.ApiIntegrationTests.Endpoints;
@@ -16,7 +19,7 @@ namespace RentACar.ApiIntegrationTests.Endpoints;
 public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
     [Fact]
-    public async Task CustomerRegister_WithValidPayload_ReturnsOk()
+    public async Task CustomerRegister_WithValidPayload_ReturnsNotFound()
     {
         var request = new CustomerRegisterRequest(
             Email: $"customer-{Guid.NewGuid():N}@rentacar.test",
@@ -26,7 +29,7 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
 
         var response = await Client.PostAsJsonAsync("/api/customer/v1/auth/register", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -34,11 +37,29 @@ public sealed class ApiEndpointIntegrationTests(RedisFixture redisFixture) : Api
     {
         var email = $"login-{Guid.NewGuid():N}@rentacar.test";
         var password = "IntegrationPassword123!";
-        await Client.PostAsJsonAsync("/api/customer/v1/auth/register", new CustomerRegisterRequest(
-            email,
-            password,
-            "Login Customer",
-            "+90 555 000 00 02"));
+        string passwordHash;
+        using (var scope = Services.CreateScope())
+        {
+            passwordHash = scope.ServiceProvider
+                .GetRequiredService<IPasswordHasher>()
+                .HashPassword(password);
+        }
+
+        await WithDbContextAsync(async dbContext =>
+        {
+            dbContext.Customers.Add(new Customer
+            {
+                Email = email,
+                FullName = "Login Customer",
+                Phone = "+90 555 000 00 02",
+                IdentityNumber = string.Empty,
+                Nationality = "TR",
+                LicenseYear = 0,
+                PasswordHash = passwordHash
+            });
+            await dbContext.SaveChangesAsync();
+            return true;
+        });
 
         var response = await Client.PostAsJsonAsync("/api/customer/v1/auth/login", new CustomerLoginRequest(email, password));
 

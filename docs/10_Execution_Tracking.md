@@ -2008,6 +2008,16 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
+## 17 July 2026 - Public Membership Surface Disabled Locally
+
+**Implementation:** The no-membership branch is now enforced at every public entry layer. The public header no longer renders the login action, including managed `login` links; the customer login page no longer links to registration; `/dashboard/register/v1` and every localized `/{locale}/account-claim` page return `404`; `/api/auth/register` and `/api/auth/claim` return empty `404` responses without forwarding; and the API pipeline terminates exact `/api/customer/v1/auth/register` and `/api/customer/v1/auth/claim` paths before controller execution or persistence. Existing customer login remains available by direct route.
+
+**Fresh evidence:** The red-first frontend run failed exactly 13 new expectations before implementation. The completed implementation passes 64/64 Vitest files and 296/296 tests, ESLint with 0 errors/1 existing warning, TypeScript, the Next.js production build, 805/805 backend unit tests, and 53/53 API integration tests. Rebuilt local API/web Docker images passed the revised membership-disabled Chromium harness 1/1: backend/frontend register and claim endpoints, including backend trailing-slash variants, returned `404`; all five localized claim pages and registration returned `404`; the homepage exposed no login link; and no customer/job side effect appeared. The reservation-boundary Chromium regression also passed 1/1 after its fixture stopped using public registration. The scoped risky-change review found and closed the initial trailing-slash bypass and reported no remaining material concern in the reviewed slice.
+
+**Release impact:** The source-level alternative to production membership-email delivery is locally acceptance-proven. This is not yet deployed acceptance: merge/CI and deployed public web/API revalidation remain open. Reservation-lifecycle notification scope remains a separate future decision.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
 ## 17 July 2026 - Dokploy Payment Startup Incident and Explicit Disabled Mode
 
 **Incident:** The Dokploy API recreation completed database migrations and seed work, then entered a restart loop with `OptionsValidationException: Production payment configuration is incomplete or unsafe.` The root Production Compose file supplied no `Payment__*` values, while startup validation required a fully shaped Iyzico configuration even though payments were disabled. A transient first PostgreSQL authentication failure recovered on retry and was not the persistent blocker.

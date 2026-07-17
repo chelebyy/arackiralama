@@ -3,6 +3,7 @@
 Date: 2026-02-25
 Version: 1.0.0
 Base URL: /api/v1
+Updated: 2026-07-17 (public membership endpoints disabled)
 
 ------------------------------------------------------------------------
 
@@ -789,8 +790,11 @@ END OF DOCUMENT
 
 ### Customer account claim
 
-- `POST /api/customer/v1/auth/register`: for an existing passwordless guest customer, returns the same generic success response but does not install credentials or update profile fields; it queues an email claim token. Repeated or concurrent requests suppressed by the normalized-account cooldown or one-active-token invariant return that same generic success contract and do not queue another message.
-- `POST /api/customer/v1/auth/claim`: accepts `{ token, newPassword }`; only an active, unexpired, unused token may install the first password. Invalid, expired, replayed, superseded, or already-claimed cases return a generic bad request and perform no credential overwrite.
+- Current release override (17 July 2026): public customer registration and account claim are disabled.
+- `POST /api/customer/v1/auth/register` and `POST /api/customer/v1/auth/claim` return an empty `404` before request-body processing, idempotency, controller dispatch, persistence, audit creation, or background-job creation. The same contract applies to case variants and an optional trailing slash.
+- Next.js `POST /api/auth/register` and `POST /api/auth/claim` return an empty `404` without forwarding to the backend.
+- `/dashboard/register/v1` and localized `/{locale}/account-claim` pages return `404`; the public header and customer-login page do not expose registration links.
+- Existing customers may still use the direct `/dashboard/login/v1` route. The earlier token-based registration/claim contract is retained as internal defense-in-depth implementation history, not as a supported public API. Re-enablement requires a new versioned product/security/deployment decision.
 
 ### Public reservation access
 

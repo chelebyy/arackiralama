@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 
 const apiBaseUrl = process.env.E2E_API_BASE_URL || "http://localhost:5000";
 const password = "CodexReservationBoundary123!";
+const passwordHash = "$2a$12$GN6XV3bIxgjSMbyAY1k0cOg.kCxbd3j5zZcf0rHBPmcBgg7qzpmCu";
 const locales = ["tr", "en", "ru", "ar", "de"] as const;
 const publicReservationKeys = [
   "currency",
@@ -50,30 +51,18 @@ test("public reservation response is allowlisted and cancellation stays owner-on
   const ownerPhone = `+9000${runId.replaceAll("-", "").slice(0, 8)}`;
   const publicCode = `SEC-${runId.replaceAll("-", "").slice(0, 16).toUpperCase()}`;
   const reservationId = randomUUID();
-  let ownerId = "";
-  let otherId = "";
+  const ownerId = randomUUID();
+  const otherId = randomUUID();
 
   try {
-    const registerResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/register`, {
-      headers: { "X-Session-Id": `reservation-boundary-register-${runId}` },
-      data: { email: ownerEmail, password, fullName: ownerName, phone: ownerPhone },
-    });
-    expect(registerResponse.ok()).toBe(true);
-
-    const ownerState = runSql(`
-      SELECT id::text || '|' || password_hash
-      FROM customers
-      WHERE normalized_email = upper('${ownerEmail}');
-    `).split("|");
-    ownerId = ownerState[0];
-    const passwordHash = ownerState.slice(1).join("|");
-    otherId = randomUUID();
-
     runSql(`
       INSERT INTO customers (
         id, full_name, phone, email, license_year, identity_number, nationality,
         created_at, updated_at, failed_login_count, normalized_email, token_version, password_hash
       ) VALUES (
+        '${ownerId}', '${ownerName}', '${ownerPhone}', '${ownerEmail}', 0, '', 'TR',
+        now(), now(), 0, upper('${ownerEmail}'), 0, '${passwordHash}'
+      ), (
         '${otherId}', 'Codex Other', '', '${otherEmail}', 0, '', 'TR',
         now(), now(), 0, upper('${otherEmail}'), 0, '${passwordHash}'
       );
@@ -193,20 +182,18 @@ test("public reservation response is allowlisted and cancellation stays owner-on
     expect(ownerCancellation.status).toBe(200);
     expect(runSql(`SELECT status FROM reservations WHERE id = '${reservationId}';`)).toBe("Cancelled");
   } finally {
-    if (ownerId || otherId) {
-      runSql(`
-        DELETE FROM auth_sessions WHERE principal_id IN ('${ownerId || "00000000-0000-0000-0000-000000000000"}', '${otherId || "00000000-0000-0000-0000-000000000000"}');
+    runSql(`
+        DELETE FROM auth_sessions WHERE principal_id IN ('${ownerId}', '${otherId}');
         DELETE FROM background_jobs WHERE payload LIKE '%${ownerEmail}%' OR payload LIKE '%${otherEmail}%' OR payload LIKE '%${reservationId}%';
         DELETE FROM audit_logs WHERE entity_id IN (
-          '${ownerId || "00000000-0000-0000-0000-000000000000"}',
-          '${otherId || "00000000-0000-0000-0000-000000000000"}',
+          '${ownerId}',
+          '${otherId}',
           '${reservationId}',
           upper('${ownerEmail}'),
           upper('${otherEmail}')
         );
         DELETE FROM reservations WHERE id = '${reservationId}';
-        DELETE FROM customers WHERE id IN ('${ownerId || "00000000-0000-0000-0000-000000000000"}', '${otherId || "00000000-0000-0000-0000-000000000000"}');
+        DELETE FROM customers WHERE id IN ('${ownerId}', '${otherId}');
       `);
-    }
   }
 });

@@ -20,45 +20,36 @@ describe("POST /api/auth/claim", () => {
     vi.clearAllMocks();
   });
 
-  it("rejects an invalid request body without calling the backend", async () => {
+  it("returns not found for an invalid body without calling the backend", async () => {
     const response = await POST(claimRequest("not-json") as never);
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ success: false });
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("");
     expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
   });
 
   it.each(["null", "[]", '"claim-token"', "42"])(
-    "rejects the valid JSON non-object body %s without calling the backend",
+    "returns not found for the JSON body %s without calling the backend",
     async body => {
       const response = await POST(claimRequest(body) as never);
 
-      expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toMatchObject({ success: false });
+      expect(response.status).toBe(404);
+      await expect(response.text()).resolves.toBe("");
       expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
     }
   );
 
-  it("rejects object bodies with non-string claim fields", async () => {
+  it("returns not found for object bodies with non-string claim fields", async () => {
     const response = await POST(
       claimRequest(JSON.stringify({ token: 42, newPassword: [] })) as never
     );
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ success: false });
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("");
     expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
   });
 
-  it("forwards a valid claim and preserves the backend status", async () => {
-    vi.mocked(callAccountClaimBackendEndpoint).mockResolvedValueOnce({
-      backendResponse: new Response(null, { status: 400 }),
-      envelope: {
-        success: false,
-        data: null,
-        message: "Hesap talep bağlantısı geçersiz veya süresi dolmuş."
-      }
-    });
-
+  it("returns not found for a valid-looking claim without calling the backend", async () => {
     const response = await POST(
       claimRequest(
         JSON.stringify({
@@ -68,14 +59,8 @@ describe("POST /api/auth/claim", () => {
       ) as never
     );
 
-    expect(callAccountClaimBackendEndpoint).toHaveBeenCalledWith({
-      token: "claim-token",
-      newPassword: "new-secret"
-    });
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      success: false,
-      message: "Hesap talep bağlantısı geçersiz veya süresi dolmuş."
-    });
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("");
+    expect(callAccountClaimBackendEndpoint).not.toHaveBeenCalled();
   });
 });

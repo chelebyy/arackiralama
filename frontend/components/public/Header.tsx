@@ -4,7 +4,6 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Link, usePathname, type Locale } from "@/i18n/routing";
 import { useLocale, useTranslations } from "next-intl";
-import NextLink from "next/link";
 import { localeLabels } from "@/i18n/routing";
 import {
   Menu,
@@ -13,8 +12,7 @@ import {
   Home,
   Info,
   Phone,
-  Search,
-  User
+  Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -28,7 +26,6 @@ const defaultHeaderLinks = [
   { id: "vehicles", label: "", href: "/vehicles", isVisible: true, sortOrder: 1 },
   { id: "about", label: "", href: "/about", isVisible: true, sortOrder: 2 },
   { id: "contact", label: "", href: "/contact", isVisible: true, sortOrder: 3 },
-  { id: "login", label: "", href: "/dashboard/login/v2", isVisible: true, sortOrder: 4 },
   { id: "trackReservation", label: "", href: "/track-reservation", isVisible: true, sortOrder: 5 },
 ] satisfies PublicSiteLink[];
 
@@ -38,7 +35,6 @@ function getHeaderIcon(id: string) {
   if (id === "vehicles") return Car;
   if (id === "about") return Info;
   if (id === "contact") return Phone;
-  if (id === "login") return User;
   if (id === "trackReservation") return Search;
   return Home;
 }
@@ -67,7 +63,6 @@ export default function Header() {
     .filter((link) => isPublicSiteLinkVisible(link, settings?.pages))
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const navLinks = headerLinks.filter((link) => link.id !== "login" && link.id !== "trackReservation");
-  const loginLink = headerLinks.find((link) => link.id === "login");
   const trackingLink = headerLinks.find((link) => link.id === "trackReservation");
   const getLabel = (link: PublicSiteLink) => {
     const fallback = hasTranslation(t, link.id) ? t(link.id) : link.label || link.id;
@@ -119,22 +114,6 @@ export default function Header() {
           {/* Right Section */}
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
-
-            {/* Login Button - Desktop */}
-            {loginLink && (
-              <NextLink
-                href={loginLink.href}
-                className={cn(
-                  "hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg",
-                  "text-sm font-medium text-white/85 hover:text-white hover:bg-white/10 lg:text-[#334155] lg:hover:text-[#0F172A] lg:hover:bg-[#F8FAFC]",
-                  "transition-colors duration-200 cursor-pointer",
-                  "focus:outline-none focus:ring-2 focus:ring-[#0369A1] focus:ring-offset-1"
-                )}
-              >
-                <User className="h-4 w-4" />
-                <span>{getLabel(loginLink)}</span>
-              </NextLink>
-            )}
 
             {/* CTA Button - Desktop */}
             {trackingLink && (
@@ -209,20 +188,6 @@ export default function Header() {
               );
             })}
             <div className="pt-4 border-t border-white/10 space-y-2">
-              {loginLink && (
-                <NextLink
-                  href={loginLink.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg",
-                    "text-sm font-medium text-white/78 hover:text-white hover:bg-white/10",
-                    "transition-colors duration-200 cursor-pointer"
-                  )}
-                >
-                  <User className="h-5 w-5 flex-shrink-0" />
-                  {getLabel(loginLink)}
-                </NextLink>
-              )}
               {trackingLink && (
                 <Link
                   href={trackingLink.href as never}

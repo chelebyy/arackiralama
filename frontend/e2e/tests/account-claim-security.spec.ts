@@ -3,15 +3,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 const apiBaseUrl = process.env.E2E_API_BASE_URL || "http://localhost:5000";
-const password = "CodexClaimPassword123!";
-
-const localeExpectations = [
-  { locale: "tr", title: "Hesap Sahiplenme", submit: "Parolayi Olustur" },
-  { locale: "en", title: "Account Claim", submit: "Set Password" },
-  { locale: "ru", title: "Принадлежность аккаунта", submit: "Установить пароль" },
-  { locale: "ar", title: "إدعاء الحساب", submit: "تعيين كلمة المرور" },
-  { locale: "de", title: "Konto beanspruchen", submit: "Passwort festlegen" },
-] as const;
+const locales = ["tr", "en", "ru", "ar", "de"] as const;
 
 function runSql(sql: string) {
   return execFileSync(
@@ -24,98 +16,57 @@ function runSql(sql: string) {
 test.describe.configure({ mode: "serial" });
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
-test("account claim is localized, single-use, and creates a working customer credential", async ({ page, request }) => {
-  const customerId = randomUUID();
-  const email = `codex-claim-${customerId.slice(0, 8)}@example.test`;
-  const normalizedEmail = email.toUpperCase();
+test("public registration and account claim surfaces stay disabled without side effects", async ({ page, request }) => {
+  const runId = randomUUID();
+  const email = `codex-disabled-membership-${runId.slice(0, 8)}@example.test`;
 
-  runSql(`
-    INSERT INTO customers (
-      id, full_name, phone, email, license_year, identity_number, nationality,
-      created_at, updated_at, failed_login_count, normalized_email, token_version
-    ) VALUES (
-      '${customerId}', 'Codex Claim', '', '${email}', 0, '', 'TR',
-      now(), now(), 0, '${normalizedEmail}', 0
-    );
-  `);
+  const registerResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/register`, {
+    data: {
+      email,
+      password: "IgnoredPassword123!",
+      fullName: "Disabled Membership",
+      phone: "+900000000000",
+    },
+  });
+  expect(registerResponse.status()).toBe(404);
 
-  try {
-    const registerResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/register`, {
-      headers: { "Accept-Language": "en-US" },
-      data: {
-        email,
-        password: "IgnoredPassword123!",
-        fullName: "Ignored Profile Change",
-        phone: "+900000000000",
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
+  const trailingSlashRegisterResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/register/`, {
+    data: { email, password: "IgnoredPassword123!" },
+  });
+  expect(trailingSlashRegisterResponse.status()).toBe(404);
 
-    const queuedPayloadText = runSql(`
-      SELECT payload
-      FROM background_jobs
-      WHERE payload LIKE '%${email}%'
-      ORDER BY created_at DESC
-      LIMIT 1;
-    `);
-    expect(queuedPayloadText).not.toBe("");
+  const claimResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/claim`, {
+    data: { token: `disabled-${runId}`, newPassword: "IgnoredPassword123!" },
+  });
+  expect(claimResponse.status()).toBe(404);
 
-    const queuedPayload = JSON.parse(queuedPayloadText) as {
-      ToEmail: string;
-      Locale: string;
-      Variables: { ClaimUrl: string };
-    };
-    expect(queuedPayload.ToEmail).toBe(email);
-    expect(queuedPayload.Locale).toBe("en-US");
+  const trailingSlashClaimResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/claim/`, {
+    data: { token: `disabled-${runId}`, newPassword: "IgnoredPassword123!" },
+  });
+  expect(trailingSlashClaimResponse.status()).toBe(404);
 
-    const claimUrl = new URL(queuedPayload.Variables.ClaimUrl, "http://localhost");
-    expect(claimUrl.searchParams.get("token")).toBeNull();
-    const token = new URLSearchParams(claimUrl.hash.slice(1)).get("token");
-    expect(token).toBeTruthy();
+  expect(runSql(`SELECT count(*) FROM customers WHERE normalized_email = upper('${email}');`)).toBe("0");
+  expect(runSql(`SELECT count(*) FROM background_jobs WHERE payload LIKE '%${email}%';`)).toBe("0");
 
-    for (const expectation of localeExpectations) {
-      await page.goto(`/${expectation.locale}/account-claim#token=${encodeURIComponent(token!)}`);
-      await expect(page.getByRole("heading", { name: expectation.title })).toBeVisible();
-      await expect(page.getByRole("button", { name: expectation.submit })).toBeVisible();
-    }
-
-    await page.goto(`/en/account-claim#token=${encodeURIComponent(token!)}`);
-    await page.getByLabel("New password", { exact: true }).fill(password);
-    await page.getByLabel("Confirm new password", { exact: true }).fill(password);
-    const claimResponsePromise = page.waitForResponse(
-      (response) => response.url().endsWith("/api/auth/claim") && response.request().method() === "POST"
-    );
-    await page.getByRole("button", { name: "Set Password" }).click();
-    const claimResponse = await claimResponsePromise;
-    expect(claimResponse.ok()).toBe(true);
-    await expect(page.getByText("Your account has been successfully claimed. You can now sign in")).toBeVisible();
-
-    const replayResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/claim`, {
-      data: { token, newPassword: "ReplayPassword123!" },
-    });
-    expect(replayResponse.status()).toBe(400);
-
-    const loginResponse = await request.post(`${apiBaseUrl}/api/customer/v1/auth/login`, {
-      data: { email, password },
-    });
-    expect(loginResponse.ok()).toBe(true);
-
-    const persistedState = runSql(`
-      SELECT
-        (password_hash IS NOT NULL)::text || '|' ||
-        full_name || '|' ||
-        phone
-      FROM customers
-      WHERE id = '${customerId}';
-    `);
-    expect(persistedState).toBe("true|Codex Claim|");
-  } finally {
-    runSql(`
-      DELETE FROM auth_sessions WHERE principal_id = '${customerId}';
-      DELETE FROM background_jobs WHERE payload LIKE '%${email}%';
-      DELETE FROM customer_account_claim_tokens WHERE customer_id = '${customerId}';
-      DELETE FROM audit_logs WHERE entity_id = '${customerId}';
-      DELETE FROM customers WHERE id = '${customerId}';
-    `);
+  for (const locale of locales) {
+    const response = await page.goto(`/${locale}/account-claim#token=disabled-${runId}`);
+    expect(response?.status()).toBe(404);
   }
+
+  const registerPageResponse = await page.goto("/dashboard/register/v1");
+  expect(registerPageResponse?.status()).toBe(404);
+
+  await page.goto("/en");
+  await expect(page.locator('a[href="/dashboard/login/v2"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/dashboard/login/v1"]')).toHaveCount(0);
+
+  const frontendRegisterResponse = await request.post("/api/auth/register", {
+    data: { email, password: "IgnoredPassword123!" },
+  });
+  expect(frontendRegisterResponse.status()).toBe(404);
+
+  const frontendClaimResponse = await request.post("/api/auth/claim", {
+    data: { token: `disabled-${runId}`, newPassword: "IgnoredPassword123!" },
+  });
+  expect(frontendClaimResponse.status()).toBe(404);
 });
