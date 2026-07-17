@@ -802,5 +802,5 @@ END OF DOCUMENT
 ### Payment containment
 
 - Payment intent creation, 3DS completion, provider webhook processing, and admin payment retry return `503` before service mutation when `Payment:EnablePayments` is false.
-- Production startup rejects Mock, unknown, sandbox, incomplete, or disabled payment configuration.
+- Production startup rejects Mock, unknown, sandbox, incomplete, or payment-enabled `Disabled` configuration. The explicit `Disabled` provider is valid only with `Payment:EnablePayments=false` and resolves to a dedicated provider that cannot process payment operations.
 - No payment provider is currently selected; payment activation is deferred. Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Before activation, final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.

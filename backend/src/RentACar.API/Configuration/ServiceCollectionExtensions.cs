@@ -146,13 +146,19 @@ public static class ServiceCollectionExtensions
                     "Production payment configuration is incomplete or unsafe.")
                 .ValidateOnStart();
         }
+        services.AddScoped<DisabledPaymentProvider>();
         services.AddScoped<MockPaymentProvider>();
         services.AddScoped<IyzicoPaymentProvider>();
         services.AddScoped<IPaymentProvider>(serviceProvider =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<PaymentOptions>>().Value;
-            return options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase)
-                ? serviceProvider.GetRequiredService<IyzicoPaymentProvider>()
+            if (options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase))
+            {
+                return serviceProvider.GetRequiredService<IyzicoPaymentProvider>();
+            }
+
+            return options.Provider.Equals("Disabled", StringComparison.OrdinalIgnoreCase)
+                ? serviceProvider.GetRequiredService<DisabledPaymentProvider>()
                 : serviceProvider.GetRequiredService<MockPaymentProvider>();
         });
 

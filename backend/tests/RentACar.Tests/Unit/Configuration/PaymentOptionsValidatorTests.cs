@@ -2,8 +2,10 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RentACar.API.Configuration;
+using RentACar.Core.Interfaces.Payments;
 using RentACar.Infrastructure.Services.Payments;
 using System.Reflection;
 using Xunit;
@@ -34,6 +36,30 @@ public sealed class PaymentOptionsValidatorTests
 
         action.Should().NotThrow();
         PaymentOptionsValidator.IsValidForProduction(options).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidateForProduction_WithDisabledProviderAndPaymentsDisabled_Succeeds()
+    {
+        var options = CreateDisabledPaymentOptions();
+
+        var action = () => PaymentOptionsValidator.ValidateForProduction(options);
+
+        action.Should().NotThrow();
+        PaymentOptionsValidator.IsValidForProduction(options).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidateForProduction_WithDisabledProviderAndPaymentsEnabled_Fails()
+    {
+        var options = CreateDisabledPaymentOptions();
+        options.EnablePayments = true;
+
+        var action = () => PaymentOptionsValidator.ValidateForProduction(options);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Payment:EnablePayments must remain false*");
+        PaymentOptionsValidator.IsValidForProduction(options).Should().BeFalse();
     }
 
     [Theory]
@@ -102,6 +128,64 @@ public sealed class PaymentOptionsValidatorTests
     }
 
     [Fact]
+    public async Task ProductionStartup_WithDisabledProviderAndPaymentsDisabled_Succeeds()
+    {
+        using var host = CreatePaymentHost(
+            Environments.Production,
+            CreateDisabledPaymentConfiguration());
+
+        var action = () => host.StartAsync();
+
+        await action.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task DisabledProvider_ResolvesExplicitlyAndFailsClosed()
+    {
+        using var host = CreatePaymentHost(
+            Environments.Production,
+            CreateDisabledPaymentConfiguration());
+        await host.StartAsync();
+        using var scope = host.Services.CreateScope();
+        var provider = scope.ServiceProvider.GetRequiredService<IPaymentProvider>();
+
+        provider.GetType().Name.Should().Be("DisabledPaymentProvider");
+
+        var intent = await provider.CreatePaymentIntentAsync(new CreatePaymentIntentProviderRequest());
+        intent.Status.Should().Be(PaymentProviderIntentStatus.Failed);
+        intent.ProviderIntentId.Should().BeEmpty();
+        intent.RedirectUrl.Should().BeNull();
+
+        var preAuthorization = await provider.CreatePreAuthorizationAsync(new CreatePreAuthorizationProviderRequest());
+        preAuthorization.Status.Should().Be(PaymentProviderIntentStatus.Failed);
+        preAuthorization.FailureCode.Should().Be("PAYMENTS_DISABLED");
+
+        var verification = await provider.VerifyPaymentAsync(new PaymentCallbackProviderRequest());
+        verification.Status.Should().Be(PaymentProviderIntentStatus.Failed);
+        verification.FailureCode.Should().Be("PAYMENTS_DISABLED");
+
+        provider.VerifyWebhookSignature("payload", "signature", null).Should().BeFalse();
+        await FluentActions.Invoking(() => provider.ParseWebhookAsync("Disabled", "{}", null))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Payment processing is disabled.");
+
+        var transactionStatus = await provider.GetTransactionStatusAsync("transaction-id");
+        transactionStatus.Should().Be(ProviderTransactionStatus.Unknown);
+
+        var refund = await provider.RefundAsync(new ProviderRefundRequest());
+        refund.Success.Should().BeFalse();
+        refund.FailureCode.Should().Be("PAYMENTS_DISABLED");
+
+        var release = await provider.ReleaseDepositAsync(new ProviderReleaseDepositRequest());
+        release.Success.Should().BeFalse();
+        release.FailureCode.Should().Be("PAYMENTS_DISABLED");
+
+        var capture = await provider.CaptureDepositAsync(new ProviderCaptureDepositRequest());
+        capture.Success.Should().BeFalse();
+        capture.FailureCode.Should().Be("PAYMENTS_DISABLED");
+    }
+
+    [Fact]
     public async Task DevelopmentStartup_WithExplicitMockProviderAndPaymentsDisabled_Succeeds()
     {
         var configuration = CreateConfiguredIyzicoConfiguration();
@@ -121,6 +205,7 @@ public sealed class PaymentOptionsValidatorTests
     {
         return Host.CreateDefaultBuilder()
             .UseEnvironment(environmentName)
+            .ConfigureLogging(logging => logging.ClearProviders())
             .ConfigureAppConfiguration(builder => builder.AddInMemoryCollection(configuration))
             .ConfigureServices((context, services) =>
             {
@@ -147,6 +232,13 @@ public sealed class PaymentOptionsValidatorTests
         ["Payment:Iyzico:WebhookSecret"] = "test-webhook-secret"
     };
 
+    private static Dictionary<string, string?> CreateDisabledPaymentConfiguration() => new()
+    {
+        ["Payment:Provider"] = "Disabled",
+        ["Payment:Currency"] = "TRY",
+        ["Payment:EnablePayments"] = "false"
+    };
+
     private static PaymentOptions CreateConfiguredIyzicoOptions() => new()
     {
         Provider = "Iyzico",
@@ -159,5 +251,12 @@ public sealed class PaymentOptionsValidatorTests
             BaseUrl = "https://api.iyzipay.com",
             WebhookSecret = "test-webhook-secret"
         }
+    };
+
+    private static PaymentOptions CreateDisabledPaymentOptions() => new()
+    {
+        Provider = "Disabled",
+        Currency = "TRY",
+        EnablePayments = false
     };
 }

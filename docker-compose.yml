@@ -72,6 +72,13 @@ services:
       Database__AutoMigrateOnStartup: ${DATABASE_AUTO_MIGRATE_ON_STARTUP:-true}
       Cors__AllowedOrigins__0: ${NEXT_PUBLIC_APP_URL}
       Notifications__PublicFrontendBaseUrl: ${NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL}
+      Payment__Provider: ${PAYMENT_PROVIDER:-Disabled}
+      Payment__Currency: ${PAYMENT_CURRENCY:-TRY}
+      Payment__EnablePayments: ${PAYMENT_ENABLE_PAYMENTS:-false}
+      Payment__Iyzico__ApiKey: ${PAYMENT_IYZICO_API_KEY:-}
+      Payment__Iyzico__SecretKey: ${PAYMENT_IYZICO_SECRET_KEY:-}
+      Payment__Iyzico__BaseUrl: ${PAYMENT_IYZICO_BASE_URL:-}
+      Payment__Iyzico__WebhookSecret: ${PAYMENT_IYZICO_WEBHOOK_SECRET:-}
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:

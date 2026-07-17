@@ -1984,7 +1984,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 15 Temmuz 2026 (PR #402 merge, post-merge `main` kontrolleri ve aktif ana dal ruleset kanıtı aşağıdaki güncel kilometre taşında kaydedildi; önceki faz ayrıntıları tarihli bölümlerde korunmaktadır.)
+**Son Güncelleme:** 17 Temmuz 2026 (Dokploy ödeme-startup olayı, açıkça Disabled ödeme modu, güncel doğrulama kanıtı ve yayın/deploy kapıları aşağıdaki kilometre taşında kaydedildi; önceki faz ayrıntıları tarihli bölümlerde korunmaktadır.)
 
 **Durum:** Aktif Takip
 
@@ -1995,6 +1995,20 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 **Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; full backend passed 762/762 unit and 51/51 API integration tests. Frontend lint passed with 0 errors and 1 existing warning, TypeScript passed, Vitest passed 61/61 files and 288/288 tests, and the Next.js production build passed. Local Docker requests to intent creation, forged 3DS return, and forged webhook each returned `503`; payment-intent/payment-webhook-job counts stayed `4,0` before and after.
 
 **Open gates:** the remaining Docker/browser matrix, secret-artifact source/ownership triage, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 17 July 2026 - Dokploy Payment Startup Incident and Explicit Disabled Mode
+
+**Incident:** The Dokploy API recreation completed database migrations and seed work, then entered a restart loop with `OptionsValidationException: Production payment configuration is incomplete or unsafe.` The root Production Compose file supplied no `Payment__*` values, while startup validation required a fully shaped Iyzico configuration even though payments were disabled. A transient first PostgreSQL authentication failure recovered on retry and was not the persistent blocker.
+
+**Permanent fix:** Production now supports an explicit `Disabled` provider only with `Payment:EnablePayments=false`. `DisabledPaymentProvider` is a distinct DI target rather than a Mock fallback and cannot complete any provider operation or authenticate a webhook. Root Compose defaults the test deployment to Disabled/TRY/false and maps optional Iyzico fields with blank defaults; `.env.example`, the API contract, Dokploy runbook, ADR, TDD, compliance, prelaunch, and security closure documents use the same boundary. No fake Iyzico credential is required or permitted as a startup workaround.
+
+**Fresh evidence:** Red-first coverage isolated four expected Disabled failures before implementation. Payment configuration tests pass 17/17; payment/settings/reservation tests pass 366/366; backend build passes with 0 warnings and 0 errors; the full unit project passes 798/798; the API integration project passes 53/53 on a clean rerun. Compose validation passes and expands the API to Disabled/TRY/false with blank optional Iyzico values. The current Release API image reaches Docker `running/healthy` against isolated PostgreSQL 17 and Redis 7.4 without provider credentials. One earlier integration cleanup hit a transient PostgreSQL read timeout; the isolated test and subsequent complete integration rerun passed. The consented scoped Codex Sentinel review found no material fail-open concern in this payment/deployment diff and did not claim whole-repository or live-environment coverage.
+
+**External handoff:** `C:\Users\muham\AppData\Local\Temp\2026-07-17-114631-dokploy-disabled-payment-fix-handoff.md`. The handoff is intentionally outside Git and must be refreshed with the published commit, PR URL, exact-head checks, and review disposition.
+
+**Remaining gates:** Commit, push, PR review/check completion, merge decision, and live Dokploy deployment rerun. After deployment, verify API and public-site health plus disabled-payment behavior. Real-provider verification, replay/mismatch negatives, and sandbox success remain mandatory before payments can ever be enabled.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
