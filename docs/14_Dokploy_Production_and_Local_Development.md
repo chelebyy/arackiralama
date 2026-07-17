@@ -84,6 +84,15 @@ Production hardening before real launch:
    https://your-domain.com/uploads/...
    ```
 
+## Latest Demo Deployment Evidence (17 July 2026)
+
+- PR #410 head `0e91b8d423977d1680bd29820eba1a75a80d6477` was squash-merged to `main` as `d0a7990bad1b7847edd4439e670f4dcfc8321a71`; the exact merge commit passed CI, Docker build/push, CodeQL, Secret Scan, and React Doctor.
+- The operator reported the Dokploy Compose deployment successful. The deployed commit is inferred from the current `main` head and observed Disabled-mode behavior; Dokploy container metadata/logs were not independently read in this session.
+- A short warm-up interval produced transient `500` responses for the DB-backed vehicles/settings endpoints. The final cache-busted matrix returned `200` for `/`, `/tr`, `/api/v1/vehicles`, and `/api/v1/public-site-settings`.
+- Public settings reported credit card, debit card, and PayPal disabled; unpaid reservation request enabled; and `anyEnabled=true`.
+- Zero-ID/no-write POST probes to payment intent, 3DS return, and webhook entry points each returned `503` with the disabled-payment response before identifier/provider validation.
+- This proves the demo deployment is available with public payment processing contained. It is not real-provider payment-integrity evidence or a production-launch approval.
+
 ## Local Development: Recommended Daily Flow
 
 Use `backend/docker-compose.yml` for local development, not the root production compose.
