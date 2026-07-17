@@ -4,6 +4,8 @@ namespace RentACar.Core.Entities;
 
 public class Reservation : BaseEntity
 {
+    public const int PublicCodeMaxLength = 24;
+
     public string PublicCode { get; set; } = string.Empty;
     public Guid CustomerId { get; set; }
     public Guid VehicleId { get; set; }

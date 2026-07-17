@@ -5,6 +5,7 @@ using Moq;
 using RentACar.API.Contracts.Reservations;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Controllers;
@@ -39,6 +40,41 @@ public sealed class ReservationsControllerTests
             : await controller.Create(request, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByPublicCode_WhenCodeExceedsStorageLimit_ReturnsNotFoundWithoutQuerying()
+    {
+        var service = new Mock<IReservationService>();
+        var controller = new ReservationsController(service.Object);
+
+        var result = await controller.GetByPublicCode(
+            new string('A', Reservation.PublicCodeMaxLength + 1),
+            CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+        service.Verify(item => item.GetReservationByPublicCodeAsync(
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByPublicCode_WhenCodeIsAtStorageLimit_QueriesReservation()
+    {
+        var publicCode = new string('A', Reservation.PublicCodeMaxLength);
+        var service = new Mock<IReservationService>();
+        service.Setup(item => item.GetReservationByPublicCodeAsync(
+                publicCode,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PublicReservationSummaryDto { PublicCode = publicCode });
+        var controller = new ReservationsController(service.Object);
+
+        var result = await controller.GetByPublicCode(publicCode, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        service.Verify(item => item.GetReservationByPublicCodeAsync(
+            publicCode,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static CreateReservationRequest CreateValidRequest()
