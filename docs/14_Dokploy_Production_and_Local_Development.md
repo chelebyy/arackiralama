@@ -95,9 +95,9 @@ Production hardening before real launch:
 
 ## Email Scope Decision (17 July 2026)
 
-- Public customer membership/account claim is not part of the current product or release scope. No production email provider is selected or configured, and real account-claim delivery is not a current acceptance gate.
+- Public customer membership/account claim is not part of the intended current product or release scope, and no production email provider is selected or configured. The current source still exposes guest registration links/routes and the backend claim-email path, so real account-claim delivery remains an acceptance gate until a separate implementation disables or removes those entry points.
 - Future automatic email is intended for reservation lifecycle notifications. The provider and exact trigger/event matrix have not been selected, so this runbook does not claim that reservation emails are currently delivered.
-- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains the required trusted HTTPS origin for the retained account-claim code if that capability is reintroduced. Setting the origin alone does not configure an email provider or prove delivery.
+- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains the required trusted HTTPS origin for the retained account-claim code while that workflow is reachable. Setting the origin alone does not configure an email provider or prove delivery. Release closure requires either disabling/removing the public workflow or completing provider configuration and controlled-delivery evidence.
 - This decision changes documentation only. It does not add credentials, change Dokploy runtime configuration, enable an email path, or remove the separate requirement to revalidate reachable original attack paths after deployment.
 
 ## Local Development: Recommended Daily Flow

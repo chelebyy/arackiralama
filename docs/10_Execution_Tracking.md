@@ -2000,11 +2000,11 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 ## 17 July 2026 - Public Membership and Email Scope Decision
 
-**Product decision:** Public customer membership/account claim is not planned as a supported capability for the current release. The existing WP1 security implementation and local claim/replay evidence remain valid, but no production email provider will be selected or configured for account-claim delivery now. Controlled claim delivery is therefore reclassified from an active release gate to an explicitly deferred product capability.
+**Product decision:** Public customer membership/account claim is not planned as a supported capability for the current release. The existing WP1 security implementation and local claim/replay evidence remain valid. The current frontend nevertheless still exposes guest registration entry points and the backend still creates and dispatches account-claim email jobs. This documentation-only decision does not disable that reachable workflow.
 
 **Future email scope:** Automatic email is desired for reservation lifecycle notifications rather than public membership onboarding. The exact events, templates, provider, sender/domain configuration, and operational acceptance matrix remain undecided. No provider credential, source code, runtime configuration, or deployment state is changed by this documentation-only decision.
 
-**Release impact:** Deployed revalidation of the remaining original attack paths, independent Dokploy container/image/health/log evidence, one complete post-ruleset Dependabot lifecycle, and provider-authenticated payment proof before enabling payments remain separate gates. Current documentation must not claim that account-claim or reservation emails are delivered in Production.
+**Release impact:** Before release, either a separate implementation must remove/disable the public registration and account-claim entry points, or production provider configuration and controlled claim-delivery evidence remain required. Deployed revalidation of the remaining original attack paths, independent Dokploy container/image/health/log evidence, one complete post-ruleset Dependabot lifecycle, and provider-authenticated payment proof before enabling payments remain separate gates. Current documentation must not claim that account-claim or reservation emails are delivered in Production.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2020,7 +2020,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **External handoff:** `C:\Users\muham\AppData\Local\Temp\2026-07-17-114631-dokploy-disabled-payment-fix-handoff.md`. The handoff is intentionally outside Git and must be refreshed with the published commit, PR URL, exact-head checks, and review disposition.
 
-**Remaining gates at the time of this acceptance:** The commit/push/PR/merge and live Disabled-mode deployment/public acceptance chain was complete. Production email delivery and deployed revalidation of the remaining original attack paths were recorded as separate; independent Dokploy container-log evidence was absent from this session. The later 17 July product decision above supersedes only the account-claim email portion by moving public membership and its delivery acceptance outside the current release scope. Real-provider verification, replay/mismatch negatives, and sandbox success remain mandatory before payments can ever be enabled.
+**Remaining gates at the time of this acceptance:** The commit/push/PR/merge and live Disabled-mode deployment/public acceptance chain was complete. Production email delivery and deployed revalidation of the remaining original attack paths were recorded as separate; independent Dokploy container-log evidence was absent from this session. The later 17 July product decision changes the intended product scope but does not supersede the account-claim delivery gate while the guest workflow remains reachable. That gate closes only after the entry points are disabled/removed or controlled production delivery is proven. Real-provider verification, replay/mismatch negatives, and sandbox success remain mandatory before payments can ever be enabled.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
