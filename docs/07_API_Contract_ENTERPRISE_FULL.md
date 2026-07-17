@@ -795,6 +795,7 @@ END OF DOCUMENT
 - Next.js `POST /api/auth/register` and `POST /api/auth/claim` return an empty `404` without forwarding to the backend.
 - `/dashboard/register/v1` and localized `/{locale}/account-claim` pages return `404`; the public header and customer-login page do not expose registration links.
 - Existing customers may still use the direct `/dashboard/login/v1` route. The earlier token-based registration/claim contract is retained as internal defense-in-depth implementation history, not as a supported public API. Re-enablement requires a new versioned product/security/deployment decision.
+- Deployed-public acceptance was completed on 17 July 2026 after PR #413 was merged and Dokploy deployed exact merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`: cache-bypassed HTTP and Chromium checks returned `404` for all five localized account-claim pages, `/dashboard/register/v1`, and the two public proxy endpoints; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage exposed no login link. Empty JSON bodies were used for proxy checks and no production data was mutated. Direct internal-backend exact/case/trailing-slash runtime evidence, container metadata/logs, and production DB/job counts remain unreviewed operational evidence and do not change this API contract.
 
 ### Public reservation access
 
