@@ -145,7 +145,7 @@ docker compose up --build
 Checklist:
 
 - [x] `.env` values are reviewed before startup.
-- [x] `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL`, and `AUTH_BACKEND_URL` match the local target.
+- [x] `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL`, `AUTH_BACKEND_URL`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` match the rehearsal target.
 - [x] `JWT_SECRET`, PostgreSQL password, and Redis password are local-only.
 - [x] External Docker network exists.
 - [x] Browser target URL is updated based on `WEB_PORT`.
@@ -154,7 +154,7 @@ Root compose alternative status on 2026-06-03:
 
 - Exercised as a config/safety validation for this pass without leaving a root `.env` file in the working tree. `.env.example` was reviewed and found to contain Dokploy-style placeholder public URLs (`https://app.example.com`, `https://api.example.com`), so the actual local rehearsal values must be reviewed/overridden before any `docker compose up --build` run.
 - `docker compose config` was run with temporary local-only environment values and returned a valid root compose model.
-- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, and `AUTH_BACKEND_URL=http://api:8080`.
+- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, `AUTH_BACKEND_URL=http://api:8080`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://localhost:3000`. The dedicated notification origin is HTTPS-shaped because the root API runs with Production validation; this config-only rehearsal does not claim local email delivery. Daily local account-claim testing continues to use `backend/docker-compose.yml` in Development with its HTTP loopback origin.
 - The validated root compose browser target is `http://localhost:3000` because `WEB_PORT=3000`; the root API target is `http://localhost:8080` because `API_PORT=8080`.
 - Temporary root compose secrets used for validation were local-only strings: PostgreSQL password `local-root-compose-postgres-only`, Redis password `local-root-compose-redis-only`, and JWT secret `local-root-compose-jwt-secret-at-least-32-chars`.
 - `docker network inspect dokploy-network --format "{{.Name}} {{.Driver}} {{.Scope}}"` returned `dokploy-network bridge local`, confirming the external Docker network exists.

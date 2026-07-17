@@ -1994,7 +1994,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; full backend passed 762/762 unit and 51/51 API integration tests. Frontend lint passed with 0 errors and 1 existing warning, TypeScript passed, Vitest passed 61/61 files and 288/288 tests, and the Next.js production build passed. Local Docker requests to intent creation, forged 3DS return, and forged webhook each returned `503`; payment-intent/payment-webhook-job counts stayed `4,0` before and after.
 
-**Open gates:** the remaining Docker/browser matrix, credential rotation/history scan, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
+**Open gates:** the remaining Docker/browser matrix, secret-artifact source/ownership triage, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2012,11 +2012,11 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 ## 13 July 2026 - Account-Claim Abuse-Control and Cleanup Follow-up
 
-**Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production delivery remains intentionally deferred until Resend is integrated.
+**Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production email delivery remains intentionally deferred until a provider is selected, configured, and proven.
 
 **Fresh verification:** focused account-claim and cleanup tests passed 29/29; full backend suites passed 765/765 unit and 51/51 API integration tests; build passed with 0 warnings/errors; EF reports no pending model changes. Docker PostgreSQL contains migration `20260712214328_HardenAccountClaimAbuseControls` and its partial unique index. Two simultaneous requests returned `200,200` while creating one active token and one email job; worker cleanup deleted an isolated 20-day-old token. The self-cleaning Chromium scenario passed claim, replay rejection, login, and unchanged-profile checks across `tr`, `en`, `ru`, `ar`, and `de`.
 
-**Open gates:** Resend production delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Credential rotation/access-log/history evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
+**Open gates:** Production email delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Secret-artifact source/ownership evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2026,7 +2026,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh verification:** `reservation-boundary-security.spec.ts` passed 1/1 in Docker Chromium. The browser captured `GET /api/v1/reservations/{publicCode}` from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages; each payload had exactly the documented 10-field allowlist, excluded the isolated reservation/customer/vehicle/office identifiers, customer PII, and private notes, and preserved `Cache-Control: no-store`. Anonymous cancellation returned `404/405` and non-owner cancellation returned `404`; both left `status`, `xmin`, and `updated_at` unchanged. Owner cancellation returned `200` and persisted `Cancelled`. Post-test customer/reservation/job/audit counts were all zero. Focused backend tests passed 103/103, focused frontend tests passed 5/5, TypeScript and scoped ESLint passed, and the production-like Docker build completed.
 
-**Open gates:** WP2 is locally acceptance-proven, but release remains blocked by credential rotation/access-log/history evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
+**Open gates:** WP2 is locally acceptance-proven, but release remains blocked by secret-artifact source/ownership evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2036,7 +2036,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh verification:** Final PR validation passed targeted payment/settings/reservation tests 133/133, backend build with 0 warnings/errors, backend suites 794/794 unit and 53/53 integration, frontend lint with 0 errors and 1 existing warning, frontend tests 299/299, and the production build. The post-merge `main` run passed backend unit/integration, frontend lint/test/build, Docker build, and GHCR publication. Secret Scan, React Doctor, CodeQL, and Dependabot Updates also passed. Existing Dependabot PR #401 reports `BEHIND`, demonstrating that strict current-main enforcement requires refresh and check rerun before merge. GitHub also reports 11 open frontend lockfile alerts (3 high, 4 medium, 4 low): 10 development-scope and one low runtime alert. Local `pnpm audit` could not independently classify them because the registry endpoint returned HTTP `410`.
 
-**Open gates:** Provider credential rotation/access-log evidence, dependency-alert triage/remediation or explicit risk acceptance, a production deployment rerun, and focused final security validation against the original attack paths remain release blockers. Real Resend delivery and real-provider payment sandbox evidence remain intentionally deferred feature gates. A Dependabot PR created or refreshed after ruleset activation should be observed through the complete required-check and manual-decision lifecycle. This governance closure is not a complete security audit or a release-readiness declaration.
+**Open gates:** Secret-artifact source/ownership evidence, dependency-alert triage/remediation or explicit risk acceptance, a production deployment rerun, and focused final security validation against the original attack paths remain release blockers. Real production email delivery and real-provider payment sandbox evidence remain intentionally deferred feature gates. A Dependabot PR created or refreshed after ruleset activation should be observed through the complete required-check and manual-decision lifecycle. This governance closure is not a complete security audit or a release-readiness declaration.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2046,7 +2046,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh verification:** pnpm 9.15.9 frozen install passed locally. TypeScript passed; ESLint reported 0 errors and 1 existing unused-disable warning; Vitest coverage passed 63 files / 299 tests with 80.59% statement coverage; the Next.js production build completed. PR #405 then passed the authoritative Node 22 frontend job, all required/advisory checks, and exact-head Codex review. Post-merge `main` CI, CodeQL, Secret Scan, React Doctor, and five Dependabot update jobs passed. The local `pnpm audit` client still targets the retired registry endpoint and returned HTTP `410` (`ERR_PNPM_AUDIT_BAD_RESPONSE`), which is recorded as no result rather than a clean scan. Per-alert validation reports and ledger receipts are stored outside the repository under the current temporary Codex Security scan bundle.
 
-**Open gates:** GitHub's post-merge SBOM lists only the patched target versions, but its Dependabot alert API still reports all 11 records open with unchanged alert timestamps after the update jobs completed. Treat alert closure as pending until GitHub reconciles those records to fixed, or investigate the platform state if they persist. Provider credential/access-log evidence, deployment rerun, and focused final security validation remain separate release blockers.
+**Open gates:** GitHub's post-merge SBOM lists only the patched target versions, but its Dependabot alert API still reports all 11 records open with unchanged alert timestamps after the update jobs completed. Treat alert closure as pending until GitHub reconciles those records to fixed, or investigate the platform state if they persist. Secret-artifact source/ownership evidence, deployment rerun, and focused final security validation remain separate release blockers.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2066,20 +2066,46 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh graph evidence:** The default-branch SBOM generated at `2026-07-16T10:24:16Z` contains 1,121 packages. Its target set is exactly `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the previously vulnerable target versions appears.
 
-**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. Provider credential/access-log evidence, the production deployment rerun, and focused final security validation remain separate release blockers. One complete post-ruleset Dependabot lifecycle should still be retained as operational assurance.
+**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. At this snapshot, secret-artifact source/ownership evidence, the production deployment rerun, and focused final security validation remained separate release blockers. The later 16 July provider-candidate triage resolved the secret-artifact uncertainty. One complete post-ruleset Dependabot lifecycle should still be retained as operational assurance.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
 ## 16 July 2026 - Focused Final Security Validation
 
-**Validation result:** All seven original finding instances were revalidated with the application-under-test at `202074fe42b6dbbf288c93d4294af3a3a63e088b`. The account-claim test-source correction was committed separately, and that corrected harness was re-run from `9420446` against the same Docker web/API/PostgreSQL acceptance stack with a 1/1 Chromium pass. Guest email claim, public driver PII, production Mock fallback, Dependabot auto-merge, and public PII/cancellation are suppressed by current dynamic/static counterevidence. Secret-artifact incident impact remains deferred until provider rotation/old-token/access-log evidence exists. Forged 3DS remains deferred because the tracked application is safely contained with payments disabled, but `IyzicoPaymentProvider.VerifyPaymentAsync` is still simulated and must not be enabled before real provider verification and sandbox proof.
+**Validation result:** All seven original finding instances were revalidated with the application-under-test at `202074fe42b6dbbf288c93d4294af3a3a63e088b`. The account-claim test-source correction was committed separately, and that corrected harness was re-run from `9420446` against the same Docker web/API/PostgreSQL acceptance stack with a 1/1 Chromium pass. Guest email claim, public driver PII, production Mock fallback, Dependabot auto-merge, and public PII/cancellation are suppressed by current dynamic/static counterevidence. Secret-artifact incident impact remains deferred until the scanner candidates receive source/ownership verdicts and any confirmed credential receives provider evidence. Forged 3DS remains deferred because the tracked application is safely contained with payments disabled, but `IyzicoPaymentProvider.VerifyPaymentAsync` is still simulated and must not be enabled before real provider verification and sandbox proof.
 
 **Fresh automated and runtime evidence:** Focused backend security tests passed 143/143; full backend passed 794/794 unit and 53/53 API integration tests. Focused frontend passed 27/27; full Vitest passed 63 files / 299 tests; TypeScript passed; ESLint reported 0 errors and one existing warning. The production web/API Docker build completed and `/health` plus `/tr` returned `200`. `account-claim-security.spec.ts` and `reservation-boundary-security.spec.ts` each passed 1/1 in Chromium; cleanup left zero test-owned customer/reservation/job rows. The claim harness was corrected to consume the implemented `#token=` fragment and wait for the same-origin `/api/auth/claim` response. The reservation harness first proved the strict limiter with `429`, then passed unchanged in a clean process-scoped rate-limit window.
 
 **Payment, secret, and governance evidence:** Real Docker intent creation, forged 3DS, and forged webhook requests each returned `503`; the payment intent/event/job/paid-reservation fingerprint remained `4|0|0|1`. The current Release API image rejected missing, Mock, unknown, sandbox, incomplete, and enabled Production payment configurations with the general fail-closed error and no synthetic secret leakage; a synthetic payments-disabled Iyzico control reached health. CI-equivalent pinned Gitleaks working-tree/full-history scan passed. Live ruleset `18985047` remains active with zero bypass actors and seven strict checks; no Dependabot PR was created after activation, so one complete lifecycle remains operational assurance.
 
-**Remaining release gates:** Provider credential rotation, old-token rejection, and access-log review; production deployment rerun; real provider/API implementation with mismatch/replay negatives and sandbox success before payments are enabled. The focused final validation is complete as an assessment, but the product remains not release-ready while these external/deferred gates are open.
+**Remaining release gates:** Production deployment rerun; real provider/API implementation with mismatch/replay negatives and sandbox success before payments are enabled. The focused final validation is complete as an assessment, but the product remains not release-ready while these external/deferred gates are open.
 
 **Validation artifacts:** `C:\tmp\codex-security-scans\Arac-Kiralama\202074f_20260716T140519+0300\artifacts\05_findings`.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - PR #408 Merge Verification and Resend Artifact Triage
+
+**Merge verification:** PR #408 merged to `main` as `27c7f05c5c341be71f6e3516e06fe8667c2d0c6a`. The exact merge commit completed CI, Secret Scan, React Doctor, and CodeQL successfully. The security-validation branch is no longer the active delivery surface.
+
+**Resend triage result:** The Ship Safe candidate was traced to `frontend/tsconfig.tsbuildinfo`, an ignored generated TypeScript incremental-build cache that was never tracked. The candidate was copied into `.ship-safe/context.json` and `ship-safe-report.html`, and those two scanner artifacts were the only Git-tree occurrences. No source, environment, deployment, or account anchor exists, and the repository owner confirmed that Resend had not been configured. The scanner candidate is therefore not applicable for project credential rotation; committing unredacted scanner output was the real repository-hygiene defect, and that defect remains fixed.
+
+**Email delivery status:** No Resend adapter or credential is being introduced. The existing SMTP adapter remains disabled and unconfigured. The API production Compose mapping uses the dedicated `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` environment variable for `Notifications__PublicFrontendBaseUrl`. Production requires this value to be the HTTPS public-site origin; it is intentionally separate from the browser-facing `NEXT_PUBLIC_APP_URL` so local HTTP Compose targets cannot bypass the backend startup policy.
+
+**Upstash triage result:** Three scanner matches were traced to `.dotnet/.dotnet/TelemetryStorageService/*.trn` files added on the Phase 6 history line. Each match was a 38-, 44-, or 70-character alphanumeric substring inside a Base64-only line. Every line decoded successfully to a gzip payload (`1F8B` magic) and then to Application Insights JSON with `name`, `time`, `iKey`, `tags`, and `data` fields; the matched substring was absent after decoding. No Upstash package, environment variable, source integration, deployment configuration, or provider account anchor exists in the repository history inspected. Verdict: `not_actionable`; no credential rotation or provider access-log review is required. The generated `.dotnet/` path is now ignored to prevent recurrence.
+
+**Remaining gates:** Production email delivery remains deferred until a provider is deliberately selected and proven. Deployment rerun, real payment-provider verification, and one complete post-ruleset Dependabot lifecycle remain open.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Provider Candidate Triage Closure and Handoff
+
+**Closure result:** No Resend integration is present or being introduced. The historical Resend-shaped match has no project/provider anchor. The three Upstash-shaped matches are Base64/gzip .NET telemetry false positives and are classified `not_actionable`. No credential rotation or provider access-log review is required for either scanner label.
+
+**Durable repository controls:** The production Compose surface binds the dedicated HTTPS-only `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` value to `Notifications__PublicFrontendBaseUrl`; SMTP logs no longer include recipient, subject, or raw provider exception text; all 13 remaining tracked `.dotnet` sentinel/cache/telemetry files were removed and the generated path is ignored.
+
+**External continuation handoff:** `C:\tmp\2026-07-16-210636-security-provider-triage-handoff.md`. The handoff is intentionally outside Git and must be finalized with the published commit SHA, PR URL, check results, and review disposition.
+
+**Remaining gates:** Deliberately select and prove a production email provider before claiming delivery acceptance. Re-run the combined acceptance matrix after production deployment. Keep payments disabled until authoritative provider verification, replay/mismatch negatives, and sandbox success are implemented and proven.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
