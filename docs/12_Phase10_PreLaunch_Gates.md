@@ -1547,6 +1547,16 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 **Son Güncelleme:** 4 Mayıs 2026 (Phase 10.5 Security Audit — dependency vulnerabilities fixed, manual OWASP scan completed, security findings documented)  
 **Durum:** Aktif Takip
 
+## 17 July 2026 - WP2 Local Revalidation Addendum
+
+- Local Docker reservation-boundary Chromium: **PASS 1/1** across `tr`, `en`, `ru`, `ar`, and `de`.
+- Public response: exact 10-field allowlist, forbidden test-owned identifiers/PII/notes absent, `Cache-Control: no-store`.
+- Cancellation: anonymous `404/405` and non-owner `404` preserved the database fingerprint; owner `200` persisted `Cancelled`.
+- Cleanup: `customers=0`, `reservations=0`, `jobs=0` for test-owned markers.
+- Public-code hardening: pre-fix Dokploy development/staging returned `500` above the 24-character schema limit; the scoped local fix returns uniform `404 + no-store` before EF for lengths 25 and 128 while preserving the supported 24-character path.
+- Automated gates: controller 33/33, backend unit 807/807, integration 53/53, build 0 warnings/errors, changed-file format verification pass.
+- Gate state: **LOCAL GO; DEPLOYMENT ACCEPTANCE PENDING**. The current Dokploy instance is development/staging, not the final production VPS.
+
 ## 16 July 2026 Security Remediation Gate Addendum
 
 | Gate | State | Evidence / blocker |

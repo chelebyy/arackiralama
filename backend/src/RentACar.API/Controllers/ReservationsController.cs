@@ -5,6 +5,7 @@ using RentACar.API.Configuration;
 using RentACar.API.Contracts;
 using RentACar.API.Contracts.Reservations;
 using RentACar.API.Services;
+using RentACar.Core.Entities;
 
 namespace RentACar.API.Controllers;
 
@@ -128,6 +129,11 @@ public sealed class ReservationsController(IReservationService reservationServic
         if (string.IsNullOrWhiteSpace(publicCode))
         {
             return BadRequestResponse("Rezervasyon kodu gereklidir.");
+        }
+
+        if (publicCode.Length > Reservation.PublicCodeMaxLength)
+        {
+            return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadı."));
         }
 
         var reservation = await reservationService.GetReservationByPublicCodeAsync(publicCode, cancellationToken);

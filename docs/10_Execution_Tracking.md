@@ -2066,6 +2066,18 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
+## 17 July 2026 - WP2 Local Rerun and Public-Code Length Guard
+
+**Implementation status:** The complete reservation disclosure/cancellation matrix was rerun against the local Docker API/web/PostgreSQL stack. A read-only Dokploy development/staging preflight also found that public codes longer than the database-backed 24-character limit produced `500`; the scoped branch now returns the uniform not-found response before any repository query and shares the domain limit with EF configuration.
+
+**Fresh verification:** The focused controller suite first failed because a 25-character code reached the mocked service, then passed 33/33 after the guard. Rebuilt local HTTP returned `404 + no-store` for nonexistent lengths 24, 25, and 128. The clean-window five-locale Playwright matrix passed 1/1 and proved the exact allowlist, anonymous/non-owner no-write fingerprints, owner `200` with persisted `Cancelled`, and zero test-owned customer/reservation/job rows. Backend build passed with 0 warnings/errors; the complete backend rerun passed 807/807 unit and 53/53 integration tests. Changed-file format verification passed; solution-wide format verification remains blocked by four unrelated pre-existing newline/charset findings.
+
+**Environment classification:** The current Dokploy deployment is development/staging, not the final production VPS. No controlled staging fixture was created during this slice. The current branch is therefore locally fixed and acceptance-proven but not deployed.
+
+**Open gates:** Merge/deploy the scoped hardening, then repeat the real reservation payload and authenticated owner/non-owner cancellation matrix in Dokploy staging. Final-production VPS acceptance, remaining original attack paths, payment-provider proof before enablement, and one complete post-ruleset Dependabot lifecycle remain separate.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
 ## 15 July 2026 - PR #402 Merge and Main Governance Closure
 
 **Implementation status:** PR #402 was squash-merged to `main` as `f0da549b90fc4646267f3a027370c4d2e0a67b90` after the final Codex review reported no major issue at reviewed head `4371fce226`. Repository ruleset `Protect main - solo developer` (ID `18985047`) is active for `refs/heads/main`: pull request and review-thread resolution are required, the branch must be current, seven named CI/security checks are strict, only squash merge is allowed, no bypass actor is configured, and deletion/non-fast-forward updates are blocked. The approving-review threshold is intentionally zero for the solo-developer workflow; merge remains a manual decision.

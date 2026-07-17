@@ -18,7 +18,7 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
-        builder.Property(x => x.PublicCode).HasColumnName("public_code").HasMaxLength(24).IsRequired();
+        builder.Property(x => x.PublicCode).HasColumnName("public_code").HasMaxLength(Reservation.PublicCodeMaxLength).IsRequired();
         builder.Property(x => x.CustomerId).HasColumnName("customer_id");
         builder.Property(x => x.VehicleId).HasColumnName("vehicle_id");
         builder.Property(x => x.PickupOfficeId).HasColumnName("pickup_office_id");
