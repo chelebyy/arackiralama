@@ -12,16 +12,7 @@ describe("POST /api/auth/register", () => {
     vi.clearAllMocks();
   });
 
-  it("forwards the browser language preference to the customer auth backend", async () => {
-    vi.mocked(callRegisterEndpoint).mockResolvedValueOnce({
-      backendResponse: new Response(null, { status: 200 }),
-      envelope: {
-        success: true,
-        data: {},
-        message: "Kayıt başarılı."
-      }
-    });
-
+  it("returns an empty not-found response without calling the backend", async () => {
     const response = await POST(new Request("http://localhost/api/auth/register", {
       method: "POST",
       headers: {
@@ -36,12 +27,8 @@ describe("POST /api/auth/register", () => {
       })
     }) as never);
 
-    expect(callRegisterEndpoint).toHaveBeenCalledWith({
-      email: "new@example.test",
-      password: "secret",
-      fullName: "New Customer",
-      phone: "+905551112233"
-    }, "de-DE,de;q=0.9");
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("");
+    expect(callRegisterEndpoint).not.toHaveBeenCalled();
   });
 });

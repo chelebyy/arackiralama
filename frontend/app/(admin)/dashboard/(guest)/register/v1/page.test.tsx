@@ -10,11 +10,11 @@ vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
 }));
 
-import AccountClaimPage from "@/app/(public)/[locale]/account-claim/page";
+import RegisterPage from "@/app/(admin)/dashboard/(guest)/register/v1/page";
 
-describe("AccountClaimPage", () => {
-  it("returns not found instead of rendering the account claim surface", () => {
-    expect(() => AccountClaimPage()).toThrow("NEXT_NOT_FOUND");
+describe("RegisterPage", () => {
+  it("returns not found instead of rendering public registration", () => {
+    expect(() => RegisterPage()).toThrow("NEXT_NOT_FOUND");
     expect(notFoundMock).toHaveBeenCalledOnce();
   });
 });

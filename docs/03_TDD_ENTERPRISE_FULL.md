@@ -1,6 +1,7 @@
 # Technical Design Document (TDD)
 
 Date: 2026-02-25
+Updated: 2026-07-17 (public membership fail-closed boundary)
 
 ## 1. Domain Modules
 
@@ -1830,9 +1831,11 @@ Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern 
 
 `AccountClaimSecurityOptions` binds the request cooldown, retention period, cleanup interval, and cleanup batch size from configuration. Registration resolves the normalized email to the customer before applying the five-minute cooldown, preserving the generic response for both issued and suppressed requests. PostgreSQL enforces one active claim token per customer through the partial unique index `ux_customer_account_claim_tokens_one_active`; the migration supersedes legacy duplicates before creating that index. A unique-constraint race is handled as a suppressed request without exposing account state, and the failed EF change tracker is cleared before audit persistence.
 
-`CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. The existing SMTP adapter remains disabled and unconfigured in production. Account-claim acceptance uses the queued email job and does not claim real delivery; provider selection, production configuration, and a controlled delivery test remain separate future work.
+`CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. These controls are retained as defense in depth, but registration and claim are not supported public workflows for the current release.
 
-The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: focused abuse/cleanup tests, full backend suites, PostgreSQL migration/index inspection, simultaneous-request proof, worker cleanup proof, and a self-cleaning Chromium scenario covering claim, replay rejection, login, and profile preservation in all five locales. The browser harness must follow the production contract exactly: the queued link carries the one-time token in `#token=`, the query string must remain token-free, and submission is observed through the same-origin `/api/auth/claim` route rather than by waiting for a direct backend URL.
+`PublicCustomerAccountSurfaceMiddleware` now runs before idempotency and controller dispatch and returns an empty `404` for `/api/customer/v1/auth/register` and `/api/customer/v1/auth/claim`, including case variants and an optional trailing slash. The two Next.js proxy handlers also return an empty `404` without contacting the backend; `/dashboard/register/v1` and each localized `/{locale}/account-claim` page resolve through `notFound()`. The public `Header` renders neither a managed login link nor a fallback sign-in entry. The existing-customer `/dashboard/login/v1` route remains available, but its registration link is removed.
+
+The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: middleware and integration regressions prove exact/case/trailing-slash rejection before password, claim-token, audit, or background-job mutation; frontend unit tests prove the disabled proxies/pages/header contract; and the self-cleaning Chromium scenario proves five-locale page rejection, direct register-page rejection, homepage link removal, proxy/backend rejection, and zero test-owned customer/job side effects. The earlier claim/replay/login harness remains historical evidence for the retained internal controls, not the current public contract.
 
 ## 14.7 Public Reservation and Cancellation Boundary Validation
 
@@ -1890,13 +1893,13 @@ The final validation harness replays each original attack path against the curre
 - focused backend security tests plus the complete backend unit and API-integration suites;
 - focused frontend tests, complete Vitest, TypeScript, and ESLint;
 - current Release web/API image builds and HTTP health/page probes;
-- production-like Chromium account-claim and reservation-boundary scenarios with database cleanup proof;
+- production-like Chromium membership-disabled and reservation-boundary scenarios with database cleanup proof;
 - real disabled-payment intent, forged 3DS, and forged webhook requests with before/after payment-state fingerprints;
 - disposable unsafe-production startup cases with synthetic secret-leakage checks;
 - pinned Gitleaks working-tree and full-history scan; and
 - live ruleset, required-check, Dependabot alert, and default-branch SBOM inspection.
 
-The resulting assessment suppresses the currently disproven account-claim, public disclosure/cancellation, production Mock, Dependabot auto-merge, and reachable callback findings. The historical Resend-shaped match is not actionable for credential rotation: it originated in an ignored generated TypeScript build cache, existed in Git only because unredacted scanner artifacts copied it, had no application/deployment/account anchor, and the repository owner confirmed Resend was never configured. The three Upstash-shaped matches are also not actionable: each occurred only as an arbitrary substring in a Base64-encoded gzip `.NET TelemetryStorageService` line, and none existed in the decoded Application Insights telemetry JSON or in an Upstash source, package, environment, or deployment configuration. Payment integrity remains deferred until the simulated provider verification is replaced by authoritative server-to-server verification with mismatch, replay, and sandbox-success evidence. Detailed commands, counts, and remaining release gates are canonical in `docs/18_Codex_Security_Findings_Implementation.md`; validation artifacts are temporary evidence and are not committed to the repository.
+The resulting assessment records the public membership surface as disabled and locally acceptance-proven, while the retained internal claim controls are no longer represented as a supported public workflow. It also suppresses the currently disproven public disclosure/cancellation, production Mock, Dependabot auto-merge, and reachable callback findings. The historical Resend-shaped and Upstash-shaped matches remain not actionable for credential rotation for the documented provenance reasons. Payment integrity remains deferred until the simulated provider verification is replaced by authoritative server-to-server verification with mismatch, replay, and sandbox-success evidence. Detailed commands, counts, and remaining release gates are canonical in `docs/18_Codex_Security_Findings_Implementation.md`; validation artifacts are temporary evidence and are not committed to the repository.
 
 ---
 

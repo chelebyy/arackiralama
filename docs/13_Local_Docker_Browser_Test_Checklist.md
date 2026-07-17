@@ -3,7 +3,7 @@
 Date: 2026-06-03
 Scope: Production release rehearsal on local Docker before live deployment
 
-Latest delta evidence: 2026-06-27 admin public-site localization smoke rerun on local Docker. `rentacar-web` was rebuilt from current frontend code; `rentacar-api`, `rentacar-postgres`, and `rentacar-redis` stayed on the local compose stack. Playwright selected Docker suite passed **17/17** against `http://localhost:3001`, including the new admin public settings smoke for five-language managed-content controls.
+Latest delta evidence: 2026-07-17 public membership-disable acceptance rerun on local Docker. Current API and web images were rebuilt; the Chromium membership-disabled and reservation-boundary scenarios each passed **1/1** against `http://localhost:3001`, including exact/trailing-slash endpoint rejection, five-locale claim-page rejection, public login-link removal, and database cleanup/no-write proof.
 
 ---
 
@@ -154,10 +154,17 @@ Root compose alternative status on 2026-06-03:
 
 - Exercised as a config/safety validation for this pass without leaving a root `.env` file in the working tree. `.env.example` was reviewed and found to contain Dokploy-style placeholder public URLs (`https://app.example.com`, `https://api.example.com`), so the actual local rehearsal values must be reviewed/overridden before any `docker compose up --build` run.
 - `docker compose config` was run with temporary local-only environment values and returned a valid root compose model.
-- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, `AUTH_BACKEND_URL=http://api:8080`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://localhost:3000`. The dedicated notification origin is HTTPS-shaped because the root API runs with Production validation; this config-only rehearsal does not claim local email delivery. Daily local account-claim testing continues to use `backend/docker-compose.yml` in Development with its HTTP loopback origin.
+- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, `AUTH_BACKEND_URL=http://api:8080`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://localhost:3000`. The dedicated notification origin is HTTPS-shaped because the root API runs with Production validation; this config-only rehearsal does not claim local email delivery. This 3 June entry is historical; the current release validates the disabled membership surface instead of a public account-claim delivery flow.
 - The validated root compose browser target is `http://localhost:3000` because `WEB_PORT=3000`; the root API target is `http://localhost:8080` because `API_PORT=8080`.
 - Temporary root compose secrets used for validation were local-only strings: PostgreSQL password `local-root-compose-postgres-only`, Redis password `local-root-compose-redis-only`, and JWT secret `local-root-compose-jwt-secret-at-least-32-chars`.
 - `docker network inspect dokploy-network --format "{{.Name}} {{.Driver}} {{.Scope}}"` returned `dokploy-network bridge local`, confirming the external Docker network exists.
+
+Current membership-disable acceptance on 2026-07-17:
+
+- Rebuilt the current local Docker API and web images and verified both services healthy/reachable.
+- `frontend/e2e/tests/account-claim-security.spec.ts` passed **1/1** in Chromium: all five localized claim pages and `/dashboard/register/v1` returned `404`, the homepage exposed no customer login link, frontend and backend registration/claim endpoints returned `404` (including trailing-slash variants), and test-owned customer/background-job counts stayed zero.
+- `frontend/e2e/tests/reservation-boundary-security.spec.ts` passed **1/1** after replacing its removed public-registration fixture dependency with a test-owned customer fixture; its disclosure, ownership, cancellation, and cleanup assertions remained unchanged.
+- This is local acceptance evidence only. Repeat the membership-disabled browser/API matrix against the deployed commit before calling the deployment gate closed.
 
 ---
 
@@ -750,7 +757,7 @@ Checklist:
 - [x] Session checks use `/api/auth/me`.
 - [x] Password reset request uses `/api/auth/password-reset/request`.
 - [x] Password reset confirmation uses `/api/auth/password-reset/confirm`.
-- [x] Register flow uses `/api/auth/register` where applicable.
+- [x] Public `/api/auth/register` and `/api/auth/claim` proxies return empty `404` responses without forwarding.
 - [x] No request targets production domains.
 - [x] No access token, refresh token, or secret appears in visible page content.
 - [x] Unexpected 401/403 responses are understood and documented.

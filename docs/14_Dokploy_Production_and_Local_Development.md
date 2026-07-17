@@ -1,6 +1,7 @@
 # Dokploy Production and Local Development Runbook
 
 Date: 2026-06-09
+Updated: 2026-07-17 (public membership surface disabled)
 
 ## What Happened in the Dokploy Demo
 
@@ -43,7 +44,7 @@ PAYMENT_ENABLE_PAYMENTS=false
 Rules:
 
 - `NEXT_PUBLIC_*` values are browser-facing and are baked into the Next.js client bundle at build time.
-- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` is server-side and must be the public HTTPS site origin used in account-claim links. Keep it equal to the production `NEXT_PUBLIC_APP_URL`, but configure it separately so local HTTP browser targets cannot be injected into the Production API.
+- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains a server-side trusted HTTPS origin for the retained notification/claim implementation, but the current public registration and claim surfaces return `404`. Keeping this value configured does not reopen membership or prove email delivery; any future re-enablement requires a separate product and security decision.
 - `AUTH_BACKEND_URL` is server-side only and should stay internal in Dokploy/Docker: `http://api:8080`.
 - After changing any `NEXT_PUBLIC_*` value in Dokploy, rebuild/redeploy the web service.
 - Do not use Tailscale IPs or Docker service names in browser-facing `NEXT_PUBLIC_*` values for production.
@@ -74,7 +75,7 @@ Production hardening before real launch:
    ```
 
 3. Attach the public domain to the `web` service.
-4. Set env values using the production settings above, including `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com`, `PAYMENT_PROVIDER=Disabled`, and `PAYMENT_ENABLE_PAYMENTS=false`.
+4. Set env values using the production settings above, including retained `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com`, `PAYMENT_PROVIDER=Disabled`, and `PAYMENT_ENABLE_PAYMENTS=false`. The notification origin is configuration hygiene only and does not enable the disabled membership routes.
 5. Trigger deploy and wait for status `done`.
 6. Verify:
 
@@ -95,10 +96,10 @@ Production hardening before real launch:
 
 ## Email Scope Decision (17 July 2026)
 
-- Public customer membership/account claim is not part of the intended current product or release scope, and no production email provider is selected or configured. The current source still exposes guest registration links/routes and the backend claim-email path, so real account-claim delivery remains an acceptance gate until a separate implementation disables or removes those entry points.
+- Public customer membership/account claim is not part of the intended current product or release scope. The current source now removes the public login/registration entry points and returns `404` from registration/claim pages, frontend proxies, and backend endpoints before side effects. Existing customers may still use the direct login route.
 - Future automatic email is intended for reservation lifecycle notifications. The provider and exact trigger/event matrix have not been selected, so this runbook does not claim that reservation emails are currently delivered.
-- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains the required trusted HTTPS origin for the retained account-claim code while that workflow is reachable. Setting the origin alone does not configure an email provider or prove delivery. Release closure requires either disabling/removing the public workflow or completing provider configuration and controlled-delivery evidence.
-- This decision changes documentation only. It does not add credentials, change Dokploy runtime configuration, enable an email path, or remove the separate requirement to revalidate reachable original attack paths after deployment.
+- `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains a trusted-origin guard for retained internal code. Setting it does not enable membership, configure an email provider, or prove delivery.
+- The source-level/local membership gate is closed; merge/CI and deployed exact/trailing-slash page/API revalidation remain required. This change adds no credentials, does not select an email provider, and does not remove the separate requirement to revalidate other reachable original attack paths after deployment.
 
 ## Local Development: Recommended Daily Flow
 

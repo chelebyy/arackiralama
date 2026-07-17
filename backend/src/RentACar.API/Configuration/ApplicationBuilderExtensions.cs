@@ -53,6 +53,7 @@ public static class ApplicationBuilderExtensions
         app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<CultureMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
+        app.UseMiddleware<PublicCustomerAccountSurfaceMiddleware>();
         app.UseMiddleware<IdempotencyMiddleware>();
         app.UseStaticFiles();
         app.UseCors(ServiceCollectionExtensions.ApiCorsPolicyName);
