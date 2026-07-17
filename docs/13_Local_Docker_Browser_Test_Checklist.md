@@ -164,7 +164,7 @@ Current membership-disable acceptance on 2026-07-17:
 - Rebuilt the current local Docker API and web images and verified both services healthy/reachable.
 - `frontend/e2e/tests/account-claim-security.spec.ts` passed **1/1** in Chromium: all five localized claim pages and `/dashboard/register/v1` returned `404`, the homepage exposed no customer login link, frontend and backend registration/claim endpoints returned `404` (including trailing-slash variants), and test-owned customer/background-job counts stayed zero.
 - `frontend/e2e/tests/reservation-boundary-security.spec.ts` passed **1/1** after replacing its removed public-registration fixture dependency with a test-owned customer fixture; its disclosure, ownership, cancellation, and cleanup assertions remained unchanged.
-- This is local acceptance evidence only. Repeat the membership-disabled browser/API matrix against the deployed commit before calling the deployment gate closed.
+- This section remains the local acceptance record. The required live follow-up was completed on 17 July 2026 after an operator-triggered Dokploy deployment of exact merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`: cache-bypassed HTTP and Chromium checks returned `404` for all five localized claim pages, `/dashboard/register/v1`, and both public proxies; direct login remained `200`; and the homepage exposed no login link. Empty JSON proxy probes mutated no production data. The deployed-public membership gate is closed; direct internal-backend/container/log/database evidence remains outside this checklist and unreviewed.
 
 ---
 
