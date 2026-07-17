@@ -15,7 +15,7 @@ namespace RentACar.API.Configuration;
 /// </summary>
 public static class PaymentOptionsValidator
 {
-    private static readonly string[] KnownProviders = { "Mock", "Iyzico" };
+    private static readonly string[] KnownProviders = { "Disabled", "Mock", "Iyzico" };
 
     public static void ValidateForProduction(PaymentOptions options)
     {
@@ -31,6 +31,17 @@ public static class PaymentOptionsValidator
         {
             throw new InvalidOperationException(
                 $"Unknown payment provider '{options.Provider}'. Production only allows: {string.Join(", ", KnownProviders)}.");
+        }
+
+        if (options.Provider.Equals("Disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            if (options.EnablePayments)
+            {
+                throw new InvalidOperationException(
+                    "Disabled payment provider cannot process payments. Payment:EnablePayments must remain false.");
+            }
+
+            return;
         }
 
         if (options.Provider.Equals("Mock", StringComparison.OrdinalIgnoreCase))

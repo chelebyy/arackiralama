@@ -35,6 +35,9 @@ NEXT_PUBLIC_API_URL=https://your-domain.com/api/v1
 NEXT_PUBLIC_ADMIN_API_URL=/api/admin
 NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com
 AUTH_BACKEND_URL=http://api:8080
+PAYMENT_PROVIDER=Disabled
+PAYMENT_CURRENCY=TRY
+PAYMENT_ENABLE_PAYMENTS=false
 ```
 
 Rules:
@@ -45,6 +48,8 @@ Rules:
 - After changing any `NEXT_PUBLIC_*` value in Dokploy, rebuild/redeploy the web service.
 - Do not use Tailscale IPs or Docker service names in browser-facing `NEXT_PUBLIC_*` values for production.
 - The root `docker-compose.yml` is the Dokploy/production compose file and expects Dokploy's external network.
+- `PAYMENT_PROVIDER=Disabled` is the explicit fail-closed mode for the test/demo site. It is valid only with `PAYMENT_ENABLE_PAYMENTS=false`, does not require synthetic provider credentials, and never falls back to Mock.
+- Do not set `PAYMENT_ENABLE_PAYMENTS=true`. The current Iyzico implementation is simulated and is not an authorization source for real payments.
 
 Production hardening before real launch:
 
@@ -57,6 +62,7 @@ Production hardening before real launch:
 - Confirm `ALLOWED_HOSTS` includes the public domain and expected internal names.
 - Set a real `GA_KEY` only if analytics is intentionally enabled.
 - Keep database backup/export procedures outside Git.
+- Keep `PAYMENT_PROVIDER=Disabled` and `PAYMENT_ENABLE_PAYMENTS=false` until a real provider integration, callback verification, mismatch/replay tests, and controlled provider sandbox proof have passed.
 
 ## Dokploy Deployment Checklist
 
@@ -68,7 +74,7 @@ Production hardening before real launch:
    ```
 
 3. Attach the public domain to the `web` service.
-4. Set env values using the production settings above, including `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com`.
+4. Set env values using the production settings above, including `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://your-domain.com`, `PAYMENT_PROVIDER=Disabled`, and `PAYMENT_ENABLE_PAYMENTS=false`.
 5. Trigger deploy and wait for status `done`.
 6. Verify:
 
