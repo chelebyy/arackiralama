@@ -1,7 +1,13 @@
-# Dokploy Production and Local Development Runbook
+# Dokploy Development/Staging and Future Production Runbook
 
 Date: 2026-06-09
-Updated: 2026-07-17 (public membership surface disabled)
+Updated: 2026-07-18 (active VPS classified as development/staging)
+
+## Environment Classification
+
+The currently active Dokploy VPS and `https://arac.cheleby.qzz.io` are development/staging surfaces used while implementation continues. They are not production and must not be cited as production acceptance, launch approval, or release readiness.
+
+Public reachability, TLS, a production-shaped Compose file, or a successful Dokploy deployment does not promote an environment. Production identity requires an explicit operator/product decision, a separately identified target, and a fresh production acceptance record. Until that happens, all runtime evidence from the active VPS is development/staging evidence, even when it exercises production configuration guards.
 
 ## What Happened in the Dokploy Demo
 
@@ -25,7 +31,7 @@ That worked only from a Tailscale-accessible environment and broke for normal vi
 
 These routes proxy public API and uploaded media requests to `AUTH_BACKEND_URL`.
 
-## Production Settings
+## Future Production Settings
 
 For a real single-domain production deployment, keep this shape:
 
@@ -48,7 +54,7 @@ Rules:
 - `AUTH_BACKEND_URL` is server-side only and should stay internal in Dokploy/Docker: `http://api:8080`.
 - After changing any `NEXT_PUBLIC_*` value in Dokploy, rebuild/redeploy the web service.
 - Do not use Tailscale IPs or Docker service names in browser-facing `NEXT_PUBLIC_*` values for production.
-- The root `docker-compose.yml` is the Dokploy/production compose file and expects Dokploy's external network.
+- The root `docker-compose.yml` is the production-shaped Dokploy compose definition and expects Dokploy's external network. Using that file on the active VPS does not change its development/staging classification.
 - `PAYMENT_PROVIDER=Disabled` is the explicit fail-closed mode for the test/demo site. It is valid only with `PAYMENT_ENABLE_PAYMENTS=false`, does not require synthetic provider credentials, and never falls back to Mock.
 - Do not set `PAYMENT_ENABLE_PAYMENTS=true`. The current Iyzico implementation is simulated and is not an authorization source for real payments.
 
@@ -94,13 +100,24 @@ Production hardening before real launch:
 - Zero-ID/no-write POST probes to payment intent, 3DS return, and webhook entry points each returned `503` with the disabled-payment response before identifier/provider validation.
 - This proves the demo deployment is available with public payment processing contained. It is not real-provider payment-integrity evidence or a production-launch approval.
 
+## Development/Staging Security Revalidation (18 July 2026)
+
+- SSH, Docker labels, and the remote checkout identified Dokploy project `rent-a-car-zlatqa` at deployed source commit `0a5e7fa94bc94c6eb9ae986bc5bc2c57939dc145`. The remote checkout had only the operator-managed Compose file modified.
+- A self-cleaning Chromium/API/PostgreSQL matrix re-proved the five-locale reservation allowlist, anonymous and non-owner no-write behavior, owner cancellation, and fixture cleanup. Residual counts were `0|0|0|0|0`.
+- Public lookup lengths 24, 25, and 128 returned `404` with `Cache-Control: no-store, no-cache`.
+- The five localized account-claim pages, registration page, both public membership proxies, and direct backend case/trailing-slash variants returned `404`; direct existing-customer login remained `200`.
+- Payment intent, forged 3DS return, and forged webhook probes each returned `503`. The before/after database fingerprint for customers, claim tokens, background jobs, audit logs, payment intents, and webhook events remained unchanged at `0|0|2|4|0|0`.
+- Web, API, worker, PostgreSQL, and Redis remained healthy; PostgreSQL accepted connections. A bounded sensitive-log-pattern scan returned zero matches.
+- The API had one earlier PostgreSQL password-authentication failure and one restart during startup. At final inspection it was healthy, all database-backed acceptance flows had passed, and the error had not recurred in the final ten-minute window.
+- Netgsm and SMS-job triage were explicitly excluded. This evidence expands development/staging acceptance only; it does not close final-production validation.
+
 ## Email Scope Decision (17 July 2026)
 
 - Public customer membership/account claim is not part of the intended current product or release scope. The current source now removes the public login/registration entry points and returns `404` from registration/claim pages, frontend proxies, and backend endpoints before side effects. Existing customers may still use the direct login route.
 - Future automatic email is intended for reservation lifecycle notifications. The provider and exact trigger/event matrix have not been selected, so this runbook does not claim that reservation emails are currently delivered.
 - `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` remains a trusted-origin guard for retained internal code. Setting it does not enable membership, configure an email provider, or prove delivery.
 - PR #413 head `5039c6028f1c21c8bd5aaecbb1cb3cc5e996ccee` was squash-merged as `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`; post-merge CI/security and the GHCR push succeeded. The live site did not advance from the earlier behavior until the operator used the Dokploy Compose **Deploy** action; the completed deployment reported that exact merge commit.
-- Cache-bypassed production HTTP and real Chromium checks then returned `404` for all five localized claim pages, `/dashboard/register/v1`, and the two public proxy endpoints; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage exposed no login link. Empty JSON proxy probes did not mutate production data. The source/local/deployed-public membership gate is closed. Direct internal-backend exact/case/trailing-slash runtime proof, container metadata/logs, production DB/job counts, and the other original attack paths remain separate unreviewed or open evidence gates.
+- Cache-bypassed deployed-public development/staging HTTP and real Chromium checks then returned `404` for all five localized claim pages, `/dashboard/register/v1`, and the two public proxy endpoints; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage exposed no login link. Empty JSON proxy probes did not mutate staging data. The source/local/deployed-public membership gate is closed. The 18 July direct-VPS follow-up subsequently proved internal-backend exact/case/trailing-slash behavior, container health/log state, and unchanged staging database/job fingerprints. Final-production evidence and the other original attack paths remain separate open gates.
 - This change adds no credentials and does not select an email provider.
 
 ## Local Development: Recommended Daily Flow
