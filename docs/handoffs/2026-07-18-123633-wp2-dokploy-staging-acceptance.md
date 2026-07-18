@@ -7,6 +7,8 @@
 - Branch: `codex/wp2-staging-acceptance-docs`
 - Branch base commit: `0a5e7fa94bc94c6eb9ae986bc5bc2c57939dc145`
 - Source implementation commit: `dff0ce1ecb4785cbaf60035d3aafc3167a0cbc7b`
+- Documentation publication commit: `9e21b16e6dde7afedd04ad0467bcd78d12100818`
+- Pull request: [#416](https://github.com/chelebyy/arackiralama/pull/416)
 - Deployed `main` commit confirmed by the operator: `0a5e7fa94bc94c6eb9ae986bc5bc2c57939dc145`
 - Session duration: approximately 90 minutes across VPS recovery, staging validation, cleanup, and documentation
 
@@ -65,6 +67,7 @@ WP2 public-reservation disclosure and cancellation hardening is implementation-c
 - [x] Removed the temporary staging harness and generated Playwright artifacts; the worktree was clean before documentation edits.
 - [x] Updated the canonical security document with the completed development/staging acceptance result.
 - [x] Validated this handoff with the session-handoff validator: `100/100`, no TODO placeholders, all required sections complete, and no potential secrets detected.
+- [x] Published the documentation branch and opened GitHub PR #416 against `main`.
 
 ## Files Modified
 
@@ -86,9 +89,9 @@ WP2 public-reservation disclosure and cancellation hardening is implementation-c
 
 ## Immediate Next Steps
 
-1. Publish the two approved documentation files from `codex/wp2-staging-acceptance-docs`, open the documentation PR, and verify that local, remote, and PR head commits match.
-2. Track required/advisory checks and inspect submitted reviews, top-level comments, and inline review threads before recommending merge.
-3. After this documentation PR is complete, select the next security/operations slice separately: final-production revalidation of remaining original attack paths, one complete post-ruleset Dependabot lifecycle, or the notification-provider/worker issue.
+1. Track PR #416 required/advisory checks and verify the final local, remote, and PR head commits match.
+2. Inspect submitted reviews, top-level comments, and inline review threads on the final head before recommending merge.
+3. After PR #416 is complete, select the next security/operations slice separately: final-production revalidation of remaining original attack paths, one complete post-ruleset Dependabot lifecycle, or the notification-provider/worker issue.
 
 ## Blockers/Open Questions
 
@@ -161,7 +164,8 @@ WP2 public-reservation disclosure and cancellation hardening is implementation-c
 - `C:\All_Project\Arac-Kiralama\frontend\e2e\tests\reservation-boundary-security.spec.ts`
 - `C:\All_Project\Arac-Kiralama\docker-compose.yml`
 - GitHub PR #415: `https://github.com/chelebyy/arackiralama/pull/415`
+- GitHub PR #416: `https://github.com/chelebyy/arackiralama/pull/416`
 
 ---
 
-**First action for the next session:** inspect the live documentation PR head, checks, reviews, comments, and unresolved review threads before making any merge recommendation.
+**First action for the next session:** inspect PR #416's live head, checks, reviews, comments, and unresolved review threads before making any merge recommendation.
