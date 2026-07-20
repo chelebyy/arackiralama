@@ -98,7 +98,7 @@ WP2 public-reservation disclosure and cancellation hardening is implementation-c
 - [ ] The final production VPS acceptance environment is not represented by this staging run.
 - [ ] A `notification-sms-send` background job remains failed because Netgsm is not configured. It did not match the controlled fixture and must be triaged as a separate operational notification task.
 - [ ] Real payment-provider integrity remains intentionally deferred while payments stay disabled.
-- [ ] One complete post-ruleset Dependabot lifecycle remains an operational evidence gate.
+- [x] The post-ruleset Dependabot operational-evidence gate completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
 
 ## Deferred Items
 
