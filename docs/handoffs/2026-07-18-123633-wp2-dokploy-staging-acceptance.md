@@ -91,7 +91,7 @@ WP2 public-reservation disclosure and cancellation hardening is implementation-c
 
 1. Track PR #416 required/advisory checks and verify the final local, remote, and PR head commits match.
 2. Inspect submitted reviews, top-level comments, and inline review threads on the final head before recommending merge.
-3. After PR #416 is complete, select the next security/operations slice separately: final-production revalidation of remaining original attack paths, one complete post-ruleset Dependabot lifecycle, or the notification-provider/worker issue.
+3. After PR #416 is complete, select the next security/operations slice separately. At this handoff, the candidates were final-production revalidation of remaining original attack paths, one complete post-ruleset Dependabot lifecycle, or the notification-provider/worker issue. The Dependabot lifecycle candidate later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026; the other candidates remain separate.
 
 ## Blockers/Open Questions
 

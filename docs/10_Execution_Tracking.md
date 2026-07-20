@@ -2004,7 +2004,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Future email scope:** Automatic email is desired for reservation lifecycle notifications rather than public membership onboarding. The exact events, templates, provider, sender/domain configuration, and operational acceptance matrix remain undecided. No provider credential, source code, runtime configuration, or deployment state is changed by this documentation-only decision.
 
-**Release impact:** Before release, either a separate implementation must remove/disable the public registration and account-claim entry points, or production provider configuration and controlled claim-delivery evidence remain required. Deployed revalidation of the remaining original attack paths, independent Dokploy container/image/health/log evidence, one complete post-ruleset Dependabot lifecycle, and provider-authenticated payment proof before enabling payments remain separate gates. Current documentation must not claim that account-claim or reservation emails are delivered in Production.
+**Release impact at this snapshot:** Before release, either a separate implementation must remove/disable the public registration and account-claim entry points, or production provider configuration and controlled claim-delivery evidence remain required. Deployed revalidation of the remaining original attack paths, independent Dokploy container/image/health/log evidence, and provider-authenticated payment proof before enabling payments remain separate gates. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026. Current documentation must not claim that account-claim or reservation emails are delivered in Production.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2074,7 +2074,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Environment classification:** The current Dokploy deployment is development/staging, not the final production VPS. No controlled staging fixture was created during this slice. The current branch is therefore locally fixed and acceptance-proven but not deployed.
 
-**Open gates:** Merge/deploy the scoped hardening, then repeat the real reservation payload and authenticated owner/non-owner cancellation matrix in Dokploy staging. Final-production VPS acceptance, remaining original attack paths, payment-provider proof before enablement, and one complete post-ruleset Dependabot lifecycle remain separate.
+**Open gates at this snapshot:** Merge/deploy the scoped hardening, then repeat the real reservation payload and authenticated owner/non-owner cancellation matrix in Dokploy staging. Final-production VPS acceptance, remaining original attack paths, and payment-provider proof before enablement remain separate. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2114,7 +2114,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Fresh graph evidence:** The default-branch SBOM generated at `2026-07-16T10:24:16Z` contains 1,121 packages. Its target set is exactly `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the previously vulnerable target versions appears.
 
-**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. At this snapshot, secret-artifact source/ownership evidence, the production deployment rerun, and focused final security validation remained separate release blockers. The later 16 July provider-candidate triage resolved the secret-artifact uncertainty. One complete post-ruleset Dependabot lifecycle should still be retained as operational assurance.
+**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. At this snapshot, secret-artifact source/ownership evidence, the production deployment rerun, focused final security validation, and one complete post-ruleset Dependabot lifecycle remained separate release blockers. The later 16 July provider-candidate triage resolved the secret-artifact uncertainty. The Dependabot operational-assurance gate later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
@@ -2142,7 +2142,7 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Upstash triage result:** Three scanner matches were traced to `.dotnet/.dotnet/TelemetryStorageService/*.trn` files added on the Phase 6 history line. Each match was a 38-, 44-, or 70-character alphanumeric substring inside a Base64-only line. Every line decoded successfully to a gzip payload (`1F8B` magic) and then to Application Insights JSON with `name`, `time`, `iKey`, `tags`, and `data` fields; the matched substring was absent after decoding. No Upstash package, environment variable, source integration, deployment configuration, or provider account anchor exists in the repository history inspected. Verdict: `not_actionable`; no credential rotation or provider access-log review is required. The generated `.dotnet/` path is now ignored to prevent recurrence.
 
-**Remaining gates:** Production email delivery remains deferred until a provider is deliberately selected and proven. Deployment rerun, real payment-provider verification, and one complete post-ruleset Dependabot lifecycle remain open.
+**Remaining gates at this snapshot:** Production email delivery remains deferred until a provider is deliberately selected and proven. Deployment rerun and real payment-provider verification remain open. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
 
 **Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
 
