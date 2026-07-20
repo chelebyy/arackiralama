@@ -51,6 +51,17 @@ The normative environment/evidence contract is section 1.2 of `docs/19_Database_
 
 Every evidence record contains environment, UTC timestamp, commit SHA, image digests, sanitized configuration hash, test/runbook ID, result, and evidence location. Secrets, customer records, and raw restored Production rows never enter evidence.
 
+Evidence traceability uses stable identifiers that do not change when headings or file names are refined:
+
+- phase exit gates use `DBOPS-P<n>-G<n>`;
+- registered safe Production checks use `DBOPS-PROD-<nn>`;
+- runbooks use `DBOPS-RB-<domain>-<nn>`;
+- evidence runs use `DBOPS-EV-<LOCAL|TESTVPS|PROD>-<YYYYMMDDTHHMMSSZ>-<short-slug>` and reference every gate, test, and runbook they claim to satisfy.
+
+`docs/19_Database_Operations_and_Observability_Plan.md` and this document remain the normative architecture and implementation contracts. `docs/10_Execution_Tracking.md` is the mutable execution ledger for phase status, environment-specific results, blockers, and evidence links. A checkbox in this document may change to `[x]` only when the matching ledger entry points to the required evidence; the ledger cannot weaken or override a gate.
+
+Phase 0 creates `docs/test-evidence/database-operations/README.md` and `docs/test-evidence/database-operations/templates/validation-record.md`. Actual records live under `docs/test-evidence/database-operations/<environment>/<run-id>/`; they contain sanitized summaries and hashes/locations rather than copied secrets, customer rows, restored Production rows, or large raw logs.
+
 ### 2.2 Environment Execution Matrix
 
 | Work type | Local Docker | Test VPS | Production |
@@ -126,6 +137,16 @@ The exact file names may change to match validated tool versions, but the owners
 
 ```text
 ops/
+├── README.md
+├── runbooks/
+│   ├── README.md
+│   ├── monitoring-and-postgresql.md
+│   ├── backup-wal-and-quiescence.md
+│   ├── b2-object-lock-and-capacity.md
+│   ├── restore-and-pitr.md
+│   ├── audit-delivery-and-break-glass.md
+│   ├── identity-credentials-and-owner-recovery.md
+│   └── test-vps-fault-injection.md
 ├── observability/
 │   ├── compose.yml
 │   ├── README.md
@@ -163,9 +184,18 @@ ops/
     ├── write-safety-watch.service
     ├── write-safety-watch.sh
     └── restore-verification.md
+
+docs/test-evidence/database-operations/
+├── README.md
+├── templates/
+│   └── validation-record.md
+└── <environment>/
+    └── <run-id>/
 ```
 
 Production secrets stay in Dokploy or the selected secret store and are mounted/injected at runtime. Example files contain names and safe placeholders only.
+
+`ops/README.md` is the version-controlled operator index. It owns the implementation-specific trust-boundary diagram, component/version/license register, topology and port inventory, responsibility map, source-of-truth links, and secret/configuration names only. It never contains credential values, personal contact details, provider account identifiers, private recovery locations, or live bucket/receiver coordinates.
 
 The shared write-admission implementation has explicit ownership rather than controller-local helpers:
 
@@ -266,13 +296,17 @@ Every phase uses the same V1 human assignment:
 
 - [ ] Start from a clean or explicitly scoped working tree.
 - [ ] Record selected image/package versions and official documentation links.
-- [ ] Add an implementation-specific threat/trust-boundary diagram to the operations README.
+- [ ] Create `ops/README.md` as the operator index and add an implementation-specific threat/trust-boundary diagram, component/version/license register, topology/port inventory, responsibility map, source-of-truth links, and secret names only.
+- [ ] Create `ops/runbooks/README.md` with the stable runbook registry and create the database-operations evidence README/template defined in section 2.1; do not pre-fill later-phase runbooks or claim evidence before their implementation/validation phase.
+- [ ] Register phase-gate, Production-check, runbook, and evidence-run IDs without embedding environment secrets or mutable provider coordinates.
 - [x] Define environment names and evidence authority: Local Docker, the existing Staging/Dokploy host as Test VPS, and Production; record that Test VPS is never Production authority.
 
 ### 6.2 Reconcile Legacy Claims
 
 Update, without falsifying historical evidence:
 
+- [ ] `docs/02_ADR_ENTERPRISE_FULL.md` with the accepted database-operations architecture decisions and canonical links;
+- [ ] `docs/03_TDD_ENTERPRISE_FULL.md` with a canonical-link and synchronization boundary now; add detailed interfaces, schemas, and runtime flows only with the phases that implement them so Phase 0 does not invent source behavior;
 - [ ] `docs/04_IDD_ENTERPRISE_FULL.md` backup, restore, and monitoring sections;
 - [ ] `docs/05_Runbook_ENTERPRISE_FULL.md` incident and restore procedures;
 - [ ] `docs/06_Security_Compliance_ENTERPRISE_FULL.md` credential, audit, PII, and retention controls;
@@ -284,7 +318,9 @@ Update, without falsifying historical evidence:
 
 Legacy `pg_dump` evidence may remain as a supplemental logical-export record. It must no longer be described as the sole disaster-recovery authority.
 
-**Phase 0 exit gate:** canonical documents agree on source of truth, backup authority, Local/Test VPS/Production topology, environment-specific evidence labels, status, and remaining blockers; the baseline and documentation checks are rerun on the Test VPS checkout.
+Use `docs/10_Execution_Tracking.md` for changing phase status and evidence pointers. Keep `docs/19` and `docs/20` as the normative decision/acceptance contracts; do not create a third master plan or duplicate live status across new phase-plan documents.
+
+**Phase 0 exit gate (`DBOPS-P0-G1`):** canonical documents agree on source of truth, backup authority, Local/Test VPS/Production topology, environment-specific evidence labels, status, and remaining blockers; the operator/runbook/evidence indexes exist; the baseline and documentation checks are rerun on the Test VPS checkout.
 
 ## 7. Phase 1 - Structured Application Logging
 
@@ -374,7 +410,7 @@ Tasks:
 - [ ] A representative request produces correlated API and web events without duplicate request logs.
 - [ ] Log volume is measured under the existing k6 smoke profile.
 
-**Phase 1 exit gate:** applicable unit/integration/load/redaction checks have `LOCAL-PASS`, the deployed Test VPS log stream has `TEST-VPS-PASS`, and structured logs are safe and machine parseable before Loki is introduced. The later Production canary cannot compensate for a missing Test VPS pass.
+**Phase 1 exit gate (`DBOPS-P1-G1`):** applicable unit/integration/load/redaction checks have `LOCAL-PASS`, the deployed Test VPS log stream has `TEST-VPS-PASS`, and structured logs are safe and machine parseable before Loki is introduced. The later Production canary cannot compensate for a missing Test VPS pass.
 
 ## 8. Phase 2 - Metrics, Log Pipeline, Dashboards, and Alerts
 
@@ -480,7 +516,7 @@ Do not merge a direct `/var/run/docker.sock` mount into Alloy. First detect the 
 - [ ] Grafana can correlate a safe request event with API metrics by time/correlation without high-cardinality labels.
 - [ ] Retention and quota behavior are demonstrated in Local Docker where feasible and mandatorily on the Test VPS.
 
-**Phase 2 exit gate:** Local Docker configuration/fault checks pass and the full deployed Test VPS pipeline proves external receiver delivery, source failure, recovery, and no business-traffic coupling. Actual cross-provider/account/region independence remains a labeled `PRODUCTION-ONLY` gate.
+**Phase 2 exit gate (`DBOPS-P2-G1`):** Local Docker configuration/fault checks pass and the full deployed Test VPS pipeline proves external receiver delivery, source failure, recovery, and no business-traffic coupling. Actual cross-provider/account/region independence remains a labeled `PRODUCTION-ONLY` gate.
 
 ## 9. Phase 3 - pgBackRest, WAL/PITR, and Restore Evidence
 
@@ -593,7 +629,7 @@ The restore verifier must be infrastructure-owned and isolated from Production a
 - [ ] Latest recovery point is intentionally removed/corrupted in an isolated test repository.
 - [ ] Alert and admin status distinguish `FAILED`, `STALE`, `UNVERIFIED`, and `UNKNOWN`.
 
-**Phase 3 exit gate:** applicable Local Docker backup/PITR checks pass; on the Test VPS, two scheduled cycles per explicit repository, all-repository WAL freshness, separate check/info/expire evidence, real test-B2 interruption/quiescence tests, proof that `archive-push-queue-max` is unset, version-drift detection, direct plus manifest-reconstructed restores, and isolated synthetic restores explicitly from both `repo1` and `repo2` pass. The host-loss sub-gate additionally requires a separate recovery host/control plane while the source is unavailable. Backup/WAL-file existence, a default-priority restore, or a co-located target cannot pass, and Production restore authority remains open until the `PRODUCTION-ONLY --repo=2` isolated restore succeeds.
+**Phase 3 exit gate (`DBOPS-P3-G1`):** applicable Local Docker backup/PITR checks pass; on the Test VPS, two scheduled cycles per explicit repository, all-repository WAL freshness, separate check/info/expire evidence, real test-B2 interruption/quiescence tests, proof that `archive-push-queue-max` is unset, version-drift detection, direct plus manifest-reconstructed restores, and isolated synthetic restores explicitly from both `repo1` and `repo2` pass. The host-loss sub-gate additionally requires a separate recovery host/control plane while the source is unavailable. Backup/WAL-file existence, a default-priority restore, or a co-located target cannot pass, and Production restore authority remains open until the `PRODUCTION-ONLY --repo=2` isolated restore succeeds.
 
 ## 10. Phase 4 - Read-Only Operations Overview Module
 
@@ -772,7 +808,7 @@ Tasks:
 - [ ] Duplicate, restart, timeout, quota, poison-event, disk-full, hide-marker, version-list, receipt-signing-key rotation, verifier-cache loss, and B2 recovery tests prove at-least-once delivery with reconstructible B2-derived receipts, duplicate-tolerant/version-aware evidence queries, and no silent drop or name-only false absence.
 - [ ] Security-critical mutation plus transactional audit outbox commits or rolls back atomically; process termination cannot silently lose the event, and retries preserve its event ID.
 
-**Phase 4 exit gate:** Local Docker automated/contract tests pass and the deployed Test VPS proves the module, test Keycloak, real test relay/sinks, fail-closed/break-glass, outbox, and degraded behavior end to end. Provider details stay internal and monitoring failure cannot affect business endpoints; actual Production identity/audit configuration remains `PRODUCTION-ONLY`.
+**Phase 4 exit gate (`DBOPS-P4-G1`):** Local Docker automated/contract tests pass and the deployed Test VPS proves the module, test Keycloak, real test relay/sinks, fail-closed/break-glass, outbox, and degraded behavior end to end. Provider details stay internal and monitoring failure cannot affect business endpoints; actual Production identity/audit configuration remains `PRODUCTION-ONLY`.
 
 ## 11. Phase 5 - Admin System and Operations Page
 
@@ -820,7 +856,7 @@ Tasks:
 - [ ] Responsive desktop/tablet/mobile layout.
 - [ ] Accessibility: semantic status text, keyboard navigation, focus, contrast, and non-color-only status.
 
-**Phase 5 exit gate:** Local component/build/browser tests and Test VPS authorized browser validation pass across healthy/degraded/stale/unauthorized states. The page is a truthful read-only projection and never pretends to be an independent control plane.
+**Phase 5 exit gate (`DBOPS-P5-G1`):** Local component/build/browser tests and Test VPS authorized browser validation pass across healthy/degraded/stale/unauthorized states. The page is a truthful read-only projection and never pretends to be an independent control plane.
 
 ## 12. Phase 6 - Fault Injection, Security, and Recovery Validation
 
@@ -887,7 +923,7 @@ Tasks:
 - [ ] Record `pg_database_size`, daily WAL bytes, compressed backup sizes, B2 stored bytes, log bytes/day, Prometheus active series, and metrics bytes/day.
 - [ ] Treat the 30-day B2 projection as an early-warning signal only. Prove the combined conservative peak across the rolling 7-day recovery window (including overlapping chains, WAL, and object versions) and the full 3-year immutable-audit horizon remains below 8 GB; also prove PostgreSQL/WAL/local-repository filesystems remain below the 70% warning projection.
 
-**Phase 6 exit gate:** all applicable Local Docker checks pass and every material destructive failure path has `TEST-VPS-PASS` evidence. Host-loss evidence passes only from the independent recovery-host topology defined above; a same-host/container-only restore leaves that gate open. No report describes the system as fully secure or Production-safe solely because these tests pass; live-environment claims remain open until their safe `PRODUCTION-ONLY` checks pass.
+**Phase 6 exit gate (`DBOPS-P6-G1`):** all applicable Local Docker checks pass and every material destructive failure path has `TEST-VPS-PASS` evidence. Host-loss evidence passes only from the independent recovery-host topology defined above; a same-host/container-only restore leaves that gate open. No report describes the system as fully secure or Production-safe solely because these tests pass; live-environment claims remain open until their safe `PRODUCTION-ONLY` checks pass.
 
 ## 13. Phase 7 - Rollout and Documentation Closure
 
@@ -923,16 +959,16 @@ The Test VPS validates the complete implementation and destructive failure behav
 
 Run these items only after `TEST-VPS-PASS`; each produces `PRODUCTION-PASS` or blocks cutover:
 
-- [ ] Verify exact live commit/image digests, private networks, DNS/TLS, firewall/ingress, persistent volumes, runtime mounts, sanitized configuration hashes, and public management-port exposure.
-- [ ] Prove the Operations VPS is actually in the approved different provider/account/region failure domain and the receiver-side dead-man evaluator plus B2 receipt verifier are outside both Production and Operations control planes. Isolate only dedicated Production and Operations canary routes to prove each missed-check alert; do not disconnect, stop, or kill a live host/path.
-- [ ] Inspect actual PostgreSQL monitor grants/limits/timeouts, archive settings, `archive-push-queue-max` absence, write-safety watcher/state permissions, shared startup/API/auth/Worker/direct-command gate wiring, no-write recovery-auth configuration, and fail-closed Production configuration.
-- [ ] Verify actual Keycloak issuer/client, MFA/step-up/recent-auth claims, `SystemOperator` mapping, and offline recovery independence using a synthetic operator check.
-- [ ] Verify actual backup/audit B2 bucket policies, 7-day/3-year Compliance Object Lock, scoped runtime credentials, audit hide-marker/version-aware controls, provider alerts, no-paid-capacity controls, combined stored bytes, 30-day operational forecast, 7-day recovery-window peak, and 3-year immutable-audit forecast using safe test markers only.
-- [ ] Verify live pgBackRest all-repository WAL freshness plus repository-specific check/info/expire and two scheduled cycles for both `repo1` and `repo2`, watcher heartbeat, and sanitized capacity metrics without blocking B2 or filling `pg_wal`.
-- [ ] Restore an actual Production `repo2` backup with explicit repository selection into an encrypted ephemeral clean target with private ingress, default-deny egress, Owner-Operator-only access, fixed TTL, and all side effects disabled. Read-only verify the signed accepted-version manifest, historical-file-ID reconstruction procedure, and version-drift monitor; run bounded aggregate/synthetic checks without exporting row values, then verify cleanup and volume destruction.
-- [ ] Verify one synthetic live overview audit reaches Vector, Loki, and immutable B2, then derive its opaque event prefix from the event ID and validate the bounded one-event lookup plus signed receipt's event ID, digest, object key, version/file ID, timestamp/expiry, and verifier key ID. Validate fail-closed configuration by inspection/safe test seam rather than disabling the live sink.
-- [ ] Run the authorized read-only Operations UI/API smoke and verify source ages, `no-store`, safe links, and no raw provider/customer/secret data.
-- [ ] Confirm rollback/runbooks, private Operations Contact Record, evidence locations, and open accepted risks before enabling traffic.
+- [ ] `DBOPS-PROD-01` - Verify exact live commit/image digests, private networks, DNS/TLS, firewall/ingress, persistent volumes, runtime mounts, sanitized configuration hashes, and public management-port exposure.
+- [ ] `DBOPS-PROD-02` - Prove the Operations VPS is actually in the approved different provider/account/region failure domain and the receiver-side dead-man evaluator plus B2 receipt verifier are outside both Production and Operations control planes. Isolate only dedicated Production and Operations canary routes to prove each missed-check alert; do not disconnect, stop, or kill a live host/path.
+- [ ] `DBOPS-PROD-03` - Inspect actual PostgreSQL monitor grants/limits/timeouts, archive settings, `archive-push-queue-max` absence, write-safety watcher/state permissions, shared startup/API/auth/Worker/direct-command gate wiring, no-write recovery-auth configuration, and fail-closed Production configuration.
+- [ ] `DBOPS-PROD-04` - Verify actual Keycloak issuer/client, MFA/step-up/recent-auth claims, `SystemOperator` mapping, and offline recovery independence using a synthetic operator check.
+- [ ] `DBOPS-PROD-05` - Verify actual backup/audit B2 bucket policies, 7-day/3-year Compliance Object Lock, scoped runtime credentials, audit hide-marker/version-aware controls, provider alerts, no-paid-capacity controls, combined stored bytes, 30-day operational forecast, 7-day recovery-window peak, and 3-year immutable-audit forecast using safe test markers only.
+- [ ] `DBOPS-PROD-06` - Verify live pgBackRest all-repository WAL freshness plus repository-specific check/info/expire and two scheduled cycles for both `repo1` and `repo2`, watcher heartbeat, and sanitized capacity metrics without blocking B2 or filling `pg_wal`.
+- [ ] `DBOPS-PROD-07` - Restore an actual Production `repo2` backup with explicit repository selection into an encrypted ephemeral clean target with private ingress, default-deny egress, Owner-Operator-only access, fixed TTL, and all side effects disabled. Read-only verify the signed accepted-version manifest, historical-file-ID reconstruction procedure, and version-drift monitor; run bounded aggregate/synthetic checks without exporting row values, then verify cleanup and volume destruction.
+- [ ] `DBOPS-PROD-08` - Verify one synthetic live overview audit reaches Vector, Loki, and immutable B2, then derive its opaque event prefix from the event ID and validate the bounded one-event lookup plus signed receipt's event ID, digest, object key, version/file ID, timestamp/expiry, and verifier key ID. Validate fail-closed configuration by inspection/safe test seam rather than disabling the live sink.
+- [ ] `DBOPS-PROD-09` - Run the authorized read-only Operations UI/API smoke and verify source ages, `no-store`, safe links, and no raw provider/customer/secret data.
+- [ ] `DBOPS-PROD-10` - Confirm rollback/runbooks, private Operations Contact Record, evidence locations, and open accepted risks before enabling traffic.
 
 The following are explicitly prohibited in Production validation: deliberate B2/quota exhaustion, `pg_wal` or filesystem fill, 15-minute archive outage, destructive table/data removal, live host kill, real receiver blackhole, Vector disk exhaustion, forced outbox exhaustion, retention reduction, Object-Lock bypass, customer notification/payment side effects, and any restore over the live primary. Their accepted behavioral evidence comes from Local Docker/Test VPS fault tests.
 
@@ -952,12 +988,13 @@ Rollback order must preserve observability and backups:
 
 - [ ] Update canonical ADR/IDD/TDD/implementation/execution/security/runbook/gate docs.
 - [ ] Record exact versions, topology, ports, owners, RPO/RTO, retention, and secret locations by name only.
+- [ ] Keep live status and evidence pointers in `docs/10_Execution_Tracking.md`; keep normative decisions and gate wording in `docs/19` and `docs/20` without creating per-phase master-plan duplicates.
 - [ ] Add operator runbooks for alert triage, PostgreSQL saturation, low disk, stale backup, WAL failure, log-pipeline failure, and restore.
 - [ ] Add runbooks for B2 outage stages, centralized write quiescence/resume, combined 8 GB capacity remediation, audit relay/B2 backlog, audit break-glass reconciliation, mutation-outbox pressure, independent-monitoring loss, and Owner-Operator unavailability.
 - [ ] Add screenshots for the admin page after implementation.
 - [ ] Add separate Local Docker, Test VPS, and Production evidence timestamps/labels without copying secrets or customer data.
 
-**Phase 7 exit gate:** every phase has applicable `LOCAL-PASS` plus mandatory `TEST-VPS-PASS`; each registered live gate has separate `PRODUCTION-PASS`; implementation, Test VPS acceptance, and Production readiness are reported separately and truthfully.
+**Phase 7 exit gate (`DBOPS-P7-G1`):** every phase has applicable `LOCAL-PASS` plus mandatory `TEST-VPS-PASS`; each registered live gate has separate `PRODUCTION-PASS`; implementation, Test VPS acceptance, and Production readiness are reported separately and truthfully.
 
 ## 14. Automated Validation Matrix
 
@@ -1021,6 +1058,20 @@ Before Production acceptance, provide tested runbooks for:
 
 Each runbook includes trigger, owner, safe first checks, prohibited actions, rollback/recovery, evidence capture, and escalation.
 
+Runbooks are grouped physically so incidents that cross components still have one obvious entry point:
+
+| Runbook file | Required scenario groups |
+|---|---|
+| `ops/runbooks/monitoring-and-postgresql.md` | monitoring/log pipeline loss, Loki/Prometheus disk pressure, PostgreSQL saturation, long/idle transactions, autovacuum/XID |
+| `ops/runbooks/backup-wal-and-quiescence.md` | stale/failed backup, WAL backlog, B2 outage stages, write quiescence/restart/no-write recovery authentication/manual resume |
+| `ops/runbooks/b2-object-lock-and-capacity.md` | same-name/hide-marker and manifest checks, 6/7.5/8/9 GB response, retention-compliant repository migration, test-resource isolation |
+| `ops/runbooks/restore-and-pitr.md` | isolated restore/PITR, historical-file-ID reconstruction, independent recovery-host drill, Production-artifact isolation/cleanup/destruction |
+| `ops/runbooks/audit-delivery-and-break-glass.md` | relay/B2 backlog, receipt-verifier outage/cache/key rotation, fail-closed reads, break-glass reconciliation, outbox pressure |
+| `ops/runbooks/identity-credentials-and-owner-recovery.md` | compromised monitoring credential, `SystemOperator` revoke, credential rotation/retained decrypt material, feature disable, escalation, Owner-Operator unavailability |
+| `ops/runbooks/test-vps-fault-injection.md` | exclusive maintenance, snapshot, abort/resource bounds, off-host evidence, unrelated-workload isolation, cleanup/recovery |
+
+`ops/runbooks/README.md` assigns each scenario a stable `DBOPS-RB-*` ID, owning file, environment applicability, required gate IDs, lifecycle status (`DRAFT`, `LOCAL-TESTED`, `TEST-VPS-TESTED`, or `PRODUCTION-VALIDATED`), last tested revision/time, and evidence link. `PRODUCTION-VALIDATED` is allowed only for the registered safe checks in section 13.2; destructive behavior remains evidenced by Local/Test VPS runs.
+
 ## 16. Security Plan-Gap Verification Mapping
 
 | Plan gap ID | Implementation phases that close it | Required evidence |
@@ -1051,7 +1102,7 @@ Each runbook includes trigger, owner, safe first checks, prohibited actions, rol
 - [ ] No EvLog or unapproved paid dependency is present.
 - [ ] No paid B2 path, finite `archive-push-queue-max`, controller-specific/middleware-only write flag, unqualified single-repository backup schedule, direct controller B2 integration, Vector-as-`B2_DELIVERED` shortcut, or fire-and-forget security audit remains.
 - [ ] No V1 database-maintenance execution surface exists.
-- [ ] Source/config/security documentation is synchronized.
+- [ ] Source/config/security documentation is synchronized; `ops/README.md`, the runbook registry, the database-operations evidence index/template, and `docs/10` ledger entries exist with stable IDs and no private-record leakage.
 
 ### 17.2 Test VPS Acceptance Complete
 
