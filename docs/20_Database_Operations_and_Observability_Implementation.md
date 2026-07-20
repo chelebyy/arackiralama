@@ -102,7 +102,7 @@ Expected application changes are limited to:
 - `frontend/components/layout/sidebar/nav-main.tsx`;
 - a small frontend operations client/hook following existing project conventions;
 - corresponding Vitest/Testing Library tests;
-- new `ops/observability/`, `ops/audit/`, and `ops/backup/` infrastructure configuration;
+- new `ops/README.md`, `ops/runbooks/`, `ops/observability/`, `ops/audit/`, and `ops/backup/` operator documentation and infrastructure configuration;
 - `.env.example` placeholders only;
 - canonical docs and test checklists.
 
@@ -298,7 +298,7 @@ Every phase uses the same V1 human assignment:
 - [ ] Record selected image/package versions and official documentation links.
 - [ ] Create `ops/README.md` as the operator index and add an implementation-specific threat/trust-boundary diagram, component/version/license register, topology/port inventory, responsibility map, source-of-truth links, and secret names only.
 - [ ] Create `ops/runbooks/README.md` with the stable runbook registry and create the database-operations evidence README/template defined in section 2.1; do not pre-fill later-phase runbooks or claim evidence before their implementation/validation phase.
-- [ ] Register phase-gate, Production-check, runbook, and evidence-run IDs without embedding environment secrets or mutable provider coordinates.
+- [ ] Register phase-gate, Production-check, and runbook IDs plus the evidence-run ID scheme/template without embedding environment secrets or mutable provider coordinates; create each `DBOPS-EV-*` ID only when its actual run is recorded.
 - [x] Define environment names and evidence authority: Local Docker, the existing Staging/Dokploy host as Test VPS, and Production; record that Test VPS is never Production authority.
 
 ### 6.2 Reconcile Legacy Claims
@@ -1062,7 +1062,7 @@ Runbooks are grouped physically so incidents that cross components still have on
 
 | Runbook file | Required scenario groups |
 |---|---|
-| `ops/runbooks/monitoring-and-postgresql.md` | monitoring/log pipeline loss, Loki/Prometheus disk pressure, PostgreSQL saturation, long/idle transactions, autovacuum/XID |
+| `ops/runbooks/monitoring-and-postgresql.md` | monitoring/log pipeline loss, Loki/Prometheus disk pressure, host/PostgreSQL/WAL/local-repository low-disk response, PostgreSQL saturation, long/idle transactions, autovacuum/XID |
 | `ops/runbooks/backup-wal-and-quiescence.md` | stale/failed backup, WAL backlog, B2 outage stages, write quiescence/restart/no-write recovery authentication/manual resume |
 | `ops/runbooks/b2-object-lock-and-capacity.md` | same-name/hide-marker and manifest checks, 6/7.5/8/9 GB response, retention-compliant repository migration, test-resource isolation |
 | `ops/runbooks/restore-and-pitr.md` | isolated restore/PITR, historical-file-ID reconstruction, independent recovery-host drill, Production-artifact isolation/cleanup/destruction |
