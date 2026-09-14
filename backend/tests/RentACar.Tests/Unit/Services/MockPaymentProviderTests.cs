@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RentACar.Core.Interfaces.Payments;
@@ -53,8 +56,8 @@ public sealed class MockPaymentProviderTests
 
     [Theory]
     [InlineData("bank-fail-response")]
-    [InlineData("bank-cancel-response")]
-    public async Task VerifyPaymentAsync_WhenBankResponseIndicatesFailure_ReturnsFailedResult(string bankResponse)
+    [InlineData("approved-by-attacker")]
+    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_ReturnsFailedResult(string bankResponse)
     {
         var sut = CreateSut();
 
@@ -65,8 +68,24 @@ public sealed class MockPaymentProviderTests
         });
 
         Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
-        Assert.Equal("MOCK_3DS_FAILED", result.FailureCode);
-        Assert.Equal("Mock provider marked payment as failed.", result.FailureMessage);
+        Assert.Equal("MOCK_3DS_VERIFICATION_FAILED", result.FailureCode);
+        Assert.Equal("Mock 3DS callback verification failed.", result.FailureMessage);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_WhenBankResponseIsSignedSuccess_ReturnsSucceededResult()
+    {
+        var sut = CreateSut();
+        var bankResponse = CreateSignedThreeDsPayload("mock-intent", "success", "mock-tx-1", "mock-secret");
+
+        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        {
+            ProviderIntentId = "mock-intent",
+            BankResponse = bankResponse
+        });
+
+        Assert.Equal(PaymentProviderIntentStatus.Succeeded, result.Status);
+        Assert.Equal("mock-tx-1", result.TransactionId);
     }
 
     [Fact]
@@ -133,16 +152,17 @@ public sealed class MockPaymentProviderTests
     }
 
     [Fact]
-    public async Task VerifyPaymentAsync_WhenBankResponseContainsTimeout_ThrowsTimeoutException()
+    public async Task VerifyPaymentAsync_WhenBankResponseContainsTimeoutButIsUnsigned_ReturnsFailedResult()
     {
         var sut = CreateSut();
 
-        await Assert.ThrowsAsync<TimeoutException>(() =>
-            sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
-            {
-                ProviderIntentId = "mock-intent",
-                BankResponse = "timeout-response"
-            }));
+        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        {
+            ProviderIntentId = "mock-intent",
+            BankResponse = "timeout-response"
+        });
+
+        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
     }
 
     [Theory]
@@ -309,6 +329,23 @@ public sealed class MockPaymentProviderTests
 
         Assert.True(result.Success);
         Assert.StartsWith("mock-capture-", result.ReferenceId);
+    }
+
+    private static string CreateSignedThreeDsPayload(string providerIntentId, string status, string transactionId, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToString("O");
+        var payload = $"{providerIntentId}.{status}.{transactionId}.{timestamp}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+
+        return JsonSerializer.Serialize(new
+        {
+            providerIntentId,
+            status,
+            transactionId,
+            timestamp,
+            signature = $"sha256={signature}"
+        });
     }
 
     private static MockPaymentProvider CreateSut(int intentExpiresMinutes = 15, TestLogger<MockPaymentProvider>? logger = null)
