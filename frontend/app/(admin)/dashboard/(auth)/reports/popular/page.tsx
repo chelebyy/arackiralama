@@ -76,7 +76,7 @@ export default function PopularVehiclesPage() {
                       width={120}
                     />
                     <Tooltip
-                      formatter={(value: number) => [`${value} kiralama`, "Sayı"]}
+                      formatter={(value) => [`${value} kiralama`, "Sayı"]}
                     />
                     <Bar dataKey="rentalCount" radius={[0, 4, 4, 0]} fill="#8b5cf6" />
                   </BarChart>

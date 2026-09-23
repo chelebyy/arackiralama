@@ -121,8 +121,8 @@ export default function RevenueReportPage() {
                     tickFormatter={(v) => `₺${(v as number) / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [
-                      `₺${value.toLocaleString("tr-TR")}`,
+                    formatter={(value) => [
+                      `₺${Number(value ?? 0).toLocaleString("tr-TR")}`,
                       "Gelir",
                     ]}
                   />

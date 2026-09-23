@@ -34,6 +34,7 @@ internal sealed class KeyPrefixedConnectionMultiplexer : IConnectionMultiplexer
 
     public bool IsConnected => _inner.IsConnected;
     public bool IsConnecting => _inner.IsConnecting;
+    [Obsolete("Configure ConfigurationOptions.IncludeDetailInExceptions before connecting.", true)]
     public bool IncludeDetailInExceptions
     {
         get => _inner.IncludeDetailInExceptions;

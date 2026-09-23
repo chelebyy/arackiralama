@@ -257,7 +257,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip
-                      formatter={(value: number) => [`${value} araç`, ""]}
+                      formatter={(value) => [`${value} araç`, ""]}
                       cursor={{ fill: "rgba(0,0,0,0.04)" }}
                     />
                     <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#3b82f6" />

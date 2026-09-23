@@ -867,6 +867,7 @@ describe("shared UI primitives", () => {
                   dataKey: "reservations",
                   name: "reservations",
                   value: 12,
+                  graphicalItemId: "reservations",
                   color: "hsl(210 70% 50%)",
                   payload: {},
                 },
