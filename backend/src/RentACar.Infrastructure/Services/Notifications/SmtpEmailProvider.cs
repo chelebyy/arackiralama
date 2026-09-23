@@ -57,10 +57,7 @@ public sealed class SmtpEmailProvider(
         {
             await client.SendMailAsync(message, cancellationToken);
 
-            _logger.LogInformation(
-                "SMTP email sent to {DestinationEmail} with subject {Subject}",
-                request.ToEmail,
-                request.Subject);
+            _logger.LogInformation("SMTP email sent");
 
             return new EmailSendResult
             {
@@ -70,13 +67,15 @@ public sealed class SmtpEmailProvider(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SMTP email send failed for {DestinationEmail}", request.ToEmail);
+            _logger.LogError(
+                "SMTP email send failed with exception type {ExceptionType}",
+                ex.GetType().Name);
 
             return new EmailSendResult
             {
                 Provider = "Smtp",
                 FailureCode = "EMAIL_SEND_FAILED",
-                FailureMessage = ex.Message
+                FailureMessage = "SMTP email request failed."
             };
         }
     }

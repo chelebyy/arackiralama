@@ -6,6 +6,8 @@ set -e
 BASE_URL="${BASE_URL:-http://localhost:5000}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-integration-admin@rentacar.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-IntegrationTestPassword123!}"
+CUSTOMER_EMAIL="${CUSTOMER_EMAIL:-}"
+CUSTOMER_ACCESS_TOKEN="${CUSTOMER_ACCESS_TOKEN:-}"
 SMOKE_MODE="${SMOKE_MODE:-0}"
 
 echo "================================"
@@ -25,6 +27,8 @@ run_test() {
     --env BASE_URL="$BASE_URL" \
     --env ADMIN_EMAIL="$ADMIN_EMAIL" \
     --env ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+    --env CUSTOMER_EMAIL="$CUSTOMER_EMAIL" \
+    --env CUSTOMER_ACCESS_TOKEN="$CUSTOMER_ACCESS_TOKEN" \
     --env SMOKE_MODE="$SMOKE_MODE" \
     "$file"
   echo ""

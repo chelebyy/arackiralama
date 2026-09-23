@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { updateAdminPublicContact } from "@/lib/api/admin/publicContent";
 import type {
   AdminPublicContent,
@@ -39,6 +41,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
   const [isDirty, setIsDirty] = useState(false);
   const isDirtyRef = useRef(false);
   const [draftVersion, setDraftVersion] = useState(content.version);
+  const saveStateLabel = isSaving ? "Kaydediliyor" : isDirty ? "Kaydedilmemiş değişiklik" : "Kaydedildi";
 
   useEffect(() => {
     if (isDirtyRef.current) {
@@ -194,7 +197,11 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div>
           <h2 className="text-base font-semibold">İletişim</h2>
-          <div className="text-sm text-muted-foreground">Sürüm {content.version}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="outline">Global iletişim</Badge>
+            <Badge variant={isDirty ? "warning" : "success"}>{saveStateLabel}</Badge>
+            <span>Sürüm {content.version}</span>
+          </div>
         </div>
         <Button type="button" onClick={saveContact} disabled={isSaving}>
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -202,8 +209,28 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
         </Button>
       </div>
 
+      <div
+        aria-live="polite"
+        className={cn(
+          "rounded-md border px-3 py-2 text-sm",
+          isDirty ? "border-orange-300 bg-orange-50 text-orange-900" : "border-green-200 bg-green-50 text-green-900",
+        )}
+      >
+        {isDirty
+          ? "İletişim alanlarında kaydedilmemiş değişiklik var. Gizli satırlar admin görünümünde kalır ama public sitede gösterilmez."
+          : "Son kaydedilen global iletişim bilgileri gösteriliyor. Dil kutuları yalnızca public metin çevirilerini değiştirir."}
+      </div>
+
       <section className="space-y-3">
-        <h3 className="text-sm font-medium">Harita</h3>
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-medium">Harita</h3>
+            <Badge variant={mapIsVisible ? "success" : "secondary"}>{mapIsVisible ? "Görünür" : "Gizli"}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Başlık, embed URL ve görünürlük tüm diller için ortak public iletişim alanıdır.
+          </p>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="contact-map-title">Harita Başlığı</Label>
@@ -242,14 +269,27 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
       </section>
 
       <section className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-medium">Kanallar</h3>
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">Kanallar</h3>
+          <p className="text-sm text-muted-foreground">
+            Temel kanal bilgileri globaldir; alttaki dil alanları public metin override değerleridir.
+          </p>
+        </div>
         {channels.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Kanal bulunamadı.</div>
         ) : (
           channels.map((channel, index) => (
-            <div key={channel.id} className="space-y-3 rounded-md border p-3">
+            <div
+              key={channel.id}
+              className={cn("space-y-3 rounded-md border p-3", !channel.isVisible && "border-dashed bg-muted/20")}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-medium">Kanal {index + 1}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-sm font-medium">Kanal {index + 1}</div>
+                  <Badge variant={channel.isVisible ? "success" : "secondary"}>
+                    {channel.isVisible ? "Public sitede görünür" : "Public sitede gizli"}
+                  </Badge>
+                </div>
                 <div className="flex items-center gap-2">
                   <Switch
                     id={`contact-channel-visible-${index}`}
@@ -301,6 +341,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
                   />
                 </div>
               </div>
+              <div className="text-xs font-medium uppercase text-muted-foreground">Dil override alanları</div>
               <div className="grid gap-3 rounded-md bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-4">
                 {translationLocales.map((locale) => (
                   <div key={locale} className="space-y-2">
@@ -329,14 +370,27 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
       </section>
 
       <section className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-medium">Ofisler</h3>
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">Ofisler</h3>
+          <p className="text-sm text-muted-foreground">
+            Ofis satırları global iletişim bilgisidir; gizli satırlar kayıttan silinmez, public sitede pasif kalır.
+          </p>
+        </div>
         {offices.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Ofis bulunamadı.</div>
         ) : (
           offices.map((office, index) => (
-            <div key={office.id} className="space-y-3 rounded-md border p-3">
+            <div
+              key={office.id}
+              className={cn("space-y-3 rounded-md border p-3", !office.isVisible && "border-dashed bg-muted/20")}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-medium">Ofis {index + 1}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-sm font-medium">Ofis {index + 1}</div>
+                  <Badge variant={office.isVisible ? "success" : "secondary"}>
+                    {office.isVisible ? "Public sitede görünür" : "Public sitede gizli"}
+                  </Badge>
+                </div>
                 <div className="flex items-center gap-2">
                   <Switch
                     id={`contact-office-visible-${index}`}
@@ -388,6 +442,7 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
                   />
                 </div>
               </div>
+              <div className="text-xs font-medium uppercase text-muted-foreground">Dil override alanları</div>
               <div className="grid gap-3 rounded-md bg-muted/20 p-3 md:grid-cols-2 xl:grid-cols-4">
                 {translationLocales.map((locale) => (
                   <div key={locale} className="space-y-2">
@@ -424,14 +479,31 @@ export default function ContactContentEditor({ content, onContentChange }: Conta
       </section>
 
       <section className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-medium">Çalışma Saatleri</h3>
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">Çalışma Saatleri</h3>
+          <p className="text-sm text-muted-foreground">
+            Her satır ayrı görünürlük taşır; dil alanları yalnızca gün ve saat metnini yerelleştirir.
+          </p>
+        </div>
         {workingHours.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
             Çalışma saati bulunamadı.
           </div>
         ) : (
           workingHours.map((workingHour, index) => (
-            <div key={workingHour.id} className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]">
+            <div
+              key={workingHour.id}
+              className={cn(
+                "grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_auto]",
+                !workingHour.isVisible && "border-dashed bg-muted/20",
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-2 md:col-span-3">
+                <div className="text-sm font-medium">Saat satırı {index + 1}</div>
+                <Badge variant={workingHour.isVisible ? "success" : "secondary"}>
+                  {workingHour.isVisible ? "Public sitede görünür" : "Public sitede gizli"}
+                </Badge>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor={`contact-working-hour-day-${index}`}>Gün {index + 1}</Label>
                 <Input

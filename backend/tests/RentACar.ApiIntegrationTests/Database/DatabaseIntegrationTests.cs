@@ -166,16 +166,16 @@ public sealed class DatabaseIntegrationTests(RedisFixture redisFixture) : ApiInt
         DateTime pickup,
         DateTime dropoff,
         ReservationStatus status) => new()
-    {
-        PublicCode = $"IT{Guid.NewGuid():N}"[..12].ToUpperInvariant(),
-        CustomerId = customerId,
-        VehicleId = vehicleId,
-        PickupDateTime = pickup,
-        ReturnDateTime = dropoff,
-        Status = status,
-        PickupOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-        ReturnOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-        UnpaidRequestExpiresAtUtc = status == ReservationStatus.UnpaidRequest ? DateTime.UtcNow.AddHours(24) : null,
-        TotalAmount = 1000m
-    };
+        {
+            PublicCode = $"IT{Guid.NewGuid():N}"[..12].ToUpperInvariant(),
+            CustomerId = customerId,
+            VehicleId = vehicleId,
+            PickupDateTime = pickup,
+            ReturnDateTime = dropoff,
+            Status = status,
+            PickupOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            ReturnOfficeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            UnpaidRequestExpiresAtUtc = status == ReservationStatus.UnpaidRequest ? DateTime.UtcNow.AddHours(24) : null,
+            TotalAmount = 1000m
+        };
 }

@@ -556,6 +556,38 @@ export default function ReservationDetailPage() {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <NotebookPen className="h-4 w-4 text-muted-foreground" />
+            Ek Seçenekler
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {r.breakdownSource === "LEGACY_TOTAL_ONLY" ? (
+            <div className="rounded-md bg-muted p-3 text-muted-foreground">
+              Eski rezervasyon: yalnızca toplam tutar kaydı bulunuyor.
+            </div>
+          ) : r.selectedExtras && r.selectedExtras.length > 0 ? (
+            <div className="space-y-3">
+              {r.selectedExtras.map((extra) => (
+                <div key={`${extra.optionId}-${extra.optionVersion}`} className="flex flex-col gap-2 border-b border-border pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">{extra.name}</p>
+                    <p className="text-muted-foreground">
+                      {extra.quantity} adet · {currency(extra.unitPrice)} / {extra.pricingMode === "PER_DAY" ? "gün" : "kiralama"}
+                    </p>
+                  </div>
+                  <span className="font-semibold">{currency(extra.total)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-muted-foreground">Ek seçenek bulunmuyor.</div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Admin Notları */}
         <Card>

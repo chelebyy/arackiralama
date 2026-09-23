@@ -21,7 +21,6 @@ export default async function Page() {
       title={t("title")}
       description={t("description")}
       successRedirect="/dashboard/customer-portal"
-      registerHref="/dashboard/register/v1"
     />
   );
 }

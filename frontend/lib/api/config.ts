@@ -32,7 +32,11 @@ export const API_ENDPOINTS = {
   },
   pricing: {
     breakdown: '/pricing/breakdown',
+    quote: '/pricing/quote',
     validateCampaign: '/pricing/campaigns/validate',
+  },
+  reservationExtras: {
+    catalog: '/reservation-extra-options',
   },
   payments: {
     createIntent: '/payments/intents',

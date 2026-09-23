@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using RentACar.Core.Entities;
 
 namespace RentACar.Core.Specifications;

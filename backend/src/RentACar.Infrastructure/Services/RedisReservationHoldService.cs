@@ -52,7 +52,7 @@ public sealed class RedisReservationHoldService : IReservationHoldService
 
             // Store hold data
             await db.StringSetAsync(holdKey, json, ttl);
-            
+
             // Track vehicle hold for quick lookup
             await db.StringSetAsync(vehicleKey, reservationId.ToString(), ttl);
 
@@ -105,7 +105,7 @@ public sealed class RedisReservationHoldService : IReservationHoldService
             var json = JsonSerializer.Serialize(holdData);
 
             await db.StringSetAsync(holdKey, json, newDuration);
-            
+
             // Update vehicle hold TTL
             var vehicleKey = $"{_vehiclePrefix}{holdData.VehicleId}";
             await db.KeyExpireAsync(vehicleKey, newDuration);
@@ -142,7 +142,7 @@ public sealed class RedisReservationHoldService : IReservationHoldService
             }
 
             await db.KeyDeleteAsync(holdKey);
-            
+
             // Also clean up database hold if exists
             await ReleaseDatabaseHoldAsync(reservationId, cancellationToken);
 

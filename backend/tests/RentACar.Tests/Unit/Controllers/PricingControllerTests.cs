@@ -7,6 +7,7 @@ using RentACar.API.Contracts.Pricing;
 using RentACar.API.Controllers;
 using RentACar.API.Services;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Infrastructure.Data;
 using RentACar.Tests.TestFixtures;
 using Xunit;
@@ -246,6 +247,41 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
+    public async Task GetBreakdown_WhenLegacyExtrasRequested_UsesCatalogPricesAndCampaignDiscount()
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var (vehicleGroup, pickupOffice, returnOffice) = await SeedPricingDataAsync(dbContext, useCampaign: true);
+        await SeedLegacyCatalogAsync(dbContext, vehicleGroup.Id);
+        var controller = new PricingController(
+            new PricingService(dbContext, new EfUnitOfWork(dbContext)),
+            reservationExtraPricingService: new ReservationExtraPricingService(dbContext));
+
+        var result = await controller.GetBreakdown(
+            vehicleGroup.Id,
+            pickupOffice.Id,
+            returnOffice.Id,
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(3),
+            "MARCH10",
+            2,
+            1,
+            null,
+            false,
+            CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse<PriceBreakdownDto>>().Subject;
+
+        response.Data.Should().NotBeNull();
+        response.Data!.ExtraDriverFee.Should().Be(450m);
+        response.Data.ChildSeatFee.Should().Be(180m);
+        response.Data.ExtrasTotal.Should().Be(1380m);
+        response.Data.CampaignDiscount.Should().Be(358m);
+        response.Data.FinalTotal.Should().Be(3222m);
+        response.Data.ExtraItems.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task GetBreakdown_WhenWeekendMultiplierConfigured_AppliesWeekendPricing()
     {
         using var dbContext = _dbContextFactory.CreateContext();
@@ -468,6 +504,56 @@ public sealed class PricingControllerTests : IClassFixture<TestDbContextFactory>
         var daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)date.DayOfWeek + 7) % 7;
         return date.Date.AddDays(daysUntilSaturday == 0 ? 0 : daysUntilSaturday);
     }
-}
 
+    private static async Task SeedLegacyCatalogAsync(RentACarDbContext dbContext, Guid vehicleGroupId)
+    {
+        dbContext.ReservationExtraOptions.AddRange(
+            CreateLegacyOption(
+                vehicleGroupId,
+                "additional_driver",
+                225m,
+                ReservationExtraPricingMode.PerRental,
+                3),
+            CreateLegacyOption(
+                vehicleGroupId,
+                "child_seat",
+                90m,
+                ReservationExtraPricingMode.PerDay,
+                3));
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static ReservationExtraOption CreateLegacyOption(
+        Guid vehicleGroupId,
+        string code,
+        decimal unitPrice,
+        ReservationExtraPricingMode pricingMode,
+        int maxQuantity)
+    {
+        var option = new ReservationExtraOption
+        {
+            Code = code,
+            UnitPrice = unitPrice,
+            PricingMode = pricingMode,
+            MaxQuantity = maxQuantity,
+            IconKey = "users",
+            SortOrder = 1,
+            IsActive = true,
+            IsArchived = false
+        };
+        option.Translations.Add(new ReservationExtraOptionTranslation
+        {
+            Option = option,
+            Locale = "tr",
+            Name = code,
+            Description = code
+        });
+        option.VehicleGroups.Add(new ReservationExtraOptionVehicleGroup
+        {
+            Option = option,
+            VehicleGroupId = vehicleGroupId
+        });
+        return option;
+    }
+}
 

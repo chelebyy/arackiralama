@@ -34,17 +34,20 @@ public static class ServiceCollectionExtensions
         services.AddApiCors(configuration, environment);
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
-        services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
+        services.AddNotificationOptions(configuration, environment);
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<RefreshTokenCookieSettings>(configuration.GetSection(RefreshTokenCookieSettings.SectionName));
         services.AddInfrastructure(configuration);
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenCookieService, RefreshTokenCookieService>();
         services.AddScoped<IPasswordResetEmailDispatcher, PasswordResetEmailDispatcher>();
+        services.AddScoped<ICustomerAccountClaimEmailDispatcher, CustomerAccountClaimEmailDispatcher>();
         services.AddScoped<IAccessTokenSessionValidator, AccessTokenSessionValidator>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IReservationExtraPricingService, ReservationExtraPricingService>();
+        services.AddScoped<IReservationQuoteService, ReservationQuoteService>();
         services.AddSingleton<AvailabilityCacheInvalidationSignal>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();
@@ -52,13 +55,36 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
         services.AddScoped<IPublicSiteSettingsService, PublicSiteSettingsService>();
+        services.AddScoped<IReservationExtraOptionCatalogService, ReservationExtraOptionCatalogService>();
         services.AddScoped<IReportsService, ReportsService>();
-        services.AddPaymentIntegration(configuration);
+        services.AddPaymentIntegration(configuration, environment);
         services.AddHostedService<QueuedPaymentWebhookHostedService>();
         services.AddJwtAuthentication(configuration, environment);
         services.AddAdminAuthorization();
         services.AddApiRateLimiting(configuration);
         services.AddAdminAuditLogging();
+
+        return services;
+    }
+
+    private static IServiceCollection AddNotificationOptions(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        services.AddOptions<NotificationOptions>()
+            .Bind(configuration.GetSection(NotificationOptions.SectionName))
+            .Validate(
+                options =>
+                    Uri.TryCreate(options.PublicFrontendBaseUrl, UriKind.Absolute, out var publicFrontendBaseUri)
+                    && (publicFrontendBaseUri.Scheme == Uri.UriSchemeHttps
+                        || (environment.IsDevelopment()
+                            && publicFrontendBaseUri.Scheme == Uri.UriSchemeHttp
+                            && publicFrontendBaseUri.IsLoopback))
+                    && string.IsNullOrEmpty(publicFrontendBaseUri.Query)
+                    && string.IsNullOrEmpty(publicFrontendBaseUri.Fragment),
+                "Notifications:PublicFrontendBaseUrl must be an absolute HTTPS URL without a query or fragment. Development may use HTTP only for loopback origins.")
+            .ValidateOnStart();
 
         return services;
     }
@@ -107,17 +133,48 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddPaymentIntegration(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddPaymentIntegration(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        services.Configure<PaymentOptions>(configuration.GetSection("Payment"));
+        var paymentOptions = services.AddOptions<PaymentOptions>()
+            .Bind(configuration.GetSection(PaymentOptions.SectionName));
+
+        if (environment.IsProduction())
+        {
+            paymentOptions
+                .Validate(
+                    PaymentOptionsValidator.IsValidForProduction,
+                    "Production payment configuration is incomplete or unsafe.")
+                .ValidateOnStart();
+        }
+        services.AddScoped<DisabledPaymentProvider>();
         services.AddScoped<MockPaymentProvider>();
         services.AddScoped<IyzicoPaymentProvider>();
         services.AddScoped<IPaymentProvider>(serviceProvider =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<PaymentOptions>>().Value;
-            return options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase)
-                ? serviceProvider.GetRequiredService<IyzicoPaymentProvider>()
+            if (options.Provider.Equals("Iyzico", StringComparison.OrdinalIgnoreCase))
+            {
+                return serviceProvider.GetRequiredService<IyzicoPaymentProvider>();
+            }
+
+            return options.Provider.Equals("Disabled", StringComparison.OrdinalIgnoreCase)
+                ? serviceProvider.GetRequiredService<DisabledPaymentProvider>()
                 : serviceProvider.GetRequiredService<MockPaymentProvider>();
+        });
+
+        // Emergency containment hardening (WP0). In production, payment completion
+        // is fail-closed unless Payment:EnablePayments is explicitly set to true.
+        services.PostConfigure<PaymentOptions>(options =>
+        {
+            var enablePaymentsConfigured = bool.TryParse(
+                configuration.GetSection("Payment:EnablePayments").Value,
+                out var enablePaymentsValue);
+
+            if (environment.IsProduction() && (!enablePaymentsConfigured || !enablePaymentsValue))
+            {
+                options.EnablePayments = false;
+            }
+
         });
 
         return services;

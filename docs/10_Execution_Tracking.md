@@ -14,20 +14,47 @@
 
 ---
 
+## Fresh Feature Update — 10 Temmuz 2026
+
+**Reservation Extra Options:** 🟨 In Progress — Phases 1-5 implemented, all eight local section 6.6 Docker/Chromium rows pass, and PR #386 CI is green. Aikido, deployment/rollback, and the production legacy-adapter observation gates remain open.
+
+- Added normalized option, translation, vehicle-group assignment, and immutable selected-extra persistence.
+- Added versioned reservation pricing snapshot (`jsonb`), nullable unique `QuoteId`, PostgreSQL `xmin` catalog concurrency, database constraints, and additive migration `20260709204616_AddReservationExtraOptions`.
+- Added four deterministic built-ins, 20 locale rows, migration-time group assignment, and zero-assignment-only idempotent startup backfill.
+- Added admin/public catalog contracts and endpoints, `AdminOnly` authorization, standard rate limiting, `Cache-Control: no-store`, bounded validation, five-locale activation checks, archive/restore, conditional hard delete, and stable PII-free audit actions.
+- Real API authorization tests prove Admin/SuperAdmin access and unauthenticated/customer rejection. Real PostgreSQL tests prove stale `xmin` rejection, parent-version advancement after child mutation, and archive fallback when a reservation reference races hard delete.
+- Added server-authoritative generic extra calculation, flat `POST /api/v1/pricing/quote`, 15-minute session-hashed Redis quotes, atomic owner-bound claim/release/finalization, database `QuoteId` replay reconciliation, immutable selected-extra rows, and complete versioned price snapshots.
+- Draft and unpaid creation now reject mixed quote/legacy inputs, revalidate quote expiry/session/booking inputs/current option structure, preserve valid quote prices across price-only changes, and return snapshot-backed reservation reads with explicit `SNAPSHOT` / `LEGACY_TOTAL_ONLY` sources.
+- Backend build passed with 0 warnings / 0 errors.
+- Latest backend validation passed: `RentACar.Tests` 730/730 and `RentACar.ApiIntegrationTests` 51/51. Focused Phase 3 filters passed 20/20 and 3/3 respectively.
+- Docker Desktop full compose build passed; API and web returned HTTP 200. Running PostgreSQL confirmed 4 active built-ins, 20 translations, 8 migration-time assignments, and the expected latest migration. API restart preserved built-in `xmin`/`UpdatedAt` state.
+- Phase 3 integration validation reused healthy Docker PostgreSQL and Redis services and proved the real quote-to-reservation/replay path; CI has not run for the local feature branch.
+- Phase 4 admin catalog and Phase 5 booking UI are now implemented. The public flow fetches only active group/locale catalog entries, persists identifier/version/quantity selections, requests a session-bound server quote, submits the quote ID plus matching non-price booking inputs with the same session/idempotency headers, maps the measured legacy URL codes only during compatibility, and renders immutable selected-extra snapshots in admin reservation detail.
+- Latest Phase 5 local frontend evidence from `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript PASS; focused Vitest 42/42; full Vitest 60 files / 274 tests PASS; ESLint 0 errors with the existing `SearchForm.test.tsx` warning; Next.js production build PASS. This full-suite/build evidence predates the final one-line `driverAge` contract-alignment correction; the final TypeScript and Step 4 focused suite (15/15) passed. The 2026-07-11 continuation then reran the exact-current Docker Chromium booking/payment/i18n/mobile bundle at 16/16 and expanded the reservation-extra acceptance spec to 9/9, including the Step 3 state/quantity/legacy matrix, Step 4 quote/campaign/paid/unpaid ordering, price-only quote preservation, bounded availability-conflict recovery without payment-form loss, immutable selected-extra/full-pricing history, and explicit real `LEGACY_TOTAL_ONLY` rendering. The snapshot pass exposed and fixed raw backend price-breakdown fields bypassing admin-client normalization; TypeScript, ESLint, focused admin API Vitest 13/13, and the rebuilt Next.js production image passed. No repository-local `node_modules` success is claimed because that tree remains incomplete.
+- A fresh `docker compose -f backend/docker-compose.yml up -d --build` passed on 11 July 2026; PostgreSQL/Redis were healthy, API `/health` and `/tr` returned 200, and `/` redirected 307 to `/tr`. Chromium booking/payment smoke passed 6/6 after aligning stale E2E selectors and seed-office assumptions. A focused Docker browser proof also passed 6/6: admin catalog load, selected child-seat line in the server quote, no generated `extras` URL parameter, quote-expiry status, terms validation, unpaid reservation creation/confirmation, and the new reservation's non-legacy no-extra admin detail.
+- The browser pass exposed and fixed a real backend blocker: date-only driver snapshot values arrived as `DateTimeKind.Unspecified` and caused PostgreSQL `timestamptz` writes to fail with 500. Driver birth/license dates are now normalized to UTC; the focused backend regression test passed 1/1 and the rebuilt API completed the real unpaid-request flow. The test-created local holds were cancelled after evidence collection.
+- Quote expiry/cross-session/replay is now closed with a real Docker Chromium + Redis + PostgreSQL gate: expired and mismatched-session submissions returned `409` with zero rows, replay returned the original reservation ID, and the unique `quote_id` count remained one. Current-source browser validation passed as the existing scenarios 9/9 plus focused quote lifecycle 1/1 in separate clean API rate-limit windows; focused .NET replay integration passed 1/1.
+- Section 6.6 is complete locally at 8/8 rows. The final focused Chromium pass captured and visually inspected Step 3/4 at desktop, tablet, and mobile widths, asserted no horizontal overflow or inaccessible icon action, and stored non-sensitive console/network evidence under `docs/test-evidence/2026-07-11-reservation-extra-options-responsive/`.
+- The current comprehensive implementation handoff is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; it remains the historical continuation entry point, while the canonical docs now record local acceptance at 8/8 and keep CI/Aikido/deployment/observation gates separate.
+- PR #386 Codex review follow-up closed three valid findings: invalid legacy quantities now return 400, adapted legacy extras retain campaign-discount semantics, and changed selections require explicit confirmation before resubmission. Focused backend 34/34, full backend 733/733, TypeScript, Step 4 Vitest 15/15, rebuilt Docker build, and focused Chromium 1/1 passed.
+- PR #386 re-review closed four additional behavioral gaps: quote-backed campaigns discount the subtotal including generic extras; repeated legacy URL codes aggregate into one bounded selection; Step 3 reconciles persisted selections with the current catalog; and Step 4 requires explicit confirmation for version/unit-price/pricing-mode/final-total changes. Focused quote tests passed 4/4, full backend unit tests passed 734/734, focused Step 3/4 Vitest passed 22/22, full Vitest passed 60 files / 278 tests, TypeScript and focused ESLint passed, rebuilt Docker API/web returned HTTP 200, and focused Chromium conflict recovery passed 1/1. The repeated `xmin` migration comment is non-actionable because provider-generated SQL and the applied Docker schema contain no physical user column.
+- Aikido MCP was unavailable; the required full-content scan remains an explicit release/security blocker.
+- Decision and evidence sources: `docs/16_Reservation_Extra_Options_Plan.md`, `docs/17_Reservation_Extra_Options_Implementation.md`, and ADR 12.8.
+
 ## 📊 Executive Dashboard
 
-| Metric | Value |
-|--------|-------|
-| Toplam Faz | 10 |
-| Tamamlanan Faz | 8 |
-| Devam Eden Faz | 1 |
-| Bekleyen Faz | 1 |
-| Toplam Görev | ~320+ (yaklaşık) |
-| Tamamlanan Görev | 225+ |
-| Devam Eden Görev | 3+ |
-| Genel İlerleme | 94% |
+| Metric           | Value            |
+| ---------------- | ---------------- |
+| Toplam Faz       | 10               |
+| Tamamlanan Faz   | 8                |
+| Devam Eden Faz   | 1                |
+| Bekleyen Faz     | 1                |
+| Toplam Görev     | ~320+ (yaklaşık) |
+| Tamamlanan Görev | 225+             |
+| Devam Eden Görev | 3+               |
+| Genel İlerleme   | 94%              |
 
-Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Critical Fixes tamamlandı (8/8 fix uygulandı): W2-P004, W2-P005, W2-F004, W2-F005, W2-I001, W2-I002, W2-I004. Tüm testler geçti (backend 480/480, frontend 63/63). Build ve type-check temiz. Frontend public sayfalar artık hardcoded veri kullanmıyor. API contract'lar frontend-backend arasında uyumlu. Wave 2 Additional Fixes (validateCampaign contract + OfficeDto Code field) tamamlandı. **Wave 3 COMPLETED** — CRITICAL (4), HIGH (9), MEDIUM (backend 7, frontend 5), LOW (7) tümü kapatıldı. Backend test: 480/480 ✅. Frontend TypeScript: clean ✅. 4 commit push edildi: `9b67335`, `fad8c8d`, `fa5b3e2`, `beeb79f`. **Wave 4 DEFERRED** (admin settings/system page stub + fleet/maintenance action stub — launch kritik değil). **Wave 5 Migration Safety COMPLETED ✅** — 3 migration fix uygulandı: Phase4OverlapConstraint `Down()` extension drop, AddAuditLogDetailColumns duplicate column ve duplicate feature flag temizlendi. 12/12 migration reversibility doğrulandı. **EF Migration Fix COMPLETED ✅** — Phase7BackgroundJobAndFeatureFlagHardening Designer.cs eksikligi giderildi: AddMissingBackgroundJobColumns migration ile background_jobs tablosuna last_error ve failed_at sutunlari eklendi. CI Integration Tests artık gecerli: 29/29 PASS (`46ddef2`). **Wave 6+ Infrastructure DEFERRED** (Dokploy kurulumu, load testing, security audit, monitoring — deployment zamanlamasına bağlı). 11 May 2026 local backend coverage rebaseline ile `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` komutu local Postgres (`5433`) ve Redis (`6379`) açıkken yeniden doğrulandı; service ve infrastructure coverage genişletmeleri sonrası sonuç **534/534 PASS** ve aggregate backend line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38**). Bu son rebaseline ile Infrastructure coverage düşük kalmaya devam etse de aktif slice ölçülebilir biçimde ilerledi; provider ve hold-service testleri eklendi. Frontend overall coverage ise shell ortamındaki pnpm build-script approval blokajı nedeniyle henüz güvenilir şekilde yeniden alınamadı.
+Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi `docs/12_Phase10_PreLaunch_Gates.md` içindedir. Faz 10.0 (Code Quality) keşfi tamamlandı, 18 code smell tespit edildi. Faz 10.1 (Test Coverage) Wave 1-3 tamamlandı, toplam 451 test, 0 failure. **Faz 10.2 (Integration Tests) tamamlandı: 28 yeni integration test, Build 0 warning/error.** **Faz 10.0 Wave 1 Critical Fixes tamamlandı (8/8 fix uygulandı): R002-R008, R018. Tüm testler geçti (501/501). EF migration oluşturuldu. Faz 10.0 Wave 2 Critical Fixes tamamlandı (8/8 fix uygulandı): W2-P004, W2-P005, W2-F004, W2-F005, W2-I001, W2-I002, W2-I004. Tüm testler geçti (backend 480/480, frontend 63/63). Build ve type-check temiz. Frontend public sayfalar artık hardcoded veri kullanmıyor. API contract'lar frontend-backend arasında uyumlu. Wave 2 Additional Fixes (validateCampaign contract + OfficeDto Code field) tamamlandı. **Wave 3 COMPLETED** — CRITICAL (4), HIGH (9), MEDIUM (backend 7, frontend 5), LOW (7) tümü kapatıldı. Backend test: 480/480 ✅. Frontend TypeScript: clean ✅. 4 commit push edildi: `9b67335`, `fad8c8d`, `fa5b3e2`, `beeb79f`. **Wave 4 DEFERRED** (admin settings/system page stub + fleet/maintenance action stub — launch kritik değil). **Wave 5 Migration Safety COMPLETED ✅** — 3 migration fix uygulandı: Phase4OverlapConstraint `Down()` extension drop, AddAuditLogDetailColumns duplicate column ve duplicate feature flag temizlendi. 12/12 migration reversibility doğrulandı. **EF Migration Fix COMPLETED ✅** — Phase7BackgroundJobAndFeatureFlagHardening Designer.cs eksikligi giderildi: AddMissingBackgroundJobColumns migration ile background_jobs tablosuna last_error ve failed_at sutunlari eklendi. CI Integration Tests artık gecerli: 29/29 PASS (`46ddef2`). **Wave 6+ Infrastructure DEFERRED** (Dokploy kurulumu, load testing, security audit, monitoring — deployment zamanlamasına bağlı). 11 May 2026 local backend coverage rebaseline ile `dotnet test backend/RentACar.sln --configuration Release --no-build --collect:"XPlat Code Coverage"` komutu local Postgres (`5433`) ve Redis (`6379`) açıkken yeniden doğrulandı; service ve infrastructure coverage genişletmeleri sonrası sonuç **534/534 PASS** ve aggregate backend line coverage **%29.86** (API **%52.91**, Core **%92.00**, Worker **%63.49**, Infrastructure **%9.38\*\*). Bu son rebaseline ile Infrastructure coverage düşük kalmaya devam etse de aktif slice ölçülebilir biçimde ilerledi; provider ve hold-service testleri eklendi. Frontend overall coverage ise shell ortamındaki pnpm build-script approval blokajı nedeniyle henüz güvenilir şekilde yeniden alınamadı.
 
 **27 Jun 2026 Fresh Update:** Admin Public Site Settings now supports five-language managed public content for legal/contact/navigation surfaces. `PublicSiteSettings` link/contact DTOs gained optional `translations` maps for TR/EN/RU/AR/DE while base fields remain backward-compatible fallbacks. Verification: `dotnet test backend\tests\RentACar.Tests\RentACar.Tests.csproj --filter PublicSiteSettings --no-restore` **12/12 PASS**, `corepack pnpm -C frontend exec tsc --noEmit` PASS, `corepack pnpm -C frontend lint` PASS with **0 errors / 1 pre-existing warning**, `corepack pnpm -C frontend test` **52 files / 228 tests PASS**, Docker web rebuild PASS, Docker Playwright smoke/i18n/mobile/admin-public-settings **17/17 PASS**, and Aikido MCP `aikido_full_scan` on 23 modified/added first-party code/config/test files returned **0 issues**. Residual environment note: full `dotnet test backend\RentACar.sln --no-restore` reached `RentACar.Tests` **665/665 PASS** but `RentACar.ApiIntegrationTests` failed in this sandbox because Windows EventLog denied `.NET Runtime` log writes.
 
@@ -250,7 +277,7 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 | 1.7.3 | GitHub Actions workflow - Push to registry | ✅ | AI | 02.03.2026 | 02.03.2026 | .github/workflows/ci.yml icindeki docker-push job'u ile GHCR push aktif |
 
-| 1.7.4 | Branch protection rules | ⬜ | | | | Soft main guard kaldirildi; native branch protection aktif degil |
+| 1.7.4 | Branch protection rules | ✅ | AI | 15.07.2026 | 15.07.2026 | Active GitHub ruleset `Protect main - solo developer` (ID `18985047`): PR, resolved threads, strict seven-check gate, squash-only, no bypass, deletion/non-fast-forward blocked |
 
 #### 1.8 Test Infrastructure Setup
 
@@ -1608,9 +1635,9 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 **Süre:** Hafta 19-20
 
-**Başlangıç:** \***\*\_\_\_\*\*
+**Başlangıç:** \*\*\*\*\_\_\_\*\*
 
-**Hedef Bitiş:** \***\*\_\_\_\*\*
+**Hedef Bitiş:** \*\*\*\*\_\_\_\*\*
 
 **Durum:** 🟨 In Progress
 
@@ -1631,27 +1658,28 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 ### 📋 Faz 10 Phase Özeti
 
-| Phase | Adı | Durum | Maddeler | Tamamlanan |
-|-------|-----|-------|----------|------------|
-| 10.0 | Code Quality Assessment | 🟨 | 15 | 12 |
-| 10.1 | Test Coverage & Gap Analysis | 🟨 | 21 | 21 |
-| 10.2 | Integration Tests | ✅ | 24 | 24 |
-| 10.3 | E2E Tests | ✅ | 17 | 17 |
-| 10.4 | Load Testing | 🟨 | 6 | 3 |
-| 10.5 | Security Final Audit | ⬜ | 26 | 0 |
-| 10.6 | Performance Baseline | ⬜ | 19 | 0 |
-| 10.7 | Infrastructure Readiness | ⬜ | 26 | 0 |
-| 10.8 | Monitoring & Alerting | ⬜ | 22 | 0 |
-| 10.9 | Data Integrity & Migration | ⬜ | 9 | 0 |
-| 10.10 | Rollback & Incident Response | ⬜ | 12 | 0 |
-| 10.11 | Launch Execution | ⬜ | 23 | 0 |
-| **TOPLAM** | | | **220** | **74** |
+| Phase      | Adı                          | Durum | Maddeler | Tamamlanan |
+| ---------- | ---------------------------- | ----- | -------- | ---------- |
+| 10.0       | Code Quality Assessment      | 🟨    | 15       | 12         |
+| 10.1       | Test Coverage & Gap Analysis | 🟨    | 21       | 21         |
+| 10.2       | Integration Tests            | ✅    | 24       | 24         |
+| 10.3       | E2E Tests                    | ✅    | 17       | 17         |
+| 10.4       | Load Testing                 | 🟨    | 6        | 3          |
+| 10.5       | Security Final Audit         | ⬜    | 26       | 0          |
+| 10.6       | Performance Baseline         | ⬜    | 19       | 0          |
+| 10.7       | Infrastructure Readiness     | ⬜    | 26       | 0          |
+| 10.8       | Monitoring & Alerting        | ⬜    | 22       | 0          |
+| 10.9       | Data Integrity & Migration   | ⬜    | 9        | 0          |
+| 10.10      | Rollback & Incident Response | ⬜    | 12       | 0          |
+| 10.11      | Launch Execution             | ⬜    | 23       | 0          |
+| **TOPLAM** |                              |       | **220**  | **74**     |
 
 ### 📝 Faz 10 İlerleme Notları
 
 > **Kaynak önceliği notu:** Bu bölümdeki kısa özetler ve aşağıdaki ilerleme sayaçları tarihsel takip kolaylığı içindir. Launch sequencing ve gate kararı için birincil kaynak `docs/12_Phase10_PreLaunch_Gates.md` olmalıdır; overall/full-solution backend coverage yüzdeleri için `docs/handoffs/2026-05-11-phase10-coverage-infrastructure-followup.md`, 14 May unit-side Infrastructure ilerlemesi için `docs/handoffs/2026-05-14-session-handoff-phase10-notification-provider-coverage-followup.md` kullanılmalıdır.
 
 **10.0 Code Quality Assessment:**
+
 - Wave 1 (Auth + Reservation + Payment + Booking Flow): ✅ 8/8 critical fix tamamlandı
 - Wave 2 (Pricing + Fleet + Offices + Public Inventory): ✅ 8/8 critical fix tamamlandı
 - Wave 2 Additional Fixes: ✅ validateCampaign contract alignment + OfficeDto Code field
@@ -1660,19 +1688,23 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 - Wave 5 (Infrastructure + Migrations + Rollback + Deploy): ⬜ Bekliyor
 
 **10.1 Test Coverage & Gap Analysis:**
+
 - Backend: fresh full-solution rerun succeeded on **16 May 2026** after restarting the previously stopped `rentacar-postgres` and `rentacar-redis` containers. New Release evidence: build **0 warning / 0 error**, unit tests **574/574 PASS**, integration tests **32/32 PASS**, merged backend line coverage **91.09%** overall (API **78%**, Core **92.7%**, Infrastructure **97%**, Worker **63.4%**). Same-day deterministic application-service follow-ups then expanded `PaymentServiceTests` to **33/33 PASS** and `ReservationServiceTests` to **64/64 PASS**, lifting `RentACar.Tests` first to **582/582 PASS** and then to **590/590 PASS**. Fresh unit-project Cobertura aggregates now show **payment module %91.71** (564/615) and **reservation module %82.47** (320/388); backend-side Phase 10.1 coverage gates are closed.
 - Frontend: **190/190 PASS**. Project-wide frontend coverage is now **%63.17** (Phase 10.1 target **%60** closed). Public layout + booking entry/layout slices remain high; `TrackReservationPage` **%100 / 85.71% branch**, `BookingStep2Page` **%99 / 62.06% branch**, `BookingStep4Page` **%98.02 / 78% branch**, `VehiclesPage` **%99.7 / 92.42% branch**, SearchForm **%100 statements / 78.04% branches**, admin `ReservationsPage` **%97.42 / 75.55% branch**, admin `ReservationDetailPage` **%97.37 / 72.09% branch**, `frontend/hooks/admin` **%97.23**, `frontend/components/ui` **%83.52**, and `frontend/hooks` **%92.16**.
 
 **10.2 Integration Tests:**
+
 - ✅ 32/32 integration test pass in the fresh **16 May 2026** full-environment backend rerun. Endpoint, Database, Redis, and Payment Provider integration coverage were revalidated with local Postgres/Redis healthy.
 - Build 0 warning/error.
 
 **10.3 E2E Tests:**
+
 - ✅ All 5 blockers FIXED (4 May 2026): Step4 payment flow wired (createReservation → placeHold → createPaymentIntent → redirect), 3DS return page fixed (`useParams()`), `placeHold` `X-Session-Id` header support, admin refund UI dialog + E2E tests, `BookingStep4.test.tsx` mock fix.
 - Flaky `data-search-form-hydrated` wait in `i18n.spec.ts` replaced with `networkidle` + `#pickupLocation` visible check.
 - E2E CI strategy updated: PR trigger REMOVED (`.github/workflows/e2e.yml`). E2E runs nightly (03:00 UTC) + release tags (`v*.*.*`) + manual dispatch only.
 
 **10.4 Load Testing:**
+
 - 🟨 6 k6 scripts created in `backend/tests/k6/` (availability-query, concurrent-search, concurrent-booking, payment-intent, admin-dashboard, mixed-traffic) + README + run-all.sh.
 - CodeQL HIGH severity (`Math.random()` in `concurrent-booking.js`) fixed in commit `3d3b2f1`. Proactive fix applied to `payment-intent.js`.
 - Local Docker smoke validation completed for `concurrent-booking`, `payment-intent`, `mixed-traffic`, `availability-query`, `concurrent-search`, and `admin-dashboard` after the host-header and local-admin-seed adjustments.
@@ -1682,30 +1714,30 @@ Not: Faz 10 planlaması tamamlandı ve yürütülüyor. Detaylı kontrol listesi
 
 Tüm kriterlerin detaylı tanımları ve eşik değerleri `docs/12_Phase10_PreLaunch_Gates.md` içindedir.
 
-| # | Gate | Eşik | Durum |
-|---|------|------|-------|
-| 1 | Code Quality | Critical smell = 0 | ⬜ |
-| 2 | Backend Coverage | ≥ %70 | ⬜ |
-| 3 | Frontend Coverage | ≥ %60 | ✅ |
-| 4 | Payment Coverage | ≥ %80 | ⬜ |
-| 5 | Reservation Coverage | ≥ %80 | ⬜ |
-| 6 | Integration Tests | 100% pass | ⬜ |
-| 7 | E2E Tests | 100% pass localde | ✅ |
-| 8 | Load Test (p95) | < 300ms | 🟨 SCRIPTS READY |
-| 9 | Load Test (Concurrent) | 100 users, 0 double-book | 🟨 SCRIPTS READY |
-| 10 | OWASP Scan | 0 critical/high | ⬜ |
-| 11 | Dependency Scan | 0 critical/high | ⬜ |
-| 12 | Lighthouse Perf | ≥ 90 | ⬜ |
-| 13 | Lighthouse A11y | ≥ 90 | ⬜ |
-| 14 | API Health | < 100ms | ⬜ |
-| 15 | Services Healthy | 200 OK | ⬜ |
-| 16 | SSL Rating | A+ | ⬜ |
-| 17 | Backup Verified | Daily, restorable | ⬜ |
-| 18 | Uptime Monitor | Active | ⬜ |
-| 19 | Alerts Configured | Email/Slack | ⬜ |
-| 20 | Migration Rollback | Tested | ⬜ |
-| 21 | Rollback Plan | Documented | ⬜ |
-| 22 | Incident Response | Escalation matrix | ⬜ |
+| #   | Gate                   | Eşik                     | Durum            |
+| --- | ---------------------- | ------------------------ | ---------------- |
+| 1   | Code Quality           | Critical smell = 0       | ⬜               |
+| 2   | Backend Coverage       | ≥ %70                    | ⬜               |
+| 3   | Frontend Coverage      | ≥ %60                    | ✅               |
+| 4   | Payment Coverage       | ≥ %80                    | ⬜               |
+| 5   | Reservation Coverage   | ≥ %80                    | ⬜               |
+| 6   | Integration Tests      | 100% pass                | ⬜               |
+| 7   | E2E Tests              | 100% pass localde        | ✅               |
+| 8   | Load Test (p95)        | < 300ms                  | 🟨 SCRIPTS READY |
+| 9   | Load Test (Concurrent) | 100 users, 0 double-book | 🟨 SCRIPTS READY |
+| 10  | OWASP Scan             | 0 critical/high          | ⬜               |
+| 11  | Dependency Scan        | 0 critical/high          | ⬜               |
+| 12  | Lighthouse Perf        | ≥ 90                     | ⬜               |
+| 13  | Lighthouse A11y        | ≥ 90                     | ⬜               |
+| 14  | API Health             | < 100ms                  | ⬜               |
+| 15  | Services Healthy       | 200 OK                   | ⬜               |
+| 16  | SSL Rating             | A+                       | ⬜               |
+| 17  | Backup Verified        | Daily, restorable        | ⬜               |
+| 18  | Uptime Monitor         | Active                   | ⬜               |
+| 19  | Alerts Configured      | Email/Slack              | ⬜               |
+| 20  | Migration Rollback     | Tested                   | ⬜               |
+| 21  | Rollback Plan          | Documented               | ⬜               |
+| 22  | Incident Response      | Escalation matrix        | ⬜               |
 
 **Karar Kuralı:** 22 maddenin tamamı "Go" olmadan launch yapılamaz.
 
@@ -1819,6 +1851,7 @@ GENEL İLERLEME: [████████░░] 85%
 | Tarih | Kayıt Tipi | Yapılanlar | Tamamlanan Görevler | Sonraki Adımlar | Notlar | Yazan |
 
 |-------|------------|------------|---------------------|-----------------|--------|-------|
+| 08.07.2026 | Security Fix | `Microsoft.OpenApi` NU1903/GHSA-v5pm-xwqc-g5wc uyarısı kapatıldı; API projesine explicit `Microsoft.OpenApi` 2.7.5 PackageReference eklendi ve zaman aşımına uğrayan rezervasyon unit test verisi göreli gelecek tarihlere taşındı | Dependency vulnerability cleanup, backend test stability | Aikido MCP kurulursa repo policy gereği `aikido_full_scan` çalıştır | `dotnet list backend\RentACar.sln package --include-transitive --vulnerable` artık açık paket bulmuyor; `dotnet build backend\RentACar.sln --no-restore` 0 warning / 0 error; `dotnet test backend\RentACar.sln --no-build` sandbox dışında 682/682 unit + 34/34 integration PASS | AI |
 | 18.05.2026 | Delivery | Phase 10.4 local Docker load baseline tamamlandı: local startup seed ile inventory 120 araca çıkarıldı, concurrent booking hold yolu overlap-retry ile stabilize edildi ve 100-user k6 baseline yeşil olarak doğrulandı. Local smoke + baseline doğrulaması `concurrent-booking`, `payment-intent`, `mixed-traffic`, `availability-query`, `concurrent-search` ve `admin-dashboard` için tamamlandı. | Load-validation closure, reservation hold retry, local startup seed expansion | PR, docs sync ve checks takibi | `dotnet test backend/tests/RentACar.Tests/RentACar.Tests.csproj --no-restore --filter "FullyQualifiedName~ReservationServiceTests"` 67/67 pass; `docker compose up -d --build api`; k6 baseline `http_req_failed 0.00%`, `http_req_duration p95 16.87ms`, `iterations 9686`. Handoff: `docs/handoffs/2026-05-18-022152-phase10-load-baseline-complete-and-docs-sync.md`. | AI |
 | 02.06.2026 | Follow-up | **PR #259 MERGED** — `fix(phase10): close local docker 100-user load baseline` `main`'e indi (`544613c` merge SHA, merged 2026-06-02T19:25:06Z). Phase 10.4 local Docker load baseline resmen kapalı; working tree `0 ahead / 0 behind`. Closure body arşivi `docs/handoffs/2026-05-18-PR-235-load-baseline-closure-body.md` olarak tracked. | PR #259 merge confirmation, branch sync verification, working-tree archival | Phase 10 deployment/infrastructure gate'leri (Dokploy) | `gh pr view 259 --json state,mergedAt,headRefOid` → `MERGED / 2026-06-02T19:25:06Z / 544613ccec4d87dc918e3d8abaf16718eb2b5343`. | AI |
 | 02.06.2026 | Follow-up | **PR #260 MERGED** — `fix(security): bump vitest to 4.1.x to address CVE-2026-47429` `main`'e indi (`220d602` merge SHA, merged 2026-06-02T20:36Z). 2 Dependabot critical alerts (vitest < 4.1.0) otomatik kapandı. `pnpm audit` 0 critical / 0 high (1 transitive moderate `brace-expansion` kaldı, ayrı PR). | PR #260 merge confirmation, vitest CVE closure, 2 Dependabot alert auto-close | Phase 10 deployment/infrastructure gate'leri (Dokploy); brace-expansion moderate follow-up PR | `gh pr view 260 --json state,mergedAt,headRefOid` → `MERGED`. CI: Backend Unit/Integration, Frontend Lint/Test/Build, Docker Build, CodeQL (csharp + js) — SUCCESS. PR body archive: `docs/handoffs/2026-06-02-PR-260-fix-security-vitest-body.md`. Handoff: `docs/handoffs/2026-06-02-232800-phase10-deps-vitest-cve-fix.md`. | AI |
@@ -1919,7 +1952,7 @@ GENEL İLERLEME: [████████░░] 85%
 
 | Security headers (HSTS, CSP, X-Frame-Options) | ⬜ Not Started | Reverse proxy / API response header seti henüz tanımlanmadı |
 
-| Dependency vulnerability scanning | 🟨 Partial | NU1903 uyarısı mevcut; paket güncellemesi ve tarama temizliği bekleniyor |
+| Dependency vulnerability scanning | ✅ Completed | 08.07.2026 doğrulaması: `Microsoft.OpenApi` 2.7.5 override sonrası `dotnet list backend\RentACar.sln package --include-transitive --vulnerable` açık paket bulmuyor; Aikido MCP hâlâ ayrı repo-policy gate'i |
 
 ---
 
@@ -1951,6 +1984,176 @@ Bu doküman aşağıdaki kaynaklara dayanmaktadır:
 
 **Oluşturulma Tarihi:** 02 Mart 2026
 
-**Son Güncelleme:** 17 Mayıs 2026 (Phase 10 backend rerun blocker çözüldü, deterministic payment + reservation application-service coverage slice'ları eklendi, frontend %25 ara hedefi kapatıldı ve son tamamlama slice'ı Phase 10.1 frontend coverage gate'i kapattı. Fresh kanıt: backend build **0 warning / 0 error**, `RentACar.Tests` önce **574/574 PASS** + `RentACar.ApiIntegrationTests` **32/32 PASS** ile merged backend line coverage **91.09%** overall üretti; sonra payment follow-up ile `PaymentServiceTests` **33/33 PASS** ve `RentACar.Tests` **582/582 PASS**, ardından reservation follow-up ile `ReservationServiceTests` **64/64 PASS** ve `RentACar.Tests` **590/590 PASS** oldu. Unit-project Cobertura aggregates payment için **%91.71** (564/615) ve reservation için **%82.47** (320/388) gösterdi. Frontend Vitest **190/190 PASS**, overall frontend coverage **63.17%**, `frontend/components/ui` **83.52%**, `frontend/hooks` **92.16%**, `frontend/hooks/admin` **97.23%**, admin fleet/pricing/report page surfaces mostly **85–97%**, and public routes remain high. docs/12 bu güncel durumu yansıtacak şekilde hizalandı; PR follow-through handoff `docs/handoffs/2026-05-17-162725-phase10-frontend-coverage-pr-handoff.md` altında kaydedildi.)
+**Son Güncelleme:** 17 Temmuz 2026 (Dokploy ödeme-startup olayı, açıkça Disabled ödeme modu, güncel doğrulama kanıtı ve yayın/deploy kapıları aşağıdaki kilometre taşında kaydedildi; önceki faz ayrıntıları tarihli bölümlerde korunmaktadır.)
 
 **Durum:** Aktif Takip
+
+## 12 July 2026 - Codex Security Findings Implementation Follow-up
+
+**Implementation status:** WP1 account claim and WP2 public reservation/cancellation boundaries are backend-implemented; WP0/WP4 containment changes are present. No payment provider is selected yet, so WP3 is intentionally deferred and contained: payments default disabled and intent, 3DS return, webhook, and admin retry paths fail closed before service mutation.
+
+**Fresh verification:** `dotnet build backend/RentACar.sln --no-restore` passed with 0 warnings/errors; full backend passed 762/762 unit and 51/51 API integration tests. Frontend lint passed with 0 errors and 1 existing warning, TypeScript passed, Vitest passed 61/61 files and 288/288 tests, and the Next.js production build passed. Local Docker requests to intent creation, forged 3DS return, and forged webhook each returned `503`; payment-intent/payment-webhook-job counts stayed `4,0` before and after.
+
+**Open gates:** the remaining Docker/browser matrix, secret-artifact source/ownership triage, branch-protection evidence, and focused post-implementation security revalidation remain open. Real-provider sandbox proof is deferred until a payment method is selected and must pass before payments are enabled. This slice is implementation-progress, not acceptance-complete or release-ready.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 17 July 2026 - Public Membership and Email Scope Decision
+
+**Product decision:** Public customer membership/account claim is not planned as a supported capability for the current release. The existing WP1 security implementation and local claim/replay evidence remain valid. The current frontend nevertheless still exposes guest registration entry points and the backend still creates and dispatches account-claim email jobs. This documentation-only decision does not disable that reachable workflow.
+
+**Future email scope:** Automatic email is desired for reservation lifecycle notifications rather than public membership onboarding. The exact events, templates, provider, sender/domain configuration, and operational acceptance matrix remain undecided. No provider credential, source code, runtime configuration, or deployment state is changed by this documentation-only decision.
+
+**Release impact at this snapshot:** Before release, either a separate implementation must remove/disable the public registration and account-claim entry points, or production provider configuration and controlled claim-delivery evidence remain required. Deployed revalidation of the remaining original attack paths, independent Dokploy container/image/health/log evidence, and provider-authenticated payment proof before enabling payments remain separate gates. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026. Current documentation must not claim that account-claim or reservation emails are delivered in Production.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 17 July 2026 - Public Membership Surface Disabled and Deployed
+
+**Implementation:** The no-membership branch is now enforced at every public entry layer. The public header no longer renders the login action, including managed `login` links; the customer login page no longer links to registration; `/dashboard/register/v1` and every localized `/{locale}/account-claim` page return `404`; `/api/auth/register` and `/api/auth/claim` return empty `404` responses without forwarding; and the API pipeline terminates exact `/api/customer/v1/auth/register` and `/api/customer/v1/auth/claim` paths before controller execution or persistence. Existing customer login remains available by direct route.
+
+**Fresh evidence:** The red-first frontend run failed exactly 13 new expectations before implementation. The completed implementation passes 64/64 Vitest files and 296/296 tests, ESLint with 0 errors/1 existing warning, TypeScript, the Next.js production build, 805/805 backend unit tests, and 53/53 API integration tests. Rebuilt local API/web Docker images passed the revised membership-disabled Chromium harness 1/1: backend/frontend register and claim endpoints, including backend trailing-slash variants, returned `404`; all five localized claim pages and registration returned `404`; the homepage exposed no login link; and no customer/job side effect appeared. The reservation-boundary Chromium regression also passed 1/1 after its fixture stopped using public registration. The scoped risky-change review found and closed the initial trailing-slash bypass and reported no remaining material concern in the reviewed slice.
+
+**Publication and deployed acceptance:** PR #413 head `5039c6028f1c21c8bd5aaecbb1cb3cc5e996ccee` was squash-merged to `main` as `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`, with zero unresolved review threads. The exact merge commit passed post-merge CI, React Doctor, CodeQL, Secret Scan, and Docker build/push to GHCR. Because the live site had not advanced automatically, the operator triggered the Dokploy Compose **Deploy** action and the deployment completed at that exact commit. Cache-bypassed production HTTP checks and a real Chromium pass then confirmed `404` for all five localized account-claim pages, `/dashboard/register/v1`, and both public register/claim proxies; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage exposed no login link. Empty JSON bodies were used for live proxy checks and no production data was mutated. The public membership source/local/deployed-public gate is closed. Direct internal-backend exact/case/trailing-slash runtime proof, container metadata/logs, and production database/job counts remain unreviewed; deployed revalidation of the other original attack paths remains separate. Reservation-lifecycle notification scope also remains a separate future decision.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 17 July 2026 - Dokploy Payment Startup Incident and Explicit Disabled Mode
+
+**Incident:** The Dokploy API recreation completed database migrations and seed work, then entered a restart loop with `OptionsValidationException: Production payment configuration is incomplete or unsafe.` The root Production Compose file supplied no `Payment__*` values, while startup validation required a fully shaped Iyzico configuration even though payments were disabled. A transient first PostgreSQL authentication failure recovered on retry and was not the persistent blocker.
+
+**Permanent fix:** Production now supports an explicit `Disabled` provider only with `Payment:EnablePayments=false`. `DisabledPaymentProvider` is a distinct DI target rather than a Mock fallback and cannot complete any provider operation or authenticate a webhook. Root Compose defaults the test deployment to Disabled/TRY/false and maps optional Iyzico fields with blank defaults; `.env.example`, the API contract, Dokploy runbook, ADR, TDD, compliance, prelaunch, and security closure documents use the same boundary. No fake Iyzico credential is required or permitted as a startup workaround.
+
+**Fresh evidence:** Red-first coverage isolated four expected Disabled failures before implementation. Payment configuration tests pass 17/17; payment/settings/reservation tests pass 366/366; backend build passes with 0 warnings and 0 errors; the full unit project passes 798/798; the API integration project passes 53/53 on a clean rerun. Compose validation passes and expands the API to Disabled/TRY/false with blank optional Iyzico values. The current Release API image reaches Docker `running/healthy` against isolated PostgreSQL 17 and Redis 7.4 without provider credentials. One earlier integration cleanup hit a transient PostgreSQL read timeout; the isolated test and subsequent complete integration rerun passed. The consented scoped Codex Sentinel review found no material fail-open concern in this payment/deployment diff and did not claim whole-repository or live-environment coverage.
+
+**Live acceptance (17 July 2026, 12:39 TRT):** PR #410 head `0e91b8d423977d1680bd29820eba1a75a80d6477` was squash-merged to `main` as `d0a7990bad1b7847edd4439e670f4dcfc8321a71`; the exact merge commit passed CI, Docker build/push, CodeQL, Secret Scan, and React Doctor. The operator reported the Dokploy Compose deployment successful. A short warm-up interval produced transient `500` responses from the DB-backed vehicles/settings endpoints; the final cache-busted matrix returned `200` for `/`, `/tr`, `/api/v1/vehicles`, and `/api/v1/public-site-settings`. Public settings reported credit card, debit card, and PayPal disabled, unpaid request enabled, and `anyEnabled=true`. Zero-ID/no-write probes to intent creation, 3DS return, and webhook processing each returned `503` with the disabled-payment response before identifier/provider validation. The deployed commit is inferred from current `main` plus runtime behavior; Dokploy container metadata and logs were not independently read in this session.
+
+**External handoff:** `C:\Users\muham\AppData\Local\Temp\2026-07-17-114631-dokploy-disabled-payment-fix-handoff.md`. The handoff is intentionally outside Git and must be refreshed with the published commit, PR URL, exact-head checks, and review disposition.
+
+**Remaining gates at the time of this acceptance:** The commit/push/PR/merge and live Disabled-mode deployment/public acceptance chain was complete. Production email delivery and deployed revalidation of the remaining original attack paths were recorded as separate; independent Dokploy container-log evidence was absent from this session. The later 17 July product decision changes the intended product scope but does not supersede the account-claim delivery gate while the guest workflow remains reachable. That gate closes only after the entry points are disabled/removed or controlled production delivery is proven. Real-provider verification, replay/mismatch negatives, and sandbox success remain mandatory before payments can ever be enabled.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Production Payment Configuration Startup Matrix
+
+**Implementation status:** The provider-independent WP5 payment-configuration gate now exercises the actual `ValidateOnStart` host path instead of only calling `PaymentOptionsValidator` directly. Production startup rejects missing, Mock, unknown, sandbox, incomplete, and `EnablePayments=true` configurations while verification remains simulated; a fully configured payments-disabled Iyzico Production host and an intentional Development Mock host remain valid controls. No provider-specific paid-transition behavior was introduced and payments remain default disabled in tracked deployment configuration.
+
+**Fresh verification:** The initial 13 July run passed 12/12: five unsafe Production cases raised `OptionsValidationException` during `IHost.StartAsync`, while the payments-disabled Production and Development controls started. The 16 July follow-up added the explicit `EnablePayments=true` unsafe case and passed 13/13, so the current matrix contains six rejected Production configurations.
+
+**Production-like Docker evidence:** the current Release API image was exercised in disposable containers without replacing or stopping the active local Compose project. The initial matrix proved missing, Mock, unknown, sandbox, and incomplete Production configurations; the 16 July follow-up also proved `EnablePayments=true`. All six unsafe cases exited `139`, emitted the expected general payment-validation error, and did not log synthetic credential values. A syntactically valid synthetic secret-injected Iyzico configuration with payments disabled stayed running and returned `/health` `200` through a random loopback port. Migrations and local seeds were disabled; the selected migration/admin/customer/payment/job/audit count fingerprint was unchanged before and after.
+
+**Open gates:** deployment rerun, real-provider contract/sandbox proof before enablement, credential and GitHub operational evidence, and the focused final security review remain open. This closes the local code and production-like container startup matrices only; it is not provider acceptance or release readiness.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Account-Claim Abuse-Control and Cleanup Follow-up
+
+**Implementation status:** WP1 now includes a five-minute normalized-customer cooldown, a PostgreSQL one-active-token invariant with legacy-duplicate repair, bounded request metadata, and worker-driven cleanup of terminal claim records after a 14-day retention window. Production email delivery remains intentionally deferred until a provider is selected, configured, and proven.
+
+**Fresh verification:** focused account-claim and cleanup tests passed 29/29; full backend suites passed 765/765 unit and 51/51 API integration tests; build passed with 0 warnings/errors; EF reports no pending model changes. Docker PostgreSQL contains migration `20260712214328_HardenAccountClaimAbuseControls` and its partial unique index. Two simultaneous requests returned `200,200` while creating one active token and one email job; worker cleanup deleted an isolated 20-day-old token. The self-cleaning Chromium scenario passed claim, replay rejection, login, and unchanged-profile checks across `tr`, `en`, `ru`, `ar`, and `de`.
+
+**Open gates:** Production email delivery is deferred by product choice. The next provider-independent WP5 slice is production-like browser/network proof for the allowlisted public reservation response and authenticated owner cancellation, including anonymous no-write verification. Secret-artifact source/ownership evidence, branch-protection/Dependabot proof, and focused final security review remain release blockers.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 13 July 2026 - Public Reservation and Cancellation Boundary Acceptance
+
+**Implementation status:** WP2 production code was already repository-safe: the unauthenticated lookup maps directly to `PublicReservationSummaryDto`, uses the Strict limiter and `no-store`, while cancellation remains available only through customer ownership checks and the admin route. This slice added repeatable production-like acceptance evidence without changing the production boundary.
+
+**Fresh verification:** `reservation-boundary-security.spec.ts` passed 1/1 in Docker Chromium. The browser captured `GET /api/v1/reservations/{publicCode}` from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages; each payload had exactly the documented 10-field allowlist, excluded the isolated reservation/customer/vehicle/office identifiers, customer PII, and private notes, and preserved `Cache-Control: no-store`. Anonymous cancellation returned `404/405` and non-owner cancellation returned `404`; both left `status`, `xmin`, and `updated_at` unchanged. Owner cancellation returned `200` and persisted `Cancelled`. Post-test customer/reservation/job/audit counts were all zero. Focused backend tests passed 103/103, focused frontend tests passed 5/5, TypeScript and scoped ESLint passed, and the production-like Docker build completed.
+
+**Open gates:** WP2 is locally acceptance-proven, but release remains blocked by secret-artifact source/ownership evidence, branch-protection/Dependabot proof, production payment configuration/provider gates, deployment rerun, and the focused final security review.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 17 July 2026 - WP2 Local Rerun and Public-Code Length Guard
+
+**Implementation status:** The complete reservation disclosure/cancellation matrix was rerun against the local Docker API/web/PostgreSQL stack. A read-only Dokploy development/staging preflight also found that public codes longer than the database-backed 24-character limit produced `500`; the scoped branch now returns the uniform not-found response before any repository query and shares the domain limit with EF configuration.
+
+**Fresh verification:** The focused controller suite first failed because a 25-character code reached the mocked service, then passed 33/33 after the guard. Rebuilt local HTTP returned `404 + no-store` for nonexistent lengths 24, 25, and 128. The clean-window five-locale Playwright matrix passed 1/1 and proved the exact allowlist, anonymous/non-owner no-write fingerprints, owner `200` with persisted `Cancelled`, and zero test-owned customer/reservation/job rows. Backend build passed with 0 warnings/errors; the complete backend rerun passed 807/807 unit and 53/53 integration tests. Changed-file format verification passed; solution-wide format verification remains blocked by four unrelated pre-existing newline/charset findings.
+
+**Environment classification:** The current Dokploy deployment is development/staging, not the final production VPS. No controlled staging fixture was created during this slice. The current branch is therefore locally fixed and acceptance-proven but not deployed.
+
+**Open gates at this snapshot:** Merge/deploy the scoped hardening, then repeat the real reservation payload and authenticated owner/non-owner cancellation matrix in Dokploy staging. Final-production VPS acceptance, remaining original attack paths, and payment-provider proof before enablement remain separate. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - PR #402 Merge and Main Governance Closure
+
+**Implementation status:** PR #402 was squash-merged to `main` as `f0da549b90fc4646267f3a027370c4d2e0a67b90` after the final Codex review reported no major issue at reviewed head `4371fce226`. Repository ruleset `Protect main - solo developer` (ID `18985047`) is active for `refs/heads/main`: pull request and review-thread resolution are required, the branch must be current, seven named CI/security checks are strict, only squash merge is allowed, no bypass actor is configured, and deletion/non-fast-forward updates are blocked. The approving-review threshold is intentionally zero for the solo-developer workflow; merge remains a manual decision.
+
+**Fresh verification:** Final PR validation passed targeted payment/settings/reservation tests 133/133, backend build with 0 warnings/errors, backend suites 794/794 unit and 53/53 integration, frontend lint with 0 errors and 1 existing warning, frontend tests 299/299, and the production build. The post-merge `main` run passed backend unit/integration, frontend lint/test/build, Docker build, and GHCR publication. Secret Scan, React Doctor, CodeQL, and Dependabot Updates also passed. Existing Dependabot PR #401 reports `BEHIND`, demonstrating that strict current-main enforcement requires refresh and check rerun before merge. GitHub also reports 11 open frontend lockfile alerts (3 high, 4 medium, 4 low): 10 development-scope and one low runtime alert. Local `pnpm audit` could not independently classify them because the registry endpoint returned HTTP `410`.
+
+**Open gates at this snapshot:** Secret-artifact source/ownership evidence, dependency-alert triage/remediation or explicit risk acceptance, a production deployment rerun, and focused final security validation against the original attack paths remain release blockers. Real production email delivery and real-provider payment sandbox evidence remain intentionally deferred feature gates. A Dependabot PR created or refreshed after ruleset activation still needed to be observed through the complete required-check and manual-decision lifecycle at this snapshot; that operational gate later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026. This governance closure is not a complete security audit or a release-readiness declaration.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - Frontend Dependabot Alert Remediation (Merged, Reconciliation Pending)
+
+**Implementation status:** PR #405 merged the five-package patched set to `main` as `479317b6eb4a84d98936db7cc9e0f24d31b29220`. The manifest pins Vite 7.3.5 as an explicit development dependency, resolves `@babel/core` 7.29.6, undici 7.28.0, and js-yaml 4.2.0, and applies the narrow `vite@7.3.5>esbuild` override to 0.28.1 because Vite 7.3.5 still declares the vulnerable `^0.27.0` esbuild line. None of the five vulnerable versions remains in the lockfile, installed pnpm store, or post-merge GitHub SBOM.
+
+**Fresh verification:** pnpm 9.15.9 frozen install passed locally. TypeScript passed; ESLint reported 0 errors and 1 existing unused-disable warning; Vitest coverage passed 63 files / 299 tests with 80.59% statement coverage; the Next.js production build completed. PR #405 then passed the authoritative Node 22 frontend job, all required/advisory checks, and exact-head Codex review. Post-merge `main` CI, CodeQL, Secret Scan, React Doctor, and five Dependabot update jobs passed. The local `pnpm audit` client still targets the retired registry endpoint and returned HTTP `410` (`ERR_PNPM_AUDIT_BAD_RESPONSE`), which is recorded as no result rather than a clean scan. Per-alert validation reports and ledger receipts are stored outside the repository under the current temporary Codex Security scan bundle.
+
+**Open gates:** GitHub's post-merge SBOM lists only the patched target versions, but its Dependabot alert API still reports all 11 records open with unchanged alert timestamps after the update jobs completed. Treat alert closure as pending until GitHub reconciles those records to fixed, or investigate the platform state if they persist. Secret-artifact source/ownership evidence, deployment rerun, and focused final security validation remain separate release blockers.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 15 July 2026 - Dependabot Alert Reconciliation Investigation (External State Pending)
+
+**Investigation result:** No new package, lockfile, or source-code change is required. A complete live GraphQL traversal of `frontend/pnpm-lock.yaml` returned 1,069 dependencies across 11 pages and found only `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the five old target versions remained. The default-branch SBOM generated at `2026-07-15T14:39:33Z` reported the same patched set.
+
+**Alert-record evidence:** At the same checkpoint, original alert numbers `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` were still open and none was fixed. Their GraphQL alert objects retained the old vulnerable requirements (`7.29.0`, `7.3.2`, `0.27.7`, `7.25.0`, and `4.1.1`) with null fixed/dismissal fields. This graph-versus-alert mismatch is recorded as GitHub alert-record reconciliation lag, not residual repository exposure.
+
+**Decision and next gate:** Preserve the patched graph and avoid dependency churn or manual dismissal. Wait 12-24 hours, then re-query the original alert numbers. If they remain open while the graph stays patched, request GitHub backend resynchronization only after explicit user authorization. No GitHub Support request was submitted; the temporary support text is an unsent draft and not operational evidence.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Dependabot Alert Reconciliation Completed
+
+**Live alert evidence:** The 12-24 hour re-check queried original alert numbers `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` individually. All 11 now report `state=fixed`. Alerts `39`, `41`, `43`, `44`, `45`, `46`, and `47` have `fixed_at=2026-07-15T15:27:57Z`; alerts `48`, `50`, `51`, and `52` have `fixed_at=2026-07-15T15:27:58Z`. All dismissal and auto-dismissal timestamps remain null, so the closure is provider reconciliation of the technical remediation rather than a manual risk disposition.
+
+**Fresh graph evidence:** The default-branch SBOM generated at `2026-07-16T10:24:16Z` contains 1,121 packages. Its target set is exactly `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0; none of the previously vulnerable target versions appears.
+
+**Decision and remaining gates:** The dependency alert-record reconciliation gate is satisfied. No package, lockfile, source-code, manual-dismissal, backend-resynchronization, or GitHub Support action is required; no support request was submitted. At this snapshot, secret-artifact source/ownership evidence, the production deployment rerun, focused final security validation, and one complete post-ruleset Dependabot lifecycle remained separate release blockers. The later 16 July provider-candidate triage resolved the secret-artifact uncertainty. The Dependabot operational-assurance gate later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Focused Final Security Validation
+
+**Validation result:** All seven original finding instances were revalidated with the application-under-test at `202074fe42b6dbbf288c93d4294af3a3a63e088b`. The account-claim test-source correction was committed separately, and that corrected harness was re-run from `9420446` against the same Docker web/API/PostgreSQL acceptance stack with a 1/1 Chromium pass. Guest email claim, public driver PII, production Mock fallback, Dependabot auto-merge, and public PII/cancellation are suppressed by current dynamic/static counterevidence. Secret-artifact incident impact remains deferred until the scanner candidates receive source/ownership verdicts and any confirmed credential receives provider evidence. Forged 3DS remains deferred because the tracked application is safely contained with payments disabled, but `IyzicoPaymentProvider.VerifyPaymentAsync` is still simulated and must not be enabled before real provider verification and sandbox proof.
+
+**Fresh automated and runtime evidence:** Focused backend security tests passed 143/143; full backend passed 794/794 unit and 53/53 API integration tests. Focused frontend passed 27/27; full Vitest passed 63 files / 299 tests; TypeScript passed; ESLint reported 0 errors and one existing warning. The production web/API Docker build completed and `/health` plus `/tr` returned `200`. `account-claim-security.spec.ts` and `reservation-boundary-security.spec.ts` each passed 1/1 in Chromium; cleanup left zero test-owned customer/reservation/job rows. The claim harness was corrected to consume the implemented `#token=` fragment and wait for the same-origin `/api/auth/claim` response. The reservation harness first proved the strict limiter with `429`, then passed unchanged in a clean process-scoped rate-limit window.
+
+**Payment, secret, and governance evidence:** Real Docker intent creation, forged 3DS, and forged webhook requests each returned `503`; the payment intent/event/job/paid-reservation fingerprint remained `4|0|0|1`. The current Release API image rejected missing, Mock, unknown, sandbox, incomplete, and enabled Production payment configurations with the general fail-closed error and no synthetic secret leakage; a synthetic payments-disabled Iyzico control reached health. CI-equivalent pinned Gitleaks working-tree/full-history scan passed. Live ruleset `18985047` remains active with zero bypass actors and seven strict checks. No Dependabot PR had been created after activation at this snapshot; the required operational lifecycle later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
+
+**Remaining release gates:** Production deployment rerun; real provider/API implementation with mismatch/replay negatives and sandbox success before payments are enabled. The focused final validation is complete as an assessment, but the product remains not release-ready while these external/deferred gates are open.
+
+**Validation artifacts:** `C:\tmp\codex-security-scans\Arac-Kiralama\202074f_20260716T140519+0300\artifacts\05_findings`.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - PR #408 Merge Verification and Resend Artifact Triage
+
+**Merge verification:** PR #408 merged to `main` as `27c7f05c5c341be71f6e3516e06fe8667c2d0c6a`. The exact merge commit completed CI, Secret Scan, React Doctor, and CodeQL successfully. The security-validation branch is no longer the active delivery surface.
+
+**Resend triage result:** The Ship Safe candidate was traced to `frontend/tsconfig.tsbuildinfo`, an ignored generated TypeScript incremental-build cache that was never tracked. The candidate was copied into `.ship-safe/context.json` and `ship-safe-report.html`, and those two scanner artifacts were the only Git-tree occurrences. No source, environment, deployment, or account anchor exists, and the repository owner confirmed that Resend had not been configured. The scanner candidate is therefore not applicable for project credential rotation; committing unredacted scanner output was the real repository-hygiene defect, and that defect remains fixed.
+
+**Email delivery status:** No Resend adapter or credential is being introduced. The existing SMTP adapter remains disabled and unconfigured. The API production Compose mapping uses the dedicated `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` environment variable for `Notifications__PublicFrontendBaseUrl`. Production requires this value to be the HTTPS public-site origin; it is intentionally separate from the browser-facing `NEXT_PUBLIC_APP_URL` so local HTTP Compose targets cannot bypass the backend startup policy.
+
+**Upstash triage result:** Three scanner matches were traced to `.dotnet/.dotnet/TelemetryStorageService/*.trn` files added on the Phase 6 history line. Each match was a 38-, 44-, or 70-character alphanumeric substring inside a Base64-only line. Every line decoded successfully to a gzip payload (`1F8B` magic) and then to Application Insights JSON with `name`, `time`, `iKey`, `tags`, and `data` fields; the matched substring was absent after decoding. No Upstash package, environment variable, source integration, deployment configuration, or provider account anchor exists in the repository history inspected. Verdict: `not_actionable`; no credential rotation or provider access-log review is required. The generated `.dotnet/` path is now ignored to prevent recurrence.
+
+**Remaining gates at this snapshot:** Production email delivery remains deferred until a provider is deliberately selected and proven. Deployment rerun and real payment-provider verification remain open. The post-ruleset Dependabot lifecycle that was still open at this snapshot later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 16 July 2026 - Provider Candidate Triage Closure and Handoff
+
+**Closure result:** No Resend integration is present or being introduced. The historical Resend-shaped match has no project/provider anchor. The three Upstash-shaped matches are Base64/gzip .NET telemetry false positives and are classified `not_actionable`. No credential rotation or provider access-log review is required for either scanner label.
+
+**Durable repository controls:** The production Compose surface binds the dedicated HTTPS-only `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` value to `Notifications__PublicFrontendBaseUrl`; SMTP logs no longer include recipient, subject, or raw provider exception text; all 13 remaining tracked `.dotnet` sentinel/cache/telemetry files were removed and the generated path is ignored.
+
+**External continuation handoff:** `C:\tmp\2026-07-16-210636-security-provider-triage-handoff.md`. The handoff is intentionally outside Git and must be finalized with the published commit SHA, PR URL, check results, and review disposition.
+
+**Remaining gates:** Deliberately select and prove a production email provider before claiming delivery acceptance. Re-run the combined acceptance matrix after production deployment. Keep payments disabled until authoritative provider verification, replay/mismatch negatives, and sandbox success are implemented and proven.
+
+**Canonical plan:** `docs/18_Codex_Security_Findings_Implementation.md`.

@@ -1,4 +1,4 @@
-﻿namespace RentACar.Core.Enums;
+namespace RentACar.Core.Enums;
 
 public enum PaymentStatus
 {

@@ -1,0 +1,136 @@
+{
+  "baseUrl": "http://localhost:3001",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "name": "tablet",
+      "width": 834,
+      "height": 1112
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "consoleErrors": [
+    "Google Analytics key not provided.",
+    "Google Analytics key not provided.",
+    "Google Analytics key not provided."
+  ],
+  "knownLocalConsoleErrors": [
+    "Google Analytics key not provided."
+  ],
+  "unexpectedConsoleErrors": [],
+  "apiEvidence": [
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reservation-extra-options",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/offices",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pricing/quote",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reservation-extra-options",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/offices",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pricing/quote",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reservation-extra-options",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/offices",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "cacheControl": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public-site-settings",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pricing/quote",
+      "status": 200,
+      "contentType": "application/json",
+      "cacheControl": "no-store"
+    }
+  ]
+}

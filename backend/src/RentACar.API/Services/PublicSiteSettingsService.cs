@@ -2,13 +2,17 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RentACar.API.Contracts.PublicSiteSettings;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces;
+using RentACar.Infrastructure.Services.Payments;
 
 namespace RentACar.API.Services;
 
-public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) : IPublicSiteSettingsService
+public sealed class PublicSiteSettingsService(
+    IApplicationDbContext dbContext,
+    IOptions<PaymentOptions> paymentOptions) : IPublicSiteSettingsService
 {
     private const string SingletonKey = "public-site";
     private const string DefaultCompanyName = "Dvn rent a car";
@@ -54,7 +58,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         var settings = await GetOrCreateAsync(cancellationToken);
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
 
-        return Map(settings, paymentMethods);
+        return Map(settings, paymentMethods, paymentOptions.Value.EnablePayments);
     }
 
     public async Task<PublicSiteSettingsDto> UpdateAsync(UpdatePublicSiteSettingsRequest request, CancellationToken cancellationToken = default)
@@ -88,7 +92,7 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
         await dbContext.SaveChangesAsync(cancellationToken);
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(dbContext, cancellationToken);
 
-        return Map(settings, paymentMethods);
+        return Map(settings, paymentMethods, paymentOptions.Value.EnablePayments);
     }
 
     public async Task<AdminPublicContentDto> GetAdminContentAsync(CancellationToken cancellationToken = default)
@@ -762,7 +766,10 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static bool IsEmptyJsonArray(string value) =>
         string.IsNullOrWhiteSpace(value) || value.Trim().Equals("[]", StringComparison.Ordinal);
 
-    private static PublicSiteSettingsDto Map(PublicSiteSettings settings, PaymentMethodAvailability paymentMethods) => new(
+    private static PublicSiteSettingsDto Map(
+        PublicSiteSettings settings,
+        PaymentMethodAvailability paymentMethods,
+        bool paymentsEnabled) => new(
         settings.CompanyName,
         settings.CompanyAddress,
         settings.CompanyPhone,
@@ -784,12 +791,12 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
             .Select(ToPublicPageDto)
             .ToList(),
         new PublicPaymentMethodsDto(
-            paymentMethods.OnlinePaymentEnabled && paymentMethods.CreditCardEnabled,
-            paymentMethods.OnlinePaymentEnabled && paymentMethods.DebitCardEnabled,
+            paymentsEnabled && paymentMethods.OnlinePaymentEnabled && paymentMethods.CreditCardEnabled,
+            paymentsEnabled && paymentMethods.OnlinePaymentEnabled && paymentMethods.DebitCardEnabled,
             paymentMethods.UnpaidRequestEnabled,
             false,
-            paymentMethods.AnyActionableEnabled),
-        paymentMethods.OnlinePaymentEnabled,
+            paymentMethods.UnpaidRequestEnabled || (paymentsEnabled && paymentMethods.AnyCardEnabled)),
+        paymentsEnabled && paymentMethods.OnlinePaymentEnabled,
         settings.UpdatedAt);
 
     private static AdminPublicContentDto ToAdminContentDto(PublicSiteSettings settings)
@@ -868,16 +875,16 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
 
                 return new StoredPublicManagedPageDto
                 {
-                    Id = page.Id,
-                    Slug = page.Slug,
-                    Locale = page.Locale,
-                    Title = page.Title,
-                    Subtitle = page.Subtitle,
-                    SeoTitle = page.SeoTitle,
-                    SeoDescription = page.SeoDescription,
+                    Id = existing?.Id ?? page.Id,
+                    Slug = existing?.Slug ?? page.Slug,
+                    Locale = existing?.Locale ?? page.Locale,
+                    Title = existing?.Title ?? page.Title,
+                    Subtitle = existing?.Subtitle ?? page.Subtitle,
+                    SeoTitle = existing?.SeoTitle ?? page.SeoTitle,
+                    SeoDescription = existing?.SeoDescription ?? page.SeoDescription,
                     IsPublished = page.IsPublished,
                     SortOrder = page.SortOrder,
-                    Blocks = page.Blocks,
+                    Blocks = existing?.Blocks ?? page.Blocks,
                     Published = published,
                     DraftUpdatedAtUtc = existing?.DraftUpdatedAtUtc ?? updatedAt,
                     PublishedAtUtc = existing?.PublishedAtUtc ?? published?.PublishedAtUtc
@@ -911,11 +918,11 @@ public sealed class PublicSiteSettingsService(IApplicationDbContext dbContext) :
     private static PublicManagedPageDto ToPublicPageDto(StoredPublicManagedPageDto page)
     {
         var published = GetPublishedSnapshot(page);
-        var title = published?.Title ?? page.Title;
-        var subtitle = published?.Subtitle ?? page.Subtitle;
-        var seoTitle = published?.SeoTitle ?? page.SeoTitle;
-        var seoDescription = published?.SeoDescription ?? page.SeoDescription;
-        var blocks = published?.Blocks ?? page.Blocks;
+        var title = published?.Title ?? (page.IsPublished ? page.Title : string.Empty);
+        var subtitle = published?.Subtitle ?? (page.IsPublished ? page.Subtitle : string.Empty);
+        var seoTitle = published?.SeoTitle ?? (page.IsPublished ? page.SeoTitle : string.Empty);
+        var seoDescription = published?.SeoDescription ?? (page.IsPublished ? page.SeoDescription : string.Empty);
+        var blocks = published?.Blocks ?? (page.IsPublished ? page.Blocks : []);
 
         return new PublicManagedPageDto(
             page.Id,

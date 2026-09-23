@@ -1,7 +1,7 @@
 # Security & Compliance Document
 
 Date: 2026-02-25
-Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
+Updated: 2026-07-17 (public customer membership surface disabled)
 
 ## 1. Network Security
 
@@ -55,7 +55,9 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 -   PII masked in logs
 -   5-year payment log retention
 
-## 5. Dependency Security
+## 5. Dependency Security (Historical Snapshot)
+
+> The results in sections 5.1 and 5.2 are the 4 May 2026 point-in-time scans. They are retained as historical evidence and must not be used as the current release gate. Section 13 records the live dependency-alert state.
 
 ### 5.1 Backend (4 Mayıs 2026)
 
@@ -77,7 +79,7 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 -   5xx alerts
 -   Disk usage alerts
 
-## 7. OWASP Top 10 Değerlendirmesi (Phase 10.5)
+## 7. OWASP Top 10 Değerlendirmesi (Phase 10.5 Historical Snapshot)
 
 | # | Kategori | Durum | Notlar |
 |---|----------|-------|--------|
@@ -86,8 +88,27 @@ Updated: 2026-05-10 (Phase 10.5 hardening + migration/runtime follow-up eklendi)
 | A03 | Injection | ✅ | EF Core parameterized queries, raw SQL yok (production) |
 | A04 | Insecure Design | 🟡 | CORS eksik, security headers eksik — medium risk |
 | A05 | Security Misconfiguration | 🟡 | `AllowedHosts: "*"`, Swagger unconditionally, `AutoMigrateOnStartup: true` |
-| A06 | Vulnerable Components | ✅ | Dependency scan: 0 vulnerability |
+| A06 | Vulnerable Components | ✅ | The 11 tracked Dependabot alerts are fixed without dismissal and the fresh SBOM contains only the patched target versions; current evidence and future dependency-review requirements are tracked in section 13 |
 | A07 | Auth Failures | ✅ | JWT + refresh + session validation + brute force lockout |
 | A08 | Data Integrity Failures | ✅ | Webhook HMAC verification, idempotency keys |
 | A09 | Logging Failures | ✅ | Audit log + request log + error log tam |
 | A10 | SSRF | ✅ | Outbound requests sadece configured payment provider URL'lerine |
+
+## 13. Codex Security Findings Remediation Status (17 July 2026)
+
+| Boundary | Implemented control | Current evidence | Remaining gate |
+| --- | --- | --- | --- |
+| Public customer membership | Registration and claim fail closed before controller/idempotency/persistence work; public pages and Next.js proxies return `404`; public header and customer-login page expose no registration entry point; retained hashed single-use claim controls remain defense in depth only | Fresh local validation passed 805/805 backend unit tests, 53/53 API integration tests, 296/296 frontend tests, production builds, and two Docker Chromium scenarios. PR #413 head `5039c6028f1c21c8bd5aaecbb1cb3cc5e996ccee` was squash-merged as `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`; post-merge CI/security and the GHCR push succeeded. After an operator-triggered Dokploy deployment of that commit, cache-bypassed public HTTP and Chromium checks confirmed `404` for five localized claim pages, `/dashboard/register/v1`, and both public proxies; the homepage exposed no customer-login link; direct login remained reachable with `200`; and empty-body proxy checks mutated no production data | Source/local/deployed-public acceptance is closed. Direct internal-backend exact/case/trailing-slash proof, container metadata/logs, and production DB/job counts remain unreviewed. Future reservation-notification email is a separate undecided capability |
+| Public reservation read | Allowlisted public DTO, strict rate limit, `no-store`, shared 24-character public-code limit enforced before EF | Fresh local Docker Chromium captured the real response through all five localized confirmation pages; the exact 10-field allowlist matched and test-owned PII/internal values were absent. Lengths 24, 25, and 128 now return uniform local `404 + no-store`; the overlength defect was reproduced as `500` on the pre-fix Dokploy staging deployment | Merge/deploy the length guard, then capture a controlled real-reservation payload in Dokploy development/staging. Final-production VPS proof remains separate |
+| Reservation cancellation | Anonymous route removed; `CustomerOnly` plus owner-ID equality protects self-service cancellation; admin route preserved | Fresh local Chromium HTTP proof returned `404/405` for anonymous and `404` for non-owner with unchanged `status/xmin/updated_at`; owner cancellation returned `200` and persisted `Cancelled`; cleanup counts were zero. Full backend rerun passed 807/807 unit and 53/53 integration tests | Repeat authenticated owner/non-owner proof in Dokploy development/staging after deploy; final-production acceptance remains a future environment gate |
+| Production payment configuration | `ValidateOnStart`; missing/Mock/unknown/sandbox/incomplete real-provider and enabled configurations rejected; explicit `Disabled` accepted only with payments off and resolved to a dedicated fail-closed provider | Focused configuration tests pass 17/17, including real host start, concrete DI selection, and every provider operation. Compose expands to Disabled/TRY/false with blank optional Iyzico values, and the rebuilt Release image reaches Docker `running/healthy` without provider credentials; the earlier unsafe matrix remains the negative control. PR #410 was merged as `d0a7990`, its main-branch CI/GHCR path passed, and the live Dokploy public matrix kept browsing/settings available while all three public payment entry points returned `503` | GO for Disabled-mode deployment/public containment; independent container-log/image-digest evidence and real-provider sandbox proof remain separate or deferred gates |
+| Payment state integrity | Payments default disabled; intent, 3DS return, webhook, and admin retry paths return `503` before service mutation | Fresh Docker proof returned `503` for intent, forged 3DS, and forged webhook; payment intent/event/job/paid-reservation fingerprint stayed `4|0|0|1` | Keep disabled until a real provider is selected; then require server-to-server verification, negative/replay tests, and sandbox success |
+| Secret artifacts | Generated Ship-Safe artifacts removed; scanner outputs and local `.dotnet/` telemetry ignored; all 13 remaining tracked `.dotnet` sentinel/cache/telemetry files removed; Gitleaks scans working tree and Git history | Fresh CI-equivalent pinned Gitleaks working-tree/full-history scan passed; generated paths are untracked and ignored. The Resend-shaped candidate had no source/env/deploy/account anchor. The three Upstash-shaped matches were arbitrary substrings inside Base64-encoded gzip .NET telemetry and were absent after decoding. Neither provider-shaped candidate is applicable for rotation | Preserve the sanitized triage evidence; no provider rotation or access-log review is required for these scanner false positives |
+| Main change governance | Active `Protect main - solo developer` ruleset requires a PR, resolved threads, current branch, seven checks, and squash merge; deletion/non-fast-forward updates blocked; no bypass actors | Ruleset ID `18985047` verified active for `refs/heads/main`; PR #408 merged as `27c7f05` and the exact merge commit passed CI, Secret Scan, React Doctor, and CodeQL | Preserve exact check names and revalidate the ruleset after workflow renames |
+| Dependency review | Dependabot auto-merge workflow removed; dependency PRs use the same ruleset and require a manual merge/close decision | Live ruleset `18985047` is active with zero bypass actors, resolved-thread enforcement, strict current-branch checks, seven required checks, and squash-only merge. Post-ruleset PR #422 was rebased to a current exact head, passed required/advisory checks with zero review threads, and was manually squash-merged as `134c6c888ff510c4eb1adfab1e41ebc0c5d83793`; post-merge `main` checks passed and open Dependabot alerts remained zero | Retain the same current-branch, checks, thread, and manual-decision evidence for future Dependabot PRs |
+| Dependency alert state | No blanket clean-scan claim; GitHub Dependabot is the live alert source; PR #405 merged patched Babel, Vite, esbuild, undici, and js-yaml versions | PR #405 passed the Node 22 frontend job, all repository checks, and exact-head Codex review, then squash-merged as `479317b`. A complete live traversal of `frontend/pnpm-lock.yaml` returned 1,069 dependencies across 11 pages with only the five patched target versions and zero old target entries. The 11 original alerts later reconciled to `fixed`: `39`, `41`, `43`, `44`, `45`, `46`, and `47` at `2026-07-15T15:27:57Z`; `48`, `50`, `51`, and `52` at `2026-07-15T15:27:58Z`; no dismissal or auto-dismissal was used. The fresh SBOM generated at `2026-07-16T10:24:16Z` contains 1,121 packages and only `@babel/core` 7.29.6, Vite 7.3.5, esbuild 0.28.1, undici 7.28.0, and js-yaml 4.2.0 for the target set, with zero old-version matches. Local `pnpm audit` still returns registry HTTP `410`, so it is not a vulnerability result | The dependency alert-record reconciliation gate is satisfied. Preserve the alert IDs, `fixed_at` timestamps, PR/check evidence, and patched SBOM; continue to require the normal human-reviewed dependency workflow for future changes |
+| Focused final validation | Instance-preserving revalidation of all seven original findings, followed by the 17 July public-membership closure implementation, scoped trust-boundary review, PR #413 publication, and exact-commit deployed-public verification | The earlier findings remain classified by their recorded evidence. The membership-disabled change passed full backend/frontend validation, Docker Chromium regressions, post-merge CI/security, GHCR publication, and Dokploy public HTTP + Chromium acceptance at `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`; a trailing-slash bypass discovered during the scoped review was fixed and regression-tested. The Resend and Upstash scanner candidates remain not applicable; authoritative payment-provider verification remains deferred | The public membership source/local/deployed-public gate is closed. Deployed revalidation of remaining original attack paths, direct internal backend/container/log/database evidence, and provider-authenticated payment validation remain open; payment proof remains deferred until payments are introduced |
+
+No statement in this table means the repository has received a complete security audit or is production-safe. `docs/18_Codex_Security_Findings_Implementation.md` remains the closure authority.
+
+Product scope note (17 July 2026): public customer membership/account claim is not planned for the current release and is now disabled in source across navigation, pages, frontend proxies, and backend endpoints. Existing-customer login remains available by direct route. No production email provider is selected or configured, and none is required to accept the disabled membership boundary. The desired future email use case is transactional reservation lifecycle notification; its provider, exact triggering events, templates, and operational acceptance evidence remain undecided and must not be represented as current capability.
