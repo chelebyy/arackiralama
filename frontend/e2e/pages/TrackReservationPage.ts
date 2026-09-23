@@ -20,8 +20,8 @@ export class TrackReservationPage {
   constructor(page: Page) {
     this.page = page;
     this.searchInput = page.getByLabel(/rezervasyon|reservation|kod|code/i);
-    this.searchButton = page.getByRole("button", { name: /takip|track|ara|search/i });
-    this.errorMessage = page.getByRole("alert");
+    this.searchButton = page.locator("form").filter({ has: this.searchInput }).getByRole("button");
+    this.errorMessage = page.locator("#reservation-code-error");
     this.reservationCard = page.locator("[data-testid='reservation-card']");
   }
 

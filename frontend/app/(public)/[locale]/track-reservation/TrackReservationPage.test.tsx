@@ -30,6 +30,11 @@ vi.mock("@/components/public/ReservationTimeline", () => ({
 }));
 
 describe("TrackReservationPage", () => {
+  it("provides an accessible name for the reservation code field", () => {
+    render(<TrackReservationPage />);
+    expect(screen.getByLabelText(messages.codePlaceholder)).toHaveAttribute("required");
+  });
+
   beforeEach(() => {
     mockedGetReservationByPublicCode.mockReset();
     Object.defineProperty(navigator, "clipboard", {

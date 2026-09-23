@@ -301,3 +301,11 @@ Current status on 2026-07-08: complete for the focused admin Public Site &
 Contact UX slice. The OpenAPI dependency warning found during Docker rebuild is
 closed and verified; the Aikido MCP availability blocker remains explicitly
 reported for release/security gating.
+
+## September 23, 2026 local regression validation
+
+Current main (`ce23b54`) was built in an isolated Docker stack with payments and email disabled. Desktop and mobile Chromium verified normal admin login and the admin detail of a synthetic reservation created through the public unpaid-request flow. Public confirmation and tracking displayed the same reservation code; the browser sent no payment-intent or hold request.
+
+The tracking input lacked an accessible name. It now uses the existing localized code prompt as its accessible label, with a focused unit regression test. Tracking E2E selectors were scoped to the reservation form and its actual error element; the not-found test now asserts the displayed error. An opt-in localhost-only E2E test covers unpaid submission through admin detail. Fresh local inventory required synthetic pricing rules before a quote could be produced; this setup and commands are recorded in `13_Local_Docker_Browser_Test_Checklist.md`.
+
+This pass does not reopen the completed Public Site & Contact redesign or establish production/payment-provider acceptance. Existing security-gating limitations above remain separate from the local browser evidence.
