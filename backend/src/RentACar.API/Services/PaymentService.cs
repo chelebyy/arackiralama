@@ -148,6 +148,22 @@ public sealed class PaymentService(
             return null;
         }
 
+        if (intent.Status is not (PaymentStatus.Created or PaymentStatus.Pending))
+        {
+            return new PaymentIntentApiDto
+            {
+                PaymentIntentId = intent.Id,
+                PaymentKind = GetPaymentKind(intent),
+                Status = intent.Status.ToString(),
+                RedirectUrl = null,
+                Amount = intent.Amount,
+                Currency = _paymentOptions.Currency,
+                ExpiresAt = intent.UpdatedAt,
+                TransactionId = intent.ProviderTransactionId,
+                ReservationStatus = reservation.Status.ToString()
+            };
+        }
+
         var verificationResult = await ExecuteWithTimeoutRetryAsync(
             () => _paymentProvider.VerifyPaymentAsync(
                 new PaymentCallbackProviderRequest

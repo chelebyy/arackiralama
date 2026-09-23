@@ -256,6 +256,39 @@ public sealed class PaymentServiceTests : IDisposable
         reservation.Status.Should().Be(ReservationStatus.PendingPayment);
     }
 
+    [Theory]
+    [InlineData(PaymentStatus.Succeeded)]
+    [InlineData(PaymentStatus.Refunded)]
+    [InlineData(PaymentStatus.Cancelled)]
+    [InlineData(PaymentStatus.Failed)]
+    public async Task CompleteThreeDsAsync_WhenIntentIsTerminal_PreservesStoredOutcome(PaymentStatus status)
+    {
+        var provider = new FakePaymentProvider
+        {
+            VerifyPaymentResult = new PaymentVerificationProviderResult
+            {
+                Status = PaymentProviderIntentStatus.Failed,
+                TransactionId = "replacement"
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync(status: ReservationStatus.Paid);
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id, "terminal-retry", status,
+            providerIntentId: "provider-intent",
+            providerTransactionId: "original-transaction");
+        var updatedAt = intent.UpdatedAt;
+
+        var result = await sut.CompleteThreeDsAsync(
+            intent.Id, new ThreeDsReturnApiRequest { BankResponse = "invalid" }, CancellationToken.None);
+
+        result!.Status.Should().Be(status.ToString());
+        intent.Status.Should().Be(status);
+        intent.ProviderTransactionId.Should().Be("original-transaction");
+        intent.UpdatedAt.Should().Be(updatedAt);
+        reservation.Status.Should().Be(ReservationStatus.Paid);
+    }
+
     [Fact]
     public async Task CompleteThreeDsAsync_WhenIntentDoesNotExist_ReturnsNull()
     {

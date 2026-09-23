@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace RentACar.Infrastructure.Services.Payments;
@@ -20,6 +21,10 @@ internal static class PaymentThreeDsCallbackVerifier
         {
             using var document = JsonDocument.Parse(bankResponse);
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return Failed(failureCode, failureMessage);
+            }
 
             var responseIntentId = TryGetString(root, "providerIntentId")
                 ?? TryGetString(root, "provider_intent_id")
@@ -31,7 +36,8 @@ internal static class PaymentThreeDsCallbackVerifier
             var timestamp = TryGetString(root, "timestamp");
             var signature = TryGetString(root, "signature");
 
-            if (!string.Equals(responseIntentId, providerIntentId, StringComparison.Ordinal)
+            if (string.IsNullOrWhiteSpace(responseIntentId)
+                || !string.Equals(responseIntentId, providerIntentId, StringComparison.Ordinal)
                 || string.IsNullOrWhiteSpace(status)
                 || string.IsNullOrWhiteSpace(transactionId)
                 || string.IsNullOrWhiteSpace(timestamp)
@@ -66,7 +72,19 @@ internal static class PaymentThreeDsCallbackVerifier
 
     private static bool IsFreshTimestamp(string timestamp)
     {
-        if (!DateTimeOffset.TryParse(timestamp, out var timestampUtc))
+        DateTimeOffset timestampUtc;
+        if (long.TryParse(timestamp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds))
+        {
+            try
+            {
+                timestampUtc = DateTimeOffset.FromUnixTimeSeconds(seconds);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+        }
+        else if (!DateTimeOffset.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out timestampUtc))
         {
             return false;
         }
