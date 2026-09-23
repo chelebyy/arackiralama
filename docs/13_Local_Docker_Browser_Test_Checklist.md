@@ -9,6 +9,10 @@ Latest delta evidence: 2026-07-17 public membership-disable acceptance rerun on 
 
 ## 1. Goal
 
+### 2026-09-23 Vitest 5 follow-up
+
+PR #444 aligns Vitest and its V8 coverage provider at 5.0.1 and regenerates the lockfile with pnpm 9.15.9 while preserving all 13 dependency overrides. On Node 24.13.0, all 296 tests across 64 files passed; coverage measured 80.43% statements, 68.36% branches, 80.06% functions, and 81.20% lines. TypeScript, production build, and lint passed, with the existing unused eslint-disable warning in SearchForm.test.tsx. This test-tool upgrade adds no Docker browser or production acceptance evidence.
+
 ### 2026-09-23 dependency review validation
 
 The dependency follow-through aligns Tiptap packages, adapts Recharts 3 and Lucide 1 consumers, updates the Redis test wrapper, and uses Node 24 for frontend CI and Docker. Local Release backend build and 807 unit tests passed. Frontend typecheck, lint (one pre-existing warning), all 296 tests in 64 files, coverage thresholds, and production build passed. Docker Desktop was unavailable; container builds and PostgreSQL/Redis integration remain CI gates. No production deployment or browser acceptance is claimed by these checks.
