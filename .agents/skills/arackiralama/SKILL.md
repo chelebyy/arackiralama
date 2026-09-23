@@ -1,4 +1,7 @@
-```markdown
+---
+name: arackiralama
+description: Repository-specific reference for RentACar backend and frontend contribution workflows. Use only after checking the current root AGENTS.md and source files.
+---
 # arackiralama Development Patterns
 
 > Auto-generated skill from repository analysis
@@ -26,7 +29,7 @@ This skill provides a comprehensive guide to contributing to the **arackiralama*
 
 ### Export Style
 
-- **Default exports** are used for classes.
+- C# classes use explicit access modifiers; C# does not have JavaScript-style default exports.
   - Example:
     ```csharp
     public class CarRentalService
@@ -193,4 +196,3 @@ export default function NewBooking() {
 | /close-gate         | Finalize a feature or security boundary with tests and docs    |
 | /security-hardening | Apply security improvements and compliance checks              |
 | /fix-bug            | Address review feedback or bug reports                         |
-```
