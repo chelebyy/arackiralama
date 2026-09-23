@@ -120,7 +120,7 @@ export default function OccupancyReportPage() {
                     domain={[0, 100]}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`%${value.toFixed(1)}`, "Doluluk"]}
+                    formatter={(value) => [`%${Number(value ?? 0).toFixed(1)}`, "Doluluk"]}
                   />
                   <Area
                     type="monotone"

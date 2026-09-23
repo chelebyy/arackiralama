@@ -9,11 +9,9 @@ import {
   Mail,
   Clock,
   Car,
-  ChevronRight,
-  Instagram,
-  Facebook,
-  Twitter
+  ChevronRight
 } from "lucide-react";
+import { RiInstagramLine as Instagram, RiFacebookLine as Facebook, RiTwitterLine as Twitter } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { getPublicSiteSettings } from "@/lib/api/publicSiteSettings";
 import type { PublicSiteLink, PublicSocialLink } from "@/lib/api/admin/types";

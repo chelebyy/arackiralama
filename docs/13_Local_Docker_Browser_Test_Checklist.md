@@ -9,6 +9,10 @@ Latest delta evidence: 2026-07-17 public membership-disable acceptance rerun on 
 
 ## 1. Goal
 
+### 2026-09-23 dependency review validation
+
+The dependency follow-through aligns Tiptap packages, adapts Recharts 3 and Lucide 1 consumers, updates the Redis test wrapper, and uses Node 24 for frontend CI and Docker. Local Release backend build and 807 unit tests passed. Frontend typecheck, lint (one pre-existing warning), all 296 tests in 64 files, coverage thresholds, and production build passed. Docker Desktop was unavailable; container builds and PostgreSQL/Redis integration remain CI gates. No production deployment or browser acceptance is claimed by these checks.
+
 This checklist verifies the application in a production-like local Docker environment before going live. The tester must validate both customer-facing public pages and the admin dashboard through a real browser, not only through automated tests.
 
 Primary goals:
