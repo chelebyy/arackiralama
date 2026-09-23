@@ -2,8 +2,6 @@
  * Reservation Tracking E2E Test
  *
  * Tests public reservation tracking flow.
- * Note: Track reservation page currently uses mock data (Phase 10.3 blocker).
- * Backend endpoint GET /api/v1/reservations/{publicCode} exists but not wired to page yet.
  */
 
 import { test, expect } from "../fixtures/test-data";
@@ -29,12 +27,8 @@ test.describe("Reservation Tracking", () => {
     const trackPage = new TrackReservationPage(page);
     await trackPage.goto("tr");
 
-    // Search with non-existent code
     await trackPage.searchByCode("NONEXISTENT999");
-
-    // Should show not found message (or empty state)
-    await page.waitForLoadState("networkidle");
-    // Current mock implementation shows no results; real API would show 404
+    await trackPage.expectNotFound();
   });
 
   test("search form is accessible", async ({ page }) => {

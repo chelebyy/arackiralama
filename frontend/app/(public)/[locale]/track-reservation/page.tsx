@@ -152,6 +152,7 @@ export default function TrackReservationPage() {
                 <input
                   type="text"
                   required
+                  aria-label={t("codePlaceholder")}
                   aria-invalid={!!error && !reservation}
                   aria-describedby={error && !reservation ? "reservation-code-error" : undefined}
                   value={reservationCode}

@@ -141,6 +141,8 @@ vendor/
 coverage/
 tmp/
 **/.tmp/
+frontend/playwright-report/
+frontend/playwright-results/
 
 # Local security scan artifacts (may contain sensitive findings)
 .ship-safe/
