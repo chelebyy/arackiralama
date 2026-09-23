@@ -4,6 +4,7 @@ public static class NotificationTemplateKeys
 {
     public const string PasswordResetCustomer = "password-reset-customer";
     public const string PasswordResetAdmin = "password-reset-admin";
+    public const string CustomerAccountClaim = "customer-account-claim";
     public const string ReservationConfirmed = "reservation-confirmed";
     public const string ReservationCancelled = "reservation-cancelled";
     public const string PaymentReceived = "payment-received";

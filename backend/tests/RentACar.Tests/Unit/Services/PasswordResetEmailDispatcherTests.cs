@@ -11,7 +11,7 @@ namespace RentACar.Tests.Unit.Services;
 
 public sealed class PasswordResetEmailDispatcherTests
 {
-[Fact]
+    [Fact]
     public async Task DispatchAsync_WhenLocaleProvided_ComposesPasswordResetEmail()
     {
         var fakeQueueService = new FakeNotificationQueueService();

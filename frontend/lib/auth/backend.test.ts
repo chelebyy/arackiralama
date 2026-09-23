@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildBackendUrl,
+  callAccountClaimEndpoint,
   callLoginEndpoint,
   callLogoutEndpoint,
   callPasswordResetConfirm,
@@ -65,7 +66,7 @@ describe("auth backend helpers", () => {
       password: "secret",
       fullName: "New Customer",
       phone: "+905551112233",
-    });
+    }, "de-DE,de;q=0.9");
     await callPasswordResetRequest({ email: "new@example.test", principalScope: "Customer" });
     await callPasswordResetConfirm({
       token: "reset-token",
@@ -93,6 +94,9 @@ describe("auth backend helpers", () => {
           fullName: "New Customer",
           phone: "+905551112233",
         }),
+        headers: expect.objectContaining({
+          "accept-language": "de-DE,de;q=0.9",
+        }),
       })
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -108,6 +112,27 @@ describe("auth backend helpers", () => {
           token: "reset-token",
           newPassword: "new-secret",
           principalScope: "Admin",
+        }),
+      })
+    );
+  });
+
+  it("posts account claims through the same-origin auth route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await callAccountClaimEndpoint({
+      token: "claim-token",
+      newPassword: "new-secret",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/claim",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          token: "claim-token",
+          newPassword: "new-secret",
         }),
       })
     );

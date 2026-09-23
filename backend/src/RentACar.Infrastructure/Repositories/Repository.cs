@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RentACar.Core.Entities;
 using RentACar.Core.Interfaces;
 using RentACar.Core.Specifications;

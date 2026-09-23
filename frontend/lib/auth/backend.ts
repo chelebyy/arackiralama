@@ -64,8 +64,47 @@ export async function callRegisterEndpoint(payload: {
   password: string;
   fullName?: string;
   phone?: string;
-}) {
+}, acceptLanguage?: string) {
   const backendResponse = await fetch(buildBackendUrl("/api/customer/v1/auth/register"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(acceptLanguage ? { "accept-language": acceptLanguage } : {})
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+
+  const envelope = await parseEnvelope<Record<string, unknown>>(backendResponse);
+
+  return {
+    backendResponse,
+    envelope
+  };
+}
+
+export async function callAccountClaimEndpoint(payload: {
+  token: string;
+  newPassword: string;
+}) {
+  return postAccountClaim("/api/auth/claim", payload);
+}
+
+export async function callAccountClaimBackendEndpoint(payload: {
+  token: string;
+  newPassword: string;
+}) {
+  return postAccountClaim(
+    buildBackendUrl("/api/customer/v1/auth/claim"),
+    payload
+  );
+}
+
+async function postAccountClaim(
+  url: string,
+  payload: { token: string; newPassword: string }
+) {
+  const backendResponse = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json"

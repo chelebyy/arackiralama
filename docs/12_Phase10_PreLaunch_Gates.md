@@ -92,7 +92,7 @@ npx skills add thebushidocollective/han@docker-compose-production -g -y
 | 8 | **Load Tests** | Availability query p95 | < 300ms | ✅ **LOCAL DOCKER SMOKE VERIFIED 17 May 2026** — availability-query, concurrent-search, and admin-dashboard were completed locally in Docker after the host-header and seed adjustments; booking, payment, and mixed traffic had already passed earlier in the same local-first run order. Dokploy rerun remains deferred. | ✅ GO |
 | 9 | **Load Tests** | Concurrent booking simulation | 100 users, 0 double-booking | ✅ **LOCAL DOCKER BASELINE VERIFIED 18 May 2026** — booking flow passed locally in Docker after local startup inventory seed expansion, load-test session partitioning, and overlap-retry stabilization. Final k6 baseline completed with `http_req_failed 0.00%`, `http_req_duration p95 16.87ms`, and `9686` iterations. **PR #259 MERGED 2026-06-02** — closure commit landed on `main` via `merge: resolve origin/main conflicts for PR #259` (SHA `544613c`). | ✅ GO |
 | 10 | **Security** | OWASP Top 10 scan | 0 critical/high | ✅ **HARDENED 10 May 2026** — No critical/high vulnerabilities found. Previously documented medium findings were closed: named CORS policy added, non-development security headers enabled, Swagger/OpenAPI gated to Development, `AllowedHosts` restricted, and default `AutoMigrateOnStartup=false`. Manual production-style boot with `Database__AutoMigrateOnStartup=true` returned `/health` 200 and `/openapi/v1.json` 404. | ✅ GO |
-| 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ✅ **FIXED 4 May 2026 + 2 June 2026** — Backend: `dotnet list package --vulnerable` = 0. Frontend: `pnpm audit` = 0 critical / 0 high (1 transitive moderate `brace-expansion` via `eslint-config-next > eslint-plugin-import > ... > minimatch` remains, deliberate follow-up — override or wait-for-parent, separate PR). **2 Dependabot critical vitest alerts closed 2 June 2026** via **PR #260** (merged SHA `220d602`, fix/security-vitest-2026-06-02 → main, vitest `^3.2.4 → ^4.1.0` for CVE-2026-47429 / GHSA-5xrq-8626-4rwp). Verification: `pnpm test` 190/190 PASS, `pnpm build` 0 error, `pnpm lint` 0 error. PR body archived at `docs/handoffs/2026-06-02-PR-260-fix-security-vitest-body.md`. **Note:** this row reflects `main` HEAD state, not the PR-branch state. The vitest bump lives in PR #260's branch (already merged to `main`); this PR is documentation sync only and intentionally does not include the bump to avoid re-bumping packages already resolved on `main`. | ✅ GO |
+| 11 | **Security** | Dependency vulnerabilities | 0 critical/high | ✅ **FIXED 4 May 2026 + 2 June 2026 + 8 July 2026** — Backend: `dotnet list backend\RentACar.sln package --include-transitive --vulnerable` reported no vulnerable packages after the `Microsoft.OpenApi` 2.7.5 override for GHSA-v5pm-xwqc-g5wc / CVE-2026-49451. Frontend: `pnpm audit` = 0 critical / 0 high (1 transitive moderate `brace-expansion` via `eslint-config-next > eslint-plugin-import > ... > minimatch` remains, deliberate follow-up — override or wait-for-parent, separate PR). **2 Dependabot critical vitest alerts closed 2 June 2026** via **PR #260** (merged SHA `220d602`, fix/security-vitest-2026-06-02 → main, vitest `^3.2.4 → ^4.1.0` for CVE-2026-47429 / GHSA-5xrq-8626-4rwp). Latest backend verification: `dotnet build backend\RentACar.sln --no-restore` 0 warning / 0 error and `dotnet test backend\RentACar.sln --no-build` 682/682 unit + 34/34 integration PASS outside the sandbox. | ✅ GO |
 | 12 | **Performance** | Lighthouse Performance | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
 | 13 | **Performance** | Lighthouse Accessibility | ≥ 90 | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
 | 14 | **Performance** | API health check response | < 100ms | ⬜ DEFERRED — deployed app gerekli | ⬜ DEFERRED |
@@ -1045,7 +1045,7 @@ Load test koşuları önce local Docker stack üzerinde yapılır. Dokploy altya
 
 | # | Tarama | Araç | Durum | Hedef |
 |---|--------|------|-------|-------|
-| 10.5.1.1 | Dependency vulnerability scan (backend) | `dotnet list package --vulnerable` | ✅ **PASS 4 May 2026** | 0 critical/high |
+| 10.5.1.1 | Dependency vulnerability scan (backend) | `dotnet list backend\RentACar.sln package --include-transitive --vulnerable` | ✅ **PASS 8 July 2026** | 0 critical/high; `Microsoft.OpenApi` resolved to patched 2.7.5 |
 | 10.5.1.2 | Dependency vulnerability scan (frontend) | `pnpm audit` | ✅ **PASS 4 May 2026** | 0 critical/high (previously 4 high + 6 moderate, fixed via pnpm overrides) |
 | 10.5.1.3 | Secret scan | Manual `grep` audit | ✅ **PASS 4 May 2026** | 0 exposed production secret (only test/local placeholders found) |
 | 10.5.1.4 | SAST (Static Application Security Testing) | CodeQL (GitHub Actions) | 🟡 **CONFIGURED** | `codeql.yml` active on push to main/dev + PRs. No critical/high findings reported to date. |
@@ -1521,14 +1521,14 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 | 10.2 Integration Tests | 24 | 0 | ⬜ |
 | 10.3 E2E Tests | 17 | 0 | ⬜ |
 | 10.4 Load Tests | 6 | 0 | ⬜ |
-| 10.5 Security Audit | 26 | 8 | 🟡 |
+| 10.5 Security Audit | 26 | 9 | 🟡 |
 | 10.6 Performance | 19 | 0 | ⬜ |
 | 10.7 Infrastructure | 26 | 0 | ⬜ |
 | 10.8 Monitoring | 22 | 0 | ⬜ |
 | 10.9 Data Integrity | 9 | 3 | 🟡 |
 | 10.10 Rollback Plan | 12 | 0 | ⬜ |
 | 10.11 Launch | 23 | 0 | ⬜ |
-| **TOPLAM** | **220** | **8** | **🟡** |
+| **TOPLAM** | **220** | **9** | **🟡** |
 
 ---
 
@@ -1546,3 +1546,33 @@ Bu tablo **her gün güncellenir**. Tüm maddeler ✅ olmadan launch yapılmaz.
 **Oluşturulma:** 25 Nisan 2026  
 **Son Güncelleme:** 4 Mayıs 2026 (Phase 10.5 Security Audit — dependency vulnerabilities fixed, manual OWASP scan completed, security findings documented)  
 **Durum:** Aktif Takip
+
+## 17 July 2026 - WP2 Local Revalidation Addendum
+
+- Local Docker reservation-boundary Chromium: **PASS 1/1** across `tr`, `en`, `ru`, `ar`, and `de`.
+- Public response: exact 10-field allowlist, forbidden test-owned identifiers/PII/notes absent, `Cache-Control: no-store`.
+- Cancellation: anonymous `404/405` and non-owner `404` preserved the database fingerprint; owner `200` persisted `Cancelled`.
+- Cleanup: `customers=0`, `reservations=0`, `jobs=0` for test-owned markers.
+- Public-code hardening: pre-fix Dokploy development/staging returned `500` above the 24-character schema limit; the scoped local fix returns uniform `404 + no-store` before EF for lengths 25 and 128 while preserving the supported 24-character path.
+- Automated gates: controller 33/33, backend unit 807/807, integration 53/53, build 0 warnings/errors, changed-file format verification pass.
+- Gate state: **LOCAL GO; DEPLOYMENT ACCEPTANCE PENDING**. The current Dokploy instance is development/staging, not the final production VPS.
+
+## 16 July 2026 Security Remediation Gate Addendum
+
+| Gate | State | Evidence / blocker |
+| --- | --- | --- |
+| Guest account claim boundary | GO (DEPLOYED PUBLIC ACCEPTANCE) | The selected no-membership closure path removes the public header login action, removes the registration link from customer login, returns `404` from registration/account-claim pages and frontend proxies, and short-circuits exact backend registration/claim paths, including case and trailing-slash variants, with `404` before side effects. Frontend passed 64/64 files and 296/296 tests; the final full backend rerun passed 805/805 unit and 53/53 integration tests. Rebuilt local API/web images passed the revised Chromium harness 1/1. PR #413 head `5039c6028f1c21c8bd5aaecbb1cb3cc5e996ccee` was squash-merged as `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`; post-merge CI/security and GHCR publication passed. After an operator-triggered Dokploy deployment, cache-bypassed public HTTP and Chromium checks confirmed five locale claim pages, registration, and both public proxies return `404`, the homepage exposes no login link, and direct existing login remains `200`. Live proxy checks used empty JSON and mutated no production data. Direct internal-backend/container/log/database evidence remains unreviewed |
+| Public reservation PII boundary | GO (LOCAL ACCEPTANCE) | Production-like Docker Chromium captured the public response through all five localized confirmation pages; the exact 10-field allowlist matched, test-owned PII/internal values were absent, and `Cache-Control: no-store` was preserved |
+| Anonymous cancellation containment | GO (LOCAL ACCEPTANCE) | Anonymous `404/405` and non-owner `404` left `status/xmin/updated_at` unchanged; authenticated owner cancellation returned `200` and persisted `Cancelled`; the self-cleaning fixture left zero test-owned customer/reservation/job/audit rows |
+| Production payment fail-closed configuration | GO (DEPLOYED CONTAINMENT) | Focused configuration coverage passes 17/17: Production accepts explicit Disabled only with payments off, resolves a dedicated provider that fails every operation closed, and rejects enabled Disabled plus the existing missing/Mock/unknown/sandbox/incomplete/enabled unsafe matrix. PR #410 was merged as `d0a7990`; the exact merge commit passed CI and GHCR publication. After the successful Dokploy deployment, cache-busted public web, vehicles, and settings probes returned `200`; credit/debit/PayPal remained disabled; and intent, 3DS return, and webhook probes each returned `503`. Real-provider sandbox proof remains deferred until payments are introduced |
+| Provider-authenticated paid transition | DEFERRED / NO-GO TO ENABLE | No provider is selected; payments default disabled and all new-payment entry paths are contained. Real provider/API contract, replay/mismatch negatives, and sandbox success are mandatory before enablement |
+| Credential incident closure | GO (TRIAGED) | CI-equivalent pinned Gitleaks working-tree/full-history scan passes; scanner artifacts are untracked/ignored; all 13 remaining tracked `.dotnet` sentinel/cache/telemetry files are removed and the path is ignored. The Resend-shaped candidate had no project/provider anchor. The three Upstash-shaped matches were arbitrary substrings inside Base64-encoded gzip .NET telemetry and disappeared after decoding. Neither candidate requires credential rotation or provider access-log review |
+| Dependabot human review enforcement | GO (OPERATIONAL EVIDENCE) | Auto-merge workflow is removed; active ruleset `18985047` has no bypass actors and requires a current branch, resolved threads, seven checks, and squash merge. Post-ruleset Dependabot PR #422 was rebased to current head `e0dff18f083fac0a5ad8f4e9a92c6ad35f7c0df8`, passed all required and advisory checks with zero review threads, and was manually squash-merged as `134c6c888ff510c4eb1adfab1e41ebc0c5d83793`; post-merge `main` CI/security checks passed and open Dependabot alerts remained zero |
+| Frontend automated verification | GO | Fresh TypeScript pass; ESLint 0 errors/1 existing warning; focused Vitest 27/27 and full Vitest 63 files/299 tests pass; production Docker web build pass |
+| Backend automated verification | GO | Fresh focused security tests 143/143; full unit 794/794 and integration 53/53 pass |
+| Disabled-payment Docker proof | GO | Intent creation, forged 3DS return, and forged webhook each return `503`; payment intent/event/job/paid-reservation fingerprint remains `4|0|0|1` |
+| Combined Docker/browser/security review | PARTIAL / NO-GO RELEASE | Focused final validation completed for all seven original findings: five are suppressed by current evidence, both provider-shaped scanner candidates are not applicable, and payment integrity remains deferred. Account-claim and reservation Chromium attacks, payment startup/containment, Gitleaks, and GitHub governance checks pass locally; the live Disabled-mode Dokploy public acceptance pass is complete. The selected no-membership closure path passed its local Docker/Chromium harness, merged through PR #413, passed post-merge CI/security + GHCR publication, and passed exact-commit Dokploy public HTTP + Chromium acceptance at `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`. The post-ruleset Dependabot lifecycle completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793`. Deployed revalidation of the remaining original attack paths, direct internal backend/container/log/database evidence, and provider-authenticated paid-transition proof before enabling payments remain open |
+
+Release remains blocked. Implementation-complete, acceptance-complete, and release-ready must continue to be reported separately.
+
+Product decision (17 July 2026): the current release does not include public customer membership/account claim as a supported product capability, and no production email provider has been selected or configured. The public workflow has now been disabled in source and accepted on the deployed public surface at merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`; controlled production claim delivery is therefore not required for this release boundary. This acceptance does not include direct internal backend/container/log/database proof or the remaining original attack paths. Future email automation is intended for reservation lifecycle notifications, but the provider and exact notification-event matrix have not been decided; this future capability is not claimed as implemented or accepted.

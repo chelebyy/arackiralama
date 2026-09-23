@@ -24,7 +24,7 @@ public interface IReservationService
         CancellationToken cancellationToken = default);
 
     // Reservation CRUD
-    Task<ReservationDto?> GetReservationByPublicCodeAsync(
+    Task<PublicReservationSummaryDto?> GetReservationByPublicCodeAsync(
         string publicCode,
         CancellationToken cancellationToken = default);
 

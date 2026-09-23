@@ -11,7 +11,7 @@ vi.mock("../client", () => ({
   adminPatch: vi.fn(),
   adminPost: vi.fn(),
   adminPostFormData: vi.fn(),
-  adminPut: vi.fn(),
+  adminPut: vi.fn()
 }));
 
 import { adminDel, adminGet, adminPatch, adminPost, adminPostFormData, adminPut } from "../client";
@@ -29,7 +29,7 @@ import {
   mockReservations,
   mockRevenueReports,
   mockVehicleGroups,
-  mockVehicles,
+  mockVehicles
 } from "./mock";
 import {
   assignVehicle,
@@ -40,7 +40,7 @@ import {
   createManualReservation,
   getReservationById,
   getReservations,
-  refundReservation,
+  refundReservation
 } from "./reservations";
 import {
   createCampaign,
@@ -50,7 +50,7 @@ import {
   getCampaigns,
   getPricingRules,
   updateCampaign,
-  updatePricingRule,
+  updatePricingRule
 } from "./pricing";
 import { getOccupancyReport, getPopularVehicles, getRevenueReport } from "./reports";
 import {
@@ -58,7 +58,7 @@ import {
   getFeatureFlags,
   getPublicSiteSettings,
   updateFeatureFlag,
-  updatePublicSiteSettings,
+  updatePublicSiteSettings
 } from "./settings";
 import {
   createAdminUser,
@@ -68,7 +68,7 @@ import {
   getCustomers,
   updateAdminUser,
   updateAdminUserRole,
-  updateAdminUserStatus,
+  updateAdminUserStatus
 } from "./users";
 import {
   createOffice,
@@ -87,7 +87,7 @@ import {
   updateVehicle,
   updateVehicleGroup,
   updateVehicleStatus,
-  uploadVehiclePhoto,
+  uploadVehiclePhoto
 } from "./vehicles";
 
 const mockedDel = vi.mocked(adminDel);
@@ -123,7 +123,9 @@ describe("admin API fixtures", () => {
 describe("admin vehicles API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedGet.mockResolvedValue({ data: { items: [], page: 2, pageSize: 10, totalCount: 0 } } as never);
+    mockedGet.mockResolvedValue({
+      data: { items: [], page: 2, pageSize: 10, totalCount: 0 }
+    } as never);
     mockedPost.mockResolvedValue({ data: mockVehicles[0] } as never);
     mockedPostFormData.mockResolvedValue({ data: mockVehicles[0] } as never);
     mockedPut.mockResolvedValue({ data: mockVehicles[1] } as never);
@@ -137,10 +139,7 @@ describe("admin vehicles API", () => {
     ).resolves.toMatchObject({ page: 2 });
     await getVehicleById("vehicle-1");
 
-    expect(mockedGet).toHaveBeenNthCalledWith(
-      1,
-      "/v1/vehicles?page=2&search=clio&active=true"
-    );
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/vehicles?page=2&search=clio&active=true");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/vehicles/vehicle-1");
   });
 
@@ -157,13 +156,13 @@ describe("admin vehicles API", () => {
     expect(mockedPost).toHaveBeenCalledWith("/v1/vehicles", { plate: "07ABC123" });
     expect(mockedPut).toHaveBeenCalledWith("/v1/vehicles/vehicle-1", { color: "Black" });
     expect(mockedPatch).toHaveBeenNthCalledWith(1, "/v1/vehicles/vehicle-1/status", {
-      status: 3,
+      status: 3
     });
     expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/vehicles/vehicle-1/transfer", {
-      officeId: "office-2",
+      officeId: "office-2"
     });
     expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/vehicles/vehicle-1/maintenance", {
-      reason: "oil",
+      reason: "oil"
     });
     expect(mockedPostFormData).toHaveBeenCalledWith(
       "/v1/vehicles/vehicle-1/photo",
@@ -185,7 +184,7 @@ describe("admin vehicles API", () => {
     expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups");
     expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups", { name: "SUV" });
     expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups/group-1", {
-      minAge: 25,
+      minAge: 25
     });
     expect(mockedDel).toHaveBeenNthCalledWith(1, "/v1/vehicle-groups/group-1");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/offices");
@@ -198,9 +197,74 @@ describe("admin vehicles API", () => {
 describe("admin reservations API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedGet.mockResolvedValue({ data: { items: mockReservations, page: 1, pageSize: 5 } } as never);
+    mockedGet.mockResolvedValue({
+      data: { items: mockReservations, page: 1, pageSize: 5 }
+    } as never);
     mockedPatch.mockResolvedValue({ data: mockReservations[0] } as never);
     mockedPost.mockResolvedValue({ data: { id: "refund-1" } } as never);
+  });
+
+  it("normalizes persisted pricing snapshots without double counting built-in fees", async () => {
+    mockedGet.mockResolvedValueOnce({
+      data: {
+        id: "reservation-snapshot",
+        totalAmount: 4575,
+        rentalDays: 3,
+        priceBreakdown: {
+          dailyRate: 1200,
+          rentalDays: 3,
+          baseTotal: 3600,
+          extrasTotal: 975,
+          campaignDiscount: 0,
+          airportFee: 250,
+          oneWayFee: 500,
+          extraDriverFee: 0,
+          childSeatFee: 0,
+          youngDriverFee: 0,
+          fullCoverageWaiverFee: 0,
+          finalTotal: 4575,
+          depositAmount: 2000,
+          currency: "TRY"
+        }
+      }
+    } as never);
+
+    const reservation = await getReservationById("reservation-snapshot");
+
+    expect(reservation.priceBreakdown).toMatchObject({
+      basePrice: 3600,
+      extrasTotal: 975,
+      insuranceTotal: 0,
+      subtotal: 4575,
+      discountAmount: 0,
+      totalAmount: 4575,
+      depositAmount: 2000,
+      currency: "TRY"
+    });
+  });
+
+  it("reconstructs legacy extras when the aggregate field is absent", async () => {
+    mockedGet.mockResolvedValueOnce({
+      data: {
+        id: "legacy-reservation",
+        totalAmount: 4350,
+        priceBreakdown: {
+          baseTotal: 3600,
+          airportFee: 250,
+          oneWayFee: 500,
+          finalTotal: 4350,
+          currency: "TRY"
+        }
+      }
+    } as never);
+
+    const reservation = await getReservationById("legacy-reservation");
+
+    expect(reservation.priceBreakdown).toMatchObject({
+      extrasTotal: 750,
+      subtotal: 4350,
+      totalAmount: 4350
+    });
   });
 
   it("builds reservation reads and action payloads", async () => {
@@ -217,20 +281,25 @@ describe("admin reservations API", () => {
       returnDateTimeUtc: "2026-06-12T10:00:00Z",
       customerFirstName: "Jane",
       customerLastName: "Doe",
-      customerPhone: "+905551234567",
+      customerPhone: "+905551234567"
     });
     await confirmUnpaidRequest("reservation-3");
     await checkIn("reservation-1", { mileage: 1200 } as never);
     await checkOut("reservation-1", { mileage: 1400 } as never);
     await refundReservation("reservation-1", { amount: 100, reason: "Refund" } as never);
 
-    expect(mockedGet).toHaveBeenNthCalledWith(
-      1,
-      "/v1/reservations?page=1&status=Confirmed"
-    );
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/reservations?page=1&status=Confirmed");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-1");
-    expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/reservations/reservation-1/cancel", "Customer request");
-    expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-2/cancel", "Duplicate");
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      1,
+      "/v1/reservations/reservation-1/cancel",
+      "Customer request"
+    );
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      2,
+      "/v1/reservations/reservation-2/cancel",
+      "Duplicate"
+    );
     expect(mockedPatch).toHaveBeenNthCalledWith(
       1,
       "/v1/reservations/reservation-1/assign-vehicle",
@@ -244,22 +313,22 @@ describe("admin reservations API", () => {
       returnDateTimeUtc: "2026-06-12T10:00:00Z",
       customerFirstName: "Jane",
       customerLastName: "Doe",
-      customerPhone: "+905551234567",
+      customerPhone: "+905551234567"
     });
-    expect(mockedPost).toHaveBeenNthCalledWith(4, "/v1/reservations/reservation-3/confirm-unpaid-request", {});
-    expect(mockedPatch).toHaveBeenNthCalledWith(
-      2,
-      "/v1/reservations/reservation-1/check-in",
-      { mileage: 1200 }
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      4,
+      "/v1/reservations/reservation-3/confirm-unpaid-request",
+      {}
     );
-    expect(mockedPatch).toHaveBeenNthCalledWith(
-      3,
-      "/v1/reservations/reservation-1/check-out",
-      { mileage: 1400 }
-    );
+    expect(mockedPatch).toHaveBeenNthCalledWith(2, "/v1/reservations/reservation-1/check-in", {
+      mileage: 1200
+    });
+    expect(mockedPatch).toHaveBeenNthCalledWith(3, "/v1/reservations/reservation-1/check-out", {
+      mileage: 1400
+    });
     expect(mockedPost).toHaveBeenNthCalledWith(5, "/v1/reservations/reservation-1/refund", {
       amount: 100,
-      reason: "Refund",
+      reason: "Refund"
     });
   });
 });
@@ -290,7 +359,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       validFrom: "2026-06-01",
       validUntil: "2026-12-31",
       isActive: true,
-      allowedVehicleGroupIds: ["group-1"],
+      allowedVehicleGroupIds: ["group-1"]
     });
     await updateCampaign("campaign-1", {
       code: "WINTER",
@@ -299,7 +368,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       minRentalDays: 2,
       validFrom: "2026-12-01",
       validUntil: "2027-01-31",
-      isActive: false,
+      isActive: false
     });
     await deleteCampaign("campaign-1");
 
@@ -308,10 +377,10 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       "/v1/pricing-rules?vehicleGroupId=group-1&active=true"
     );
     expect(mockedPost).toHaveBeenNthCalledWith(1, "/v1/pricing-rules", {
-      vehicleGroupId: "group-1",
+      vehicleGroupId: "group-1"
     });
     expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/pricing-rules/rule-1", {
-      dailyPrice: 80,
+      dailyPrice: 80
     });
     expect(mockedDel).toHaveBeenNthCalledWith(1, "/v1/pricing-rules/rule-1");
     expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/campaigns");
@@ -323,7 +392,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       validFrom: "2026-06-01",
       validUntil: "2026-12-31",
       isActive: true,
-      allowedVehicleGroupIds: ["group-1"],
+      allowedVehicleGroupIds: ["group-1"]
     });
     expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1", {
       code: "WINTER",
@@ -332,7 +401,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       minDays: 2,
       validFrom: "2026-12-01",
       validUntil: "2027-01-31",
-      isActive: false,
+      isActive: false
     });
     expect(mockedDel).toHaveBeenNthCalledWith(2, "/v1/campaigns/campaign-1");
   });
@@ -345,12 +414,12 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       email: "admin@example.test",
       password: "P@ssw0rd!",
       fullName: "Test Admin",
-      role: "Admin",
+      role: "Admin"
     });
     await updateAdminUser("admin-1", {
       email: "admin-updated@example.test",
       fullName: "Updated Admin",
-      role: "SuperAdmin",
+      role: "SuperAdmin"
     });
     await updateAdminUserRole("admin-1", "SuperAdmin");
     await updateAdminUserRole("admin-2", { role: "Admin" });
@@ -365,18 +434,18 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       email: "admin@example.test",
       password: "P@ssw0rd!",
       fullName: "Test Admin",
-      role: "Admin",
+      role: "Admin"
     });
     expect(mockedPut).toHaveBeenNthCalledWith(1, "/v1/users/admin-1", {
       email: "admin-updated@example.test",
       fullName: "Updated Admin",
-      role: "SuperAdmin",
+      role: "SuperAdmin"
     });
     expect(mockedPut).toHaveBeenNthCalledWith(2, "/v1/users/admin-1/role", {
-      role: "SuperAdmin",
+      role: "SuperAdmin"
     });
     expect(mockedPut).toHaveBeenNthCalledWith(3, "/v1/users/admin-2/role", {
-      role: "Admin",
+      role: "Admin"
     });
     expect(mockedPost).toHaveBeenNthCalledWith(2, "/v1/users/admin-1/activate");
     expect(mockedPost).toHaveBeenNthCalledWith(3, "/v1/users/admin-2/deactivate");
@@ -402,7 +471,7 @@ describe("admin pricing, users, settings, and reports APIs", () => {
       contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
       contactPageMapIsVisible: true,
       pages: [],
-      updatedAt: "2026-06-06T00:00:00Z",
+      updatedAt: "2026-06-06T00:00:00Z"
     };
     mockedGet
       .mockResolvedValueOnce({ data: mockFeatureFlags } as never)
@@ -423,19 +492,15 @@ describe("admin pricing, users, settings, and reports APIs", () => {
     await expect(getPopularVehicles("year")).resolves.toBe(mockPopularVehicles);
 
     expect(mockedGet).toHaveBeenNthCalledWith(1, "/v1/feature-flags");
-    expect(mockedPatch).toHaveBeenCalledWith("/v1/feature-flags/EnableCreditCardPayment", { enabled: false });
-    expect(mockedGet).toHaveBeenNthCalledWith(
-      2,
-      "/v1/audit-logs?entityType=Reservation&page=1"
-    );
+    expect(mockedPatch).toHaveBeenCalledWith("/v1/feature-flags/EnableCreditCardPayment", {
+      enabled: false
+    });
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/v1/audit-logs?entityType=Reservation&page=1");
     expect(mockedGet).toHaveBeenNthCalledWith(3, "/v1/public-site-settings");
     expect(mockedPut).toHaveBeenCalledWith("/v1/public-site-settings", publicSiteSettings);
     expect(mockedGet).toHaveBeenNthCalledWith(4, "/v1/reports/revenue?period=month");
     expect(mockedGet).toHaveBeenNthCalledWith(5, "/v1/reports/occupancy?period=week");
-    expect(mockedGet).toHaveBeenNthCalledWith(
-      6,
-      "/v1/reports/popular-vehicles?period=year"
-    );
+    expect(mockedGet).toHaveBeenNthCalledWith(6, "/v1/reports/popular-vehicles?period=year");
   });
 });
 
@@ -454,7 +519,7 @@ describe("admin public content API", () => {
       contactPageWorkingHours: [],
       contactPageMapTitle: "Map",
       contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
-      contactPageMapIsVisible: true,
+      contactPageMapIsVisible: true
     };
     mockedGet.mockResolvedValueOnce({ data: publicContent } as never);
 
@@ -479,7 +544,7 @@ describe("admin public content API", () => {
       seoDescription: "",
       isPublished: true,
       sortOrder: 0,
-      blocks: [],
+      blocks: []
     });
 
     expect(result).toEqual(content);
@@ -491,7 +556,7 @@ describe("admin public content API", () => {
       seoDescription: "",
       isPublished: true,
       sortOrder: 0,
-      blocks: [],
+      blocks: []
     });
   });
 
@@ -505,7 +570,7 @@ describe("admin public content API", () => {
       contactPageWorkingHours: [],
       contactPageMapTitle: "",
       contactPageMapEmbedUrl: "",
-      contactPageMapIsVisible: false,
+      contactPageMapIsVisible: false
     };
     mockedPost.mockResolvedValue({ data: publicContent } as never);
 
@@ -536,7 +601,7 @@ describe("admin public content API", () => {
       contactPageWorkingHours: [],
       contactPageMapTitle: "Map",
       contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
-      contactPageMapIsVisible: true,
+      contactPageMapIsVisible: true
     };
     const updateData = {
       version: "5",
@@ -545,7 +610,7 @@ describe("admin public content API", () => {
       contactPageWorkingHours: [],
       contactPageMapTitle: "Map",
       contactPageMapEmbedUrl: "https://www.google.com/maps/embed?pb=managed",
-      contactPageMapIsVisible: true,
+      contactPageMapIsVisible: true
     };
     mockedPut.mockResolvedValueOnce({ data: publicContent } as never);
 

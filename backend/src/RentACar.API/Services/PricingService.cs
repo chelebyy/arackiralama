@@ -175,7 +175,12 @@ public sealed class PricingService(
             DepositAmount: depositAmount,
             PreAuthorizationAmount: preAuthorizationAmount,
             Currency: DefaultCurrency,
-            AppliedCampaignCode: campaign?.Code);
+            AppliedCampaignCode: campaign?.Code)
+        {
+            AppliedCampaignId = campaign?.Id,
+            AppliedCampaignDiscountType = campaign?.DiscountType,
+            AppliedCampaignDiscountValue = campaign?.DiscountValue
+        };
     }
 
     public async Task<IReadOnlyList<PricingRuleDto>> GetPricingRulesAsync(CancellationToken cancellationToken = default)
@@ -298,12 +303,12 @@ public sealed class PricingService(
             details: new
             {
                 pricingRule.VehicleGroupId,
-            pricingRule.StartDate,
-            pricingRule.EndDate,
-            pricingRule.WeekdayMultiplier,
-            pricingRule.WeekendMultiplier,
-            pricingRule.Priority
-        });
+                pricingRule.StartDate,
+                pricingRule.EndDate,
+                pricingRule.WeekdayMultiplier,
+                pricingRule.WeekendMultiplier,
+                pricingRule.Priority
+            });
         dbContext.PricingRules.Remove(pricingRule);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;

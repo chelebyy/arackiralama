@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,6 +136,13 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
 
   const isMutating = isSaving || isPublishing || isUnpublishing;
   const isUnsavedLocaleDraft = Boolean(draft && !selectedPage);
+  const statusLabel = isDirty
+    ? "Kaydedilmemiş değişiklik"
+    : selectedPage
+      ? selectedPage.isPublished
+        ? "Yayında"
+        : "Taslak"
+      : "Yeni çeviri taslağı";
 
   const selectSlug = (slug: string) => {
     setSelectedSlug(slug);
@@ -277,8 +285,12 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
               </Button>
             ))}
           </div>
-          <div className="text-sm text-muted-foreground">
-            Sürüm {content.version} · {selectedPage ? (selectedPage.isPublished ? "Yayında" : "Taslak") : "Yeni çeviri taslağı"}
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="outline">Dil: {localeLabels[selectedLocale]}</Badge>
+            <Badge variant={isDirty ? "warning" : selectedPage?.isPublished ? "success" : "secondary"}>
+              {statusLabel}
+            </Badge>
+            <span>Sürüm {content.version}</span>
           </div>
         </div>
 
@@ -288,6 +300,24 @@ export default function PageContentEditor({ content, onContentChange }: PageCont
           </div>
         ) : (
           <>
+            <div
+              aria-live="polite"
+              className={cn(
+                "rounded-md border px-3 py-2 text-sm",
+                isDirty
+                  ? "border-orange-300 bg-orange-50 text-orange-900"
+                  : isUnsavedLocaleDraft
+                    ? "border-blue-300 bg-blue-50 text-blue-900"
+                    : "border-green-200 bg-green-50 text-green-900",
+              )}
+            >
+              {isDirty
+                ? "Bu dilde kaydedilmemiş değişiklik var. Yayınla veya yayından kaldırmadan önce taslağı kaydet."
+                : isUnsavedLocaleDraft
+                  ? "Bu dil için yeni bir taslak hazırlanıyor. Public sitede görünmesi için önce kaydet, sonra yayınla."
+                  : "Son kaydedilen içerik gösteriliyor. Dil ve yayın durumu bu sayfa içeriği için geçerli."}
+            </div>
+
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="page-title">Sayfa Başlığı</Label>

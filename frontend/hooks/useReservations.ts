@@ -10,6 +10,7 @@ import type {
   CreateReservationData,
   ExtendHoldData,
   HoldReservationData,
+  PublicReservationSummary,
   Reservation,
 } from '@/lib/api/types';
 
@@ -17,11 +18,13 @@ const RESERVATION_KEYS = {
   all: ['reservations'] as const,
   details: () => [...RESERVATION_KEYS.all, 'detail'] as const,
   detail: (code: string) => [...RESERVATION_KEYS.details(), code] as const,
+  publicDetails: () => [...RESERVATION_KEYS.all, 'public-detail'] as const,
+  publicDetail: (code: string) => [...RESERVATION_KEYS.publicDetails(), code] as const,
 };
 
 export function useReservation(code: string | null) {
-  const { data, error, isLoading, mutate } = useSWR<Reservation, Error>(
-    code ? RESERVATION_KEYS.detail(code) : null,
+  const { data, error, isLoading, mutate } = useSWR<PublicReservationSummary, Error>(
+    code ? RESERVATION_KEYS.publicDetail(code) : null,
     () => getReservationByPublicCode(code!),
     {
       revalidateOnFocus: true,

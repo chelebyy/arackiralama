@@ -17,7 +17,8 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
             .Include(r => r.Vehicle)
                 .ThenInclude(v => v!.Office)
             .Include(r => r.PickupOffice)
-            .Include(r => r.ReturnOffice);
+            .Include(r => r.ReturnOffice)
+            .Include(r => r.SelectedExtras);
     }
 
     protected override IQueryable<Reservation> BuildListQuery()

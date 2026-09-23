@@ -1,16 +1,17 @@
 # Technical Design Document (TDD)
 
 Date: 2026-02-25
+Updated: 2026-07-17 (public membership fail-closed boundary)
 
 ## 1. Domain Modules
 
--   Reservation
--   Fleet
--   Pricing
--   Payment
--   Notification
--   Feature Management
--   Identity & Access
+- Reservation
+- Fleet
+- Pricing
+- Payment
+- Notification
+- Feature Management
+- Identity & Access
 
 ## 2. Reservation Concurrency Strategy
 
@@ -21,11 +22,11 @@ hold TTL (15 minutes) - Idempotency enforcement
 
 ## 3. Payment Flow
 
--   PaymentIntent creation (unique idempotency key)
--   3D Secure redirect
--   Webhook verification (signature)
--   Background worker processes payment confirmation
--   Reservation status updated atomically
+- PaymentIntent creation (unique idempotency key)
+- 3D Secure redirect
+- Webhook verification (signature)
+- Background worker processes payment confirmation
+- Reservation status updated atomically
 
 ## 4. Idempotency Enforcement
 
@@ -40,6 +41,7 @@ Standardized response: { "errorCode": "RESERVATION_CONFLICT", "message":
 ## 6. Logging
 
 Structured JSON logs Correlation ID per request PII masking enabled
+
 ## 7. Background Job Processing Architecture
 
 The system implements a persistent job processing pattern.
@@ -49,6 +51,7 @@ The system implements a persistent job processing pattern.
 **Table:** `background_jobs`
 
 **Fields:**
+
 - `id` (UUID, PK)
 - `type` (string)
 - `payload` (JSONB)
@@ -82,9 +85,7 @@ The system implements a persistent job processing pattern.
 - No event loss
 - Retry mechanism built-in
 
-
-
-------------------------------------------------------------------------
+---
 
 # 8. Core Service Interfaces
 
@@ -801,8 +802,7 @@ public interface ICacheService
 }
 ```
 
-
-------------------------------------------------------------------------
+---
 
 # 9. Redis Caching Strategy
 
@@ -851,28 +851,28 @@ public class CacheAsideService<T> where T : class
 
 ## 9.2 Cache Key Naming Convention
 
-| Data Type | Key Pattern | Example |
-|-----------|-------------|---------|
-| Vehicle Availability | `avail:{officeId}:{date}:{groupId}` | `avail:1:20260315:5` |
-| Vehicle Details | `vehicle:{vehicleId}` | `vehicle:42` |
-| Pricing Rules | `pricing:seasonal:{year}` | `pricing:seasonal:2026` |
-| Campaign Code | `campaign:{code}` | `campaign:SUMMER25` |
-| User Session | `session:{sessionId}` | `session:a8x9k2m3` |
-| Reservation Hold | `hold:{holdId}` | `hold:hold_abc123` |
-| Rate Limit | `ratelimit:{endpoint}:{ip}` | `ratelimit:payment:192.168.1.1` |
+| Data Type            | Key Pattern                         | Example                         |
+| -------------------- | ----------------------------------- | ------------------------------- |
+| Vehicle Availability | `avail:{officeId}:{date}:{groupId}` | `avail:1:20260315:5`            |
+| Vehicle Details      | `vehicle:{vehicleId}`               | `vehicle:42`                    |
+| Pricing Rules        | `pricing:seasonal:{year}`           | `pricing:seasonal:2026`         |
+| Campaign Code        | `campaign:{code}`                   | `campaign:SUMMER25`             |
+| User Session         | `session:{sessionId}`               | `session:a8x9k2m3`              |
+| Reservation Hold     | `hold:{holdId}`                     | `hold:hold_abc123`              |
+| Rate Limit           | `ratelimit:{endpoint}:{ip}`         | `ratelimit:payment:192.168.1.1` |
 
 ## 9.3 Time-To-Live (TTL) Strategy
 
-| Cache Category | TTL | Rationale |
-|----------------|-----|-----------|
-| **Vehicle Availability** | 5 minutes | High change frequency |
-| **Vehicle Details** | 1 hour | Rarely changes |
-| **Pricing Rules** | 30 minutes | Seasonal changes |
-| **Campaign Codes** | 15 minutes | Promotion updates |
-| **User Sessions** | 20 minutes | Security + UX balance |
-| **Reservation Holds** | 15 minutes (exact) | Business requirement |
-| **Location/Offices** | 24 hours | Static data |
-| **Vehicle Groups** | 6 hours | Configuration data |
+| Cache Category           | TTL                | Rationale             |
+| ------------------------ | ------------------ | --------------------- |
+| **Vehicle Availability** | 5 minutes          | High change frequency |
+| **Vehicle Details**      | 1 hour             | Rarely changes        |
+| **Pricing Rules**        | 30 minutes         | Seasonal changes      |
+| **Campaign Codes**       | 15 minutes         | Promotion updates     |
+| **User Sessions**        | 20 minutes         | Security + UX balance |
+| **Reservation Holds**    | 15 minutes (exact) | Business requirement  |
+| **Location/Offices**     | 24 hours           | Static data           |
+| **Vehicle Groups**       | 6 hours            | Configuration data    |
 
 ## 9.4 Cache Invalidation Rules
 
@@ -895,22 +895,22 @@ public static class CacheInvalidationRules
 {
     public static Dictionary<CacheInvalidationTrigger, string[]> Patterns = new()
     {
-        [CacheInvalidationTrigger.VehicleStatusChanged] = 
+        [CacheInvalidationTrigger.VehicleStatusChanged] =
             new[] { "avail:*", "vehicle:*" },
-        
-        [CacheInvalidationTrigger.PricingRuleUpdated] = 
+
+        [CacheInvalidationTrigger.PricingRuleUpdated] =
             new[] { "pricing:*", "avail:*" },
-        
-        [CacheInvalidationTrigger.CampaignActivated] = 
+
+        [CacheInvalidationTrigger.CampaignActivated] =
             new[] { "campaign:*", "avail:*" },
-        
-        [CacheInvalidationTrigger.ReservationConfirmed] = 
+
+        [CacheInvalidationTrigger.ReservationConfirmed] =
             new[] { "avail:*", "hold:*" },
-        
-        [CacheInvalidationTrigger.ReservationCancelled] = 
+
+        [CacheInvalidationTrigger.ReservationCancelled] =
             new[] { "avail:*" },
-        
-        [CacheInvalidationTrigger.VehicleTransferCompleted] = 
+
+        [CacheInvalidationTrigger.VehicleTransferCompleted] =
             new[] { "vehicle:*", "avail:*" }
     };
 }
@@ -944,7 +944,7 @@ public class ResilientCacheService : ICacheService
     private static bool _redisAvailable = true;
     private static DateTime _lastCheck = DateTime.MinValue;
 
-    public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default) 
+    public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
         where T : class
     {
         if (await IsRedisAvailableAsync())
@@ -1008,16 +1008,15 @@ public class CacheWarmUpService : BackgroundService
         foreach (var group in groups)
         {
             await _cache.SetAsync(
-                $"vehiclegroup:{group.Id}", 
-                group, 
+                $"vehiclegroup:{group.Id}",
+                group,
                 TimeSpan.FromHours(6), ct);
         }
     }
 }
 ```
 
-
-------------------------------------------------------------------------
+---
 
 # 10. Internationalization (i18n) Implementation
 
@@ -1044,21 +1043,21 @@ Resources/
 
 ### SharedResources (UI Texts)
 
-| Key | TR | EN | RU | AR | DE |
-|-----|----|----|----|----|----|
-| `WelcomeMessage` | Hoş geldiniz | Welcome | Добро пожаловать | أهلاً وسهلاً | Willkommen |
-| `ReservationConfirmed` | Rezervasyon onaylandı | Reservation confirmed | Бронирование подтверждено | تم تأكيد الحجز | Reservierung bestätigt |
-| `PaymentFailed` | Ödeme başarısız | Payment failed | Оплата не прошла | فشل الدفع | Zahlung fehlgeschlagen |
-| `VehicleNotAvailable` | Araç müsait değil | Vehicle not available | Автомобиль недоступен | السيارة غير متوفرة | Fahrzeug nicht verfügbar |
+| Key                    | TR                    | EN                    | RU                        | AR                 | DE                       |
+| ---------------------- | --------------------- | --------------------- | ------------------------- | ------------------ | ------------------------ |
+| `WelcomeMessage`       | Hoş geldiniz          | Welcome               | Добро пожаловать          | أهلاً وسهلاً       | Willkommen               |
+| `ReservationConfirmed` | Rezervasyon onaylandı | Reservation confirmed | Бронирование подтверждено | تم تأكيد الحجز     | Reservierung bestätigt   |
+| `PaymentFailed`        | Ödeme başarısız       | Payment failed        | Оплата не прошла          | فشل الدفع          | Zahlung fehlgeschlagen   |
+| `VehicleNotAvailable`  | Araç müsait değil     | Vehicle not available | Автомобиль недоступен     | السيارة غير متوفرة | Fahrzeug nicht verfügbar |
 
 ### ValidationMessages (Error Texts)
 
-| Key | TR | EN | RU | AR | DE |
-|-----|----|----|----|----|----|
-| `RequiredField` | Zorunlu alan | Required field | Обязательное поле | حقل مطلوب | Pflichtfeld |
-| `InvalidPhone` | Geçersiz telefon | Invalid phone | Неверный телефон | رقم هاتف غير صالح | Ungültige Telefonnummer |
-| `InvalidDateRange` | Geçersiz tarih aralığı | Invalid date range | Неверный диапазон дат | نطاق تاريخ غير صالح | Ungültiger Zeitraum |
-| `MinAgeNotMet` | Minimum yaş şartı karşılanmıyor | Minimum age not met | Минимальный возраст не достиг | لم يتم استيفاء الحد الأدنى للعمر | Mindestalter nicht erfüllt |
+| Key                | TR                              | EN                  | RU                            | AR                               | DE                         |
+| ------------------ | ------------------------------- | ------------------- | ----------------------------- | -------------------------------- | -------------------------- |
+| `RequiredField`    | Zorunlu alan                    | Required field      | Обязательное поле             | حقل مطلوب                        | Pflichtfeld                |
+| `InvalidPhone`     | Geçersiz telefon                | Invalid phone       | Неверный телефон              | رقم هاتف غير صالح                | Ungültige Telefonnummer    |
+| `InvalidDateRange` | Geçersiz tarih aralığı          | Invalid date range  | Неверный диапазон дат         | نطاق تاريخ غير صالح              | Ungültiger Zeitraum        |
+| `MinAgeNotMet`     | Minimum yaş şartı karşılanmıyor | Minimum age not met | Минимальный возраст не достиг | لم يتم استيفاء الحد الأدنى للعمر | Mindestalter nicht erfüllt |
 
 ## 10.3 Culture Middleware
 
@@ -1069,13 +1068,13 @@ public class CultureMiddleware
     private readonly ILogger<CultureMiddleware> _logger;
 
     // Supported cultures
-    private static readonly string[] SupportedCultures = 
+    private static readonly string[] SupportedCultures =
         new[] { "tr", "en", "ru", "ar", "de" };
 
     public async Task InvokeAsync(HttpContext context)
     {
         var culture = DetermineCulture(context);
-        
+
         CultureInfo.CurrentCulture = culture;
         CultureInfo.CurrentUICulture = culture;
 
@@ -1119,7 +1118,7 @@ public class CultureMiddleware
         return new CultureInfo("tr");
     }
 
-    private bool IsSupported(string lang) => 
+    private bool IsSupported(string lang) =>
         SupportedCultures.Contains(lang.ToLowerInvariant());
 }
 ```
@@ -1135,7 +1134,7 @@ builder.Services.AddLocalization(options =>
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    var supportedCultures = new[] 
+    var supportedCultures = new[]
     {
         new CultureInfo("tr"),
         new CultureInfo("en"),
@@ -1171,7 +1170,7 @@ public class ReservationController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(new 
+            return BadRequest(new
             {
                 Error = _localizer["InvalidRequest"]
             });
@@ -1179,7 +1178,7 @@ public class ReservationController : ControllerBase
 
         // ... create logic
 
-        return Ok(new 
+        return Ok(new
         {
             Message = _localizer["ReservationConfirmed"],
             ConfirmationCode = code
@@ -1247,8 +1246,12 @@ Public legal/contact/navigation content can be managed from the admin dashboard 
 - Dashboard editing is split by ownership:
   - `/dashboard/settings/system` keeps operational and technical settings.
   - `/dashboard/settings/public-content` provides a dedicated authoring surface for managed pages, contact information, navigation links, hero CTA, map embed, and public payment-method display.
+- The admin authoring UI must expose state close to the content it affects:
+  - managed page editors show the active locale, saved/dirty/draft/published state, and publish/unpublish availability near the editing controls;
+  - contact editors separate global contact/map fields from locale override fields and keep hidden rows visible to admins with explicit public visibility labels;
+  - settings navigation is overflow-contained on narrow mobile viewports so tab labels can scroll without widening the page.
 - `privacy`, `terms`, and contact/`iletisim` routes remain normal public Next.js routes. They consume `GET /api/v1/public-site-settings`, render managed records when published, and fall back to bundled locale messages when a managed block is missing or unpublished.
-- Browser smoke coverage is expected for the dedicated admin authoring route and the public managed-content routes after Docker rebuilds.
+- Browser smoke coverage is expected for the dedicated admin authoring route and the public managed-content routes after Docker rebuilds. The 2026-07-08 Admin Public Site & Contact UX pass is recorded in `docs/13_Local_Docker_Browser_Test_Checklist.md` and `docs/test-evidence/local-docker-2026-07-08-admin-ux/`.
 
 Example link payload:
 
@@ -1266,8 +1269,7 @@ Example link payload:
 }
 ```
 
-
-------------------------------------------------------------------------
+---
 
 # 11. Database Indexing Strategy
 
@@ -1276,19 +1278,19 @@ partial indexes, and GIN indexes for JSON fields.
 
 ## 11.1 Index Overview by Table
 
-| Table | Index Name | Type | Columns | Purpose |
-|-------|------------|------|---------|---------|
-| reservations | idx_reservations_vehicle_dates | B-tree | vehicle_id, start_date, end_date | Overlap detection |
-| reservations | idx_reservations_status | B-tree | status | Status filtering |
-| reservations | idx_reservations_confirmation | B-tree | confirmation_code | Public lookup |
-| reservations | idx_reservations_created_at | B-tree | created_at DESC | Admin listing |
-| vehicles | idx_vehicles_office_status | B-tree | current_office_id, status | Availability queries |
-| vehicles | idx_vehicles_group | B-tree | vehicle_group_id | Group filtering |
-| holds | idx_holds_expires | B-tree | expires_at | Cleanup job |
-| holds | idx_holds_session | B-tree | session_id | Session lookup |
-| pricing_rules | idx_pricing_date_range | B-tree | start_date, end_date | Seasonal queries |
-| payment_intents | idx_payment_idempotency | B-tree | idempotency_key | Duplicate prevention |
-| payment_webhooks | idx_webhook_provider_event | B-tree | provider_event_id | Duplicate detection |
+| Table            | Index Name                     | Type   | Columns                          | Purpose              |
+| ---------------- | ------------------------------ | ------ | -------------------------------- | -------------------- |
+| reservations     | idx_reservations_vehicle_dates | B-tree | vehicle_id, start_date, end_date | Overlap detection    |
+| reservations     | idx_reservations_status        | B-tree | status                           | Status filtering     |
+| reservations     | idx_reservations_confirmation  | B-tree | confirmation_code                | Public lookup        |
+| reservations     | idx_reservations_created_at    | B-tree | created_at DESC                  | Admin listing        |
+| vehicles         | idx_vehicles_office_status     | B-tree | current_office_id, status        | Availability queries |
+| vehicles         | idx_vehicles_group             | B-tree | vehicle_group_id                 | Group filtering      |
+| holds            | idx_holds_expires              | B-tree | expires_at                       | Cleanup job          |
+| holds            | idx_holds_session              | B-tree | session_id                       | Session lookup       |
+| pricing_rules    | idx_pricing_date_range         | B-tree | start_date, end_date             | Seasonal queries     |
+| payment_intents  | idx_payment_idempotency        | B-tree | idempotency_key                  | Duplicate prevention |
+| payment_webhooks | idx_webhook_provider_event     | B-tree | provider_event_id                | Duplicate detection  |
 
 ## 11.2 Critical Composite Indexes
 
@@ -1296,12 +1298,12 @@ partial indexes, and GIN indexes for JSON fields.
 
 ```sql
 -- Primary index for overlap detection
-CREATE INDEX idx_reservations_vehicle_dates 
+CREATE INDEX idx_reservations_vehicle_dates
 ON reservations (vehicle_id, start_date, end_date);
 
 -- Partial index for active reservations only
-CREATE INDEX idx_reservations_active_dates 
-ON reservations (vehicle_id, start_date, end_date) 
+CREATE INDEX idx_reservations_active_dates
+ON reservations (vehicle_id, start_date, end_date)
 WHERE status IN ('Paid', 'Active');
 ```
 
@@ -1309,12 +1311,12 @@ WHERE status IN ('Paid', 'Active');
 
 ```sql
 -- Composite index for office + status queries
-CREATE INDEX idx_vehicles_office_status_group 
+CREATE INDEX idx_vehicles_office_status_group
 ON vehicles (current_office_id, status, vehicle_group_id);
 
 -- Include frequently accessed columns
-CREATE INDEX idx_vehicles_available 
-ON vehicles (current_office_id, vehicle_group_id, status) 
+CREATE INDEX idx_vehicles_available
+ON vehicles (current_office_id, vehicle_group_id, status)
 WHERE status = 'Available';
 ```
 
@@ -1382,13 +1384,13 @@ public partial class AddPerformanceIndexes : Migration
 ```sql
 -- Analyze query performance
 EXPLAIN ANALYZE
-SELECT * FROM reservations 
-WHERE vehicle_id = 42 
+SELECT * FROM reservations
+WHERE vehicle_id = 42
   AND start_date < '2026-03-20'
   AND end_date > '2026-03-15';
 
 -- Check index usage
-SELECT 
+SELECT
     schemaname, tablename, indexname, idx_scan, idx_tup_read
 FROM pg_stat_user_indexes
 WHERE tablename IN ('reservations', 'vehicles', 'holds')
@@ -1398,8 +1400,55 @@ ORDER BY idx_scan DESC;
 REINDEX INDEX CONCURRENTLY idx_reservations_vehicle_dates;
 ```
 
+## 11.5 Reservation Extra Options Persistence
 
-------------------------------------------------------------------------
+The reservation-extra catalog uses explicit EF Core configurations and PostgreSQL constraints rather than convention-only mapping. The Phase 1 schema is introduced by `20260709204616_AddReservationExtraOptions` and consists of:
+
+- `reservation_extra_options` with unique immutable code, price/quantity/order checks, catalog ordering index, and `xmin` row version;
+- `reservation_extra_option_translations` with `option_id + locale` composite key and the supported five-locale constraint;
+- `reservation_extra_option_vehicle_groups` with a composite assignment key and vehicle-group lookup index;
+- `reservation_selected_extras` with immutable localized/monetary snapshots, unique `reservation_id + extra_option_id`, cascading reservation delete, and restricted option delete;
+- nullable unique `reservations.quote_id` for replay protection;
+- nullable `reservations.pricing_snapshot` stored as versioned `jsonb` for exact new-format pricing history.
+
+The built-in seed and assignment backfill are deliberately bounded. Migration-time SQL assigns every built-in to groups already present. Startup backfill runs only while all four built-ins have zero assignments, and a second run must not change `UpdatedAt` or `xmin`. Groups created by normal admin workflows are not auto-assigned.
+
+Database-focused verification uses both EF metadata tests and the real PostgreSQL integration fixture. Tests cover keys, precision, indexes, delete behavior, seed/translation/assignment shape, late backfill idempotence, hard-delete restriction, duplicate selected snapshots, and duplicate quote IDs. Detailed product rules and phase gates remain in `docs/16_Reservation_Extra_Options_Plan.md` and `docs/17_Reservation_Extra_Options_Implementation.md`.
+
+### Phase 2 Catalog Service and API Boundary
+
+`IReservationExtraOptionCatalogService` and `ReservationExtraOptionCatalogService` live in the API application-service layer and operate through `IApplicationDbContext`. The service owns normalization, validation, code generation, paginated admin queries, localized public group queries, full replacement of translation/group children, lifecycle transitions, audit events, and optimistic concurrency. Controllers translate domain outcomes to the existing `ApiResponse<T>` envelope without exposing EF exceptions.
+
+The implemented HTTP surface is:
+
+- `GET /api/v1/reservation-extra-options?vehicleGroupId={guid}&locale={locale}` for active, non-archived, group-assigned localized items;
+- admin list/create/full-update/status/restore/delete operations under `/api/admin/v1/reservation-extra-options`.
+
+Admin routes require `AuthPolicyNames.AdminOnly`; public reads are anonymous. Both controller types use `RateLimitPolicyNames.Standard` and `ResponseCache(NoStore = true)`. Public ordering is `SortOrder`, then localized name. Enum values cross the wire as `PER_DAY` and `PER_RENTAL`. Admin DTOs expose `Version` from PostgreSQL `xmin` separately from display-only `UpdatedAt`.
+
+Write validation enforces price `0..1,000,000`, quantity `1..20`, sort order `0..9,999`, the server icon allowlist, distinct existing group IDs, supported unique locales, and translation storage limits. Incomplete inactive drafts are valid; activation requires non-empty name/description values for `tr`, `en`, `de`, `ru`, and `ar`, plus at least one assignment. Codes use `extra-{guid:N}` and are omitted from update contracts so they remain immutable.
+
+Translation and assignment replacement occurs in one `SaveChangesAsync` boundary with an explicit parent `UpdatedAt` mutation, ensuring PostgreSQL advances the parent `xmin`. The loaded `Version` is checked before mutation and EF concurrency exceptions map to `409`. Used options archive; unused options are deleted. If a concurrent selected-extra reference causes PostgreSQL foreign-key/restrict failure during delete, the tracker is cleared, the option is reloaded, and the operation completes as archive. Real two-context and delete-race tests cover both paths.
+
+Audit entries are added to `AuditLogs` in the same save boundary as each catalog mutation. Stable actions cover create, update, activation, deactivation, assignment changes, delete, archive, and restore. `NewValue` contains only option code and changed field names; localized bodies and customer data are excluded.
+
+### Phase 3 Generic Quote and Reservation Boundary
+
+`ReservationExtraPricingService` owns authoritative generic-extra validation and calculation. Quote issuance loads selected options with their requested locale and vehicle-group assignment, rejects duplicate/stale/inactive/archived/unassigned/over-limit inputs, and snapshots localized text, pricing mode, unit price, quantity, rental days, and total. Submission revalidates structural availability while deliberately honoring the issued price when only price or `xmin` changed.
+
+`ReservationQuoteService` combines the existing base/campaign/fee engine with generic extras and stores `ReservationQuoteV1` through `IReservationQuoteStore`. The Redis implementation keeps the quote for 15 minutes, stores only normalized price-driving data and a one-way session hash, acquires claims atomically, releases/finalizes only the owning claim token, and records consumed state separately so the retained quote can authenticate a database replay.
+
+Draft and unpaid reservation creation first validate quote/session/input equality and current option structure, then persist the reservation, nullable unique `QuoteId`, `ReservationSelectedExtra` rows, and `ReservationPricingSnapshotV1` in one relational transaction. A retry that finds the unique database `QuoteId` must still validate the retained quote session and booking inputs before returning the existing DTO; it then reconciles Redis consumed state. Snapshot-backed reads never reconstruct current catalog prices, while pre-migration rows remain explicit total-only fallbacks.
+
+### Phase 4-5 Admin, Public Booking, and Browser Acceptance Boundary
+
+The admin settings surface uses explicit reservation-extra API contracts and stable SWR keys for list filters and lifecycle mutations. Its editor permits incomplete inactive drafts, derives readiness from all five locale name/description pairs plus at least one vehicle-group assignment, and submits activation to the server as the final authority. Public Step 3 stores only option identity, version, quantity, and display-only catalog fields; it removes newly generated legacy `extras` URL state and clears incompatible selections when the vehicle group changes. Step 4 renders the server quote, sends the quote ID with the matching session and non-price inputs, retries one recoverable conflict after refreshing the catalog/quote, and never creates a payment intent before reservation success.
+
+The Docker acceptance target is the production web image at `http://localhost:3001`, not the development server. `frontend/e2e/tests/reservation-extra-options.spec.ts` retains a self-cleaning authoring scenario that verifies incomplete activation is disabled, activates complete TR/EN/DE/RU/AR content assigned to exactly one group, asserts localized `no-store` public catalog results for the assigned group, rejects visibility for an unassigned group, and deactivates/deletes its unused test option in `finally`. Its route-controlled Step 3 scenarios cover loading, per-day/per-rental quantity and total rules, retry/empty behavior, legacy warnings, and generated-URL cleanup. Its route-controlled Step 4 scenarios cover server quote/campaign/paid/unpaid ordering plus price-only quote preservation and bounded availability-conflict recovery without creating server-side reservation data or calling a payment provider. A real unpaid browser flow persists a child-seat row and full pricing snapshot, proves no double counting, preserves immutable history after a catalog edit, and renders a pre-migration `LEGACY_TOTAL_ONLY` warning. The real quote-lifecycle scenario reuses the browser-issued quote contract against Docker Redis/PostgreSQL: an expired key and mismatched session return `409` with zero rows, while replay returns the original reservation and the unique `quote_id` count remains one. Current-source proof passed as 9/9 existing scenarios plus focused quote-lifecycle 1/1 in separate clean API rate-limit windows. The responsive scenario additionally passes Step 3/4 at 1440x1000, 834x1112, and 390x844 with inspected screenshots, no horizontal overflow, accessible icon actions, successful non-sensitive API metadata, and no unexpected console errors. These checks close all eight local rows in checklist section 6.6.
+
+The current comprehensive continuation artifact for this boundary is `C:\Users\muham\AppData\Local\Temp\2026-07-11-203021-reservation-extra-options-final-implementation-handoff.md`; canonical architecture and acceptance remain in this TDD, ADR 12.8, plan 16, implementation 17, and checklist 6.6.
+
+---
 
 # 12. Rate Limiting Configuration
 
@@ -1408,14 +1457,14 @@ allowing legitimate traffic.
 
 ## 12.1 Rate Limit Tiers
 
-| Tier | Endpoint Pattern | Limit | Window | Burst |
-|------|------------------|-------|--------|-------|
-| **Strict** | `/api/v1/auth/*` | 5 | 1 minute | 2 |
-| **Strict** | `/api/v1/payment/*` | 10 | 1 minute | 5 |
-| **Standard** | `/api/v1/reservations/*` | 30 | 1 minute | 10 |
-| **Standard** | `/api/v1/search/*` | 60 | 1 minute | 20 |
-| **Relaxed** | `/api/v1/public/*` | 100 | 1 minute | 50 |
-| **Health** | `/health` | 10 | 1 minute | 0 |
+| Tier         | Endpoint Pattern         | Limit | Window   | Burst |
+| ------------ | ------------------------ | ----- | -------- | ----- |
+| **Strict**   | `/api/v1/auth/*`         | 5     | 1 minute | 2     |
+| **Strict**   | `/api/v1/payment/*`      | 10    | 1 minute | 5     |
+| **Standard** | `/api/v1/reservations/*` | 30    | 1 minute | 10    |
+| **Standard** | `/api/v1/search/*`       | 60    | 1 minute | 20    |
+| **Relaxed**  | `/api/v1/public/*`       | 100   | 1 minute | 50    |
+| **Health**   | `/health`                | 10    | 1 minute | 0     |
 
 ## 12.2 ASP.NET Core Rate Limiter
 
@@ -1426,7 +1475,7 @@ builder.Services.AddRateLimiter(options =>
     // Global limiter
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
         context => RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.User.Identity?.Name ?? 
+            partitionKey: context.User.Identity?.Name ??
                           context.Request.Headers["X-Forwarded-For"].ToString() ??
                           context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
             factory: _ => new FixedWindowRateLimiterOptions
@@ -1521,8 +1570,8 @@ public class RedisRateLimiter : IRateLimiter
     private readonly ILogger<RedisRateLimiter> _logger;
 
     public async Task<RateLimitResult> CheckAsync(
-        string key, 
-        int limit, 
+        string key,
+        int limit,
         TimeSpan window)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -1560,8 +1609,7 @@ public class RedisRateLimiter : IRateLimiter
 }
 ```
 
-
-------------------------------------------------------------------------
+---
 
 # 13. API Versioning Strategy
 
@@ -1575,6 +1623,7 @@ smooth migration paths.
 Format: `/api/v{major}/[controller]`
 
 Examples:
+
 - `/api/v1/reservations` - Current stable
 - `/api/v2/reservations` - Future enhancements
 
@@ -1586,13 +1635,13 @@ builder.Services.AddApiVersioning(options =>
 {
     // Default version when not specified
     options.DefaultApiVersion = new ApiVersion(1, 0);
-    
+
     // Assume default version if not specified
     options.AssumeDefaultVersionWhenUnspecified = true;
-    
+
     // Report supported versions in headers
     options.ReportApiVersions = true;
-    
+
     // Read version from URL path
     options.ApiVersionReader = new UrlSegmentApiVersionReader();
 });
@@ -1607,7 +1656,7 @@ builder.Services.AddVersionedApiExplorer(options =>
 builder.Services.AddSwaggerGen(options =>
 {
     var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-    
+
     foreach (var description in provider.ApiVersionDescriptions)
     {
         options.SwaggerDoc(
@@ -1668,7 +1717,7 @@ public class VehiclesController : ControllerBase
     {
         Response.Headers.Add("Deprecation", "true");
         Response.Headers.Add("Sunset", DateTime.UtcNow.AddMonths(6).ToString("R"));
-        
+
         return Ok(await _service.GetV1Async());
     }
 
@@ -1683,13 +1732,12 @@ public class VehiclesController : ControllerBase
 
 ## 13.5 Version Compatibility Matrix
 
-| Version | Status | Sunset Date | Breaking Changes |
-|---------|--------|-------------|------------------|
-| v1.0 | Active | - | Baseline |
-| v2.0 | Planned | - | Pagination, new fields |
+| Version | Status  | Sunset Date | Breaking Changes       |
+| ------- | ------- | ----------- | ---------------------- |
+| v1.0    | Active  | -           | Baseline               |
+| v2.0    | Planned | -           | Pagination, new fields |
 
-
-------------------------------------------------------------------------
+---
 
 # 14. Security Implementation
 
@@ -1755,7 +1803,106 @@ builder.Services.AddCors(options =>
 });
 ```
 
+## 14.4 Dependency Vulnerability Verification
 
-------------------------------------------------------------------------
+Backend dependency-security work must verify both direct and transitive NuGet packages:
+
+```bash
+dotnet list backend\RentACar.sln package --include-transitive --vulnerable
+```
+
+When a vulnerable transitive package is pulled by a framework integration package, prefer the narrowest compatible override before making broad framework upgrades. The 8 July 2026 `Microsoft.OpenApi` fix follows this pattern: `Microsoft.AspNetCore.OpenApi` stays on the current .NET 10 line, while `RentACar.API.csproj` explicitly references patched `Microsoft.OpenApi` 2.7.5.
+
+Verification expectations for dependency-security slices:
+
+- Restore the solution with the repo NuGet config.
+- Re-run transitive vulnerability scanning and require 0 critical/high vulnerable backend packages.
+- Build the backend solution with 0 warnings/errors.
+- Run the backend unit and integration tests.
+- If the repo-required Aikido MCP scanner is unavailable, record the scanner availability blocker separately from NuGet vulnerability status.
+
+## 14.5 Time-Stable Test Data
+
+Tests that exercise reservation editability rules must avoid fixed calendar dates for future reservations. A date that was safely in the future when the test was written can become historical and trigger the production rule that blocks updates after pickup has started.
+
+Use `DateTime.UtcNow.Date.AddDays(...)` or an injected clock/test clock pattern for future reservation fixtures. Keep assertions focused on behavior, not on a hardcoded calendar day.
+
+## 14.6 Account-Claim Abuse Control and Retention
+
+`AccountClaimSecurityOptions` binds the request cooldown, retention period, cleanup interval, and cleanup batch size from configuration. Registration resolves the normalized email to the customer before applying the five-minute cooldown, preserving the generic response for both issued and suppressed requests. PostgreSQL enforces one active claim token per customer through the partial unique index `ux_customer_account_claim_tokens_one_active`; the migration supersedes legacy duplicates before creating that index. A unique-constraint race is handled as a suppressed request without exposing account state, and the failed EF change tracker is cleared before audit persistence.
+
+`CustomerAccountClaimTokenCleanupService` runs from the worker, deletes only expired, consumed, or superseded records older than the 14-day retention boundary, and limits each pass to 200 rows. Request metadata is bounded and raw email addresses or claim tokens are not logged. These controls are retained as defense in depth, but registration and claim are not supported public workflows for the current release.
+
+`PublicCustomerAccountSurfaceMiddleware` now runs before idempotency and controller dispatch and returns an empty `404` for `/api/customer/v1/auth/register` and `/api/customer/v1/auth/claim`, including case variants and an optional trailing slash. The two Next.js proxy handlers also return an empty `404` without contacting the backend; `/dashboard/register/v1` and each localized `/{locale}/account-claim` page resolve through `notFound()`. The public `Header` renders neither a managed login link nor a fallback sign-in entry. The existing-customer `/dashboard/login/v1` route remains available, but its registration link is removed.
+
+The current evidence set is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: middleware and integration regressions prove exact/case/trailing-slash rejection before password, claim-token, audit, or background-job mutation; frontend unit tests prove the disabled proxies/pages/header contract; and the self-cleaning Chromium scenario proves five-locale page rejection, direct register-page rejection, homepage link removal, proxy/backend rejection, and zero test-owned customer/job side effects. The earlier claim/replay/login harness remains historical evidence for the retained internal controls, not the current public contract.
+
+Deployed-public acceptance for the same boundary was completed after PR #413 head `5039c6028f1c21c8bd5aaecbb1cb3cc5e996ccee` was squash-merged as `fb7ca83e01599556ea9b06d24d9c570a4d0a111b` and manually deployed through Dokploy Compose. Post-merge CI/security workflows and the GHCR push succeeded. Cache-bypassed production HTTP checks and a real Chromium pass confirmed `404` for all five localized account-claim pages, `/dashboard/register/v1`, and both public register/claim proxies; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage contained no customer-login link. Proxy checks used empty JSON bodies and did not mutate production data. This closes the deployed public membership acceptance gate only; direct internal-backend exact/case/trailing-slash evidence, container metadata/logs, and production database/job counts remain unreviewed operational evidence.
+
+## 14.7 Public Reservation and Cancellation Boundary Validation
+
+The unauthenticated lookup path must terminate in `PublicReservationSummaryDto`; it must never create a broad `ReservationDto` and remove fields afterward. The response contract contains only public code, coarse status, pickup/return office names and timestamps, vehicle-group name, customer-facing total and deposit, and currency. Strict rate limiting and `Cache-Control: no-store` apply at the HTTP boundary.
+
+Cancellation has no unauthenticated public route. `POST /api/customer/v1/reservations/{id}/cancel` requires the `CustomerOnly` policy and returns the same not-found response for a missing reservation and a reservation owned by another customer. The ownership check must complete before `CancelReservationAsync` is called. The admin cancellation route remains independently protected by its admin controller policy.
+
+`frontend/e2e/tests/reservation-boundary-security.spec.ts` is the repeatable production-like acceptance harness. It creates isolated customers and a reservation, captures the real public response from the `tr`, `en`, `ru`, `ar`, and `de` confirmation pages, compares the response keys to the exact allowlist, checks that fixture-specific PII and internal values are absent, and confirms the non-cacheable header. For rejected anonymous and non-owner mutations, it compares PostgreSQL `status`, `xmin`, and `updated_at` before and after the HTTP request; owner cancellation is the positive control and must persist `Cancelled`. Cleanup runs in `finally`, and post-run test-owned customer, reservation, background-job, and audit counts must be zero.
+
+This harness establishes local acceptance for WP2, not release readiness. Because the strict limiter uses a process-scoped partition, acceptance runs must start from a clean limiter window or isolated API process; a preceding account-claim scenario may intentionally produce `429` without indicating a reservation-boundary regression. The unchanged reservation harness passed in a clean window during the 16 July focused final validation. Deployment rerun, operational evidence, and production payment gates remain tracked in `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 14.8 Production Payment Configuration Startup Validation
+
+`PaymentOptionsValidatorTests` includes a host-start matrix that invokes the repository's real private `AddPaymentIntegration` registration and starts an `IHost`, so `ValidateOnStart` behavior is exercised rather than inferred from direct validator calls. Production startup must raise `OptionsValidationException` for a missing provider, Mock, an unknown provider, a sandbox base URL, incomplete Iyzico credentials, Iyzico with `EnablePayments=true`, or Disabled with `EnablePayments=true` while provider verification remains simulated. Positive controls are an explicit Production `Disabled` host with `EnablePayments=false` and no Iyzico credentials, a fully configured Production Iyzico host with payments disabled, and an explicitly selected Development Mock host.
+
+The focused configuration suite passes 17/17 and resolves `IPaymentProvider` from the real service registration. It proves the Disabled provider is selected instead of Mock, returns failed or unknown results for every provider operation, rejects webhook signatures, and cannot parse a webhook as a successful provider event. The current Release image was also rebuilt and reached Docker `running/healthy` with explicit Disabled/false against isolated PostgreSQL 17 and Redis 7.4 without Iyzico credentials. The earlier disposable negative matrix remains required evidence that missing, Mock, unknown, sandbox, incomplete, and enabled Production configurations exit non-zero with the expected general validation error and no synthetic credential leakage.
+
+This is provider-independent local acceptance for configuration registration, fail-closed provider behavior, Compose interpolation, and container startup only. The live Dokploy rerun and real-provider sandbox verification remain separate gates in `docs/18_Codex_Security_Findings_Implementation.md`.
+
+## 14.9 Main-Branch Ruleset and Required Checks
+
+The `main` branch is governed by GitHub repository ruleset `Protect main - solo developer` (ID `18985047`). Workflow YAML defines how checks execute; the ruleset defines whether their result permits a merge. The ruleset must remain active, target only `refs/heads/main`, have no bypass actor, require a pull request and resolved review threads, permit squash merge only, and block branch deletion and non-fast-forward updates.
+
+The solo-developer approval threshold is zero. This avoids requiring an unavailable second maintainer while preserving a manual merge decision and the technical gates. Strict required-status-check policy requires the pull-request head to be updated against current `main` and binds these exact contexts to the GitHub Actions integration:
+
+1. `Backend Unit Tests`
+2. `Backend Integration Tests`
+3. `Frontend Lint, Test & Build`
+4. `Docker Build`
+5. `Gitleaks`
+6. `CodeQL Analyze (csharp)`
+7. `CodeQL Analyze (javascript-typescript)`
+
+Acceptance evidence must distinguish execution from enforcement. A successful Actions run proves that a workflow executed successfully; the active ruleset response for `main` proves that the required result is enforced. For Dependabot, retain at least one observable post-ruleset PR lifecycle showing the branch update, required checks, and manual merge or close decision. A pre-ruleset PR reporting `BEHIND` is useful strict-update evidence but is not a complete post-ruleset lifecycle.
+
+### 14.9.1 Dependency-Alert Reconciliation Acceptance
+
+A dependency remediation is acceptance-complete only when all of these independently observable gates pass:
+
+1. The committed manifest and lockfile resolve every affected package outside the advisory's vulnerable range.
+2. The pull-request head passes the repository ruleset, including the authoritative Node 22 frontend job for frontend lockfile changes, and receives an exact-head review outcome.
+3. After squash merge, the default-branch GitHub SBOM reports the patched versions and the post-merge workflow set succeeds.
+4. The live Dependabot alert API reports each affected record as `fixed`, or a separately reviewed risk decision records a non-fix disposition with rationale.
+
+These gates must not be collapsed into one claim. A patched SBOM with still-open alert records is `remediation merged; alert reconciliation pending`, not closed. Preserve the alert numbers, package grouping, merge SHA, SBOM timestamp, and workflow URLs as evidence; re-query the alert API before changing the state. Do not manually dismiss an alert to simulate reconciliation, and do not treat a failed or unavailable secondary audit endpoint as a zero-vulnerability result.
+
+While gate 4 is pending, capture both GitHub data planes: the fully paginated default-branch dependency graph/SBOM and the alert records' `vulnerableRequirements`, `state`, `fixedAt`, and dismissal fields. A graph that contains only patched requirements while alerts retain the old vulnerable requirements proves an alert-record reconciliation mismatch, not a reason for further repository changes. Preserve the patched graph, wait 12-24 hours, and re-query the original alert numbers. If the mismatch persists, GitHub Support or backend resynchronization is a separately authorized external escalation; a local draft does not count as a submitted request.
+
+For the dependency slice merged by PR #405, the 16 July 2026 re-check completed gate 4: original alerts `39`, `41`, `43`, `44`, `45`, `46`, `47`, `48`, `50`, `51`, and `52` all report `fixed` without dismissal, and the fresh SBOM contains only the patched target versions. This result closes alert reconciliation for that slice but did not itself replace the separate requirement to retain a complete post-ruleset Dependabot PR lifecycle as governance evidence. That operational requirement later completed through PR #422 and merge commit `134c6c888ff510c4eb1adfab1e41ebc0c5d83793` on 20 July 2026.
+
+## 14.10 Focused Final Security Validation
+
+The final validation harness replays each original attack path against the current tracked configuration and records a per-finding disposition rather than converting a green general test run into a blanket security claim. The 16 July 2026 run used the following minimum evidence set:
+
+- focused backend security tests plus the complete backend unit and API-integration suites;
+- focused frontend tests, complete Vitest, TypeScript, and ESLint;
+- current Release web/API image builds and HTTP health/page probes;
+- production-like Chromium membership-disabled and reservation-boundary scenarios with database cleanup proof;
+- real disabled-payment intent, forged 3DS, and forged webhook requests with before/after payment-state fingerprints;
+- disposable unsafe-production startup cases with synthetic secret-leakage checks;
+- pinned Gitleaks working-tree and full-history scan; and
+- live ruleset, required-check, Dependabot alert, and default-branch SBOM inspection.
+
+The resulting assessment records the public membership surface as disabled and acceptance-proven locally and on the deployed public surface at merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`, while the retained internal claim controls are no longer represented as a supported public workflow. Direct internal-backend/container/log/database evidence was not part of that deployed-public pass. It also suppresses the currently disproven public disclosure/cancellation, production Mock, Dependabot auto-merge, and reachable callback findings. The historical Resend-shaped and Upstash-shaped matches remain not actionable for credential rotation for the documented provenance reasons. Payment integrity remains deferred until the simulated provider verification is replaced by authoritative server-to-server verification with mismatch, replay, and sandbox-success evidence. Detailed commands, counts, and remaining release gates are canonical in `docs/18_Codex_Security_Findings_Implementation.md`; validation artifacts are temporary evidence and are not committed to the repository.
+
+---
 
 END OF DOCUMENT

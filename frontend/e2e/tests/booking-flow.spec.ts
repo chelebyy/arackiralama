@@ -16,7 +16,7 @@ test.describe("Booking Flow", () => {
     await homePage.goto("tr");
     await homePage.fillSearchForm({
       pickupOffice: "ala",
-      returnOffice: "ayt",
+      returnOffice: "gzp",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
@@ -24,9 +24,11 @@ test.describe("Booking Flow", () => {
 
     // Step 2: Vehicles page - Select first vehicle
     await expect(page).toHaveURL(/\/vehicles|\/booking\/step2|\/araclar/);
-    const vehicleCards = page.locator("[data-testid='vehicle-card']");
-    await expect(vehicleCards.first()).toBeVisible({ timeout: 10000 });
-    await vehicleCards.first().click();
+    const reserveLinks = page.getByRole("link", {
+      name: /hemen rezerve et|book now/i,
+    });
+    await expect(reserveLinks.first()).toBeVisible({ timeout: 10000 });
+    await reserveLinks.first().click();
 
     // Step 3: Extras selection
     await expect(page).toHaveURL(/\/booking\/step3/);
@@ -54,7 +56,7 @@ test.describe("Booking Flow", () => {
     await homePage.goto("tr");
     await homePage.fillSearchForm({
       pickupOffice: "ala",
-      returnOffice: "ayt",
+      returnOffice: "gzp",
       pickupDate: testDates.pickup,
       returnDate: testDates.returnDate,
     });
@@ -64,8 +66,10 @@ test.describe("Booking Flow", () => {
     await page.waitForURL(/\/vehicles|\/booking\/step2|\/araclar/, { timeout: 10000 });
     await page.waitForLoadState("networkidle");
 
-    const vehicleCards = page.locator("[data-testid='vehicle-card']");
-    const count = await vehicleCards.count();
+    const reserveLinks = page.getByRole("link", {
+      name: /hemen rezerve et|book now/i,
+    });
+    const count = await reserveLinks.count();
     expect(count).toBeGreaterThan(0);
   });
 });

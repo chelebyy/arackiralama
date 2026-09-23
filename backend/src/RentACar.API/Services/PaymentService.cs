@@ -33,6 +33,8 @@ public sealed class PaymentService(
         CreatePaymentIntentApiRequest request,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         var reservation = await _dbContext.Reservations
             .FirstOrDefaultAsync(x => x.Id == request.ReservationId, cancellationToken);
         if (reservation == null)
@@ -134,6 +136,8 @@ public sealed class PaymentService(
         ThreeDsReturnApiRequest request,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         var intent = await _dbContext.PaymentIntents
             .FirstOrDefaultAsync(x => x.Id == intentId, cancellationToken);
         if (intent == null)
@@ -215,6 +219,8 @@ public sealed class PaymentService(
         string? eventType,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         if (!_paymentProvider.VerifyWebhookSignature(payload, signature, timestamp))
         {
             throw new UnauthorizedAccessException("Webhook imza doğrulaması başarısız.");
@@ -279,6 +285,8 @@ public sealed class PaymentService(
         AdminRefundApiRequest request,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         var reservation = await _dbContext.Reservations
             .FirstOrDefaultAsync(x => x.Id == reservationId, cancellationToken);
         if (reservation == null)
@@ -379,6 +387,8 @@ public sealed class PaymentService(
                     : note);
         }
 
+        EnsurePaymentsEnabled();
+
         var providerResult = await _paymentProvider.ReleaseDepositAsync(
             new ProviderReleaseDepositRequest
             {
@@ -422,6 +432,14 @@ public sealed class PaymentService(
             return null;
         }
 
+        if (!_paymentOptions.EnablePayments)
+        {
+            return BuildSkippedDepositOperation(
+                reservationId,
+                "CreatePreAuthorization",
+                "Ödemeler devre dışıyken depozito ön provizyonu atlandı.");
+        }
+
         var mainPaymentIntent = await GetLatestRentalPaymentIntentAsync(reservationId, cancellationToken);
         if (mainPaymentIntent == null || mainPaymentIntent.Status != PaymentStatus.Succeeded)
         {
@@ -461,6 +479,8 @@ public sealed class PaymentService(
         string? note,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         var reservation = await _dbContext.Reservations
             .FirstOrDefaultAsync(x => x.Id == reservationId, cancellationToken);
         if (reservation == null)
@@ -516,6 +536,8 @@ public sealed class PaymentService(
         AdminPaymentRetryApiRequest request,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         if (request.ReservationId == Guid.Empty)
         {
             throw new InvalidOperationException("Geçerli bir rezervasyon ID gereklidir.");
@@ -540,6 +562,8 @@ public sealed class PaymentService(
         Guid paymentIntentId,
         CancellationToken cancellationToken = default)
     {
+        EnsurePaymentsEnabled();
+
         var intent = await _dbContext.PaymentIntents
             .FirstOrDefaultAsync(x => x.Id == paymentIntentId, cancellationToken);
         if (intent == null)
@@ -588,6 +612,11 @@ public sealed class PaymentService(
 
     public async Task<int> ProcessPendingWebhookJobsAsync(CancellationToken cancellationToken = default)
     {
+        if (!_paymentOptions.EnablePayments)
+        {
+            return 0;
+        }
+
         var pendingJobIds = await _dbContext.BackgroundJobs
             .Where(x => x.Type == WebhookProcessingJobType
                 && x.Status == BackgroundJobStatus.Pending
@@ -695,6 +724,14 @@ public sealed class PaymentService(
         }
 
         return await dbContext.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    private void EnsurePaymentsEnabled()
+    {
+        if (!_paymentOptions.EnablePayments)
+        {
+            throw new InvalidOperationException("Ödeme altyapısı geçici olarak devre dışıdır.");
+        }
     }
 
     private async Task<BackgroundJob> ReloadBackgroundJobAsync(Guid jobId, CancellationToken cancellationToken)

@@ -1,0 +1,230 @@
+{
+  "date": "2026-07-08T16:54:48.467Z",
+  "baseUrl": "http://localhost:3001",
+  "evidenceDir": "C:\\All_Project\\Arac-Kiralama\\docs\\test-evidence\\local-docker-2026-07-08-admin-ux",
+  "checked": [
+    {
+      "viewport": "1440x900",
+      "page": "admin-public-content-pages",
+      "overflow": false,
+      "textLength": 1161,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-admin-public-content-pages.png"
+    },
+    {
+      "viewport": "1440x900",
+      "page": "admin-public-content-contact",
+      "overflow": false,
+      "textLength": 4025,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-admin-public-content-contact.png"
+    },
+    {
+      "viewport": "1440x900",
+      "page": "admin-system-settings",
+      "overflow": false,
+      "textLength": 1857,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-admin-system-settings.png"
+    },
+    {
+      "viewport": "1440x900",
+      "page": "public-contact",
+      "overflow": false,
+      "textLength": 1835,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-public-contact.png"
+    },
+    {
+      "viewport": "1440x900",
+      "page": "public-privacy",
+      "overflow": false,
+      "textLength": 899,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-public-privacy.png"
+    },
+    {
+      "viewport": "1440x900",
+      "page": "public-terms",
+      "overflow": false,
+      "textLength": 866,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "desktop-public-terms.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "admin-public-content-pages",
+      "overflow": false,
+      "textLength": 1083,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-admin-public-content-pages.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "admin-public-content-contact",
+      "overflow": false,
+      "textLength": 3947,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-admin-public-content-contact.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "admin-system-settings",
+      "overflow": false,
+      "textLength": 1779,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-admin-system-settings.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "public-contact",
+      "overflow": false,
+      "textLength": 1797,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-public-contact.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "public-privacy",
+      "overflow": false,
+      "textLength": 861,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-public-privacy.png"
+    },
+    {
+      "viewport": "768x1024",
+      "page": "public-terms",
+      "overflow": false,
+      "textLength": 828,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "tablet-public-terms.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "admin-public-content-pages",
+      "overflow": false,
+      "textLength": 845,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-admin-public-content-pages.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "admin-public-content-contact",
+      "overflow": false,
+      "textLength": 3709,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-admin-public-content-contact.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "admin-system-settings",
+      "overflow": false,
+      "textLength": 1541,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-admin-system-settings.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "public-contact",
+      "overflow": false,
+      "textLength": 1762,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-public-contact.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "public-privacy",
+      "overflow": false,
+      "textLength": 826,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-public-privacy.png"
+    },
+    {
+      "viewport": "375x812",
+      "page": "public-terms",
+      "overflow": false,
+      "textLength": 793,
+      "newAppFailures": [],
+      "newConsoleErrors": [],
+      "knownConsoleNoise": [
+        "Google Analytics key not provided."
+      ],
+      "screenshot": "mobile-public-terms.png"
+    }
+  ],
+  "failures": [],
+  "materialConsoleErrorCount": 0,
+  "knownConsoleNoiseCount": 20,
+  "appFailureCount": 0,
+  "knownConsoleNoise": [
+    "Google Analytics key not provided."
+  ]
+}

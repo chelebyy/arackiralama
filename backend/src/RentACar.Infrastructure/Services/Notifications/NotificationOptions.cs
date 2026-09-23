@@ -8,6 +8,7 @@ public sealed class NotificationOptions
     public const string SectionName = "Notifications";
 
     public string DefaultLocale { get; init; } = "tr-TR";
+    public string PublicFrontendBaseUrl { get; init; } = string.Empty;
     public SmsNotificationOptions Sms { get; init; } = new();
     public EmailNotificationOptions Email { get; init; } = new();
 }

@@ -3,9 +3,9 @@
 Date: 2026-06-03
 Scope: Production release rehearsal on local Docker before live deployment
 
-Latest delta evidence: 2026-06-27 admin public-site localization smoke rerun on local Docker. `rentacar-web` was rebuilt from current frontend code; `rentacar-api`, `rentacar-postgres`, and `rentacar-redis` stayed on the local compose stack. Playwright selected Docker suite passed **17/17** against `http://localhost:3001`, including the new admin public settings smoke for five-language managed-content controls.
+Latest delta evidence: 2026-07-17 public membership-disable acceptance rerun on local Docker. Current API and web images were rebuilt; the Chromium membership-disabled and reservation-boundary scenarios each passed **1/1** against `http://localhost:3001`, including exact/trailing-slash endpoint rejection, five-locale claim-page rejection, public login-link removal, and database cleanup/no-write proof.
 
-------------------------------------------------------------------------
+---
 
 ## 1. Goal
 
@@ -19,7 +19,7 @@ Primary goals:
 - Confirm admin login and core admin pages work in the browser.
 - Capture evidence and blockers before production deployment.
 
-------------------------------------------------------------------------
+---
 
 ## 2. Test Environment
 
@@ -72,7 +72,7 @@ Environment safety evidence captured on 2026-06-03:
 - A redacted API container env check confirmed `ConnectionStrings__DefaultConnection` uses the `postgres` compose service and `Database=rentacar`, `Redis__ConnectionString` uses `redis:6379`, and `Jwt__Secret` contains the `local-dev-only` marker without printing the secret value.
 - `docker compose -f backend\docker-compose.yml config --volumes` reports only `postgres_data` and `redis_data`; section 9.1 documents `docker compose down --volumes`, so local test data can be discarded by recreating the compose volumes after the pass.
 
-------------------------------------------------------------------------
+---
 
 ## 3. Stack Startup Checklist
 
@@ -145,7 +145,7 @@ docker compose up --build
 Checklist:
 
 - [x] `.env` values are reviewed before startup.
-- [x] `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL`, and `AUTH_BACKEND_URL` match the local target.
+- [x] `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL`, `AUTH_BACKEND_URL`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL` match the rehearsal target.
 - [x] `JWT_SECRET`, PostgreSQL password, and Redis password are local-only.
 - [x] External Docker network exists.
 - [x] Browser target URL is updated based on `WEB_PORT`.
@@ -154,12 +154,19 @@ Root compose alternative status on 2026-06-03:
 
 - Exercised as a config/safety validation for this pass without leaving a root `.env` file in the working tree. `.env.example` was reviewed and found to contain Dokploy-style placeholder public URLs (`https://app.example.com`, `https://api.example.com`), so the actual local rehearsal values must be reviewed/overridden before any `docker compose up --build` run.
 - `docker compose config` was run with temporary local-only environment values and returned a valid root compose model.
-- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, and `AUTH_BACKEND_URL=http://api:8080`.
+- The local target values used for the root compose validation were `NEXT_PUBLIC_APP_URL=http://localhost:3000`, `NEXT_PUBLIC_API_URL=http://localhost:8080/api`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`, `AUTH_BACKEND_URL=http://api:8080`, and `NOTIFICATIONS_PUBLIC_FRONTEND_BASE_URL=https://localhost:3000`. The dedicated notification origin is HTTPS-shaped because the root API runs with Production validation; this config-only rehearsal does not claim local email delivery. This 3 June entry is historical; the current release validates the disabled membership surface instead of a public account-claim delivery flow.
 - The validated root compose browser target is `http://localhost:3000` because `WEB_PORT=3000`; the root API target is `http://localhost:8080` because `API_PORT=8080`.
 - Temporary root compose secrets used for validation were local-only strings: PostgreSQL password `local-root-compose-postgres-only`, Redis password `local-root-compose-redis-only`, and JWT secret `local-root-compose-jwt-secret-at-least-32-chars`.
 - `docker network inspect dokploy-network --format "{{.Name}} {{.Driver}} {{.Scope}}"` returned `dokploy-network bridge local`, confirming the external Docker network exists.
 
-------------------------------------------------------------------------
+Current membership-disable acceptance on 2026-07-17:
+
+- Rebuilt the current local Docker API and web images and verified both services healthy/reachable.
+- `frontend/e2e/tests/account-claim-security.spec.ts` passed **1/1** in Chromium: all five localized claim pages and `/dashboard/register/v1` returned `404`, the homepage exposed no customer login link, frontend and backend registration/claim endpoints returned `404` (including trailing-slash variants), and test-owned customer/background-job counts stayed zero.
+- `frontend/e2e/tests/reservation-boundary-security.spec.ts` passed **1/1** after replacing its removed public-registration fixture dependency with a test-owned customer fixture; its disclosure, ownership, cancellation, and cleanup assertions remained unchanged.
+- This section remains the local acceptance record. The required live follow-up was completed on 17 July 2026 after an operator-triggered Dokploy deployment of exact merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`: cache-bypassed HTTP and Chromium checks returned `404` for all five localized claim pages, `/dashboard/register/v1`, and both public proxies; direct login remained `200`; and the homepage exposed no login link. Empty JSON proxy probes mutated no production data. The deployed-public membership gate is closed; direct internal-backend/container/log/database evidence remains outside this checklist and unreviewed.
+
+---
 
 ## 4. Browser Test Rules
 
@@ -194,7 +201,7 @@ Browser test rules evidence captured on 2026-06-03:
 - Console checks on `/tr`, `/en`, and `/dashboard/login/v2` showed no hydration mismatch or runtime stack trace. The only repeated console entry was `Google Analytics key not provided.`, expected for this local compose pass because `GA_KEY` is intentionally empty.
 - Network checks for document/fetch/xhr requests showed local app routes returning 200, including `/tr`, `/en`, localized RSC prefetches, and `/dashboard/login/v2`. No unexpected application 4xx/5xx responses were observed. The browser also emitted successful `gc.kis.v2.scr.kaspersky-labs.com` requests from the local Kaspersky browser extension; these are extension traffic, not application traffic.
 
-------------------------------------------------------------------------
+---
 
 ## 5. Public Customer Pages
 
@@ -335,7 +342,7 @@ Reservation tracking evidence captured on 2026-06-03:
   - The valid lookup did not expose card number, driver license, payment intent id, or other unrelated reservation data in visible page text.
   - The frontend tracking mapper was fixed to support the backend's flat public reservation response shape, and `corepack pnpm -C frontend test` passed afterward with 46 test files and 191 tests.
 
-------------------------------------------------------------------------
+---
 
 ## 6. Admin Panel
 
@@ -414,7 +421,7 @@ Automated §6.1 coverage (re-verified 2026-06-04):
   checklist bullets as Playwright assertions and runs headlessly
   against the local Docker stack.
 - `E2E_BASE_URL=http://localhost:3001 pnpm exec playwright test
-  e2e/tests/guest-auth-pages.spec.ts --project=chromium` produced
+e2e/tests/guest-auth-pages.spec.ts --project=chromium` produced
   `9 passed (7.8s)` on a clean run. The spec runs in `mode: "serial"`
   and reuses a single `loggedInPage` fixture so it stays inside the
   backend's 5-permit Strict rate-limit window
@@ -624,10 +631,120 @@ Admin data operations evidence captured on 2026-06-04:
 - `frontend/lib/api/client.ts` still reads `auth_token` from
   `localStorage` even though the codebase does not write to that key
   (auth lives in the `rac_access` httpOnly cookie now). The dead
-  branch should be removed or replaced with a `rac_access` cookie
-  reader in a follow-up PR.
+  compatibility read should be removed in a future auth cleanup if no
+  old local sessions still depend on it; otherwise the branch should
+  be removed or replaced with a `rac_access` cookie reader in a
+  follow-up PR.
 
-------------------------------------------------------------------------
+### 6.5 Admin Public Site & Contact UX Validation Gate
+
+Planned on 2026-07-08 for the focused admin Public Site & Contact UX refresh
+documented in `docs/15_Admin_UX_Refresh_Implementation.md`. This gate is not
+complete until the targeted admin authoring UI has been rebuilt in Docker
+Desktop and checked in a real browser after admin login.
+
+Required admin pages:
+
+- [x] `/dashboard/settings/public-content`
+- [x] `/dashboard/settings/system` if Public Site & Contact controls remain there
+
+Required public sanity pages, when edited content/contact output changes:
+
+- [x] `/tr/iletisim`
+- [x] `/tr/privacy`
+- [x] `/tr/terms`
+
+Required viewports:
+
+- [x] Desktop `1440x900`
+- [x] Tablet `768x1024`
+- [x] Mobile `375x812`
+
+Design acceptance for every tested page:
+
+- [x] No horizontal page overflow.
+- [x] Forms, repeated contact rows, dialogs, and preview/readability areas do not break or overlap.
+- [x] Header and sidebar do not collide with page content.
+- [x] Locale-specific and global settings are visually distinct.
+- [x] Save, publish, unpublish, and visibility actions show clear feedback.
+- [x] Primary actions are reachable without visual clutter.
+- [x] Empty, error, and loading states are visible where applicable.
+- [x] Browser console has no material runtime error.
+- [x] Network panel has no unexpected application `4xx` or `5xx`.
+
+Evidence to capture after implementation:
+
+- Docker Desktop status and compose startup command/result.
+- Authenticated admin user used, without writing secrets into this file.
+- Browser viewport notes for the targeted admin routes and any affected public sanity routes.
+- Notes on whether unrelated operation-page changes were parked, reverted, or moved to a separate PR.
+- Console/network summary and any accepted non-application extension noise.
+- Link to screenshots or evidence folder if screenshots are captured.
+
+Evidence captured on 2026-07-08:
+
+- Gate decision: **PASS** for the focused Admin Public Site & Contact UX slice
+  documented in `docs/15_Admin_UX_Refresh_Implementation.md`.
+- Docker Desktop stack was rebuilt with `docker compose -f backend\docker-compose.yml up -d --build` after the admin UX changes. The web image completed `next build`, and the compose stack started `postgres`, `redis`, `api`, `worker`, and `web`.
+- Stack health checks passed: `curl.exe -i http://localhost:5000/health` returned `HTTP/1.1 200 OK` with body `Healthy`; `curl.exe -I http://localhost:3001` returned `HTTP/1.1 307 Temporary Redirect` with `location: /tr`.
+- Browser validation used the local test admin from `frontend/e2e/fixtures/test-data.ts`; the secret was not copied into this checklist.
+- Playwright Chromium checked 18 page/viewport combinations across `/dashboard/settings/public-content` pages tab, `/dashboard/settings/public-content` contact tab, `/dashboard/settings/system`, `/tr/iletisim`, `/tr/privacy`, and `/tr/terms` at `1440x900`, `768x1024`, and `375x812`.
+- Browser summary: `0` horizontal overflow failures, `0` unexpected application `4xx`/`5xx`, and `0` material console errors. The only console noise was the known local config message `Google Analytics key not provided.`
+- Evidence folder: `docs/test-evidence/local-docker-2026-07-08-admin-ux/` with `browser-summary.json`, `evidence.md`, and screenshots for each checked route/viewport.
+- Unrelated operation-page changes remain out of this implementation slice; the current code changes are limited to Public Site & Contact authoring surfaces, settings navigation overflow handling, tests, and evidence docs.
+- `aikido_full_scan` is not part of this Docker/browser gate result because the
+  Aikido MCP/tool was unavailable in the session; release security gating must
+  install/start Aikido MCP and run the required scan separately.
+
+Dependency-security follow-up captured on 2026-07-08:
+
+- The Docker rebuild surfaced an existing `Microsoft.OpenApi` 2.0.0 NU1903 /
+  GHSA-v5pm-xwqc-g5wc advisory outside the browser UX scope.
+- Follow-up commit `2ff2edf` added an explicit `Microsoft.OpenApi` 2.7.5
+  package reference in `backend/src/RentACar.API/RentACar.API.csproj`.
+- Verification after the follow-up: `dotnet list backend\RentACar.sln package
+--include-transitive --vulnerable` reported no vulnerable backend packages,
+  `dotnet build backend\RentACar.sln --no-restore` passed with 0 warnings /
+  0 errors, and `dotnet test backend\RentACar.sln --no-build` passed outside
+  the sandbox with 682/682 unit tests and 34/34 integration tests.
+- This closes the OpenAPI dependency warning noted during the Docker build, but
+  it does not replace the separate Aikido MCP release-security gate above.
+
+---
+
+### 6.6 Reservation Extra Options Validation Gate
+
+**Status:** COMPLETE LOCALLY — all eight workflow rows are closed against the rebuilt Docker stack, and PR #386 CI passes. Aikido, deployment/rollback rehearsal, and the production legacy-adapter observation window remain separate release gates.
+
+Required workflow:
+
+- [x] Create a draft extra option as an Admin and confirm incomplete translations or vehicle-group assignment block activation.
+- [x] Complete TR/EN/DE/RU/AR translations, assign one vehicle group, activate the option, and confirm group-specific public visibility across all five locales.
+- [x] Select per-day and per-rental quantities in public Step 3; verify the URL has no newly generated `extras` parameter and that loading, retry, empty, and legacy-link warnings are usable.
+- [x] Verify Step 4 server quote lines, final total, expiry state, campaign refresh, paid/unpaid `quoteId` payloads, and payment ordering.
+- [x] Issue quotes across price-only and availability-invalidating catalog changes; confirm a `409` refreshes safely, changed selections require customer confirmation before resubmission, and an unchanged retry remains bounded without losing customer/driver/card-form state.
+- [x] Open the created reservation in admin and verify immutable snapshot names, quantities, pricing rules, totals, and the legacy-total-only indicator without double counting.
+- [x] Verify expired, cross-session, and replayed quote IDs do not create duplicate reservations.
+- [x] Record console/network, desktop/tablet/mobile layout, screenshots, and non-sensitive API evidence under a dated `docs/test-evidence/` folder.
+
+Automated evidence recorded on 2026-07-11:
+
+- Clean locked frontend workspace `C:\tmp\arac-kiralama-phase4-validation-20260711`: TypeScript PASS, focused Vitest 42/42, full Vitest 60 files / 274 tests PASS, ESLint 0 errors with one pre-existing warning, and production build PASS. The full-suite/build evidence predates the final one-line `driverAge` contract-alignment correction; final TypeScript and Step 4 focused tests (15/15) passed, but repeated full-suite/build commands did not progress within timeout and are not claimed.
+- Fresh Docker rebuild PASS: PostgreSQL and Redis healthy; API `/health` 200; frontend `/tr` 200; root `/` returned 307 with `Location: /tr`; the production build included the Phase 5 routes.
+- Chromium E2E PASS after repairing stale selectors/seed assumptions: booking plus payment suite 6/6. Focused Phase 5 Docker browser proof 6/6 verified admin catalog load, Step 3 child-seat selection, no generated `extras` query parameter, selected-extra line and expiry state in the Step 4 server quote, terms validation, real unpaid reservation creation/confirmation, and a current no-extra/non-legacy admin detail.
+- The real unpaid-request run initially returned 500 because driver snapshot date-only values were deserialized with `DateTimeKind.Unspecified` and written to PostgreSQL `timestamptz`. UTC normalization was added for birth/license dates, its focused backend regression passed 1/1, the API image was rebuilt, and the same browser flow then passed. Test-created local holds were cancelled after the proof.
+- Browser-client bootstrap remains unavailable because its generated ESM kernel uses CommonJS `require`; the repository Playwright/Chromium runner was used as the browser fallback. This pass does not claim the still-unchecked authoring, five-locale, conflict/replay/expiry, paid-mode, responsive, console/network, screenshot, CI, or Aikido gates.
+- Detailed command/result record: `docs/test-evidence/2026-07-11-reservation-extra-options-phase5/README.md`.
+- Continuation evidence on 2026-07-11: the exact-final Docker Chromium bundle passed 16/16 across booking, payment, five-locale homepage/English booking, and iPhone/iPad/Android smoke. The new self-cleaning `reservation-extra-options.spec.ts` passed 1/1 and proved incomplete readiness keeps activation disabled, complete five-locale content plus one group activates successfully, every locale returns the localized option with `Cache-Control: no-store`, and an unassigned group does not return it. The unused test option was deactivated and permanently deleted in `finally`.
+- Step 3 continuation evidence on 2026-07-11: the expanded `reservation-extra-options.spec.ts` passed 4/4 against `http://localhost:3001` with one Chromium worker. The three new route-controlled browser scenarios proved the loading skeleton, per-day and per-rental quantity bounds and calculated totals, recoverable catalog error followed by retry and empty state, supported-plus-unsupported legacy-link warning, and removal of `extras` from the generated Step 4 URL. The first expanded run passed 1/4 because three locators assumed unformatted currency text or selected the Next.js route-announcer alert; narrowing those locators produced the final 4/4 pass. The scenarios created no server-side catalog or reservation data.
+- Step 4 continuation evidence on 2026-07-11: the suite expanded to 6/6 against the same Docker web target. The paid scenario rendered the server extra line, final total, and expiry state, refreshed the quote after campaign validation, submitted the refreshed `quoteId` with the quote session and an idempotency key, and proved the request order was reservation, hold, then payment intent. The unpaid scenario submitted its own `quoteId` with matching session/idempotency headers and proved that neither hold nor payment intent was called. All quote, reservation, hold, and payment responses were route-controlled; no real provider call or server-side reservation was created. The first 6-test run passed 5/6 because the unpaid radio locator used a non-rendered translation; the focused correction passed 1/1 and the final suite passed 6/6 in 9.3 seconds. A fresh supporting `BookingStep4` Vitest run passed 15/15.
+- Catalog-change continuation evidence on 2026-07-11: two route-controlled Chromium scenarios passed 2/2 after rebuilding the production Docker web, and the complete reservation-extra suite passed 8/8 with one worker. A price-only catalog edit left the issued unexpired quote and its promised total unchanged. PR #386 review follow-up tightened the availability-invalidating path: when refresh removes an option or clamps its quantity, Step 4 now stops after one reservation request, preserves payment method/card/terms state, displays the refreshed quote, and requires explicit customer confirmation before a new submission. The focused corrected Chromium scenario passed 1/1.
+- Immutable-history continuation evidence on 2026-07-11: a real public unpaid flow created a child-seat reservation and the rebuilt Docker admin UI displayed the persisted snapshot name, quantity, per-day rule, extra total, and full pricing totals. The test proved the selected-extra sum equals `extrasTotal`, recomposed `finalTotal` from base/fee/discount fields without adding the extra twice, changed the live child-seat name and price, and confirmed both selected-extra and full-pricing history remained byte-for-byte equivalent through the admin API and unchanged in the UI. A real pre-migration reservation displayed the explicit `Eski rezervasyon: yalnızca toplam tutar kaydı bulunuyor.` warning. The pass exposed and fixed admin-client normalization of raw `baseTotal`/`finalTotal` fields. Focused Playwright passed 1/1; the clean rate-limit rerun passed the complete reservation-extra suite 9/9 with one worker. The built-in child-seat catalog returned to `Çocuk Koltuğu`, 75 TRY/day, active/non-archived, and all test-created reservations were cancelled in `finally`.
+- Quote-lifecycle continuation evidence on 2026-07-11: a new Chromium scenario issued real quotes through the Docker API, expired one real Redis quote key, submitted another with a mismatched session, and replayed a successfully consumed quote with a different idempotency key. Expired and cross-session submissions returned `409` and PostgreSQL contained zero matching reservations; the replay returned the original reservation ID and the unique `quote_id` count remained exactly one. The test validates GUIDs before bounded SQL verification, cancels its created reservation, and deletes its quote/claim/consumed Redis keys. Because the local in-memory rate limiter is process-scoped, current-source browser proof ran in two clean API windows: the pre-existing scenarios passed 9/9 and the new quote-lifecycle scenario passed 1/1. TypeScript, ESLint, Prettier, focused .NET replay integration 1/1, catalog restoration, and zero active test-reservation cleanup checks passed.
+- Responsive evidence continuation on 2026-07-11: a focused Chromium scenario passed 1/1 and captured Step 3/4 at 1440x1000, 834x1112, and 390x844. All viewports had no horizontal overflow, icon-bearing visible buttons had accessible names, captured API responses stayed below HTTP 400, and catalog/quote responses retained `Cache-Control: no-store`. No unexpected console errors occurred; the known local-only `Google Analytics key not provided.` message was isolated explicitly. Six inspected screenshots and a body-free, query-free network ledger are stored at `docs/test-evidence/2026-07-11-reservation-extra-options-responsive/`.
+- PR #386 re-review evidence on 2026-07-11: quote-backed campaign discounts now include generic extras; repeated legacy codes aggregate to bounded quantities; persisted Step 3 selections reconcile against the fresh catalog; and Step 4 treats version, unit-price, pricing-mode, and final-total changes as confirmation-required terms. Full backend unit tests passed 734/734, full frontend Vitest passed 60 files / 278 tests, TypeScript and focused ESLint passed, Docker rebuilt the API/web production images, `/health` and `/tr` returned 200, and the focused availability-conflict Chromium scenario passed 1/1 against `E2E_BASE_URL=http://localhost:3001`.
+
+---
 
 ## 7. API and Network Verification
 
@@ -640,7 +757,7 @@ Checklist:
 - [x] Session checks use `/api/auth/me`.
 - [x] Password reset request uses `/api/auth/password-reset/request`.
 - [x] Password reset confirmation uses `/api/auth/password-reset/confirm`.
-- [x] Register flow uses `/api/auth/register` where applicable.
+- [x] Public `/api/auth/register` and `/api/auth/claim` proxies return empty `404` responses without forwarding.
 - [x] No request targets production domains.
 - [x] No access token, refresh token, or secret appears in visible page content.
 - [x] Unexpected 401/403 responses are understood and documented.
@@ -667,7 +784,7 @@ API and network verification evidence captured on 2026-06-04:
   - `GET /api/admin/v1/does-not-exist` returned `401` because the proxy requires a valid token before forwarding; this is the expected behaviour for unknown admin paths under the `/api/admin/[...path]` catch-all.
   - No 500 responses were observed in this pass. Any future unexpected `5xx` response on the local stack must be treated as a release blocker per the checklist.
 
-------------------------------------------------------------------------
+---
 
 ## 8. Optional Local Load Smoke
 
@@ -706,7 +823,7 @@ Optional local load smoke evidence captured on 2026-06-04:
 - `admin-dashboard.js` passed with the seeded `integration-admin@rentacar.test` local admin user, `checks=100.00%`, and `http_req_failed=0.00%`; evidence saved to `docs/test-evidence/local-docker-2026-06-04/k6-admin-dashboard.txt`.
 - `mixed-traffic.js` passed with `checks=100.00%`, `http_req_failed=0.00%`, and search/booking fallback checks passing; evidence saved to `docs/test-evidence/local-docker-2026-06-04/k6-mixed-traffic.txt`.
 
-------------------------------------------------------------------------
+---
 
 ## 9. Evidence Template
 
@@ -724,35 +841,42 @@ API URL:
 Browser(s):
 
 ## Stack Status
+
 - docker compose ps:
 - API health:
 - Frontend health:
 
 ## Public Pages
+
 - Passed:
 - Failed:
 - Screenshots:
 
 ## Booking Flow
+
 - Passed:
 - Failed:
 - Test reservation code:
 
 ## Admin Panel
+
 - Passed:
 - Failed:
 - Admin user used:
 
 ## Network / Console
+
 - Unexpected 4xx:
 - Unexpected 5xx:
 - Console errors:
 
 ## Blockers
+
 - [ ] None
 - [ ] Blocker listed below
 
 ## Decision
+
 - [ ] Ready for production deployment rehearsal
 - [ ] Not ready; fixes required
 ```
@@ -762,7 +886,7 @@ Evidence note created for this pass:
 - `docs/test-evidence/local-docker-2026-06-04/evidence.md`
 - Evidence folder also contains the six k6 stdout summaries listed in section 8 and the raw Docker health refresh file `raw-docker-health-2026-06-04.txt`.
 
-------------------------------------------------------------------------
+---
 
 ## 10. Release Gate Decision
 
@@ -789,7 +913,7 @@ Release gate decision captured on 2026-06-04:
 - Raw Docker health refresh evidence was added on 2026-06-04 after fixing the stale pnpm lockfile override metadata that initially blocked the reproducibility rebuild.
 - Known non-blocking follow-ups are explicitly listed in section 6.4; no unresolved release blocker is listed for this local pass.
 
-------------------------------------------------------------------------
+---
 
 ## 11. Cleanup
 

@@ -3,6 +3,7 @@
 Date: 2026-02-25
 Version: 1.0.0
 Base URL: /api/v1
+Updated: 2026-07-17 (public membership endpoints disabled)
 
 ------------------------------------------------------------------------
 
@@ -213,16 +214,39 @@ Track reservation by public code (no auth required).
 {
   "success": true,
   "data": {
-    "public_code": "ABC123",
+    "publicCode": "ABC123",
     "status": "Paid",
-    "pickup_datetime": "2026-04-01T10:00:00Z",
-    "return_datetime": "2026-04-05T10:00:00Z",
-    "vehicle_group": "Ekonomi",
-    "total_amount": 3750.00,
-    "deposit_status": "PreAuthorized"
+    "pickupOfficeName": "Alanya Merkez",
+    "returnOfficeName": "Gazipaşa Havalimanı",
+    "pickupDateTime": "2026-04-01T10:00:00Z",
+    "returnDateTime": "2026-04-05T10:00:00Z",
+    "vehicleGroupName": "Ekonomi",
+    "totalAmount": 3750.00,
+    "depositAmount": 5000.00,
+    "currency": "TRY"
   }
 }
 ```
+
+The `data` object is an exact allowlist. It does not include internal IDs, customer or driver PII, vehicle plate, notes, hold/session state, provider identifiers, internal pricing metadata, or customer statistics. Successful and not-found responses are non-cacheable (`Cache-Control: no-store`) and the endpoint uses the Strict rate-limit policy.
+
+### Error Responses
+
+- `404 Not Found` - Public code is unknown; no internal reservation state is disclosed.
+- `429 Too Many Requests` - Strict rate limit exceeded.
+
+## POST /api/customer/v1/reservations/{id}/cancel
+
+Cancel the authenticated customer's own reservation. Requires the `CustomerOnly` policy.
+
+### Authorization and Response Semantics
+
+- `200 OK` - The caller owns the reservation and its state permits cancellation.
+- `401 Unauthorized` - No valid customer principal is present.
+- `404 Not Found` - The reservation is missing or belongs to another customer; both cases use the same response.
+- `400 Bad Request` - The owned reservation exists but its current state cannot be cancelled.
+
+`POST /api/v1/reservations/{id}/cancel` is intentionally unavailable. Anonymous and non-owner attempts must not invoke the cancellation service or mutate the reservation.
 
 ------------------------------------------------------------------------
 
@@ -761,3 +785,27 @@ X-RateLimit-Reset: 1647356400
 ------------------------------------------------------------------------
 
 END OF DOCUMENT
+
+## Security Contract Addendum (12 July 2026)
+
+### Customer account claim
+
+- Current release override (17 July 2026): public customer registration and account claim are disabled.
+- `POST /api/customer/v1/auth/register` and `POST /api/customer/v1/auth/claim` return an empty `404` before request-body processing, idempotency, controller dispatch, persistence, audit creation, or background-job creation. The same contract applies to case variants and an optional trailing slash.
+- Next.js `POST /api/auth/register` and `POST /api/auth/claim` return an empty `404` without forwarding to the backend.
+- `/dashboard/register/v1` and localized `/{locale}/account-claim` pages return `404`; the public header and customer-login page do not expose registration links.
+- Existing customers may still use the direct `/dashboard/login/v1` route. The earlier token-based registration/claim contract is retained as internal defense-in-depth implementation history, not as a supported public API. Re-enablement requires a new versioned product/security/deployment decision.
+- Deployed-public acceptance was completed on 17 July 2026 after PR #413 was merged and Dokploy deployed exact merge commit `fb7ca83e01599556ea9b06d24d9c570a4d0a111b`: cache-bypassed HTTP and Chromium checks returned `404` for all five localized account-claim pages, `/dashboard/register/v1`, and the two public proxy endpoints; `/dashboard/login/v1` remained directly reachable with `200`, and the public homepage exposed no login link. Empty JSON bodies were used for proxy checks and no production data was mutated. Direct internal-backend exact/case/trailing-slash runtime evidence, container metadata/logs, and production DB/job counts remain unreviewed operational evidence and do not change this API contract.
+
+### Public reservation access
+
+- `GET /api/v1/reservations/{publicCode}` returns `PublicReservationSummaryDto` only: public code, status, pickup/return office names and times, vehicle-group name, total/deposit, and currency.
+- The response must not include internal IDs, customer/driver PII, plate, notes, hold/session data, provider identifiers, internal pricing metadata, or customer statistics. It is strict-rate-limited and non-cacheable.
+- `POST /api/v1/reservations/{reservationId}/cancel` is intentionally unavailable. Customer self-service cancellation is accepted only through the authenticated customer reservation controller with ownership enforcement; admin cancellation remains admin-only.
+- Local production-like acceptance is recorded in `docs/18_Codex_Security_Findings_Implementation.md`: the five localized confirmation pages returned the exact allowlist with `no-store`; anonymous and non-owner attempts left `status`, `xmin`, and `updated_at` unchanged; authenticated owner cancellation persisted `Cancelled`.
+
+### Payment containment
+
+- Payment intent creation, 3DS completion, provider webhook processing, and admin payment retry return `503` before service mutation when `Payment:EnablePayments` is false.
+- Production startup rejects Mock, unknown, sandbox, incomplete, or payment-enabled `Disabled` configuration. The explicit `Disabled` provider is valid only with `Payment:EnablePayments=false` and resolves to a dedicated provider that cannot process payment operations.
+- No payment provider is currently selected; payment activation is deferred. Browser-supplied status or `BankResponse` is not an authoritative payment-success contract. Before activation, final paid transitions require the server-side provider verification contract defined in `docs/18_Codex_Security_Findings_Implementation.md`.

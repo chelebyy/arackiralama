@@ -1,4 +1,4 @@
-﻿using RentACar.Core.Interfaces;
+using RentACar.Core.Interfaces;
 
 namespace RentACar.Infrastructure.Data;
 

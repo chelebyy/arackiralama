@@ -17,7 +17,7 @@ Load testing scripts for the RentACar backend API.
 # Or run individually
 k6 run --env BASE_URL=http://localhost:5000 availability-query.js
 k6 run --env BASE_URL=http://localhost:5000 concurrent-search.js
-k6 run --env BASE_URL=http://localhost:5000 concurrent-booking.js
+k6 run --env BASE_URL=http://localhost:5000 --env CUSTOMER_EMAIL=customer@rentacar.test --env CUSTOMER_ACCESS_TOKEN=... concurrent-booking.js
 k6 run --env BASE_URL=http://localhost:5000 payment-intent.js
 k6 run --env BASE_URL=http://localhost:5000 --env ADMIN_EMAIL=admin@rentacar.test --env ADMIN_PASSWORD=password admin-dashboard.js
 k6 run --env BASE_URL=http://localhost:5000 --env ADMIN_EMAIL=admin@rentacar.test --env ADMIN_PASSWORD=password mixed-traffic.js
@@ -41,6 +41,8 @@ When running the scripts from Docker against the local backend, set `HOST_HEADER
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BASE_URL` | `http://localhost:5000` | Backend API base URL |
+| `CUSTOMER_EMAIL` | — | Existing customer email used to attach and clean up concurrent-booking reservations |
+| `CUSTOMER_ACCESS_TOKEN` | — | Bearer token for `CUSTOMER_EMAIL`, used only by concurrent-booking cleanup |
 | `ADMIN_EMAIL` | `admin@rentacar.test` | Admin login email |
 | `ADMIN_PASSWORD` | `password` | Admin login password |
 
@@ -64,5 +66,6 @@ Test results are written to `results/*.json` and printed to stdout in summary fo
 
 - `SMOKE_MODE=1` reduces load for local Docker verification.
 - Local Docker runs that target the host backend should use `HOST_HEADER=localhost:5000` so the ASP.NET Core `AllowedHosts` check accepts the request.
+- `concurrent-booking.js` requires `CUSTOMER_EMAIL` and a matching `CUSTOMER_ACCESS_TOKEN`; it creates reservations for that existing customer and cleans them up through the authenticated customer cancellation endpoint.
 - `payment-intent.js` expects the online payment feature flag to be enabled in the local database.
 - `mixed-traffic.js` skips admin login in smoke mode so it can run against local fixtures without seeded admin credentials.

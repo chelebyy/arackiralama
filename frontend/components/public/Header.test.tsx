@@ -50,7 +50,7 @@ describe("Header", () => {
     useSWRMock.mockReturnValue({ data: undefined });
   });
 
-  it("renders desktop navigation, login, tracking cta, and language switcher", () => {
+  it("renders desktop navigation and tracking without a public login action", () => {
     render(<Header />);
 
     expect(screen.getByTestId("language-switcher")).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "vehicles" })).toHaveAttribute("href", "/vehicles");
     expect(screen.getByRole("link", { name: "about" })).toHaveAttribute("href", "/about");
     expect(screen.getByRole("link", { name: "contact" })).toHaveAttribute("href", "/contact");
-    expect(screen.getByRole("link", { name: "login" })).toHaveAttribute("href", "/dashboard/login/v2");
+    expect(screen.queryByRole("link", { name: "login" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "trackReservation" })).toHaveAttribute("href", "/track-reservation");
   });
 
@@ -68,7 +68,7 @@ describe("Header", () => {
     fireEvent.click(screen.getByRole("button", { name: "Toggle menu" }));
 
     expect(screen.getAllByRole("link", { name: "trackReservation" }).length).toBeGreaterThan(1);
-    expect(screen.getAllByRole("link", { name: "login" }).length).toBeGreaterThan(1);
+    expect(screen.queryByRole("link", { name: "login" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Toggle menu" })).toBeInTheDocument();
   });
 
@@ -98,7 +98,7 @@ describe("Header", () => {
     expect(screen.getByText("Managed Rent")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "home" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "English Fleet" })).toHaveAttribute("href", "/vehicles");
-    expect(screen.getByRole("link", { name: "login" })).toHaveAttribute("href", "/dashboard/login/v2");
+    expect(screen.queryByRole("link", { name: "login" })).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden About")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden Track")).not.toBeInTheDocument();
   });

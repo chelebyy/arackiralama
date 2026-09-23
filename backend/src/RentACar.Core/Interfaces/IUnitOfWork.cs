@@ -1,4 +1,4 @@
-﻿namespace RentACar.Core.Interfaces;
+namespace RentACar.Core.Interfaces;
 
 public interface IUnitOfWork
 {
