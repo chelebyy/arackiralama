@@ -7,6 +7,7 @@ import { Link } from "@/i18n/routing";
 import { Check, Car, Calendar, CreditCard, Hash } from "lucide-react";
 import { getReservationByPublicCode } from "@/lib/api/reservations";
 import type { PublicReservationSummary } from "@/lib/api/types";
+import { rentalDateTimeLocal } from "@/lib/rental-datetime";
 
 export default function BookingConfirmationPage() {
   const t = useTranslations();
@@ -48,15 +49,15 @@ export default function BookingConfirmationPage() {
   const details = useMemo(() => {
     if (!reservation) return null;
 
-    const pickupDateTime = new Date(reservation.pickupDateTime);
-    const returnDateTime = new Date(reservation.returnDateTime);
+    const pickupDateTime = rentalDateTimeLocal(reservation.pickupDateTime);
+    const returnDateTime = rentalDateTimeLocal(reservation.returnDateTime);
 
     return {
       vehicle: reservation.vehicleGroupName,
-      pickup: [reservation.pickupOfficeName, pickupDateTime.toISOString().slice(0, 10), pickupDateTime.toISOString().slice(11, 16)]
+      pickup: [reservation.pickupOfficeName, pickupDateTime.date, pickupDateTime.time]
         .filter(Boolean)
         .join(" - "),
-      returnDate: [reservation.returnOfficeName, returnDateTime.toISOString().slice(0, 10), returnDateTime.toISOString().slice(11, 16)]
+      returnDate: [reservation.returnOfficeName, returnDateTime.date, returnDateTime.time]
         .filter(Boolean)
         .join(" - "),
       total: new Intl.NumberFormat("tr-TR", {

@@ -158,6 +158,7 @@
       "color": "Цвет",
       "plate": "Номер",
       "minAge": "Мин. возраст",
+      "minLicenseYears": "Минимальный стаж вождения (лет)",
       "fullProtection": "Полная защита",
       "zeroExcess": "Без франшизы",
       "theftProtection": "Защита от угона",

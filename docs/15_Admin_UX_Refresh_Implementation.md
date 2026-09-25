@@ -329,3 +329,7 @@ Admin vehicle editing now supports nullable verified specifications, equipment a
 The public card/list/detail share these values; admin plate remains available while public DTOs omit it. Local browser acceptance covered editing, valid/invalid uploads, ordering, five languages and RTL/mobile layouts. Header/Hero remain untouched. Backend (818 unit/service/controller, 54 API integration), frontend (290 full-suite tests plus two new admin preservation cases), final build/TypeScript and lint checks passed, with the existing lint warning documented.
 
 See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) and the matching September 24 entry in [the local checklist](13_Local_Docker_Browser_Test_Checklist.md). Group pricing/reservation remains transitional; this is not production or full rental-flow acceptance.
+
+## September 25, 2026: third catalogue review
+
+Public vehicle detail now exposes the existing API minimum-age and licence-tenure values with five-locale labels. Confirmation/tracking display stored UTC values in Europe/Istanbul, including calendar dates. Admin behavior is unchanged. 304 frontend tests, production build/TypeScript and lint passed; one pre-existing lint warning remains. Synthetic-API local browser checks verified both fixes; no backend rerun, real booking, merge or deployment. See the updated implementation evidence and handoff.

@@ -988,3 +988,9 @@ The catalogue implementation on `codex/catalog-package1` was checked against iso
 Backend checks passed: 818 unit/service/controller tests and 54 API integration tests; the final pickup-date pricing change also passed 25 FleetService tests. Frontend checks passed: 290 tests plus two new admin preservation cases, final production build/TypeScript, and lint with one existing warning. No deployment or production migration was performed.
 
 See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) for exact scope, environment dependencies, validation limitations and retained group-based behavior. This evidence supplements the earlier run; it does not imply production acceptance.
+
+## September 25, 2026: third catalogue review
+
+Confirmation/tracking render UTC instants in Europe/Istanbul, including the correct date across midnight; tracking date labels no longer depend on the browser timezone. Vehicle detail shows the actual minimum age and licence-held years in all locales. 304 frontend tests passed with America/Los_Angeles timezone; production build/TypeScript and lint passed (one existing warning).
+
+Local production browser checks used synthetic API responses, not Docker/backend acceptance: June 9 22:00Z became June 10 01:00, June 14 07:00Z became 10:00, and Turkish detail showed 25 / 4-year eligibility. No reservation or payment was submitted. Header/Hero unchanged; no deployment.

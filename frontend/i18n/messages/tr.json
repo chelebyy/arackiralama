@@ -158,6 +158,7 @@
       "color": "Renk",
       "plate": "Plaka",
       "minAge": "Min. Yaş",
+      "minLicenseYears": "Minimum ehliyet süresi (yıl)",
       "fullProtection": "Tam Koruma",
       "zeroExcess": "Sıfır muafiyet",
       "theftProtection": "Hırsızlık koruması",

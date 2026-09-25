@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/messages/en.json";
 import { catalogueVehicle } from "@/lib/test-fixtures/catalogue";
@@ -40,6 +40,12 @@ const draw = () =>
     </NextIntlClientProvider>
   );
 describe("Vehicle detail catalogue", () => {
+  it("shows the selected vehicle's actual age and licence requirements without dates", () => {
+    state.vehicle = { ...catalogueVehicle, minAge: 25, minLicenseYears: 4 };
+    draw();
+    expect(within(screen.getByText("Min. Age").parentElement!).getByText("25")).toBeInTheDocument();
+    expect(within(screen.getByText("Minimum licence held (years)").parentElement!).getByText("4")).toBeInTheDocument();
+  });
   it("selects URL offices after a cold load and preserves later user selections", () => {
     state.search = "pickup=gzp&return=ala";
     state.offices = [];

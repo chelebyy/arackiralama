@@ -119,6 +119,16 @@ function VehicleDetail() {
                   {vehicle.year} · {vehicle.color}
                 </p>
                 <VehicleFacts vehicle={vehicle} detail />
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-slate-500">{tv("detail.minAge")}</dt>
+                    <dd className="font-medium text-slate-800">{vehicle.minAge}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">{tv("detail.minLicenseYears")}</dt>
+                    <dd className="font-medium text-slate-800">{vehicle.minLicenseYears}</dd>
+                  </div>
+                </dl>
               </section>
               <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
                 <h2 className="text-xl font-semibold">{t("equipment")}</h2>

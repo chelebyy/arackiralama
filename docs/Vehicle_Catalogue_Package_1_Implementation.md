@@ -96,3 +96,11 @@ At closure, the two frontend servers, API and the two catalogue test containers 
 Package 2 still owns removal of mandatory group-based pricing/reservation management. This package preserves group tables and the transitional booking contract. It does not certify the complete rental flow or production readiness.
 
 Focused checks covered public/admin data separation, upload authorization/bounds, safe gallery references and rendering. External integrations, all authorization paths, image decoding, storage lifecycle and production configuration were not comprehensively reviewed. A separate focused security review and pre-release test plan were offered under the advisory Sentinel policy.
+
+## Third review corrections — September 25, 2026
+
+- Review 5322047436: confirmation and tracking now share Europe/Istanbul date/time conversion for stored UTC instants. Tracking also formats its calendar dates with an explicit timezone, avoiding a second shift on browsers west of UTC.
+- Vehicle detail renders API-provided minimum age and licence-held years, with labels in all five locales and no invented thresholds.
+- Validation: 304 frontend tests in 68 files passed with TZ=America/Los_Angeles; production build/TypeScript passed; lint passed with the existing SearchForm.test.tsx unused-disable warning. Protected Header/Hero/SearchForm diff is empty.
+- Local production browser checks used a temporary synthetic, read-only API fixture: UTC June 9, 2030 22:00 displayed as June 10 01:00 on confirmation and tracking; UTC June 14 07:00 displayed as 10:00; Turkish vehicle detail showed age 25 and licence tenure 4 years. No real reservation/payment was created. This is UI acceptance, not a fresh backend integration run.
+- No backend changes, migration, merge or deployment. Existing historical records are not rewritten; current-head CI/review must be checked separately.

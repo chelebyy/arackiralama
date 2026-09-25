@@ -67,3 +67,9 @@ An initial API suite failed only because its default service ports were unavaila
 2. Address only material review findings within Package 1, rerun affected checks and update this handoff.
 3. Before a future authorized release, separately verify production migration readiness, storage lifecycle, actual inventory and group-based reservation limitations.
 4. Merge/deploy only after explicit authorization. Then follow local-default synchronization and safe worktree-cleanup policies.
+
+## Third review follow-up — September 25, 2026
+
+Addressed review 5322047436 findings r4108105447 and r4108105457: shared Europe/Istanbul display conversion for confirmation/tracking, explicit timezone for tracking date formatting, and real minimum age/licence tenure on vehicle detail in five locales.
+
+304 frontend tests (68 files) passed under America/Los_Angeles; production build/TypeScript and lint passed (one existing warning). Local browser used synthetic read-only API responses and confirmed midnight-crossing dates/times and Turkish 25-year age / 4-year licence conditions. Backend was unchanged and its earlier results remain historical. Header/Hero/SearchForm were unchanged. No real reservation, merge or deployment occurred. Recheck CI and Codex review against the new PR head.

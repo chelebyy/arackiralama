@@ -155,3 +155,10 @@ Her uygulama paketinin sonunda değişen yollar için odaklı güvenlik inceleme
 - Ana çalışma klasörünün aktif dalı `codex/docs-db-ops-phase0-doc-contract`, HEAD `e81eb08d07e33cfcf2979566604f82f72e56034f`; main ile aynı çalışma klasörü olduğu söylenemez. Takip edilmeyen `.worktrees/` korunmuştur.
 - İnceleme temiz `C:/All_Project/Araç Kiralama/.worktrees/local-validation-20260923` klasöründe yapıldı. HEAD `073da36890d4576c0a31248c34581bf11520ba72`; incelenen `main` ile dosya farkı yoktur.
 - Yeni uygulama başlamadan uzak varsayılan dal yeniden fetch edilmeli, yerel varsayılan dal güvenli biçimde kontrol edilmeli ve yeni dal güncel tabandan açılmalıdır. Bu turda hiçbir çalışma ağacı kaldırılmadı veya dal değiştirilmedi.
+
+## Paket 1 — Üçüncü inceleme düzeltmeleri (25 Eylül 2026)
+
+- Onay ve takip ekranları kayıtlı UTC zamanını Europe/Istanbul saat diliminde gösterir; gece teslimlerinde gün kayması ve ziyaretçinin saat dilimine bağımlılık giderildi.
+- Araç detayına API kaynaklı minimum yaş ve ehliyet süresi eklendi; beş dil desteklenir.
+- 304 frontend testi (America/Los_Angeles ortamı), üretim derlemesi/TypeScript ve lint geçti; lintte önceden var olan tek uyarı sürüyor. Yerel tarayıcıda sentetik API yanıtlarıyla 10 Haziran 2030 01:00 teslimi, 14 Haziran 10:00 dönüşü ve 25 yaş / 4 yıl koşulları doğrulandı.
+- Header/hero değişmedi. Backend bu turda değiştirilmedi veya yeniden test edilmedi. CI ve Codex incelemesi yeni commit için ayrıca izlenmelidir; merge/dağıtım yapılmadı.
