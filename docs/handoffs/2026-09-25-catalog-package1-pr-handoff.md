@@ -1,5 +1,11 @@
 # Session handoff: vehicle catalogue Package 1
 
+## Review correction handoff — 2026-09-25
+
+All three Codex P2 findings are implemented: prefer office codes with legacy normalized names, share UTC conversion across catalogue/availability/quote/reservation, and handle failed image URLs with a recoverable gallery fallback. Validation: 297 frontend tests passed (67 files); webpack production build/TypeScript passed; lint zero errors, one pre-existing warning. Local production-browser checks passed for GZP request emission, equal UTC timestamps and blocked-image fallback/recovery. Quote/submission equality was tested with component mocks; no live payment or reservation was submitted.
+
+This follow-up is intended for the same PR #446. Re-read its current head and CI before any merge decision. Review comments were not replied to or resolved automatically. Header/Hero were preserved. No merge/deployment authorization exists. Detailed results are in the Package 1 implementation document; the older publication snapshot below is historical.
+
 Updated: 2026-09-25. Status: implementation locally verified; [PR #446](https://github.com/chelebyy/arackiralama/pull/446) open for review.
 
 Implementation commit: `d241168db769076c63df89dc6d6394f90dd27c5d`. A documentation follow-up records publication; resolve the current PR head before checking CI. Initial checks were pending/running (backend, frontend, Docker, CodeQL, React Doctor, secret scan and external security checks). No remote success or review approval is claimed by this snapshot.

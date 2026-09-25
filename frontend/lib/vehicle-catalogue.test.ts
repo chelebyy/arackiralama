@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { catalogueSearch, validCatalogueDates, vehiclePhotos } from "./vehicle-catalogue";
+import { catalogueOffice, catalogueSearch, validCatalogueDates, vehiclePhotos } from "./vehicle-catalogue";
 describe("catalogue context", () => {
+  it("resolves office codes before names and supports legacy Turkish and ASCII names", () => {
+    expect(catalogueOffice([{ id: "gzp-id", code: "gzp", name: "Renamed airport" }], "gzp")).toBe("gzp-id");
+    for (const name of ["Gazipasa Airport", "Gazipaşa Havalimanı"]) {
+      expect(catalogueOffice([{ id: "gzp-id", name }], "gzp")).toBe("gzp-id");
+    }
+    expect(catalogueOffice([{ id: "gzp-id", name: "Airport" }], "gzp-id")).toBe("gzp-id");
+    expect(catalogueOffice([], "gzp")).toBeUndefined();
+  });
+  it("converts early morning rentals to the previous UTC day", () => {
+    expect(validCatalogueDates(new URLSearchParams("pickupDate=2030-01-01&pickupTime=01:00&returnDate=2030-01-02&returnTime=01:00"), Date.parse("2029-01-01"))).toEqual({ pickup: "2029-12-31T22:00:00.000Z", returned: "2030-01-01T22:00:00.000Z" });
+  });
   it("never invents dates and removes unrelated query data", () => {
     expect(catalogueSearch(new URLSearchParams()).toString()).toBe("");
     expect(

@@ -406,6 +406,7 @@ describe("BookingStep4Page", () => {
 
   it("shows unpaid reservation as a payment method card and submits unpaid request", async () => {
     const user = userEvent.setup();
+    bookingState.dates = { ...baseDates, pickupTime: "01:00" };
 
     render(<BookingStep4Page />);
 
@@ -424,6 +425,8 @@ describe("BookingStep4Page", () => {
           customer: bookingState.customer,
           driver: bookingState.driver,
           quoteId: "quote-123",
+          pickupDateTimeUtc: "2026-05-09T22:00:00.000Z",
+          returnDateTimeUtc: "2026-05-13T06:00:00.000Z",
           locale: "en",
         }),
         { sessionId: "uuid-123", idempotencyKey: "uuid-123" }
@@ -434,6 +437,7 @@ describe("BookingStep4Page", () => {
     });
     expect(createReservationMock).not.toHaveBeenCalled();
     expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(createReservationQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ pickupDateTimeUtc: "2026-05-09T22:00:00.000Z", returnDateTimeUtc: "2026-05-13T06:00:00.000Z" }), "uuid-123");
   });
 
   it("shows an error toast and does not redirect when reservation creation fails", async () => {

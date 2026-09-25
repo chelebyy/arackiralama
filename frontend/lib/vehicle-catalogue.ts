@@ -1,4 +1,5 @@
 import { API_CONFIG } from "@/lib/api/config";
+import { rentalDateTimeUtc } from "@/lib/rental-datetime";
 import type { PublicVehicle } from "@/lib/api/types";
 
 export const equipmentCodes = [
@@ -70,7 +71,7 @@ export function validCatalogueDates(search: Pick<URLSearchParams, "get">, now = 
       !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)
     )
       return null;
-    const value = new Date(`${date}T${time}:00+03:00`);
+    const value = new Date(rentalDateTimeUtc(date, time));
     const calendar = new Date(`${date}T00:00:00Z`);
     if (!Number.isFinite(value.getTime()) || calendar.toISOString().slice(0, 10) !== date)
       return null;
@@ -83,20 +84,24 @@ export function validCatalogueDates(search: Pick<URLSearchParams, "get">, now = 
     : null;
 }
 
-export function catalogueOffice(offices: { id: string; name: string }[], value: string) {
+export function catalogueOffice(offices: { id: string; name: string; code?: string }[], value: string) {
+  const normalize = (text: string) => text.toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i");
+  const input = normalize(value);
   const patterns: Record<string, string> = {
     ala: "alanya",
-    gzp: "gazipaşa",
+    gzp: "gazipasa",
     ayt: "antalya",
     mahmutlar: "mahmutlar",
-    kargicak: "kargıcak",
-    konakli: "konaklı",
+    kargicak: "kargicak",
+    konakli: "konakli",
     avsallar: "avsallar"
   };
   return (
     offices.find((office) => office.id === value)?.id ??
+    offices.find((office) => office.code && normalize(office.code) === input)?.id ??
+    offices.find((office) => normalize(office.name) === input)?.id ??
     offices.find(
-      (office) => patterns[value] && office.name.toLocaleLowerCase("tr").includes(patterns[value])
+      (office) => patterns[input] && normalize(office.name).includes(patterns[input])
     )?.id
   );
 }

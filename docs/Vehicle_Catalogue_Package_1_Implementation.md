@@ -1,5 +1,13 @@
 # Package 1: real vehicle catalogue
 
+## PR 446 review fixes — 2026-09-25
+
+- Addressed all three P2 findings: office code matching with Turkish/ASCII legacy name fallback; shared Turkey wall-clock to UTC conversion for catalogue, booking availability, quotes and reservation submission; accessible image failure fallback on cards and detail galleries.
+- Regression evidence: 67 frontend test files / 297 tests passed, production webpack build and TypeScript passed, ESLint reported zero errors and the existing SearchForm test warning. Backend code is unchanged by this follow-up.
+- Local production-build browser check against the retained PostgreSQL/Redis/API fixtures: `gzp` selected Gazipasa Airport and issued availability requests. Catalogue and booking step 2 both sent pickup `2026-10-09T22:00:00.000Z` and return `2026-10-11T22:00:00.000Z` for local October 10/12 at 01:00. This fixture had no available vehicles at GZP; no positive availability claim is made.
+- Temporarily blocked a gallery JPEG in the browser: card and detail showed the car fallback; moving to the second image loaded successfully. Browser blocking and cache overrides were removed. Quote and submission timestamp equality is covered by component regression tests, not a live checkout/payment.
+- Header/Hero/SearchForm source remained unchanged. No merge or deployment. Remote checks must be assessed at the new PR head; earlier green checks do not prove the follow-up.
+
 Date: 2026-09-24. Scope: local implementation and acceptance; no deployment.
 
 ## Git and preservation

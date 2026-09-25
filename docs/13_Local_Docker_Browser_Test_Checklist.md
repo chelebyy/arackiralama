@@ -1,5 +1,9 @@
 # Local Docker Browser Test Checklist
 
+## Catalogue PR 446 review follow-up — 2026-09-25
+
+Three P2 fixes verified locally: GZP code/name matching, consistent Turkey-to-UTC booking requests, and image error fallback. All 297 frontend tests passed; production build/TypeScript passed; lint has zero errors and one existing warning. Browser checks used the local production build and retained API/PostgreSQL/Redis fixtures: GZP request issued, catalogue/booking UTC instants matched, and blocked image fallback plus next-gallery-image recovery worked. No live checkout, merge or deployment. Detailed evidence: [Package 1 implementation](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25).
+
 Date: 2026-06-03
 Scope: Production release rehearsal on local Docker before live deployment
 

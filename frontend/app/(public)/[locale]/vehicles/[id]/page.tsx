@@ -3,7 +3,7 @@ import { Suspense, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Car } from "lucide-react";
+import VehicleImage from "@/components/public/VehicleImage";
 import { useVehicle, useOffices, useAvailableVehicles } from "@/hooks/useVehicles";
 import VehicleFacts from "@/components/public/VehicleFacts";
 import {
@@ -77,15 +77,7 @@ function VehicleDetail() {
             <div className="min-w-0 space-y-6 lg:col-span-2">
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                 <div className="flex aspect-[16/10] items-center justify-center bg-slate-100">
-                  {images[activeImage] ? (
-                    <img
-                      src={images[activeImage]}
-                      alt={`${name} — ${activeImage + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <Car className="h-24 w-24 text-slate-300" aria-hidden="true" />
-                  )}
+                  <VehicleImage src={images[activeImage]} alt={`${name} — ${activeImage + 1}`} />
                 </div>
                 {images.length > 1 && (
                   <div className="flex flex-wrap items-center justify-center gap-2 p-3">

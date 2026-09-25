@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Car } from "lucide-react";
+import VehicleImage from "@/components/public/VehicleImage";
 import type { PublicVehicle } from "@/lib/api/types";
 import { vehicleDetailHref, vehicleGroupName, vehiclePhotos } from "@/lib/vehicle-catalogue";
 import VehicleFacts from "./VehicleFacts";
@@ -20,13 +20,7 @@ export default function VehicleCard({
   return (
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white hover:shadow-lg">
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-        {image ? (
-          <img src={image} alt={name} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Car className="h-20 w-20 text-slate-300" aria-hidden="true" />
-          </div>
-        )}
+        <VehicleImage src={image} alt={name} />
         <span className="absolute start-3 top-3 rounded-lg bg-white/95 px-3 py-1 text-xs font-semibold text-sky-800">
           {vehicleGroupName(vehicle, locale)}
         </span>

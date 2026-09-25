@@ -1,5 +1,9 @@
 # Admin Public Site & Contact UX Refresh Implementation
 
+## Catalogue PR 446 review follow-up — 2026-09-25
+
+The catalogue review follow-up changes public office resolution, rental datetime serialization and image error fallback. Admin behavior is unchanged. All 297 frontend tests, production build and TypeScript passed; lint has zero errors and one existing warning. Local API-backed browser checks verified GZP resolution, matching catalogue/booking UTC instants and image fallback/recovery. No merge or deployment. See [Package 1 evidence](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25) and the synchronized local browser checklist.
+
 **Created:** 2026-07-08  
 **Scope:** Admin usability refresh for Public Site & Contact authoring  
 **Primary user:** Site owner/admin editing customer-facing content  

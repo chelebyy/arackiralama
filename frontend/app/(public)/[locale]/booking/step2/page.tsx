@@ -21,6 +21,8 @@ import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
 import { useBookingActions } from "@/hooks/useBooking";
 import { FuelType, TransmissionType, type AvailableVehicleGroup } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
+import { rentalDateTimeUtc } from "@/lib/rental-datetime";
+import { catalogueOffice } from "@/lib/vehicle-catalogue";
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
@@ -119,8 +121,8 @@ export default function BookingStep2Page() {
   const returnTime = searchParams.get("returnTime") || "09:00";
 
   const { offices, isLoading: officesLoading } = useOffices();
-  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
-  const returnOfficeGuid = resolveOfficeGuid(offices, returnOffice);
+  const pickupOfficeGuid = catalogueOffice(offices, pickupOffice) ?? resolveOfficeGuid(offices, pickupOffice);
+  const returnOfficeGuid = catalogueOffice(offices, returnOffice) ?? resolveOfficeGuid(offices, returnOffice);
   const pickupOfficeObj = offices.find((office) => office.id === pickupOfficeGuid);
   const returnOfficeObj = offices.find((office) => office.id === returnOfficeGuid);
   const canSearchVehicles =
@@ -136,8 +138,8 @@ export default function BookingStep2Page() {
     canSearchVehicles
       ? {
           office_id: pickupOfficeGuid,
-          pickup_datetime: `${pickupDate}T${pickupTime}`,
-          return_datetime: `${returnDate}T${returnTime}`,
+          pickup_datetime: rentalDateTimeUtc(pickupDate, pickupTime),
+          return_datetime: rentalDateTimeUtc(returnDate, returnTime),
         }
       : null
   );

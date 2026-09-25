@@ -5,13 +5,14 @@ import userEvent from "@testing-library/user-event";
 import BookingStep2Page from "./page";
 
 const pushMock = vi.fn();
+const availabilityRequestMock = vi.fn();
 let searchParams = new URLSearchParams();
 let availableVehiclesState: {
   vehicles: Array<{ groupId: string; groupName: string; groupNameEn: string; availableCount: number; dailyPrice: number; currency: string; depositAmount: number; minAge: number; minLicenseYears: number; features: string[]; imageUrl: string | null }>;
   isLoading: boolean;
   isError: boolean | null;
 };
-let officesState: { id: string; name: string }[];
+let officesState: { id: string; name: string; code?: string }[];
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
@@ -24,7 +25,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/hooks/useVehicles", () => ({
-  useAvailableVehicles: () => ({
+  useAvailableVehicles: (request: unknown) => (availabilityRequestMock(request), {
     vehicles: availableVehiclesState.vehicles,
     isLoading: availableVehiclesState.isLoading,
     isError: availableVehiclesState.isError,
@@ -38,7 +39,15 @@ vi.mock("@/hooks/useVehicles", () => ({
 }));
 
 describe("BookingStep2Page", () => {
+  it("uses the catalogue UTC instant and office code for availability", () => {
+    searchParams.set("pickup", "gzp");
+    searchParams.set("pickupTime", "01:00");
+    officesState = [{ id: "22222222-2222-2222-2222-222222222222", code: "gzp", name: "Renamed airport" }];
+    render(<BookingStep2Page />);
+    expect(availabilityRequestMock).toHaveBeenLastCalledWith({ office_id: "22222222-2222-2222-2222-222222222222", pickup_datetime: "2026-05-09T22:00:00.000Z", return_datetime: "2026-05-13T06:00:00.000Z" });
+  });
   beforeEach(() => {
+    availabilityRequestMock.mockReset();
     pushMock.mockReset();
     availableVehiclesState = {
       vehicles: [
