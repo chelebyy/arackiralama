@@ -99,6 +99,8 @@ Focused checks covered public/admin data separation, upload authorization/bounds
 
 ## Third review corrections — September 25, 2026
 
+React Doctor follow-up: the shared rental formatter is now initialized once at module scope, addressing `react-doctor/js-hoist-intl` without changing timezone or output. The 13 affected helper/confirmation/tracking tests passed under `America/Los_Angeles`; focused ESLint and `git diff --check` passed. This small refactor did not require another browser run; the browser evidence below predates it. Full CI and Codex review must be evaluated against the new commit.
+
 - Review 5322047436: confirmation and tracking now share Europe/Istanbul date/time conversion for stored UTC instants. Tracking also formats its calendar dates with an explicit timezone, avoiding a second shift on browsers west of UTC.
 - Vehicle detail renders API-provided minimum age and licence-held years, with labels in all five locales and no invented thresholds.
 - Validation: 304 frontend tests in 68 files passed with TZ=America/Los_Angeles; production build/TypeScript passed; lint passed with the existing SearchForm.test.tsx unused-disable warning. Protected Header/Hero/SearchForm diff is empty.
