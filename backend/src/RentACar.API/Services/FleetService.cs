@@ -196,13 +196,13 @@ public sealed class FleetService(
             .Distinct()
             .ToList();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
         var candidateRules = await dbContext.PricingRules
             .AsNoTracking()
             .Where(rule =>
                 vehicleGroupIds.Contains(rule.VehicleGroupId) &&
-                rule.StartDate <= today &&
-                rule.EndDate >= today)
+                rule.StartDate <= pickupDate &&
+                rule.EndDate >= pickupDate)
             .OrderByDescending(rule => rule.Priority)
             .ThenByDescending(rule => rule.StartDate)
             .ThenByDescending(rule => rule.EndDate)
@@ -211,7 +211,7 @@ public sealed class FleetService(
 
         var dailyPrices = candidateRules
             .GroupBy(rule => rule.VehicleGroupId)
-            .ToDictionary(grouping => grouping.Key, grouping => CalculateDailyRate(grouping.First(), today));
+            .ToDictionary(grouping => grouping.Key, grouping => CalculateDailyRate(grouping.First(), pickupDate));
 
         return availableVehicles
             .GroupBy(item => item.VehicleGroup.Id)
@@ -247,7 +247,16 @@ public sealed class FleetService(
             Color = request.Color.Trim(),
             GroupId = request.GroupId,
             OfficeId = request.OfficeId,
-            Status = request.Status
+            Status = request.Status,
+            Transmission = request.Transmission,
+            FuelType = request.FuelType,
+            SeatCount = request.SeatCount,
+            LuggageCapacity = request.LuggageCapacity,
+            BodyType = request.BodyType,
+            DoorCount = request.DoorCount,
+            Engine = request.Engine,
+            PowerHp = request.PowerHp,
+            Equipment = request.Equipment ?? []
         };
 
         await vehicleRepository.AddAsync(vehicle, cancellationToken);
@@ -297,6 +306,15 @@ public sealed class FleetService(
         existingVehicle.GroupId = request.GroupId;
         existingVehicle.OfficeId = request.OfficeId;
         existingVehicle.Status = request.Status;
+        existingVehicle.Transmission = request.Transmission;
+        existingVehicle.FuelType = request.FuelType;
+        existingVehicle.SeatCount = request.SeatCount;
+        existingVehicle.LuggageCapacity = request.LuggageCapacity;
+        existingVehicle.BodyType = request.BodyType;
+        existingVehicle.DoorCount = request.DoorCount;
+        existingVehicle.Engine = request.Engine;
+        existingVehicle.PowerHp = request.PowerHp;
+        existingVehicle.Equipment = request.Equipment ?? [];
 
         WriteAuditLog(
             action: "VehicleUpdated",
@@ -358,7 +376,6 @@ public sealed class FleetService(
             return VehicleDeletionOutcome.Archived;
         }
 
-        await vehiclePhotoStorage.DeleteAsync(existingVehicle.PhotoUrl, cancellationToken);
         WriteAuditLog(
             action: "VehicleDeleted",
             entityType: nameof(Vehicle),
@@ -482,8 +499,11 @@ public sealed class FleetService(
         }
 
         var previousPhotoUrl = existingVehicle.PhotoUrl;
+        var photos = GetPhotoUrls(existingVehicle);
+        if (photos.Length >= 12) throw new ArgumentException("En fazla 12 fotograf eklenebilir.");
         var photoUrl = await vehiclePhotoStorage.SaveAsync(id, file, cancellationToken);
-        existingVehicle.PhotoUrl = photoUrl;
+        existingVehicle.PhotoUrls = [.. photos, photoUrl];
+        existingVehicle.PhotoUrl = existingVehicle.PhotoUrls[0];
         WriteAuditLog(
             action: "VehiclePhotoUploaded",
             entityType: nameof(Vehicle),
@@ -497,13 +517,26 @@ public sealed class FleetService(
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (!string.Equals(previousPhotoUrl, photoUrl, StringComparison.OrdinalIgnoreCase))
-        {
-            await vehiclePhotoStorage.DeleteAsync(previousPhotoUrl, cancellationToken);
-        }
-
         return MapToDto(existingVehicle);
     }
+
+    public async Task<VehicleDto?> UpdateVehiclePhotosAsync(Guid id, string[] photoUrls, CancellationToken cancellationToken = default)
+    {
+        var vehicle = await vehicleRepository.GetByIdAsync(id, cancellationToken);
+        if (vehicle is null) return null;
+        var existing = GetPhotoUrls(vehicle);
+        if (photoUrls.Length > 12 || photoUrls.Distinct(StringComparer.Ordinal).Count() != photoUrls.Length ||
+            photoUrls.Any(url => !existing.Contains(url, StringComparer.Ordinal)))
+            throw new ArgumentException("Yalnizca bu aracin mevcut fotograflari siralanabilir veya kaldirilabilir.");
+        vehicle.PhotoUrls = photoUrls.ToArray();
+        vehicle.PhotoUrl = photoUrls.FirstOrDefault();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return MapToDto(vehicle);
+    }
+
+    private static string[] GetPhotoUrls(Vehicle vehicle) => vehicle.PhotoUrls.Length > 0
+        ? vehicle.PhotoUrls
+        : string.IsNullOrWhiteSpace(vehicle.PhotoUrl) ? [] : [vehicle.PhotoUrl];
 
     public async Task<VehicleDto?> GetVehicleByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -691,7 +724,17 @@ public sealed class FleetService(
             vehicle.GroupId,
             vehicle.OfficeId,
             vehicle.Status,
-            vehicle.PhotoUrl);
+            vehicle.PhotoUrl,
+            vehicle.Transmission,
+            vehicle.FuelType,
+            vehicle.SeatCount,
+            vehicle.LuggageCapacity,
+            vehicle.BodyType,
+            vehicle.DoorCount,
+            vehicle.Engine,
+            vehicle.PowerHp,
+            vehicle.Equipment,
+            GetPhotoUrls(vehicle));
     }
 
     private static OfficeDto MapToDto(Office office)

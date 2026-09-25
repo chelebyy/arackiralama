@@ -406,11 +406,11 @@ public sealed class AdminVehiclesControllerTests : IClassFixture<TestDbContextFa
             dbContext.Vehicles.Add(vehicle);
             await dbContext.SaveChangesAsync();
 
-            using var stream = new MemoryStream([10, 20, 30, 40, 50]);
-            IFormFile file = new FormFile(stream, 0, stream.Length, "file", "vehicle.jpg")
+            using var stream = new MemoryStream(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII="));
+            IFormFile file = new FormFile(stream, 0, stream.Length, "file", "vehicle.png")
             {
                 Headers = new HeaderDictionary(),
-                ContentType = "image/jpeg"
+                ContentType = "image/png"
             };
 
             var controller = CreateController(dbContext, storageRoot);

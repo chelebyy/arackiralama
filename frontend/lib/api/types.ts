@@ -35,9 +35,21 @@ export interface VehicleGroup {
   };
 }
 
-export interface PublicVehicle {
+export interface VehicleCatalogue {
+  transmission?: "manual" | "automatic" | "semiAutomatic" | null;
+  fuelType?: "gasoline" | "diesel" | "hybrid" | "electric" | "lpg" | null;
+  seatCount?: number | null;
+  luggageCapacity?: number | null;
+  bodyType?: "sedan" | "hatchback" | "suv" | "estate" | "van" | "coupe" | "convertible" | null;
+  doorCount?: number | null;
+  engine?: string | null;
+  powerHp?: number | null;
+  equipment?: string[];
+  photoUrls?: string[];
+}
+
+export interface PublicVehicle extends VehicleCatalogue {
   id: string;
-  plate: string;
   brand: string;
   model: string;
   year: number;
@@ -46,9 +58,9 @@ export interface PublicVehicle {
   groupName: string;
   groupNameEn: string;
   officeId: string;
-  status: 'Available' | 'Maintenance' | 'Retired' | 'OutOfService' | string;
+  status: "Available" | "Maintenance" | "Retired" | "OutOfService" | string;
   photoUrl: string | null;
-  dailyPrice: number;
+  dailyPrice: number | null;
   depositAmount: number;
   minAge: number;
   minLicenseYears: number;
@@ -70,17 +82,17 @@ export interface AvailableVehicleGroup {
 }
 
 export enum TransmissionType {
-  MANUAL = 'MANUAL',
-  AUTOMATIC = 'AUTOMATIC',
-  SEMI_AUTOMATIC = 'SEMI_AUTOMATIC',
+  MANUAL = "MANUAL",
+  AUTOMATIC = "AUTOMATIC",
+  SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
 }
 
 export enum FuelType {
-  PETROL = 'PETROL',
-  DIESEL = 'DIESEL',
-  HYBRID = 'HYBRID',
-  ELECTRIC = 'ELECTRIC',
-  LPG = 'LPG',
+  PETROL = "PETROL",
+  DIESEL = "DIESEL",
+  HYBRID = "HYBRID",
+  ELECTRIC = "ELECTRIC",
+  LPG = "LPG"
 }
 
 export interface VehicleFeature {
@@ -141,7 +153,7 @@ export interface DayHours {
 export interface Location {
   id: string;
   name: string;
-  type: 'AIRPORT' | 'CITY_CENTER' | 'HOTEL' | 'OTHER';
+  type: "AIRPORT" | "CITY_CENTER" | "HOTEL" | "OTHER";
   officeId?: string;
   coordinates?: {
     latitude: number;
@@ -190,27 +202,27 @@ export interface Reservation {
   paymentIntentId?: string;
   notes?: string;
   selectedExtras?: ReservationSelectedExtra[];
-  breakdownSource?: 'SNAPSHOT' | 'LEGACY_TOTAL_ONLY';
+  breakdownSource?: "SNAPSHOT" | "LEGACY_TOTAL_ONLY";
 }
 
 export enum ReservationStatus {
-  PENDING = 'PENDING',
-  HOLD = 'HOLD',
-  UNPAID_REQUEST = 'UNPAID_REQUEST',
-  CONFIRMED = 'CONFIRMED',
-  ACTIVE = 'ACTIVE',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
-  EXPIRED = 'EXPIRED',
+  PENDING = "PENDING",
+  HOLD = "HOLD",
+  UNPAID_REQUEST = "UNPAID_REQUEST",
+  CONFIRMED = "CONFIRMED",
+  ACTIVE = "ACTIVE",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED"
 }
 
 export enum PaymentStatus {
-  PENDING = 'PENDING',
-  AUTHORIZED = 'AUTHORIZED',
-  CAPTURED = 'CAPTURED',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
-  PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED',
+  PENDING = "PENDING",
+  AUTHORIZED = "AUTHORIZED",
+  CAPTURED = "CAPTURED",
+  FAILED = "FAILED",
+  REFUNDED = "REFUNDED",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
 }
 
 export interface Customer {
@@ -268,7 +280,7 @@ export interface ReservationSelectedExtra {
   currency: string;
 }
 
-export type ReservationExtraPricingMode = 'PER_DAY' | 'PER_RENTAL';
+export type ReservationExtraPricingMode = "PER_DAY" | "PER_RENTAL";
 
 export interface PublicReservationExtraOption {
   id: string;
@@ -361,7 +373,7 @@ export interface Campaign {
   code: string;
   name: string;
   description: string;
-  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
   discountValue: number;
   minRentalDays?: number;
   maxDiscount?: number;
@@ -380,13 +392,13 @@ export interface PaymentIntent {
 }
 
 export enum PaymentIntentStatus {
-  REQUIRES_PAYMENT_METHOD = 'REQUIRES_PAYMENT_METHOD',
-  REQUIRES_CONFIRMATION = 'REQUIRES_CONFIRMATION',
-  REQUIRES_ACTION = 'REQUIRES_ACTION',
-  PROCESSING = 'PROCESSING',
-  SUCCEEDED = 'SUCCEEDED',
-  CANCELLED = 'CANCELLED',
-  FAILED = 'FAILED',
+  REQUIRES_PAYMENT_METHOD = "REQUIRES_PAYMENT_METHOD",
+  REQUIRES_CONFIRMATION = "REQUIRES_CONFIRMATION",
+  REQUIRES_ACTION = "REQUIRES_ACTION",
+  PROCESSING = "PROCESSING",
+  SUCCEEDED = "SUCCEEDED",
+  CANCELLED = "CANCELLED",
+  FAILED = "FAILED"
 }
 
 export interface ApiErrorResponse {

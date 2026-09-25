@@ -12,4 +12,14 @@ public sealed record VehicleDto(
     Guid GroupId,
     Guid OfficeId,
     VehicleStatus Status,
-    string? PhotoUrl);
+    string? PhotoUrl,
+    string? Transmission = null,
+    string? FuelType = null,
+    int? SeatCount = null,
+    int? LuggageCapacity = null,
+    string? BodyType = null,
+    int? DoorCount = null,
+    string? Engine = null,
+    int? PowerHp = null,
+    string[]? Equipment = null,
+    string[]? PhotoUrls = null);

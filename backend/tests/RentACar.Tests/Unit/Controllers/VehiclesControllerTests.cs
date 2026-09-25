@@ -58,7 +58,10 @@ public sealed class VehiclesControllerTests : IClassFixture<TestDbContextFactory
         response.Data[0].GroupId.Should().Be(group.Id);
         response.Data[0].Brand.Should().Be("Fiat");
         response.Data[0].PhotoUrl.Should().Be("/uploads/vehicles/07phy001.webp");
-        response.Data[0].DailyPrice.Should().Be(1500);
+        response.Data[0].DailyPrice.Should().BeNull();
+        response.Data[0].SeatCount.Should().BeNull();
+        response.Data[0].Transmission.Should().BeNull();
+        System.Text.Json.JsonSerializer.Serialize(response.Data[0]).Should().NotContain("Plate");
     }
 
     [Fact]

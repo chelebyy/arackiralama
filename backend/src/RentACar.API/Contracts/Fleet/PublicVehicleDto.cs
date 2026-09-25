@@ -2,7 +2,6 @@ namespace RentACar.API.Contracts.Fleet;
 
 public sealed record PublicVehicleDto(
     Guid Id,
-    string Plate,
     string Brand,
     string Model,
     int Year,
@@ -13,8 +12,17 @@ public sealed record PublicVehicleDto(
     Guid OfficeId,
     string Status,
     string? PhotoUrl,
-    decimal DailyPrice,
+    decimal? DailyPrice,
     decimal DepositAmount,
     int MinAge,
     int MinLicenseYears,
-    IReadOnlyList<string> Features);
+    IReadOnlyList<string> Features,
+    string? Transmission = null,
+    string? FuelType = null,
+    int? SeatCount = null,
+    int? LuggageCapacity = null,
+    string? BodyType = null,
+    int? DoorCount = null,
+    string? Engine = null,
+    int? PowerHp = null,
+    string[]? PhotoUrls = null);

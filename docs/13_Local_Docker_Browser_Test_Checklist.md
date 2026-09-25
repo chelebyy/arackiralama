@@ -968,3 +968,11 @@ Cleanup evidence captured on 2026-06-04:
 - The local test data is Docker-local only. Volumes were kept intentionally for follow-up debugging because this pass produced local-only reservations/payment/admin smoke records that may be useful if the release owner wants to inspect them before discarding volumes.
 - `docker compose -f backend\docker-compose.yml down` stopped and removed `rentacar-web`, `rentacar-worker`, `rentacar-api`, `rentacar-postgres`, `rentacar-redis`, and the `backend_default` network.
 - Follow-up `docker compose -f backend\docker-compose.yml ps` returned only the header row, confirming no services remained running in this compose stack.
+
+## September 24, 2026: vehicle catalogue Package 1
+
+The catalogue implementation on `codex/catalog-package1` was checked against isolated PostgreSQL (5548), Redis (6388), API (5000) and frontend (3108). Local admin edits, multi-image upload and cover ordering, public data separation, four homepage cards, undated browsing, pickup-date group pricing, five locales, RTL and mobile/desktop layouts were verified. Protected Header/Hero source and visual comparisons showed no change.
+
+Backend checks passed: 818 unit/service/controller tests and 54 API integration tests; the final pickup-date pricing change also passed 25 FleetService tests. Frontend checks passed: 290 tests plus two new admin preservation cases, final production build/TypeScript, and lint with one existing warning. No deployment or production migration was performed.
+
+See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) for exact scope, environment dependencies, validation limitations and retained group-based behavior. This evidence supplements the earlier run; it does not imply production acceptance.

@@ -309,3 +309,11 @@ Current main (`ce23b54`) was built in an isolated Docker stack with payments and
 The tracking input lacked an accessible name. It now uses the existing localized code prompt as its accessible label, with a focused unit regression test. Tracking E2E selectors were scoped to the reservation form and its actual error element; the not-found test now asserts the displayed error. An opt-in localhost-only E2E test covers unpaid submission through admin detail. Fresh local inventory required synthetic pricing rules before a quote could be produced; this setup and commands are recorded in `13_Local_Docker_Browser_Test_Checklist.md`.
 
 This pass does not reopen the completed Public Site & Contact redesign or establish production/payment-provider acceptance. Existing security-gating limitations above remain separate from the local browser evidence.
+
+## September 24, 2026: vehicle catalogue Package 1
+
+Admin vehicle editing now supports nullable verified specifications, equipment and an ordered photo gallery. Unknown values remain unspecified; legacy photos/model/year and reserved/rented status are preserved. Successful partial uploads remain saved for retry. Only the affected vehicle changes.
+
+The public card/list/detail share these values; admin plate remains available while public DTOs omit it. Local browser acceptance covered editing, valid/invalid uploads, ordering, five languages and RTL/mobile layouts. Header/Hero remain untouched. Backend (818 unit/service/controller, 54 API integration), frontend (290 full-suite tests plus two new admin preservation cases), final build/TypeScript and lint checks passed, with the existing lint warning documented.
+
+See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) and the matching September 24 entry in [the local checklist](13_Local_Docker_Browser_Test_Checklist.md). Group pricing/reservation remains transitional; this is not production or full rental-flow acceptance.

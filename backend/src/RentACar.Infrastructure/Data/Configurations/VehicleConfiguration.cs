@@ -22,6 +22,16 @@ public sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.Property(x => x.GroupId).HasColumnName("group_id");
         builder.Property(x => x.OfficeId).HasColumnName("office_id");
         builder.Property(x => x.PhotoUrl).HasColumnName("photo_url").HasMaxLength(512);
+        builder.Property(x => x.Transmission).HasColumnName("transmission").HasMaxLength(80);
+        builder.Property(x => x.FuelType).HasColumnName("fuel_type").HasMaxLength(80);
+        builder.Property(x => x.SeatCount).HasColumnName("seat_count");
+        builder.Property(x => x.LuggageCapacity).HasColumnName("luggage_capacity");
+        builder.Property(x => x.BodyType).HasColumnName("body_type").HasMaxLength(80);
+        builder.Property(x => x.DoorCount).HasColumnName("door_count");
+        builder.Property(x => x.Engine).HasColumnName("engine").HasMaxLength(80);
+        builder.Property(x => x.PowerHp).HasColumnName("power_hp");
+        builder.Property(x => x.Equipment).HasColumnName("equipment").HasColumnType("text[]");
+        builder.Property(x => x.PhotoUrls).HasColumnName("photo_urls").HasColumnType("text[]");
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()

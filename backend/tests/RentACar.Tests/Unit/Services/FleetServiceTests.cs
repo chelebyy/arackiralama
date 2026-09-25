@@ -70,6 +70,25 @@ public sealed class FleetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SearchAvailableVehicleGroupsAsync_UsesPickupDatePricing()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        await SeedVehicleAsync("34FUT123", group.Id, office.Id);
+        var pickup = new DateTime(2099, 6, 10, 10, 0, 0, DateTimeKind.Utc);
+        _dbContext.PricingRules.Add(new PricingRule
+        {
+            VehicleGroupId = group.Id,
+            StartDate = new DateOnly(2099, 6, 1),
+            EndDate = new DateOnly(2099, 6, 30),
+            DailyPrice = 1200m,
+            CalculationType = "fixed"
+        });
+        await _dbContext.SaveChangesAsync();
+        var result = await _sut.SearchAvailableVehicleGroupsAsync(office.Id, pickup, pickup.AddDays(3));
+        result.Single().DailyPrice.Should().Be(1200m);
+    }
+
+    [Fact]
     public async Task SearchAvailableVehicleGroupsAsync_WhenBlockedByReservation_ExcludesVehicle()
     {
         var (office, group) = await SeedOfficeAndGroupAsync();
@@ -322,6 +341,74 @@ public sealed class FleetServiceTests : IDisposable
         var office = await SeedOfficeAsync("Alanya Merkez");
         var group = await SeedVehicleGroupAsync("Ekonomi");
         return (office, group);
+    }
+
+[Fact]
+    public async Task CatalogueUpdate_PreservesOtherVehiclesAndLegacyRelations()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var first = await SeedVehicleAsync("34CAT001", group.Id, office.Id);
+        var second = await SeedVehicleAsync("34CAT002", group.Id, office.Id);
+        first.PhotoUrl = "/uploads/vehicles/legacy.png";
+        await _dbContext.SaveChangesAsync();
+        var updated = await _sut.UpdateVehicleAsync(first.Id, new UpdateVehicleRequest(
+            first.Plate, first.Brand, first.Model, first.Year, first.Color, group.Id, office.Id, first.Status,
+            "manual", "diesel", 4, 1, "sedan", 4, "1.5", 110, ["bluetooth"]));
+        updated!.SeatCount.Should().Be(4);
+        updated.PhotoUrls.Should().Equal("/uploads/vehicles/legacy.png");
+        updated.GroupId.Should().Be(group.Id);
+        updated.Equipment.Should().Equal("bluetooth");
+        var other = await _sut.GetVehicleByIdAsync(second.Id);
+        other!.SeatCount.Should().BeNull();
+        other.Transmission.Should().BeNull();
+        other.PhotoUrls.Should().BeEmpty();
+        var publicController = new RentACar.API.Controllers.VehiclesController(_sut, _dbContext);
+        var response = (Microsoft.AspNetCore.Mvc.OkObjectResult)await publicController.GetById(first.Id, CancellationToken.None);
+        var data = ((RentACar.API.Contracts.ApiResponse<PublicVehicleDto>)response.Value!).Data!;
+        data.Transmission.Should().Be("manual");
+        data.Features.Should().Equal("bluetooth");
+        data.DailyPrice.Should().BeNull();
+        var json = System.Text.Json.JsonSerializer.Serialize(data);
+        json.Should().NotContain("Plate").And.NotContain("34CAT001").And.NotContain("Maintenance");
+    }
+
+    [Fact]
+    public async Task CatalogueGallery_PreservesSharedFilesAndRejectsForeignReferences()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var first = await SeedVehicleAsync("34GAL001", group.Id, office.Id);
+        var second = await SeedVehicleAsync("34GAL002", group.Id, office.Id);
+        first.PhotoUrls = ["/uploads/vehicles/shared.png", "/uploads/vehicles/own.png"];
+        first.PhotoUrl = first.PhotoUrls[0];
+        second.PhotoUrl = first.PhotoUrl;
+        await _dbContext.SaveChangesAsync();
+        var reordered = await _sut.UpdateVehiclePhotosAsync(first.Id, first.PhotoUrls.Reverse().ToArray());
+        reordered!.PhotoUrl.Should().Be("/uploads/vehicles/own.png");
+        await _sut.UpdateVehiclePhotosAsync(first.Id, ["/uploads/vehicles/own.png"]);
+        second.PhotoUrl.Should().Be("/uploads/vehicles/shared.png");
+        _photoStorageMock.Verify(storage => storage.DeleteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var foreign = () => _sut.UpdateVehiclePhotosAsync(first.Id, ["/uploads/vehicles/foreign.png"]);
+        await foreign.Should().ThrowAsync<ArgumentException>();
+        var duplicate = () => _sut.UpdateVehiclePhotosAsync(first.Id, ["/uploads/vehicles/own.png", "/uploads/vehicles/own.png"]);
+        await duplicate.Should().ThrowAsync<ArgumentException>();
+        var empty = await _sut.UpdateVehiclePhotosAsync(first.Id, []);
+        empty!.PhotoUrl.Should().BeNull();
+        empty.PhotoUrls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CatalogueUpload_AppendsRatherThanReplacingLegacyPhoto()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var first = await SeedVehicleAsync("34UPL001", group.Id, office.Id);
+        first.PhotoUrl = "/uploads/vehicles/legacy.png";
+        await _dbContext.SaveChangesAsync();
+        _photoStorageMock.Setup(storage => storage.SaveAsync(first.Id, It.IsAny<Microsoft.AspNetCore.Http.IFormFile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("/uploads/vehicles/new.png");
+        var result = await _sut.UploadVehiclePhotoAsync(first.Id, Mock.Of<Microsoft.AspNetCore.Http.IFormFile>());
+        result!.PhotoUrls.Should().Equal("/uploads/vehicles/legacy.png", "/uploads/vehicles/new.png");
+        result.PhotoUrl.Should().Be("/uploads/vehicles/legacy.png");
+        _photoStorageMock.Verify(storage => storage.DeleteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private async Task<Vehicle> SeedVehicleAsync(string plate, Guid groupId, Guid officeId)
