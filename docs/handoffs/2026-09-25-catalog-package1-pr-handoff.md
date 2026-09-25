@@ -1,6 +1,8 @@
 # Session handoff: vehicle catalogue Package 1
 
-Updated: 2026-09-25. Status: implementation locally verified; publishing for PR review.
+Updated: 2026-09-25. Status: implementation locally verified; [PR #446](https://github.com/chelebyy/arackiralama/pull/446) open for review.
+
+Implementation commit: `d241168db769076c63df89dc6d6394f90dd27c5d`. A documentation follow-up records publication; resolve the current PR head before checking CI. Initial checks were pending/running (backend, frontend, Docker, CodeQL, React Doctor, secret scan and external security checks). No remote success or review approval is claimed by this snapshot.
 
 ## Authorization and next scope
 

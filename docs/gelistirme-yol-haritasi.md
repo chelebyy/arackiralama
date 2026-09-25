@@ -49,7 +49,7 @@ Aşağıdaki yollar incelenen kaynak ağacına göredir. Satırlar inceleme anı
 
 ## Paket 1 — Gerçek araç kataloğu
 
-**Durum (25 Eylül 2026):** Uygulama ve yerel kabul kontrolleri tamamlandı; PR incelemesine hazırlanıyor. Merge ve canlıya dağıtım yapılmadı. Grup tabanlı akışın kaldırılması Paket 2 kapsamındadır.
+**Durum (25 Eylül 2026):** Uygulama ve yerel kabul kontrolleri tamamlandı; [PR #446](https://github.com/chelebyy/arackiralama/pull/446) incelemeye açıldı. Uzak CI kontrolleri yayın anında devam ediyor. Merge ve canlıya dağıtım yapılmadı. Grup tabanlı akışın kaldırılması Paket 2 kapsamındadır.
 
 Uygulama, test kanıtları ve sınırlar: [Paket 1 raporu](Vehicle_Catalogue_Package_1_Implementation.md). Devam edecek oturum için: [oturum devir belgesi](handoffs/2026-09-25-catalog-package1-pr-handoff.md).
 

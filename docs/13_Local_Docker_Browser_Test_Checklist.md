@@ -971,6 +971,8 @@ Cleanup evidence captured on 2026-06-04:
 
 ## September 24, 2026: vehicle catalogue Package 1
 
+Publication update, September 25: [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is open; remote checks were initially pending/running. Local acceptance does not replace exact-head CI review.
+
 The catalogue implementation on `codex/catalog-package1` was checked against isolated PostgreSQL (5548), Redis (6388), API (5000) and frontend (3108). Local admin edits, multi-image upload and cover ordering, public data separation, four homepage cards, undated browsing, pickup-date group pricing, five locales, RTL and mobile/desktop layouts were verified. Protected Header/Hero source and visual comparisons showed no change.
 
 Backend checks passed: 818 unit/service/controller tests and 54 API integration tests; the final pickup-date pricing change also passed 25 FleetService tests. Frontend checks passed: 290 tests plus two new admin preservation cases, final production build/TypeScript, and lint with one existing warning. No deployment or production migration was performed.

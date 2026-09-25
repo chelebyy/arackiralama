@@ -312,6 +312,8 @@ This pass does not reopen the completed Public Site & Contact redesign or establ
 
 ## September 24, 2026: vehicle catalogue Package 1
 
+Publication update, September 25: [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is open; see the [session handoff](handoffs/2026-09-25-catalog-package1-pr-handoff.md). Merge and deployment remain unauthorized.
+
 Admin vehicle editing now supports nullable verified specifications, equipment and an ordered photo gallery. Unknown values remain unspecified; legacy photos/model/year and reserved/rented status are preserved. Successful partial uploads remain saved for retry. Only the affected vehicle changes.
 
 The public card/list/detail share these values; admin plate remains available while public DTOs omit it. Local browser acceptance covered editing, valid/invalid uploads, ordering, five languages and RTL/mobile layouts. Header/Hero remain untouched. Backend (818 unit/service/controller, 54 API integration), frontend (290 full-suite tests plus two new admin preservation cases), final build/TypeScript and lint checks passed, with the existing lint warning documented.

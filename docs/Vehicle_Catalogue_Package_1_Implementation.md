@@ -8,7 +8,7 @@ Date: 2026-09-24. Scope: local implementation and acceptance; no deployment.
 - Work is isolated on `codex/catalog-package1` in `.worktrees/catalog-package1`.
 - The primary checkout remains on `codex/docs-db-ops-phase0-doc-contract` at `e81eb08d07e33cfcf2979566604f82f72e56034f`. Its untracked roadmap and worktree directory were preserved.
 - Existing worktrees were audited; none removed because activity, ignored-file or merge-evidence guards required preservation. No branch was deleted.
-- September 25: commit/push/PR publication is authorized and being prepared. No merge, production migration or deployment is authorized. See [session handoff](handoffs/2026-09-25-catalog-package1-pr-handoff.md) for continuation and publication status.
+- September 25: implementation committed as `d241168db769076c63df89dc6d6394f90dd27c5d`, pushed and published in [PR #446](https://github.com/chelebyy/arackiralama/pull/446), targeting main. Initial remote checks were pending/running; local evidence below is not a claim of remote CI success. No merge, production migration or deployment is authorized. See [session handoff](handoffs/2026-09-25-catalog-package1-pr-handoff.md) for continuation.
 
 ## Delivered behavior
 
