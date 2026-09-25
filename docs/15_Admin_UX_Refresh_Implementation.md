@@ -1,5 +1,11 @@
 # Admin Public Site & Contact UX Refresh Implementation
 
+## Second catalogue review follow-up — 2026-09-25
+
+API integration suite: 54/54 passed against local PostgreSQL/Redis using explicit IPv4 addresses.
+
+The shared backend pricing calendar now uses Turkey business dates without rewriting stored UTC timestamps. Public detail office selects recover from delayed office loading, and legacy root-relative photo URLs remain supported. Admin authoring behavior is unchanged. Validation: 823 backend / 298 frontend tests passed, production build/TypeScript passed, lint zero errors and one existing warning. Real local quote and delayed-office browser evidence are recorded in the [Package 1 document](Vehicle_Catalogue_Package_1_Implementation.md#second-pr-446-review-fixes--2026-09-25). No merge or deployment.
+
 ## Catalogue PR 446 review follow-up — 2026-09-25
 
 The catalogue review follow-up changes public office resolution, rental datetime serialization and image error fallback. Admin behavior is unchanged. All 297 frontend tests, production build and TypeScript passed; lint has zero errors and one existing warning. Local API-backed browser checks verified GZP resolution, matching catalogue/booking UTC instants and image fallback/recovery. No merge or deployment. See [Package 1 evidence](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25) and the synchronized local browser checklist.

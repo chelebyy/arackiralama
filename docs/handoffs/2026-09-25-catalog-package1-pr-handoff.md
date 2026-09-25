@@ -1,5 +1,13 @@
 # Session handoff: vehicle catalogue Package 1
 
+## Second review correction handoff — 2026-09-25
+
+Full API integration suite passed 54/54. For this environment use `127.0.0.1` rather than `localhost` in `RENTACAR_TEST_POSTGRES` and `RENTACAR_TEST_REDIS`; earlier attempts stalled before reporting results. The actual underlying host-resolution cause was not diagnosed.
+
+The new P1 local-calendar pricing defect and two P2 findings (delayed office selects, legacy photo URLs) are corrected. Backend business dates use UTC+03:00 consistently while reservation instants remain UTC. Historical reservations are not migrated. The first follow-up's timestamp-equality checks did not cover business-date semantics; the new regression cases do.
+
+Validation: 823 backend and 298 frontend tests passed; production build/TypeScript passed; lint zero errors/one existing warning. A real local API quote returned three days / TRY 3600 for October 10 01:00 to October 13 09:00. Browser request interception proved office selections update after delayed loading and the form remains submittable. Media URL compatibility/safety is regression-tested. Full evidence is in the Package 1 document. Recheck current PR #446 head and CI before any merge decision; no merge/deploy or review-thread replies are authorized by this handoff.
+
 ## Review correction handoff — 2026-09-25
 
 All three Codex P2 findings are implemented: prefer office codes with legacy normalized names, share UTC conversion across catalogue/availability/quote/reservation, and handle failed image URLs with a recoverable gallery fallback. Validation: 297 frontend tests passed (67 files); webpack production build/TypeScript passed; lint zero errors, one pre-existing warning. Local production-browser checks passed for GZP request emission, equal UTC timestamps and blocked-image fallback/recovery. Quote/submission equality was tested with component mocks; no live payment or reservation was submitted.

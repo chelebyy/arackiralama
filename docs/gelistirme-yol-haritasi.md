@@ -1,5 +1,9 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
+İkinci inceleme düzeltmelerinin ek doğrulaması: yerel PostgreSQL/Redis ile **54/54 API entegrasyon testi** geçti.
+
+**25 Eylül 2026 — İkinci PR inceleme düzeltmeleri:** Backend gün/fiyat/kampanya hesabı Türkiye takvimine bağlandı; geç yüklenen ofis seçimleri ve eski kök-göreli fotoğraf yolları düzeltildi. 823 backend ve 298 frontend testi ile derleme geçti. Gerçek yerel API erken saatli örneği 3 gün/3.600 TL hesapladı; geciktirilen ofis yanıtı tarayıcıda doğrulandı. Header/hero korundu; merge ve dağıtım yapılmadı.
+
 **25 Eylül 2026 — PR #446 inceleme düzeltmeleri:** Gazipaşa ofis kodu eşleştirmesi, katalog/rezervasyon boyunca ortak UTC saat dönüşümü ve bozuk görsel yedeği düzeltildi. 297 frontend testi, üretim derlemesi ve TypeScript kontrolü geçti; lintte hata yok, mevcut tek uyarı sürüyor. Yerel tarayıcıda ofis sorgusu, saat eşleşmesi ve görsel hata/kurtarma kontrol edildi. Header/hero korundu; merge veya canlı dağıtım yapılmadı. Ayrıntılar: [Paket 1 uygulama belgesi](Vehicle_Catalogue_Package_1_Implementation.md).
 
 24 Eylül 2026 · Kaynak kod incelemesi · Uygulama öncesi çalışma

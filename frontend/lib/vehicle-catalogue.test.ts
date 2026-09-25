@@ -39,6 +39,11 @@ describe("catalogue context", () => {
     ).toBe("2030-01-01T07:00:00.000Z");
   });
   it("preserves legacy photos and rejects unsupported URL schemes", () => {
+    expect(vehiclePhotos({ photoUrl: "/photos/1.jpg" })).toEqual(["/photos/1.jpg"]);
+    expect(vehiclePhotos({ photoUrl: "/photos/family%20car.jpg" })).toEqual(["/photos/family%20car.jpg"]);
+    for (const photoUrl of ["//evil.example/car.jpg", "/\\evil.example/car.jpg", "/%2fexample/car.jpg", "/%2e%2e/private.jpg", "/bad%url.jpg"]) {
+      expect(vehiclePhotos({ photoUrl })).toEqual([]);
+    }
     expect(vehiclePhotos({ photoUrl: "/uploads/vehicles/old.png" })).toHaveLength(1);
     expect(vehiclePhotos({ photoUrl: "javascript:alert(1)" })).toEqual([]);
   });

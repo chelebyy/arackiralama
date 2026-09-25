@@ -149,6 +149,7 @@ function VehicleDetail() {
                     <label className="grid gap-1 text-sm">
                       {t("office")}
                       <select
+                        key={`${prefix}-${(prefix === "pickup" ? officeId : returnOfficeId) ?? ""}`}
                         name={prefix}
                         defaultValue={(prefix === "pickup" ? officeId : returnOfficeId) ?? ""}
                         required

@@ -107,7 +107,7 @@ public sealed class PricingService(
         CancellationToken cancellationToken = default)
     {
         var rentalDays = CalculateRentalDays(pickupDateTimeUtc, returnDateTimeUtc);
-        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
+        var pickupDate = RentalCalendar.TurkeyDate(pickupDateTimeUtc);
 
         var vehicleGroup = await dbContext.VehicleGroups
             .AsNoTracking()
@@ -541,7 +541,7 @@ public sealed class PricingService(
     private static decimal CalculateBaseTotal(PricingRule pricingRule, DateTime pickupDateTimeUtc, int rentalDays)
     {
         var total = 0m;
-        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
+        var pickupDate = RentalCalendar.TurkeyDate(pickupDateTimeUtc);
         for (var dayOffset = 0; dayOffset < rentalDays; dayOffset++)
         {
             var currentDate = pickupDate.AddDays(dayOffset);
@@ -623,8 +623,6 @@ public sealed class PricingService(
 
     private static int CalculateRentalDays(DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc)
     {
-        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
-        var returnDate = DateOnly.FromDateTime(returnDateTimeUtc);
-        return Math.Max(1, returnDate.DayNumber - pickupDate.DayNumber);
+        return RentalCalendar.RentalDays(pickupDateTimeUtc, returnDateTimeUtc);
     }
 }

@@ -89,6 +89,27 @@ public sealed class FleetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SearchAvailableVehicleGroupsAsync_UsesTurkeyDateAtPricingBoundary()
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        await SeedVehicleAsync("34EAR123", group.Id, office.Id);
+        var pickupUtc = new DateTime(2030, 5, 9, 22, 0, 0, DateTimeKind.Utc);
+        _dbContext.PricingRules.Add(new PricingRule
+        {
+            VehicleGroupId = group.Id,
+            StartDate = new DateOnly(2030, 5, 10),
+            EndDate = new DateOnly(2030, 5, 13),
+            DailyPrice = 1200m,
+            CalculationType = "fixed"
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.SearchAvailableVehicleGroupsAsync(office.Id, pickupUtc, pickupUtc.AddDays(3));
+
+        result.Single().DailyPrice.Should().Be(1200m);
+    }
+
+    [Fact]
     public async Task SearchAvailableVehicleGroupsAsync_WhenBlockedByReservation_ExcludesVehicle()
     {
         var (office, group) = await SeedOfficeAndGroupAsync();

@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   search: "",
   vehicle: undefined as unknown,
   quotes: [] as unknown[],
+  offices: [] as { id: string; name: string; code?: string }[],
   request: vi.fn(),
   isError: false
 }));
@@ -18,7 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/hooks/useVehicles", () => ({
   useVehicle: () => ({ vehicle: state.vehicle, isLoading: false, isError: state.isError }),
-  useOffices: () => ({ offices: [{ id: "office-1", name: "Alanya" }] }),
+  useOffices: () => ({ offices: state.offices }),
   useAvailableVehicles: (request: unknown) => {
     state.request(request);
     return { vehicles: state.quotes, isLoading: false, isError: false };
@@ -28,6 +29,7 @@ beforeEach(() => {
   state.search = "";
   state.vehicle = catalogueVehicle;
   state.quotes = [];
+  state.offices = [{ id: "office-1", name: "Alanya" }];
   state.isError = false;
   state.request.mockClear();
 });
@@ -38,6 +40,21 @@ const draw = () =>
     </NextIntlClientProvider>
   );
 describe("Vehicle detail catalogue", () => {
+  it("selects URL offices after a cold load and preserves later user selections", () => {
+    state.search = "pickup=gzp&return=ala";
+    state.offices = [];
+    const { rerender } = draw();
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("");
+    state.offices = [{ id: "office-1", name: "Alanya", code: "ala" }, { id: "office-2", name: "Gazipasa Airport", code: "gzp" }];
+    const page = <NextIntlClientProvider locale="en" messages={messages}><VehicleDetailPage /></NextIntlClientProvider>;
+    rerender(page);
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("office-2");
+    expect(screen.getAllByRole("combobox")[1]).toHaveValue("office-1");
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "office-1" } });
+    state.offices = [...state.offices];
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><VehicleDetailPage /></NextIntlClientProvider>);
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("office-1");
+  });
   it("does not offer a zero-price booking when the group has no configured rate", () => {
     state.search =
       "pickup=office-1&return=office-1&pickupDate=2099-01-01&pickupTime=10:00&returnDate=2099-01-02&returnTime=10:00";

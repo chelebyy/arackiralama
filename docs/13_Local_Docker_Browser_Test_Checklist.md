@@ -1,5 +1,11 @@
 # Local Docker Browser Test Checklist
 
+## Second catalogue review follow-up — 2026-09-25
+
+API integration: 54/54 passed with explicit `127.0.0.1` PostgreSQL/Redis endpoints after `localhost` attempts stalled. No skipped tests.
+
+Verified Turkey calendar pricing with 823 backend and 298 frontend passing tests, production build/TypeScript, and lint (zero errors, existing warning). Real local API returned three days / TRY 3600 for October 10 01:00 to October 13 09:00. In-browser delayed office response selected both URL offices after the form mounted; a changed selection submitted successfully and displayed the TRY 1200 group rate. Legacy media paths and unsafe URL rejection have regression coverage. No live checkout, merge or deployment. See the [second review evidence](Vehicle_Catalogue_Package_1_Implementation.md#second-pr-446-review-fixes--2026-09-25).
+
 ## Catalogue PR 446 review follow-up — 2026-09-25
 
 Three P2 fixes verified locally: GZP code/name matching, consistent Turkey-to-UTC booking requests, and image error fallback. All 297 frontend tests passed; production build/TypeScript passed; lint has zero errors and one existing warning. Browser checks used the local production build and retained API/PostgreSQL/Redis fixtures: GZP request issued, catalogue/booking UTC instants matched, and blocked image fallback plus next-gallery-image recovery worked. No live checkout, merge or deployment. Detailed evidence: [Package 1 implementation](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25).

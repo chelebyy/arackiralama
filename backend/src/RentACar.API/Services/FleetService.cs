@@ -196,7 +196,7 @@ public sealed class FleetService(
             .Distinct()
             .ToList();
 
-        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
+        var pickupDate = RentalCalendar.TurkeyDate(pickupDateTimeUtc);
         var candidateRules = await dbContext.PricingRules
             .AsNoTracking()
             .Where(rule =>

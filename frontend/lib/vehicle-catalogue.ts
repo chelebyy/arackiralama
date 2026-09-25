@@ -50,8 +50,14 @@ export function vehiclePhotos(vehicle: Pick<PublicVehicle, "photoUrls" | "photoU
 export function resolveVehicleMedia(url: string): string {
   if (!url) return "";
   if (/^https?:\/\//i.test(url)) return url;
-  if (!url.startsWith("/uploads/vehicles/") || url.includes("..")) return "";
-  return `${new URL(API_CONFIG.baseUrl).origin}${url}`;
+  if (!url.startsWith("/")) return "";
+  try {
+    const decoded = decodeURIComponent(url);
+    if (decoded.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(decoded) || decoded.includes("..")) return "";
+  } catch {
+    return "";
+  }
+  return url.startsWith("/uploads/vehicles/") ? `${new URL(API_CONFIG.baseUrl).origin}${url}` : url;
 }
 
 export function vehicleGroupName(vehicle: PublicVehicle, locale: string): string {

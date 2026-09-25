@@ -1,5 +1,17 @@
 # Package 1: real vehicle catalogue
 
+## Second PR 446 review fixes — 2026-09-25
+
+API integration validation also passed: 54/54 tests using the retained local PostgreSQL/Redis containers with explicit `127.0.0.1` addresses. Initial `localhost` runs stalled and were stopped/timed out; the IPv4 retry completed in 48 seconds. This is an environment workaround, not a proven DNS root-cause diagnosis.
+
+- `RentalCalendar` applies the same UTC+03:00 Turkey rental calendar as the public form. Pricing rule selection, rental days, weekday/weekend totals and campaign eligibility use local dates across FleetService, PricingService, ReservationQuoteService and the legacy PricingController path. Availability overlap instants and stored timestamps stay UTC; no historical data rewrite is performed.
+- The detail form remounts each office select when its resolved URL office ID becomes available. Subsequent option refreshes with unchanged IDs preserve the visitor's selection.
+- Legacy root-relative photo paths such as `/photos/1.jpg` retain their original frontend origin. Uploaded vehicle paths still use the API origin. Protocol-relative paths, backslashes, traversal, invalid escapes and control characters remain rejected.
+- Validation: 823 backend tests and 298 frontend tests passed; production webpack build/TypeScript passed; lint zero errors with the existing SearchForm warning. New tests cover both sides of 03:00, pricing start dates, weekend totals, quote campaign eligibility, delayed offices and legacy media safety.
+- Local real API quote: October 10 01:00 to October 13 09:00 Turkey time returned HTTP 200, three rental days, daily rate TRY 1200 and base/final total TRY 3600. No reservation or payment was submitted.
+- Browser check paused the office request until the vehicle form rendered with empty selects. Releasing the request selected Gazipasa Airport and Alanya Merkez automatically. Changing pickup to Alanya and submitting the form showed the TRY 1200 daily group rate. Interception was cleared and the temporary tab closed.
+- Header/Hero remain untouched. New-head CI must be checked after publication; no merge or deployment.
+
 ## PR 446 review fixes — 2026-09-25
 
 - Addressed all three P2 findings: office code matching with Turkish/ASCII legacy name fallback; shared Turkey wall-clock to UTC conversion for catalogue, booking availability, quotes and reservation submission; accessible image failure fallback on cards and detail galleries.
