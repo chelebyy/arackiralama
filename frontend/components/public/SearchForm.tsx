@@ -12,29 +12,14 @@ import {
   ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { defaultRentalSearchDates } from "@/lib/rental-datetime";
 
 interface SearchFormProps {
   readonly className?: string;
   readonly variant?: "hero" | "default";
 }
 
-const getToday = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 const DEFAULT_LOCATION = "ala";
-
-const getWeekLater = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 export default function SearchForm({ className, variant = "default" }: SearchFormProps) {
   const t = useTranslations("searchForm");
@@ -43,9 +28,10 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
 
-  const [pickupDate, setPickupDate] = useState(getToday);
+  const [defaultDates] = useState(() => defaultRentalSearchDates());
+  const [pickupDate, setPickupDate] = useState(defaultDates.pickupDate);
   const [pickupTime, setPickupTime] = useState("10:00");
-  const [returnDate, setReturnDate] = useState(getWeekLater);
+  const [returnDate, setReturnDate] = useState(defaultDates.returnDate);
   const [returnTime, setReturnTime] = useState("10:00");
 
   const router = useRouter();
@@ -59,9 +45,9 @@ export default function SearchForm({ className, variant = "default" }: SearchFor
 
     query.set("pickup", resolvedPickupLocation);
     query.set("return", resolvedReturnLocation);
-    query.set("pickupDate", pickupDate || getToday());
+    query.set("pickupDate", pickupDate || defaultRentalSearchDates().pickupDate);
     query.set("pickupTime", pickupTime);
-    query.set("returnDate", returnDate || getWeekLater());
+    query.set("returnDate", returnDate || defaultRentalSearchDates().returnDate);
     query.set("returnTime", returnTime);
     router.push(`/${locale}/vehicles?${query.toString()}`);
   }, [pickupLocation, returnLocation, pickupDate, pickupTime, returnDate, returnTime, router, locale]);

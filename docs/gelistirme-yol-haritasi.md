@@ -156,6 +156,13 @@ Her uygulama paketinin sonunda değişen yollar için odaklı güvenlik inceleme
 - İnceleme temiz `C:/All_Project/Araç Kiralama/.worktrees/local-validation-20260923` klasöründe yapıldı. HEAD `073da36890d4576c0a31248c34581bf11520ba72`; incelenen `main` ile dosya farkı yoktur.
 - Yeni uygulama başlamadan uzak varsayılan dal yeniden fetch edilmeli, yerel varsayılan dal güvenli biçimde kontrol edilmeli ve yeni dal güncel tabandan açılmalıdır. Bu turda hiçbir çalışma ağacı kaldırılmadı veya dal değiştirilmedi.
 
+## Paket 1 — Gün hesabı ve arama varsayılanları (26 Eylül 2026)
+
+- Rezervasyon/müsaitlik gün sayısı teklif veya kayıtlı fiyat günleriyle eşitlendi; bunlar yoksa ortak Türkiye takvimi kullanılır. Geçmiş fiyat kayıtları değiştirilmez.
+- Ana sayfa araması Türkiye saatine göre gelecekteki ilk 10:00'u, dönüş için yedi gün sonrasını önerir. Header/Hero dosyaları ve SearchForm görünümü değişmedi; yalnızca varsayılan tarih mantığı düzeltildi.
+- 827 backend, 54 API entegrasyon ve 308 frontend testi; üretim derlemesi/TypeScript ve lint geçti (önceden bulunan tek uyarı sürüyor). Gerçek yerel API ile varsayılan tarih akışı ve tarifeli Ekim tarihleri için fiyat/devam bağlantısı doğrulandı.
+- Yeni commit için CI ve Codex sonucu ayrıca kontrol edilmelidir. Merge, dağıtım veya gerçek rezervasyon yapılmadı.
+
 ## Paket 1 — Üçüncü inceleme düzeltmeleri (25 Eylül 2026)
 
 - Onay ve takip ekranları kayıtlı UTC zamanını Europe/Istanbul saat diliminde gösterir; gece teslimlerinde gün kayması ve ziyaretçinin saat dilimine bağımlılık giderildi.

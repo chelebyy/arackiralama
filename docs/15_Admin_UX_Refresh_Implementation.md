@@ -330,6 +330,10 @@ The public card/list/detail share these values; admin plate remains available wh
 
 See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) and the matching September 24 entry in [the local checklist](13_Local_Docker_Browser_Test_Checklist.md). Group pricing/reservation remains transitional; this is not production or full rental-flow acceptance.
 
+## September 26, 2026: reservation day consistency
+
+Reservation DTO day counts now preserve stored pricing snapshot days; records without a snapshot use the same Turkey rental calendar as pricing. Availability uses quoted days with the same fallback. This removes 3-day/4-day mismatches without rewriting historical quotes. Homepage search defaults were corrected with unchanged Header/Hero and form layout. Validation: 827 backend, 54 API integration, 308 frontend tests; build/TypeScript/lint passed (one existing warning). See the implementation evidence and handoff for local browser proof and pending new-head CI/review.
+
 ## September 25, 2026: third catalogue review
 
 Public vehicle detail now exposes the existing API minimum-age and licence-tenure values with five-locale labels. Confirmation/tracking display stored UTC values in Europe/Istanbul, including calendar dates. Admin behavior is unchanged. 304 frontend tests, production build/TypeScript and lint passed; one pre-existing lint warning remains. Synthetic-API local browser checks verified both fixes; no backend rerun, real booking, merge or deployment. See the updated implementation evidence and handoff.

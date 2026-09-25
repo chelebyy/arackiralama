@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/messages/en.json";
 
 import SearchForm from "./SearchForm";
+import { validCatalogueDates } from "@/lib/vehicle-catalogue";
 
 const pushMock = vi.fn();
 const originalShowPicker = HTMLInputElement.prototype.showPicker;
@@ -50,8 +51,8 @@ describe("SearchForm", () => {
   it("renders deterministic default pickup and return dates", () => {
     renderSearchForm();
 
-    expect(screen.getByLabelText("Pickup Date")).toHaveValue("2026-04-27");
-    expect(screen.getByLabelText("Return Date")).toHaveValue("2026-05-04");
+    expect(screen.getByLabelText("Pickup Date")).toHaveValue("2026-04-28");
+    expect(screen.getByLabelText("Return Date")).toHaveValue("2026-05-05");
     expect(screen.getByLabelText("Pickup Time")).toHaveValue("10:00");
     expect(screen.getByLabelText("Return Time")).toHaveValue("10:00");
   });
@@ -84,7 +85,7 @@ describe("SearchForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Search Vehicles" }));
 
     expect(pushMock).toHaveBeenCalledWith(
-      "/en/vehicles?pickup=ala&return=ayt&pickupDate=2026-04-27&pickupTime=10%3A00&returnDate=2026-05-04&returnTime=10%3A00"
+      "/en/vehicles?pickup=ala&return=ayt&pickupDate=2026-04-28&pickupTime=10%3A00&returnDate=2026-05-05&returnTime=10%3A00"
     );
   });
 
@@ -102,7 +103,7 @@ describe("SearchForm", () => {
 
     expect(screen.queryByLabelText("Return Location")).not.toBeInTheDocument();
     expect(pushMock).toHaveBeenCalledWith(
-      "/en/vehicles?pickup=ala&return=ala&pickupDate=2026-04-27&pickupTime=10%3A00&returnDate=2026-05-04&returnTime=10%3A00"
+      "/en/vehicles?pickup=ala&return=ala&pickupDate=2026-04-28&pickupTime=10%3A00&returnDate=2026-05-05&returnTime=10%3A00"
     );
   });
 
@@ -118,6 +119,20 @@ describe("SearchForm", () => {
     fireEvent.click(screen.getByLabelText("Return Time"));
 
     expect(showPickerMock).toHaveBeenCalledTimes(4);
+  });
+
+  it.each([
+    ["2026-04-27T06:59:00Z", "2026-04-27"],
+    ["2026-04-27T07:00:00Z", "2026-04-28"],
+    ["2026-04-27T20:59:00Z", "2026-04-28"],
+    ["2026-04-27T21:01:00Z", "2026-04-28"]
+  ])("submits catalogue-valid defaults at %s", (now, expectedPickup) => {
+    vi.setSystemTime(new Date(now));
+    renderSearchForm();
+    fireEvent.click(screen.getByRole("button", { name: "Search Vehicles" }));
+    const query = new URLSearchParams(pushMock.mock.calls[0][0].split("?")[1]);
+    expect(query.get("pickupDate")).toBe(expectedPickup);
+    expect(validCatalogueDates(query)).not.toBeNull();
   });
 
   it("logs picker errors without breaking the form when showPicker throws", () => {

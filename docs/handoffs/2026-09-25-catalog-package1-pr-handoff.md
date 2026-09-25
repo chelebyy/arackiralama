@@ -68,6 +68,12 @@ An initial API suite failed only because its default service ports were unavaila
 3. Before a future authorized release, separately verify production migration readiness, storage lifecycle, actual inventory and group-based reservation limitations.
 4. Merge/deploy only after explicit authorization. Then follow local-default synchronization and safe worktree-cleanup policies.
 
+## Latest follow-up — September 26, 2026
+
+Codex findings r4108430691/r4108430703 are addressed: availability uses quoted rental days or RentalCalendar; reservation DTOs use stored snapshot days or RentalCalendar. Existing charged snapshots remain authoritative. SearchForm defaults use the next future Turkey-local 10:00 and seven days later; user choices remain unchanged. Header/Hero files and SearchForm JSX/CSS are unchanged.
+
+Validation passed: 827 backend tests, 54 local API integration tests, 308 frontend tests under America/Los_Angeles, production build/TypeScript, lint with one existing warning. Real local API browser validation accepted default dates, then displayed TRY1200/day and booking continuation for configured October fixture dates. No real booking/payment, historical migration, merge or deployment. Recheck CI and automatic Codex review against the new head.
+
 ## Third review follow-up — September 25, 2026
 
 Latest follow-up: React Doctor comment `r4108272350` is addressed by moving `Intl.DateTimeFormat` construction to module scope. All 13 affected tests passed with `TZ=America/Los_Angeles`, focused lint and whitespace checks passed. No UI behavior changed and no browser rerun was performed for this refactor. Previous head `b03afa4` received a completed Codex review with no new findings and all run CI checks passed (GHCR push skipped); those receipts do not cover the new follow-up commit. Recheck the current PR head.

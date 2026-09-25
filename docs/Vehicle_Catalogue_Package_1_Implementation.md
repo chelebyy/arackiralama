@@ -97,6 +97,14 @@ Package 2 still owns removal of mandatory group-based pricing/reservation manage
 
 Focused checks covered public/admin data separation, upload authorization/bounds, safe gallery references and rendering. External integrations, all authorization paths, image decoding, storage lifecycle and production configuration were not comprehensively reviewed. A separate focused security review and pre-release test plan were offered under the advisory Sentinel policy.
 
+## Rental calendar and search defaults — September 26, 2026
+
+- Addressed Codex review 5322462499: reservation availability uses the calculated quote's day count, falling back to RentalCalendar; reservation DTOs preserve persisted snapshot days and use the same calendar when no snapshot exists. Historical charged snapshots are not rewritten.
+- Homepage SearchForm now defaults to the next future 10:00 in Europe/Istanbul (today before 10:00, tomorrow at/after 10:00), with return seven calendar days later. User-entered values and strict past-date rejection remain intact. Header/Hero files and SearchForm JSX/CSS are unchanged; only date initialization/fallback logic changed.
+- Local checks passed: 827 backend tests, 54 API integration tests against isolated PostgreSQL/Redis, 308 frontend tests with TZ=America/Los_Angeles, production build/TypeScript and lint (one existing unused-disable warning).
+- Browser: production frontend 3108 and real local API 5000; defaults September 26 10:00 to October 3 10:00 were accepted by catalogue/detail. The fixture has no September rate, so detail correctly reported no group availability. Manually choosing October 10 01:00 to October 13 09:00 showed TRY1200/day and a Continue booking link preserving those values. No reservation/payment submitted.
+- Regression tests cover the 80-hour / 3-calendar-day case with and without pricing, legacy DTO consistency, preservation of historical snapshot days, the 10:00 boundary and Turkey midnight. New-head CI/review remains separate from local proof; no merge/deployment.
+
 ## Third review corrections — September 25, 2026
 
 React Doctor follow-up: the shared rental formatter is now initialized once at module scope, addressing `react-doctor/js-hoist-intl` without changing timezone or output. The 13 affected helper/confirmation/tracking tests passed under `America/Los_Angeles`; focused ESLint and `git diff --check` passed. This small refactor did not require another browser run; the browser evidence below predates it. Full CI and Codex review must be evaluated against the new commit.

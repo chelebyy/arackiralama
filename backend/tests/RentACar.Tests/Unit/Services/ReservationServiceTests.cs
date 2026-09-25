@@ -255,6 +255,64 @@ public sealed class ReservationServiceTests
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(300);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SearchAvailabilityAsync_UnequalLocalTimes_UsesThreeRentalDays(bool withPricing)
+    {
+        var officeId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var pickup = new DateTime(2030, 5, 9, 22, 0, 0, DateTimeKind.Utc);
+        var returned = new DateTime(2030, 5, 13, 6, 0, 0, DateTimeKind.Utc);
+        _fleetServiceMock.Setup(x => x.SearchAvailableVehicleGroupsAsync(
+                officeId, pickup, returned, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FleetContracts.AvailableVehicleGroupDto>
+            {
+                new(groupId, "Ekonomi", "Economy", 1, 850, "TRY", 2000, 21, 2, [], null)
+            });
+        if (withPricing)
+        {
+            _pricingServiceMock.Setup(x => x.CalculateBreakdownAsync(
+                    groupId, officeId, officeId, pickup, returned, null, 0, 0, null, false,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PriceBreakdownDto(
+                    DailyRate: 850, RentalDays: 3, BaseTotal: 2550, ExtrasTotal: 0,
+                    CampaignDiscount: 0, AirportFee: 0, OneWayFee: 0, ExtraDriverFee: 0,
+                    ChildSeatFee: 0, YoungDriverFee: 0, FullCoverageWaiverFee: 0,
+                    FinalTotal: 2550, DepositAmount: 2000, PreAuthorizationAmount: 2000,
+                    Currency: "TRY", AppliedCampaignCode: null));
+        }
+        var result = await _sut.SearchAvailabilityAsync(
+            officeId, null, pickup, returned, null, 1, 20, CancellationToken.None);
+        var group = result.Should().ContainSingle().Subject;
+        group.RentalDays.Should().Be(3);
+        group.TotalPrice.Should().Be(2550);
+    }
+
+    [Theory]
+    [InlineData(null, 3)]
+    [InlineData(4, 4)]
+    public async Task GetReservationByIdAsync_UsesSnapshotOrRentalCalendar(int? snapshotDays, int expectedDays)
+    {
+        var reservation = new Reservation
+        {
+            Id = Guid.NewGuid(),
+            PublicCode = "CALENDAR-TEST",
+            PickupDateTime = new DateTime(2030, 5, 9, 22, 0, 0, DateTimeKind.Utc),
+            ReturnDateTime = new DateTime(2030, 5, 13, 6, 0, 0, DateTimeKind.Utc),
+            TotalAmount = 2550,
+            PricingSnapshot = snapshotDays.HasValue
+                ? new ReservationPricingSnapshotV1 { RentalDays = snapshotDays.Value, BaseTotal = 2550 }
+                : null
+        };
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var result = await _sut.GetReservationByIdAsync(reservation.Id, CancellationToken.None);
+        result.Should().NotBeNull();
+        result!.RentalDays.Should().Be(expectedDays);
+        result.PriceBreakdown!.RentalDays.Should().Be(expectedDays);
+    }
+
     [Fact]
     public async Task SearchAvailabilityAsync_WhenCalledTwice_UsesCacheAndAvoidsRecomputation()
     {

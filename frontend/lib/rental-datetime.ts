@@ -20,3 +20,13 @@ export function rentalDateTimeUtc(date: string, time: string): string {
   if (!Number.isFinite(calendar.getTime()) || calendar.toISOString().slice(0, 10) !== date) return "";
   return new Date(`${date}T${time}:00+03:00`).toISOString();
 }
+
+export function defaultRentalSearchDates(now = Date.now()) {
+  const today = rentalDateTimeLocal(new Date(now).toISOString()).date;
+  const todayPickup = Date.parse(rentalDateTimeUtc(today, "10:00"));
+  const pickup = todayPickup > now ? todayPickup : todayPickup + 24 * 60 * 60 * 1000;
+  return {
+    pickupDate: rentalDateTimeLocal(new Date(pickup).toISOString()).date,
+    returnDate: rentalDateTimeLocal(new Date(pickup + 7 * 24 * 60 * 60 * 1000).toISOString()).date
+  };
+}

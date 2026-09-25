@@ -989,6 +989,10 @@ Backend checks passed: 818 unit/service/controller tests and 54 API integration 
 
 See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) for exact scope, environment dependencies, validation limitations and retained group-based behavior. This evidence supplements the earlier run; it does not imply production acceptance.
 
+## September 26, 2026: rental calendar and homepage defaults
+
+Passed 827 backend, 54 API integration and 308 frontend tests, production build/TypeScript and lint (one existing warning). Local PostgreSQL5548/Redis6388/API5000/frontend3108 acceptance confirmed future Turkey-local default dates reach catalogue/detail; selecting the configured October10 01:00–October13 09:00 fixture showed TRY1200/day and booking continuation. No reservation was created. Header/Hero files and SearchForm JSX/CSS unchanged; only default-date logic changed. Reservation day fields now follow quoted/snapshot days with RentalCalendar fallback. This is local acceptance; no merge/deployment.
+
 ## September 25, 2026: third catalogue review
 
 Confirmation/tracking render UTC instants in Europe/Istanbul, including the correct date across midnight; tracking date labels no longer depend on the browser timezone. Vehicle detail shows the actual minimum age and licence-held years in all locales. 304 frontend tests passed with America/Los_Angeles timezone; production build/TypeScript and lint passed (one existing warning).
