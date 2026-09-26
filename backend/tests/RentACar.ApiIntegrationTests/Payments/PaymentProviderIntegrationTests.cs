@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,13 +94,37 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
 
     private async Task<PaymentIntentApiDto?> CompleteThreeDsAsync(
         Guid intentId,
-        string bankResponse = "success",
+        string? bankResponse = null,
         CancellationToken cancellationToken = default)
     {
         using var scope = Services.CreateScope();
         var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-        var request = new ThreeDsReturnApiRequest { BankResponse = bankResponse };
+        var dbContext = scope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        var providerIntentId = await dbContext.PaymentIntents
+            .Where(intent => intent.Id == intentId)
+            .Select(intent => intent.ProviderIntentId)
+            .FirstAsync(cancellationToken);
+        var request = new ThreeDsReturnApiRequest
+        {
+            BankResponse = bankResponse ?? CreateSignedThreeDsPayload(providerIntentId!, "success", "mock-tx-verified", "mock-webhook-secret")
+        };
         return await paymentService.CompleteThreeDsAsync(intentId, request, cancellationToken);
+    }
+
+    private static string CreateSignedThreeDsPayload(string providerIntentId, string status, string transactionId, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToString("O");
+        var payload = $"{providerIntentId}.{status}.{transactionId}.{timestamp}";
+        var signature = ComputeSignature(payload, secret);
+
+        return JsonSerializer.Serialize(new
+        {
+            providerIntentId,
+            status,
+            transactionId,
+            timestamp,
+            signature = $"sha256={signature}"
+        });
     }
 
     private static string ComputeSignature(string payload, string secret)
@@ -114,7 +139,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
         var reservation = await SeedReservationAsync(ReservationStatus.Hold, cancellationToken);
         var intent = await CreatePaymentIntentAsync(reservation.Id, cancellationToken: cancellationToken);
         intent.Should().NotBeNull();
-        var completed = await CompleteThreeDsAsync(intent!.PaymentIntentId, "success", cancellationToken);
+        var completed = await CompleteThreeDsAsync(intent!.PaymentIntentId, cancellationToken: cancellationToken);
         completed.Should().NotBeNull();
         return reservation;
     }
@@ -162,7 +187,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
         var intent = await CreatePaymentIntentAsync(reservation.Id);
         intent.Should().NotBeNull();
 
-        var result = await CompleteThreeDsAsync(intent!.PaymentIntentId, "success");
+        var result = await CompleteThreeDsAsync(intent!.PaymentIntentId);
 
         result.Should().NotBeNull();
         result!.Status.Should().Be("Succeeded");
@@ -197,7 +222,7 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
         var reservation = await SeedReservationAsync();
         var intent = await CreatePaymentIntentAsync(reservation.Id);
         intent.Should().NotBeNull();
-        var completed = await CompleteThreeDsAsync(intent!.PaymentIntentId, "success");
+        var completed = await CompleteThreeDsAsync(intent!.PaymentIntentId);
         completed.Should().NotBeNull();
 
         using var scope = Services.CreateScope();

@@ -66,10 +66,27 @@ public sealed class IyzicoPaymentProvider(
         PaymentCallbackProviderRequest callback,
         CancellationToken cancellationToken = default)
     {
+        var verification = PaymentThreeDsCallbackVerifier.Verify(
+            callback.ProviderIntentId,
+            callback.BankResponse,
+            string.IsNullOrWhiteSpace(_options.Iyzico.SecretKey) ? _options.Iyzico.WebhookSecret : _options.Iyzico.SecretKey,
+            "IYZICO_3DS_VERIFICATION_FAILED",
+            "Iyzico 3DS callback verification failed.");
+
+        if (!verification.IsSucceeded)
+        {
+            return Task.FromResult(new PaymentVerificationProviderResult
+            {
+                Status = PaymentProviderIntentStatus.Failed,
+                FailureCode = verification.FailureCode,
+                FailureMessage = verification.FailureMessage
+            });
+        }
+
         return Task.FromResult(new PaymentVerificationProviderResult
         {
             Status = PaymentProviderIntentStatus.Succeeded,
-            TransactionId = $"iyzico-tx-{Guid.NewGuid():N}"
+            TransactionId = verification.TransactionId
         });
     }
 
