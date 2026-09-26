@@ -499,6 +499,12 @@ public sealed class ReservationService : IReservationService
             await _reservationRepository.AddAsync(reservation, cancellationToken);
             await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
 
+            if (reservation.Status == ReservationStatus.Confirmed)
+            {
+                await QueueReservationConfirmedNotificationsAsync(reservation, cancellationToken);
+                await QueueReservationReminderNotificationsAsync(reservation, cancellationToken);
+            }
+
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);
@@ -574,6 +580,7 @@ public sealed class ReservationService : IReservationService
 
         var customer = await GetOrCreateManualCustomerAsync(request, cancellationToken);
         var totalAmount = request.TotalAmount;
+        PriceBreakdownDto? manualPricing = null;
         if (!totalAmount.HasValue)
         {
             var pricing = vehicle.RentalTerms is not null && _pricingService is PricingService vehiclePricing
@@ -594,10 +601,27 @@ public sealed class ReservationService : IReservationService
 
             totalAmount = pricing?.FinalTotal
                 ?? throw new InvalidOperationException("Could not calculate pricing for the reservation");
+            manualPricing = pricing;
         }
 
         await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var now = DateTime.UtcNow;
+        ReservationPricingSnapshotV1? manualSnapshot = null;
+        if (vehicle.RentalTerms is { } manualTerms)
+        {
+            VehicleBookingService.ValidateTerms(manualTerms);
+            var rentalDays = RentalCalendar.RentalDays(request.PickupDateTimeUtc, request.ReturnDateTimeUtc);
+            manualSnapshot = manualPricing is not null
+                ? CreatePricingSnapshot(Guid.Empty, now, now, manualPricing, [])
+                : new ReservationPricingSnapshotV1
+                {
+                    RentalDays = rentalDays, DailyRate = RoundAmount(totalAmount.Value / rentalDays),
+                    BaseTotal = totalAmount.Value, FinalTotal = totalAmount.Value,
+                    DepositAmount = manualTerms.DepositAmount!.Value,
+                    PreAuthorizationAmount = manualTerms.DepositAmount.Value,
+                    IssuedAtUtc = now, ExpiresAtUtc = now
+                };
+        }
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
@@ -613,6 +637,7 @@ public sealed class ReservationService : IReservationService
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Confirmed,
             TotalAmount = totalAmount.Value,
+            PricingSnapshot = manualSnapshot,
             OccupiedUntilUtc = request.ReturnDateTimeUtc.AddMinutes(returnOffice.OperatingPolicy?.PreparationMinutes ?? 0),
             Notes = request.Notes,
             CreatedAt = now,
@@ -674,11 +699,13 @@ public sealed class ReservationService : IReservationService
         var newPickupOfficeId = request.PickupOfficeId ?? reservation.PickupOfficeId;
         var newReturnOfficeId = request.ReturnOfficeId ?? reservation.ReturnOfficeId;
 
-        if (reservation.PricingSnapshot?.BookingConditions is not null)
+        var itineraryOrDriverChanged = newPickupDateTime != reservation.PickupDateTime ||
+            newReturnDateTime != reservation.ReturnDateTime || newPickupOfficeId != reservation.PickupOfficeId ||
+            newReturnOfficeId != reservation.ReturnOfficeId || request.Driver is not null ||
+            request.Customer?.DateOfBirth is not null || request.Customer?.DriverLicenseIssueDate is not null;
+        if (reservation.PricingSnapshot?.BookingConditions is not null || !itineraryOrDriverChanged)
         {
-            if (newPickupDateTime != reservation.PickupDateTime || newReturnDateTime != reservation.ReturnDateTime ||
-                newPickupOfficeId != reservation.PickupOfficeId || newReturnOfficeId != reservation.ReturnOfficeId ||
-                request.Driver is not null || request.Customer?.DateOfBirth is not null || request.Customer?.DriverLicenseIssueDate is not null)
+            if (itineraryOrDriverChanged)
                 throw new ReservationQuoteConflictException("Changing the quoted itinerary or driver requires a new quote and reservation.");
             if (request.Customer is not null) await ApplyCustomerUpdateAsync(reservation, request.Customer, cancellationToken);
             if (request.Notes is not null) reservation.Notes = request.Notes;
@@ -707,19 +734,23 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Vehicle has overlapping reservations");
         }
 
-        var vehicleGroupId = reservation.Vehicle?.GroupId
-            ?? await _vehicleRepository
-                .GetQueryable()
-                .Where(x => x.Id == reservation.VehicleId)
-                .Select(x => x.GroupId)
-                .FirstOrDefaultAsync(cancellationToken);
+        var vehicle = reservation.Vehicle ?? await _vehicleRepository.GetQueryable()
+            .FirstOrDefaultAsync(x => x.Id == reservation.VehicleId, cancellationToken);
+        var vehicleGroupId = vehicle?.GroupId;
 
-        if (vehicleGroupId == Guid.Empty)
+        if (vehicle is null || (vehicle.RentalTerms is null && (vehicleGroupId is null || vehicleGroupId == Guid.Empty)))
         {
             throw new InvalidOperationException("Vehicle group not found.");
         }
 
-        var pricing = await _pricingService.CalculateBreakdownAsync(
+        var driverAge = CalculateAgeAt(
+            request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
+            newPickupDateTime);
+        var pricing = vehicle.RentalTerms is not null && _pricingService is PricingService vehiclePricing
+            ? await vehiclePricing.CalculateForVehicleAsync(vehicle, newPickupOfficeId, newReturnOfficeId,
+                newPickupDateTime, newReturnDateTime, reservation.PricingSnapshot?.CampaignCode, driverAge,
+                reservation.PricingSnapshot?.CoverageWaiverFee > 0m, cancellationToken)
+            : await _pricingService.CalculateBreakdownAsync(
             vehicleGroupId ?? Guid.Empty,
             newPickupOfficeId,
             newReturnOfficeId,
@@ -728,9 +759,7 @@ public sealed class ReservationService : IReservationService
             reservation.PricingSnapshot?.CampaignCode,
             0,
             0,
-            CalculateAgeAt(
-                request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
-                newPickupDateTime),
+            driverAge,
             reservation.PricingSnapshot?.CoverageWaiverFee > 0m,
             cancellationToken);
 
@@ -769,6 +798,8 @@ public sealed class ReservationService : IReservationService
                 ExtrasTotal = extrasTotal,
                 CampaignDiscount = campaignDiscount,
                 FinalTotal = finalTotal,
+                DepositAmount = existingSnapshot.DepositAmount,
+                PreAuthorizationAmount = existingSnapshot.PreAuthorizationAmount,
                 ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
             };
             reservation.PricingSnapshot = CreatePricingSnapshot(
@@ -1462,7 +1493,7 @@ public sealed class ReservationService : IReservationService
         var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
             vehicleId,
             reservation.PickupDateTime,
-            reservation.ReturnDateTime,
+            reservation.OccupiedUntilUtc ?? reservation.ReturnDateTime,
             reservationId,
             cancellationToken);
 

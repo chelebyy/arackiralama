@@ -1,6 +1,6 @@
 # Local Docker Browser Test Checklist
 
-Latest PR #447 follow-up: the second Codex review on `efefb21` is addressed with batched catalogue queries, preparation-aware reservation updates and required age for exact quotes. Validation: 857 backend unit tests and 32 real PostgreSQL/Redis API tests passed; catalogue queries stayed at two for both 1 and 50 vehicles. Lint passed with one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. Earlier frontend/browser receipts retain their original scope; this pass changes no frontend source and performs no merge or deployment.
+Latest PR #447 follow-up: four findings from the third Codex review on `1e4a692` are addressed: preparation-aware reassignment, vehicle-based manual repricing, immutable manual deposit snapshots, and transactional confirmation/reminder queueing. Validation: 857 backend unit tests and 45 real PostgreSQL/Redis API tests passed, including notification rollback/retry and replay without duplicate jobs. Lint passed with one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. Earlier frontend/browser receipts retain their original scope; no frontend source change, external notification delivery, merge or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026
 

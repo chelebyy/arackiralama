@@ -1,6 +1,25 @@
 # PR 447 review corrections — September 26, 2026
 
-This record covers two correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers three correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Third review: starting head 1e4a69235df271de2b08577a3a8903f97f1e1473
+
+| Review comment | Correction and evidence |
+|---|---|
+| Codex r4112314749 | Vehicle reassignment prechecks the existing occupied-until time. Real authenticated API tests reject a target booking one minute inside the preparation tail with HTTP 400 and unchanged assignment, while allowing the exact boundary. |
+| Codex r4112314753 | Manual itinerary changes use vehicle-owned pricing when terms exist, including group-less vehicles. Notes/contact-only edits preserve the accepted total and snapshot without requiring a new tariff calculation. Group-based legacy pricing remains available for vehicles without their own terms. |
+| Codex r4112314755 | Exact pay-at-pickup confirmation queues confirmation and future pickup/return reminders through the existing notification service. Its database queue writes participate in the same transaction as the reservation, becoming visible only after commit. Replay returns the existing reservation without duplicate jobs. Legacy unpaid requests do not queue confirmation jobs. |
+| Codex r4112314757 | Manual vehicle-priced reservations persist their pricing/deposit snapshot, including zero deposits and administrator-overridden totals. Later vehicle deposit edits cannot change the accepted deposit; manual itinerary repricing preserves that deposit. No quote ID or public booking-condition lock is added to manual reservations. |
+
+### Third-pass validation and security coverage
+
+- All 857 backend unit tests and 45 real PostgreSQL/Redis API tests passed. Thirteen new API cases cover reassignment boundaries; grouped/group-less manual reservations with automatic/overridden totals and zero/nonzero deposits; notification creation/replay; and a forced queue write failure followed by successful retry.
+- The queue-failure test injects a constraint only in the isolated test database. The reservation and an earlier queued email both roll back, the quote can be retried, and the retry stores one reservation and six queue jobs. No email/SMS delivery worker or external provider was invoked.
+- Existing payment unit tests verify accepted snapshot deposit precedence, including zero, against a fake provider. The new manual API matrix verifies snapshot creation and preservation after notes and date updates.
+- Backend compilation and frontend lint passed; lint retains the existing SearchForm.test.tsx unused-disable warning. No frontend source changed, and no browser or frontend production build was rerun.
+- Reviewed: changed reservation paths, transaction/queue context sharing, replay, deposit precedence, and existing admin endpoint authorization. Planning retained atomic queue persistence and immutable deposits; source/diff review found no additional material issue in this scope.
+- Not reviewed: production notification delivery, payment-provider behavior, unrelated authorization paths, production migrations/restore, devices or full accessibility. Queue persistence is not proof of email/SMS delivery.
+- Tools run: source/diff review, EF Core transaction documentation, unit/API tests, lint and whitespace checks. Local and fetched remote main remain `f1c34fe`; the dirty primary checkout is preserved. Ten checks passed and GHCR publication was skipped on the starting head; new-head CI/review must be assessed separately.
 
 ## Second review: starting head efefb2120d6f454241fcd36ba36ad2051484d86a
 

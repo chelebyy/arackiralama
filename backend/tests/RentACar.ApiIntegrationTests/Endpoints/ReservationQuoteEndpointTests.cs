@@ -11,6 +11,7 @@ using RentACar.API.Contracts.Reservations;
 using RentACar.API.Services;
 using RentACar.ApiIntegrationTests.Infrastructure;
 using RentACar.Core.Entities;
+using RentACar.Core.Constants;
 using RentACar.Core.Enums;
 using RentACar.Infrastructure.Data;
 using Xunit;
@@ -597,6 +598,61 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         json.RootElement.GetProperty("data").EnumerateArray()
             .Any(item => item.GetProperty("vehicle").GetProperty("id").GetGuid() == input.VehicleId).Should().Be(included);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UnpaidConfirmation_QueuesNotificationsOnceOnlyForExactBooking(bool exact)
+    {
+        var input = ExactInput() with { VehicleId = exact ? TestDataSeeder.GroupOneId : null };
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), true);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), true);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
+        var jobs = await WithDbContextAsync(db => db.BackgroundJobs.AsNoTracking()
+            .Where(j => j.Type == BackgroundJobTypes.NotificationEmailSend || j.Type == BackgroundJobTypes.NotificationSmsSend)
+            .ToListAsync());
+        jobs.Should().HaveCount(exact ? 6 : 0);
+        if (exact)
+        {
+            jobs.Count(j => j.Type == BackgroundJobTypes.NotificationEmailSend).Should().Be(3);
+            jobs.Count(j => j.Type == BackgroundJobTypes.NotificationSmsSend).Should().Be(3);
+            jobs.Count(j => j.ScheduledAt == input.PickupDateTimeUtc.AddHours(-24)).Should().Be(2);
+            jobs.Count(j => j.ScheduledAt == input.ReturnDateTimeUtc.AddHours(-24)).Should().Be(2);
+            jobs.Select(j => JsonDocument.Parse(j.Payload).RootElement.GetProperty("TemplateKey").GetString())
+                .Distinct().Should().HaveCount(3);
+        }
+    }
+
+    [Fact]
+    public async Task ExactConfirmation_NotificationQueueFailureRollsBackAndAllowsRetry()
+    {
+        await WithDbContextAsync(db => db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE background_jobs ADD CONSTRAINT test_reject_sms CHECK (type <> 'notification-sms-send')"));
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        using var rejected = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), true);
+        rejected.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(0);
+        (await WithDbContextAsync(db => db.BackgroundJobs.CountAsync(j =>
+            j.Type == BackgroundJobTypes.NotificationEmailSend || j.Type == BackgroundJobTypes.NotificationSmsSend)))
+            .Should().Be(0);
+        await WithDbContextAsync(db => db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE background_jobs DROP CONSTRAINT test_reject_sms"));
+        using var retried = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), true);
+        retried.StatusCode.Should().Be(HttpStatusCode.OK, await retried.Content.ReadAsStringAsync());
+        (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(1);
+        (await WithDbContextAsync(db => db.BackgroundJobs.CountAsync(j =>
+            j.Type == BackgroundJobTypes.NotificationEmailSend || j.Type == BackgroundJobTypes.NotificationSmsSend)))
+            .Should().Be(6);
     }
 
     private sealed class QueryCounter : DbCommandInterceptor

@@ -1,6 +1,6 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
-**PR #447 ikinci inceleme düzeltmeleri:** `efefb21` üzerindeki üç yeni Codex bulgusu giderildi: toplu müsaitlik sorgusu, güncellemede hazırlık süresi çakışma kontrolü ve araca özel teklifte zorunlu sürücü yaşı. 857 backend birim testi ve 32 gerçek PostgreSQL/Redis API testi geçti; 1 ve 50 araç için sorgu sayısı 2 kaldı. Lint hatasız, önceden var olan tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir. Bu turda frontend kaynakları değişmedi; önceki tarayıcı kanıtları kendi kapsamını korur. Merge/dağıtım yapılmadı.
+**PR #447 üçüncü inceleme düzeltmeleri:** `1e4a692` üzerindeki dört yeni Codex bulgusu giderildi: araç değiştirirken hazırlık süresi kontrolü, manuel rezervasyonda araç tarifesiyle güncelleme, kabul edilen depozitonun saklanması ve otomatik kesinleşmede bildirimlerin rezervasyonla birlikte kuyruğa alınması. 857 backend birim testi ve 45 gerçek PostgreSQL/Redis API testi geçti; bildirim hatasında geri alma, tekrar deneme ve mükerrer kuyruk kaydı oluşmaması doğrulandı. Lint hatasız, önceden var olan tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir. Frontend değişmedi; dış e-posta/SMS gönderimi, merge veya dağıtım yapılmadı.
 
 ## Güncel durum — 26 Eylül 2026
 
