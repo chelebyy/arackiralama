@@ -1,6 +1,6 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
-**PR #447 üçüncü inceleme düzeltmeleri:** `1e4a692` üzerindeki dört yeni Codex bulgusu giderildi: araç değiştirirken hazırlık süresi kontrolü, manuel rezervasyonda araç tarifesiyle güncelleme, kabul edilen depozitonun saklanması ve otomatik kesinleşmede bildirimlerin rezervasyonla birlikte kuyruğa alınması. 857 backend birim testi ve 45 gerçek PostgreSQL/Redis API testi geçti; bildirim hatasında geri alma, tekrar deneme ve mükerrer kuyruk kaydı oluşmaması doğrulandı. Lint hatasız, önceden var olan tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir. Frontend değişmedi; dış e-posta/SMS gönderimi, merge veya dağıtım yapılmadı.
+**PR #447 dördüncü inceleme düzeltmesi:** `b8157a8` üzerindeki yeni Codex bulgusu giderildi. Kesin araç rezervasyonunda admin farklı araç atayamaz veya atamayı kaldıramaz; API 409 döndürür. Aynı aracı tekrar seçmek kayıtları değiştirmez, manuel rezervasyonların atama davranışı korunur. 864 backend birim testi ve 47 gerçek PostgreSQL/Redis API testi geçti; teklif, fiyat kaydı ve tekrar deneme tutarlılığı doğrulandı. Lint hatasız, önceden var olan tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir. Frontend değişmedi; merge veya dağıtım yapılmadı.
 
 ## Güncel durum — 26 Eylül 2026
 

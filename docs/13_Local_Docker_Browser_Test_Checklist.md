@@ -1,6 +1,6 @@
 # Local Docker Browser Test Checklist
 
-Latest PR #447 follow-up: four findings from the third Codex review on `1e4a692` are addressed: preparation-aware reassignment, vehicle-based manual repricing, immutable manual deposit snapshots, and transactional confirmation/reminder queueing. Validation: 857 backend unit tests and 45 real PostgreSQL/Redis API tests passed, including notification rollback/retry and replay without duplicate jobs. Lint passed with one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. Earlier frontend/browser receipts retain their original scope; no frontend source change, external notification delivery, merge or deployment occurred.
+Latest PR #447 follow-up: the fourth Codex review on `b8157a8` is addressed. Admin assignment/removal cannot replace the promised vehicle on an exact reservation; both endpoints return HTTP 409, and selecting the same vehicle is a no-op. Validation: 864 backend unit tests and 47 real PostgreSQL/Redis API tests passed, including unchanged quote/snapshot/replay and retained manual reassignment behavior. Lint passed with one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. No frontend source change, external notification delivery, merge or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026
 

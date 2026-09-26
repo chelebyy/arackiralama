@@ -1483,6 +1483,14 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
+        if (reservation.QuoteReplayProof is { SchemaVersion: >= 2 } || reservation.PricingSnapshot?.BookingConditions is not null)
+        {
+            if (vehicleId != reservation.VehicleId ||
+                (reservation.QuoteReplayProof?.VehicleId is { } quotedVehicleId && vehicleId != quotedVehicleId))
+                throw new ReservationQuoteConflictException("Changing the selected vehicle requires a new quote and reservation.");
+            return MapToDto(reservation);
+        }
+
         var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId, cancellationToken);
         if (vehicle == null)
         {
@@ -1522,6 +1530,9 @@ public sealed class ReservationService : IReservationService
         {
             return null;
         }
+
+        if (reservation.QuoteReplayProof is { SchemaVersion: >= 2 } || reservation.PricingSnapshot?.BookingConditions is not null)
+            throw new ReservationQuoteConflictException("Removing the selected vehicle requires a new quote and reservation.");
 
         reservation.VehicleId = Guid.Empty;
         reservation.UpdatedAt = DateTime.UtcNow;

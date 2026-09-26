@@ -2537,6 +2537,50 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task ExactVehicleAssignment_WhenEitherContractMarkerExists_RejectsMutation(
+        bool replayProof, bool bookingConditions, bool unassign)
+    {
+        var selectedId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            VehicleId = selectedId, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(8),
+            QuoteReplayProof = replayProof ? new ReservationQuoteReplayProofV1 { SchemaVersion = 2, VehicleId = selectedId } : null,
+            PricingSnapshot = bookingConditions ? new ReservationPricingSnapshotV1 { BookingConditions = new ReservationBookingConditions() } : null
+        };
+        _reservationRepositoryMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        Func<Task> act = async () =>
+        {
+            if (unassign) await _sut.UnassignVehicleAsync(reservation.Id);
+            else await _sut.AssignVehicleAsync(reservation.Id, Guid.NewGuid());
+        };
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>();
+        reservation.VehicleId.Should().Be(selectedId);
+        _applicationDbContextMock.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AssignVehicleAsync_WhenStoredVehicleDisagreesWithProof_RejectsSameVehicle()
+    {
+        var reservation = new Reservation
+        {
+            VehicleId = Guid.NewGuid(),
+            QuoteReplayProof = new ReservationQuoteReplayProofV1 { SchemaVersion = 2, VehicleId = Guid.NewGuid() }
+        };
+        _reservationRepositoryMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        Func<Task> act = () => _sut.AssignVehicleAsync(reservation.Id, reservation.VehicleId);
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>();
+        _applicationDbContextMock.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task AssignVehicleAsync_WhenNoOverlapExists_AssignsVehicle()
     {

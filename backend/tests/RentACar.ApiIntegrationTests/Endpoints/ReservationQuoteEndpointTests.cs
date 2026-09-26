@@ -655,6 +655,47 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             .Should().Be(6);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExactReservation_AdminCannotReplaceOrRemovePromisedVehicle(bool unpaid)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        var original = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync());
+        var targetId = await WithDbContextAsync(async db =>
+        {
+            var target = new Vehicle { Plate = "EXACT-NO-SUBSTITUTE", Brand = "Synthetic", Model = "Alternative",
+                Year = 2026, OfficeId = input.PickupOfficeId, GroupId = input.VehicleGroupId };
+            db.Vehicles.Add(target);
+            await db.SaveChangesAsync();
+            return target.Id;
+        });
+        await AuthenticateAsAdminAsync();
+        using var reassigned = await Client.PostAsJsonAsync($"/api/admin/v1/reservations/{original.Id}/assign-vehicle", targetId);
+        reassigned.StatusCode.Should().Be(HttpStatusCode.Conflict, await reassigned.Content.ReadAsStringAsync());
+        using var removed = await Client.PostAsync($"/api/admin/v1/reservations/{original.Id}/unassign-vehicle", null);
+        removed.StatusCode.Should().Be(HttpStatusCode.Conflict, await removed.Content.ReadAsStringAsync());
+        using var unchanged = await Client.PostAsJsonAsync($"/api/admin/v1/reservations/{original.Id}/assign-vehicle", input.VehicleId);
+        unchanged.StatusCode.Should().Be(HttpStatusCode.OK, await unchanged.Content.ReadAsStringAsync());
+        var persisted = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == original.Id));
+        persisted.VehicleId.Should().Be(input.VehicleId!.Value);
+        persisted.UpdatedAt.Should().Be(original.UpdatedAt);
+        persisted.PricingSnapshot.Should().BeEquivalentTo(original.PricingSnapshot);
+        persisted.QuoteReplayProof.Should().BeEquivalentTo(original.QuoteReplayProof);
+        persisted.QuoteId.Should().Be(original.QuoteId);
+        Client.DefaultRequestHeaders.Authorization = null;
+        using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
+        using var replayJson = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        replayJson.RootElement.GetProperty("data").GetProperty("vehicleId").GetGuid().Should().Be(input.VehicleId.Value);
+    }
+
     private sealed class QueryCounter : DbCommandInterceptor
     {
         public int Count { get; private set; }

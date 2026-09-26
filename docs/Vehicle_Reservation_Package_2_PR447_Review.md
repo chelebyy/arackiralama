@@ -1,6 +1,19 @@
 # PR 447 review corrections — September 26, 2026
 
-This record covers three correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers four correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Fourth review: starting head b8157a8563c2ecc4939daf21907c57103ea08de7
+
+Codex r4112401035 correctly identified that admin reassignment could replace a publicly promised exact vehicle without a newly accepted quote. Assignment now rejects a different vehicle for reservations marked by schema-2 replay proof or stored booking conditions. Removal is also rejected to close the related unassign path. Both admin endpoints return HTTP 409. Selecting the existing promised vehicle is a no-op; disagreement with the proof is rejected. Legacy/manual assignment behavior remains unchanged.
+
+### Fourth-pass validation and security coverage
+
+- All 864 backend unit tests passed. Seven new cases cover either/both exact-contract markers, assignment/removal rejection without saving, and a same-vehicle request whose stored vehicle disagrees with the proof.
+- All 47 real PostgreSQL/Redis API tests passed. Two new scenarios cover draft and confirmed pay-at-pickup exact bookings: substitute assignment and removal return 409, identical assignment succeeds without changing UpdatedAt, the vehicle/quote/snapshot/proof remain intact, and the original request still replays successfully. Existing manual assignment boundary tests also pass.
+- Backend compilation, lint and whitespace checks passed. Lint retains the existing SearchForm.test.tsx warning. No frontend source/build/browser rerun or external notification/payment delivery.
+- Reviewed: admin assignment/removal entry points, server-side exact-contract guards, HTTP error mapping, persisted proof/snapshot consistency, and existing hold allocation guards. The planning/source review retained authorization and public DTO boundaries; no additional material concern was found in this scoped pass.
+- Not reviewed: unrelated security paths, production data, physical devices, provider delivery and deployment/migration/restore. This is a bounded source/test review, not a security certification.
+- Local and fetched remote main remain `f1c34fe`; the active PR worktree continues from `b8157a8`, preserving the dirty primary checkout. Ten checks and React Doctor passed on that starting head, with GHCR publication skipped. New-head CI/review must be checked separately.
 
 ## Third review: starting head 1e4a69235df271de2b08577a3a8903f97f1e1473
 
