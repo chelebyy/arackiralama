@@ -5,6 +5,7 @@ namespace RentACar.API.Contracts.Reservations;
 public record CreateReservationRequest
 {
     public Guid VehicleGroupId { get; init; }
+    public Guid? VehicleId { get; init; }
     public Guid PickupOfficeId { get; init; }
     public Guid ReturnOfficeId { get; init; }
     public DateTime PickupDateTimeUtc { get; init; }

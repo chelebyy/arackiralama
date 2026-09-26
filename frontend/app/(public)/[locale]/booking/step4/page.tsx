@@ -21,10 +21,12 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
+import CurrencyAmount from "@/components/public/CurrencyAmount";
 import { differenceInCalendarDays } from "date-fns";
 import { useBookingActions, useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
 import { ApiError } from "@/lib/api/client";
+import { bookingErrorKey } from "@/lib/booking-errors";
 import { createReservationQuote, getPublicReservationExtraOptions } from "@/lib/api/reservationExtras";
 import { usePlaceHold } from "@/hooks/useReservations";
 import { createReservation, createUnpaidReservationRequest } from "@/lib/api/reservations";
@@ -49,6 +51,8 @@ const isRefreshableQuoteConflict = (error: unknown) => {
 
   return error.message === "Reservation quote is missing or expired." ||
     error.message === "Reservation quote has expired." ||
+    error.message === "Reservation quote has expired. Request a new quote." ||
+    error.message === "Price or rental conditions changed. Request a new quote." ||
     error.message === "Reservation inputs no longer match the issued quote." ||
     error.message.startsWith("A quoted extra option ") ||
     error.message.startsWith("One or more reservation extra options ") ||
@@ -81,7 +85,9 @@ export default function BookingStep4Page() {
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations("booking");
+  const vehicleText = useTranslations("vehicles");
   const booking = useBookingState();
+  const exactBooking = Boolean(booking.vehicle?.vehicleId ?? searchParams.get("preferredVehicleId"));
   const { updateExtras } = useBookingActions();
   const { validate: validateCampaignCode, isValidating } = useValidateCampaign();
   const { placeHold } = usePlaceHold();
@@ -95,6 +101,8 @@ export default function BookingStep4Page() {
   const submitModeRef = useRef<PaymentMethodId>("credit_card");
   const sessionIdRef = useRef<string | null>(null);
   const lastAutomaticQuoteKeyRef = useRef<string | null>(null);
+  const submissionRef = useRef<{ signature: string; key: string } | null>(null);
+  const submissionInFlightRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -176,18 +184,18 @@ export default function BookingStep4Page() {
             icon: <Banknote className="h-5 w-5" />,
           })
         : null,
-      paymentMethodsAvailability.unpaidRequestEnabled
+      (exactBooking || paymentMethodsAvailability.unpaidRequestEnabled)
         ? ({
             id: "unpaid" as const,
-            name: t("unpaidRequest.title"),
-            description: t("unpaidRequest.description"),
+            name: t(exactBooking ? "payAtPickup.title" : "unpaidRequest.title"),
+            description: t(exactBooking ? "payAtPickup.description" : "unpaidRequest.description"),
             icon: <Check className="h-5 w-5" />,
           })
         : null,
     ];
 
     return methods.filter((method): method is PaymentMethodOption => method !== null);
-  }, [paymentMethodsAvailability, t]);
+  }, [paymentMethodsAvailability, exactBooking, t]);
 
   useEffect(() => {
     if (paymentMethods.length === 0) return;
@@ -214,10 +222,15 @@ export default function BookingStep4Page() {
 
   const vehicleParam = searchParams.get("vehicleGroupId") || searchParams.get("vehicle") || "";
   const selectedVehicleGroupId = booking.vehicle?.vehicleGroupId ?? vehicleParam;
+  const selectedVehicleId = booking.vehicle
+    ? booking.vehicle.vehicleId
+    : searchParams.get("preferredVehicleId") ?? undefined;
   const pickupOfficeId = booking.dates?.pickupOfficeId ?? searchParams.get("pickup") ?? "";
   const returnOfficeId = booking.dates?.returnOfficeId ?? searchParams.get("return") ?? "";
   const vehicle = booking.vehicle;
-  const vehicleGroupName = vehicle ? `${vehicle.groupName} - ${vehicle.vehicleName}` : searchParams.get("vehicleName") ?? selectedVehicleGroupId;
+  const vehicleGroupName = vehicle
+    ? vehicle.vehicleId ? vehicle.vehicleName : `${vehicle.groupName} - ${vehicle.vehicleName}`
+    : searchParams.get("vehicleName") ?? selectedVehicleGroupId;
 
   const selectedExtras = booking.selectedExtras ?? [];
   const getSessionId = () => {
@@ -245,6 +258,7 @@ export default function BookingStep4Page() {
     setQuoteError(null);
     const requestQuote = (quoteSelections: SelectedBookingExtra[]) => createReservationQuote({
       vehicleGroupId: selectedVehicleGroupId,
+      vehicleId: selectedVehicleId,
       pickupOfficeId,
       returnOfficeId,
       pickupDateTimeUtc: rentalDateTimeUtc(pickupDate, booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"),
@@ -262,7 +276,7 @@ export default function BookingStep4Page() {
     } catch (error) {
       if (error instanceof ApiError && error.statusCode === 409 && selections.length > 0) {
         try {
-          const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale);
+          const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale, selectedVehicleId);
           const optionsById = new Map(catalog.map((option) => [option.id, option]));
           const reconciledSelections = selections.flatMap((selection) => {
             const option = optionsById.get(selection.optionId);
@@ -299,24 +313,29 @@ export default function BookingStep4Page() {
             return nextQuote;
           }
         } catch (recoveryError) {
-          setQuoteError(recoveryError instanceof Error ? recoveryError.message : t("failedToRefreshQuote"));
+          setQuote(null);
+          setQuoteError(t(bookingErrorKey(recoveryError)));
           return null;
         }
       }
       setQuote(null);
-      setQuoteError(error instanceof Error ? error.message : t("failedToRefreshQuote"));
+      setQuoteError(t(bookingErrorKey(error)));
       return null;
     } finally {
       setIsQuoteLoading(false);
     }
-  }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, t, updateExtras]);
+  }, [booking.dates?.pickupTime, booking.dates?.returnTime, driverAge, locale, pickupDate, pickupOfficeId, returnDate, returnOfficeId, searchParams, selectedExtras, selectedVehicleGroupId, selectedVehicleId, t, updateExtras]);
 
   const buildAutomaticQuoteKey = (selections: SelectedBookingExtra[]) => [
     selectedVehicleGroupId,
+    selectedVehicleId ?? "",
     pickupOfficeId,
     returnOfficeId,
     pickupDate,
     returnDate,
+    booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00",
+    booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00",
+    driverAge ?? "",
     locale,
     booking.campaignCode ?? "",
     selections.map((extra) => `${extra.optionId}:${extra.optionVersion}:${extra.quantity}`).join(","),
@@ -324,10 +343,11 @@ export default function BookingStep4Page() {
   const automaticQuoteKey = buildAutomaticQuoteKey(selectedExtras);
 
   useEffect(() => {
+    if (!booking.dates) return;
     if (lastAutomaticQuoteKeyRef.current === automaticQuoteKey) return;
     lastAutomaticQuoteKeyRef.current = automaticQuoteKey;
     void refreshQuote(booking.campaignCode ?? undefined);
-  }, [automaticQuoteKey, booking.campaignCode, refreshQuote]);
+  }, [automaticQuoteKey, booking.campaignCode, booking.dates, refreshQuote]);
 
   const applyCampaign = async () => {
     const normalizedCode = campaignInput.trim().toUpperCase();
@@ -341,35 +361,44 @@ export default function BookingStep4Page() {
       return;
     }
 
-    const validation = await validateCampaignCode({
-      code: normalizedCode,
-      vehicleGroupId: selectedVehicleGroupId,
-      rentalDays,
-      pickupDate,
-    });
+    if (!selectedVehicleId) {
+      const validation = await validateCampaignCode({
+        code: normalizedCode,
+        vehicleGroupId: selectedVehicleGroupId,
+        rentalDays,
+        pickupDate,
+      });
 
-    if (!validation) {
-      setAppliedCampaign(null);
-      setValue("campaignCode", "");
-      toast.error(t("failedToValidateCampaign"));
-      return;
-    }
+      if (!validation) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("failedToValidateCampaign"));
+        return;
+      }
 
-    if (!validation.valid) {
-      setAppliedCampaign(null);
-      setValue("campaignCode", "");
-      toast.error(t("invalidCampaign"));
-      return;
+      if (!validation.valid) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("invalidCampaign"));
+        return;
+      }
     }
 
     const nextQuote = await refreshQuote(normalizedCode);
     if (nextQuote) {
-      setAppliedCampaign({ code: normalizedCode });
-      setValue("campaignCode", normalizedCode);
+      if (nextQuote.appliedCampaignCode !== normalizedCode) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("invalidCampaign"));
+        return;
+      }
+      setAppliedCampaign({ code: nextQuote.appliedCampaignCode });
+      setValue("campaignCode", nextQuote.appliedCampaignCode);
     }
   };
 
   const onSubmit = async (data: Step4FormData) => {
+    if (submissionInFlightRef.current) return;
     const customer = booking.customer;
     const driver = booking.driver;
     if (!customer || !driver) {
@@ -382,7 +411,7 @@ export default function BookingStep4Page() {
       return;
     }
 
-    if (quoteExpired) {
+    if (quoteExpired || (quote?.vehicleId ?? undefined) !== selectedVehicleId) {
       await refreshQuote(appliedCampaign?.code);
       toast.error(t("quoteExpired"));
       return;
@@ -390,6 +419,7 @@ export default function BookingStep4Page() {
 
     const reservationData = (activeQuote: ReservationQuote): CreateReservationData => ({
       vehicleGroupId: booking.vehicle?.vehicleGroupId ?? vehicleParam,
+      vehicleId: selectedVehicleId,
       pickupOfficeId,
       returnOfficeId,
       pickupDateTimeUtc: rentalDateTimeUtc(booking.dates?.pickupDate ?? pickupDate, booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"),
@@ -403,6 +433,7 @@ export default function BookingStep4Page() {
       locale,
     });
 
+    submissionInFlightRef.current = true;
     try {
       const submittedMethod = data.paymentMethod;
       const selectedMethod = paymentMethods.some((method) => method.id === submittedMethod)
@@ -413,10 +444,17 @@ export default function BookingStep4Page() {
         return;
       }
 
-      const requestOptions = { sessionId: getSessionId(), idempotencyKey: crypto.randomUUID() };
-      const createForQuote = (activeQuote: ReservationQuote) => selectedMethod === "unpaid"
-        ? createUnpaidReservationRequest(reservationData(activeQuote), requestOptions)
-        : createReservation(reservationData(activeQuote), requestOptions);
+      const createForQuote = (activeQuote: ReservationQuote) => {
+        const payload = reservationData(activeQuote);
+        const signature = JSON.stringify({ method: selectedMethod, payload });
+        if (submissionRef.current?.signature !== signature) {
+          submissionRef.current = { signature, key: crypto.randomUUID() };
+        }
+        const requestOptions = { sessionId: getSessionId(), idempotencyKey: submissionRef.current.key };
+        return selectedMethod === "unpaid"
+          ? createUnpaidReservationRequest(payload, requestOptions)
+          : createReservation(payload, requestOptions);
+      };
 
       let reservation;
       try {
@@ -426,7 +464,7 @@ export default function BookingStep4Page() {
           throw error;
         }
 
-        const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale);
+        const catalog = await getPublicReservationExtraOptions(selectedVehicleGroupId, locale, selectedVehicleId);
         const optionsById = new Map(catalog.map((option) => [option.id, option]));
         const refreshedSelections = selectedExtras.flatMap((selection) => {
           const option = optionsById.get(selection.optionId);
@@ -460,8 +498,10 @@ export default function BookingStep4Page() {
               selection.unitPrice !== previous.unitPrice ||
               selection.pricingMode !== previous.pricingMode;
           });
-        const quoteTermsChanged = refreshedQuote.finalTotal !== quote!.finalTotal;
-        if (selectionsChanged || quoteTermsChanged) {
+        const quoteTermsChanged = refreshedQuote.finalTotal !== quote!.finalTotal ||
+          refreshedQuote.depositAmount !== quote!.depositAmount ||
+          JSON.stringify(refreshedQuote.conditions) !== JSON.stringify(quote!.conditions);
+        if (selectedVehicleId || selectionsChanged || quoteTermsChanged) {
           setRequiresQuoteConfirmation(true);
           setQuoteError(t("quoteConfirmationRequired"));
           return;
@@ -524,8 +564,14 @@ export default function BookingStep4Page() {
       queryParams.set("code", reservation.publicCode);
       router.push(`/${locale}/booking/confirmation?${queryParams.toString()}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("failedToProcessPayment");
-      toast.error(message);
+      const errorKey = bookingErrorKey(error);
+      if (errorKey === "vehicleUnavailable") {
+        setQuote(null);
+        setQuoteError(t(errorKey));
+      }
+      toast.error(t(errorKey));
+    } finally {
+      submissionInFlightRef.current = false;
     }
   };
 
@@ -538,6 +584,9 @@ export default function BookingStep4Page() {
     { name: t("fees.fullCoverageWaiver"), price: quote.fullCoverageWaiverFee },
   ].filter((item) => item.price > 0) : [];
 
+  const searchRecoveryParams = new URLSearchParams(searchParams.toString());
+  for (const key of ["vehicle", "preferredVehicleId", "vehicleName", "dailyPrice", "extras"]) searchRecoveryParams.delete(key);
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
@@ -548,6 +597,10 @@ export default function BookingStep4Page() {
           {t("step4.title")}
         </h1>
         <p className="text-slate-600">{t("step4.subtitle")}</p>
+        {quote && <dl className="mt-4 flex flex-wrap gap-6 rounded-lg border border-slate-200 bg-white p-4 text-sm">
+          <div><dt>{t("payment.summary.deposit")}</dt><dd className="font-semibold"><CurrencyAmount locale={locale} currency={quote.currency} amount={quote.depositAmount} /></dd></div>
+          {quote.conditions && <><div><dt>{vehicleText("detail.minAge")}</dt><dd className="font-semibold">{quote.conditions.minAge}</dd></div><div><dt>{vehicleText("detail.minLicenseYears")}</dt><dd className="font-semibold">{quote.conditions.minLicenseYears}</dd></div></>}
+        </dl>}
         {isQuoteLoading && <p className="mt-3 text-sm text-sky-800" role="status">{t("loadingQuote")}</p>}
         {quote && !quoteExpired && (
           <p className="mt-3 text-sm text-sky-800" role="status">
@@ -557,15 +610,21 @@ export default function BookingStep4Page() {
         {quoteError && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
             <p className="text-sm text-red-800">{quoteError}</p>
+            <Link href={`/${locale}/vehicles?${searchRecoveryParams.toString()}`} className="mt-3 block text-sm font-medium text-red-800 underline">{vehicleText("detail.backToSearch")}</Link>
             <button
               type="button"
               onClick={async () => {
+                if (requiresQuoteConfirmation && quote && !quoteExpired) {
+                  setRequiresQuoteConfirmation(false);
+                  setQuoteError(null);
+                  return;
+                }
                 const nextQuote = await refreshQuote(appliedCampaign?.code);
                 if (nextQuote) setRequiresQuoteConfirmation(false);
               }}
               className="mt-3 rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-800 transition-colors hover:bg-red-100"
             >
-              {t("refreshQuote")}
+              {t(requiresQuoteConfirmation && quote && !quoteExpired ? "acceptUpdatedQuote" : "refreshQuote")}
             </button>
           </div>
         )}
@@ -595,7 +654,7 @@ export default function BookingStep4Page() {
                 <button
                   type="button"
                   onClick={applyCampaign}
-                  disabled={!campaignInput || appliedCampaign !== null || isValidating}
+                  disabled={!campaignInput || appliedCampaign !== null || isValidating || isQuoteLoading || isSubmitting}
                   className={cn(
                     "px-6 py-3 font-medium rounded-lg transition-colors",
                     appliedCampaign
@@ -782,7 +841,7 @@ export default function BookingStep4Page() {
 
           <button
             type="submit"
-            disabled={isSubmitting || paymentMethods.length === 0}
+            disabled={isSubmitting || isValidating || isQuoteLoading || paymentMethods.length === 0}
             onClick={() => {
               submitModeRef.current = selectedPaymentMethod ?? "credit_card";
             }}
@@ -791,7 +850,7 @@ export default function BookingStep4Page() {
             {isSubmitting
               ? t("completing")
               : selectedPaymentMethod === "unpaid"
-                ? t("completeRequest")
+                ? t(exactBooking ? "completeBooking" : "completeRequest")
                 : t("completeBooking")}
             <ArrowRight className="h-5 w-5" />
           </button>

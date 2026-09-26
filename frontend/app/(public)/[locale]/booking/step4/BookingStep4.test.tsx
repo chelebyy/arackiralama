@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, NetworkError } from "@/lib/api/client";
 
 import BookingStep4Page from "./page";
 
@@ -30,6 +30,7 @@ type BookingDates = {
 
 type BookingVehicle = {
   vehicleGroupId: string;
+  vehicleId?: string;
   vehicleName: string;
   vehicleImage: string;
   dailyPrice: number;
@@ -179,6 +180,17 @@ const baseQuote = {
 };
 
 describe("BookingStep4Page", () => {
+  it("waits for restored office IDs before automatically requesting a quote", async () => {
+    bookingState.dates = undefined;
+    const { rerender } = render(<BookingStep4Page />);
+    await waitFor(() => expect(getPublicSiteSettingsMock).toHaveBeenCalled());
+    expect(createReservationQuoteMock).not.toHaveBeenCalled();
+    bookingState.dates = { ...baseDates, pickupOfficeId: "11111111-1111-1111-1111-111111111111", returnOfficeId: "22222222-2222-2222-2222-222222222222" };
+    rerender(<BookingStep4Page />);
+    await waitFor(() => expect(createReservationQuoteMock).toHaveBeenCalledTimes(1));
+    expect(createReservationQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ pickupOfficeId: bookingState.dates.pickupOfficeId, returnOfficeId: bookingState.dates.returnOfficeId }), expect.any(String));
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
     createReservationMock.mockReset();
@@ -309,12 +321,15 @@ describe("BookingStep4Page", () => {
     expect(updateExtrasMock).toHaveBeenCalledWith([
       expect.objectContaining({ optionId: "gps", optionVersion: 3, quantity: 1 }),
     ]);
-    expect(await screen.findByText("Extra options changed. Review the updated quote and confirm again.")).toBeInTheDocument();
+    expect(await screen.findByText("The price or rental conditions changed. Review and accept the updated offer.")).toBeInTheDocument();
   });
 
   it("validates a campaign code through the API before applying it", async () => {
     const user = userEvent.setup();
     validateCampaignMock.mockResolvedValue({ valid: true });
+    createReservationQuoteMock.mockResolvedValueOnce(baseQuote).mockResolvedValue({
+      ...baseQuote, appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174,
+    });
 
     render(<BookingStep4Page />);
 
@@ -351,6 +366,66 @@ describe("BookingStep4Page", () => {
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
+  });
+
+  it.each(["economy", "00000000-0000-0000-0000-000000000000"])("validates an exact vehicle campaign through its quote with group %s", async (vehicleGroupId) => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleGroupId };
+    createReservationQuoteMock.mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a" });
+    let resolveQuote!: (value: Omit<typeof baseQuote, "appliedCampaignCode"> & { vehicleId: string; appliedCampaignCode: string }) => void;
+    createReservationQuoteMock.mockImplementationOnce(() => new Promise((resolve) => { resolveQuote = resolve; }));
+
+    render(<BookingStep4Page />);
+    await user.type(screen.getByPlaceholderText(/enter code/i), " summer15 ");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(validateCampaignMock).not.toHaveBeenCalled();
+    expect(createReservationQuoteMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vehicleId: "car-a", vehicleGroupId, campaignCode: "SUMMER15" }), "uuid-123"
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /complete booking/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+
+    resolveQuote({ ...baseQuote, vehicleId: "car-a", appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174 });
+    expect(await screen.findByRole("button", { name: "Applied" })).toBeDisabled();
+    expect(screen.getAllByText(/Campaign Code SUMMER15/i)).toHaveLength(2);
+  });
+
+  it("allows retrying a rejected exact vehicle campaign without claiming it was applied", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleGroupId: "00000000-0000-0000-0000-000000000000" };
+    bookingState.selectedExtras = [];
+    createReservationQuoteMock.mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a" })
+      .mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Campaign code is invalid or expired.", code: "CONFLICT", timestamp: "2026-09-26T00:00:00Z", path: "/api/v1/pricing/quote" }))
+      .mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a", appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174 });
+
+    render(<BookingStep4Page />);
+    const input = screen.getByPlaceholderText(/enter code/i);
+    await user.type(input, "badcode");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled());
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+    expect(validateCampaignMock).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByRole("button", { name: "Applied" })).toBeDisabled();
+  });
+
+  it("does not mark a campaign applied when the quote does not include it", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a" };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "car-a" });
+
+    render(<BookingStep4Page />);
+    await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("Invalid campaign code."));
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+    expect(validateCampaignMock).not.toHaveBeenCalled();
   });
 
   it("shows an error toast when the campaign code is invalid", async () => {
@@ -404,22 +479,29 @@ describe("BookingStep4Page", () => {
     });
   });
 
-  it("shows unpaid reservation as a payment method card and submits unpaid request", async () => {
+  it.each([undefined, "car-a"])("submits an unpaid request with its quoted vehicle identity %s", async (vehicleId) => {
     const user = userEvent.setup();
     bookingState.dates = { ...baseDates, pickupTime: "01:00" };
+    bookingState.vehicle = { ...baseVehicle, vehicleId, vehicleName: vehicleId ? "Fiat Verified A" : baseVehicle.vehicleName };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId });
 
     render(<BookingStep4Page />);
+    if (vehicleId) {
+      expect(await screen.findByText("Fiat Verified A")).toBeInTheDocument();
+      expect(screen.queryByText("Economy - Fiat Verified A")).not.toBeInTheDocument();
+    }
 
-    await user.click(await screen.findByRole("radio", { name: /request without online payment/i }));
+    await user.click(await screen.findByRole("radio", { name: /request without online payment|pay at pickup/i }));
     expect(screen.queryByLabelText("Card Number")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: /send request/i }));
+    await user.click(screen.getByRole("button", { name: /send request|complete booking/i }));
 
     await waitFor(() => {
       expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith(
         expect.objectContaining({
           vehicleGroupId: "economy",
+          vehicleId,
           pickupOfficeId: "ala",
           returnOfficeId: "gzp",
           customer: bookingState.customer,
@@ -437,7 +519,30 @@ describe("BookingStep4Page", () => {
     });
     expect(createReservationMock).not.toHaveBeenCalled();
     expect(createPaymentIntentMock).not.toHaveBeenCalled();
-    expect(createReservationQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ pickupDateTimeUtc: "2026-05-09T22:00:00.000Z", returnDateTimeUtc: "2026-05-13T06:00:00.000Z" }), "uuid-123");
+    expect(createReservationQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ vehicleId, pickupDateTimeUtc: "2026-05-09T22:00:00.000Z", returnDateTimeUtc: "2026-05-13T06:00:00.000Z" }), "uuid-123");
+  });
+
+  it.each(["disabled", "unavailable"])("confirms exact pay-at-pickup when legacy settings are %s", async (settingsState) => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleName: "Fiat Exact" };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "car-a" });
+    if (settingsState === "unavailable") {
+      getPublicSiteSettingsMock.mockRejectedValueOnce(new Error("settings unavailable"));
+    } else {
+      getPublicSiteSettingsMock.mockResolvedValueOnce({ paymentMethods: {
+        creditCardEnabled: false, debitCardEnabled: false, unpaidRequestEnabled: false,
+        paypalEnabled: false, anyEnabled: false
+      } });
+    }
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleId: "car-a", quoteId: "quote-123" }), expect.any(Object)
+    ));
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(/no active payment method/i)).not.toBeInTheDocument();
   });
 
   it("shows an error toast and does not redirect when reservation creation fails", async () => {
@@ -455,7 +560,7 @@ describe("BookingStep4Page", () => {
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith("Reservation service unavailable");
+      expect(toastErrorMock).toHaveBeenCalledWith("Your booking could not be completed. Please try again.");
     });
     expect(pushMock).not.toHaveBeenCalled();
   });
@@ -480,13 +585,73 @@ describe("BookingStep4Page", () => {
     await user.click(screen.getByRole("button", { name: /complete booking/i }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith("Reservation quote is already being used or was consumed.");
+      expect(toastErrorMock).toHaveBeenCalledWith("The booking result could not be verified yet. Retry the same request or contact us before creating another booking.");
     });
     expect(createReservationMock).toHaveBeenCalledTimes(1);
     expect(getPublicReservationExtraOptionsMock).not.toHaveBeenCalled();
     expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
     expect(updateExtrasMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("offers a dated search without silently substituting an unavailable vehicle", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "vehicle-1" };
+    searchParams.set("preferredVehicleId", "vehicle-1");
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "vehicle-1" });
+    createUnpaidReservationRequestMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Selected vehicle is unavailable for this itinerary.", code: "CONFLICT", timestamp: "2026-09-26", path: "/reservations" }));
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    const recovery = await screen.findByRole("link", { name: "Back to search" });
+    expect(recovery).toHaveAttribute("href", "/en/vehicles?pickupDate=2026-05-10&returnDate=2026-05-13");
+    expect(createUnpaidReservationRequestMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("reuses the identical reservation attempt after a lost response", async () => {
+    const user = userEvent.setup();
+    let sequence = 0;
+    Object.defineProperty(globalThis, "crypto", { value: { randomUUID: () => `attempt-${++sequence}` }, configurable: true });
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "vehicle-1" };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "vehicle-1" });
+    createUnpaidReservationRequestMock.mockRejectedValueOnce(new NetworkError());
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("The response could not be received. Try again; the same booking attempt will be checked."));
+    expect(pushMock).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect(createUnpaidReservationRequestMock).toHaveBeenCalledTimes(2);
+    expect(createUnpaidReservationRequestMock.mock.calls[1]).toEqual(createUnpaidReservationRequestMock.mock.calls[0]);
+    expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires acceptance of changed conditions even when the price is unchanged", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "vehicle-1" };
+    bookingState.selectedExtras = [];
+    createReservationQuoteMock
+      .mockResolvedValueOnce({ ...baseQuote, vehicleId: "vehicle-1", conditions: { minAge: 21, minLicenseYears: 2 } })
+      .mockResolvedValue({ ...baseQuote, quoteId: "updated-quote", vehicleId: "vehicle-1", conditions: { minAge: 25, minLicenseYears: 3 } });
+    createUnpaidReservationRequestMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Price or rental conditions changed. Request a new quote.", code: "CONFLICT", timestamp: "2026-09-26T10:00:00Z", path: "/api/reservations" }));
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    const accept = await screen.findByRole("button", { name: "Accept updated offer" });
+    expect(createUnpaidReservationRequestMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("25")).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+    await user.click(accept);
+    expect(createReservationQuoteMock).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect(createUnpaidReservationRequestMock).toHaveBeenLastCalledWith(expect.objectContaining({ quoteId: "updated-quote", vehicleId: "vehicle-1", customer: bookingState.customer }), expect.any(Object));
+    expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith("economy", "en", "vehicle-1");
   });
 
   it("requires explicit quote confirmation when a 409 refresh changes option terms", async () => {

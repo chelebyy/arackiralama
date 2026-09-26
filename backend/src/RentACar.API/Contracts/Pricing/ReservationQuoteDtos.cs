@@ -10,6 +10,7 @@ public sealed record SelectedReservationExtraInput
 public sealed record CreateReservationQuoteRequest
 {
     public Guid VehicleGroupId { get; init; }
+    public Guid? VehicleId { get; init; }
     public Guid PickupOfficeId { get; init; }
     public Guid ReturnOfficeId { get; init; }
     public DateTime PickupDateTimeUtc { get; init; }
@@ -40,4 +41,8 @@ public sealed record ReservationQuoteDto(
     decimal PreAuthorizationAmount,
     string Currency,
     string? AppliedCampaignCode,
-    IReadOnlyList<ReservationExtraLineItemDto> ExtraItems);
+    IReadOnlyList<ReservationExtraLineItemDto> ExtraItems,
+    Guid? VehicleId = null,
+    ReservationQuoteConditionsDto? Conditions = null);
+
+public sealed record ReservationQuoteConditionsDto(int MinAge, int MinLicenseYears);

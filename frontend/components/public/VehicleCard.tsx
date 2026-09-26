@@ -4,15 +4,18 @@ import VehicleImage from "@/components/public/VehicleImage";
 import type { PublicVehicle } from "@/lib/api/types";
 import { vehicleDetailHref, vehicleGroupName, vehiclePhotos } from "@/lib/vehicle-catalogue";
 import VehicleFacts from "./VehicleFacts";
+import CurrencyAmount from "./CurrencyAmount";
 
 export default function VehicleCard({
   vehicle,
   locale,
-  search = new URLSearchParams()
+  search = new URLSearchParams(),
+  offer
 }: {
   vehicle: PublicVehicle;
   locale: string;
   search?: Pick<URLSearchParams, "get">;
+  offer?: { finalTotal: number; rentalDays: number; currency: string };
 }) {
   const t = useTranslations("catalogue");
   const name = `${vehicle.brand} ${vehicle.model}`;
@@ -34,7 +37,9 @@ export default function VehicleCard({
         </div>
         <VehicleFacts vehicle={vehicle} />
         <div className="mt-auto space-y-3 border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-600">{t("chooseDates")}</p>
+          <p className="text-sm text-slate-600">{offer
+            ? <CurrencyAmount locale={locale} currency={offer.currency} amount={offer.finalTotal} />
+            : t("chooseDates")}</p>
           <Link
             href={vehicleDetailHref(vehicle.id, locale, search)}
             className="block rounded-xl bg-sky-700 px-4 py-3 text-center font-semibold text-white hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"

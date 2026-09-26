@@ -106,6 +106,47 @@ public sealed class PricingService(
         bool fullCoverageWaiver,
         CancellationToken cancellationToken = default)
     {
+        return await CalculateCoreAsync(vehicleGroupId, pickupOfficeId, returnOfficeId, pickupDateTimeUtc,
+            returnDateTimeUtc, campaignCode, extraDriverCount, childSeatCount, driverAge, fullCoverageWaiver,
+            null, cancellationToken);
+    }
+
+    public Task<PriceBreakdownDto?> CalculateForVehicleAsync(
+        Vehicle vehicle, Guid pickupOfficeId, Guid returnOfficeId, DateTime pickupDateTimeUtc,
+        DateTime returnDateTimeUtc, string? campaignCode, int? driverAge, bool fullCoverageWaiver,
+        CancellationToken cancellationToken = default) =>
+        CalculateCoreAsync(vehicle.GroupId ?? Guid.Empty, pickupOfficeId, returnOfficeId, pickupDateTimeUtc,
+            returnDateTimeUtc, campaignCode, 0, 0, driverAge, fullCoverageWaiver, vehicle.RentalTerms, cancellationToken);
+
+    public static PriceBreakdownDto? CalculateCataloguePrice(
+        Vehicle vehicle, Office pickup, Office dropoff, DateTime pickupDateTimeUtc,
+        DateTime returnDateTimeUtc, int? driverAge)
+    {
+        var terms = vehicle.RentalTerms;
+        if (terms is null) return null;
+        var rule = ResolveVehiclePricingRule(terms, RentalCalendar.TurkeyDate(pickupDateTimeUtc));
+        return rule is null ? null : CalculateAmounts(rule, terms.DepositAmount!.Value,
+            pickup.Id, dropoff.Id, pickup.IsAirport || dropoff.IsAirport,
+            pickupDateTimeUtc, returnDateTimeUtc, 0, 0, driverAge, false, null);
+    }
+
+    private static PricingRule? ResolveVehiclePricingRule(VehicleRentalTerms terms, DateOnly pickupDate) =>
+        terms.Rates.Where(rate => rate.StartDate <= pickupDate && rate.EndDate >= pickupDate)
+            .OrderByDescending(rate => rate.Priority).ThenByDescending(rate => rate.StartDate)
+            .ThenByDescending(rate => rate.EndDate).ThenByDescending(rate => rate.CreatedAt)
+            .Select(rate => new PricingRule
+            {
+                Id = rate.Id, StartDate = rate.StartDate, EndDate = rate.EndDate,
+                DailyPrice = rate.DailyPrice, Multiplier = rate.Multiplier,
+                WeekdayMultiplier = rate.WeekdayMultiplier, WeekendMultiplier = rate.WeekendMultiplier,
+                CalculationType = rate.CalculationType, Priority = rate.Priority
+            }).FirstOrDefault();
+
+    private async Task<PriceBreakdownDto?> CalculateCoreAsync(
+        Guid vehicleGroupId, Guid pickupOfficeId, Guid returnOfficeId, DateTime pickupDateTimeUtc,
+        DateTime returnDateTimeUtc, string? campaignCode, int extraDriverCount, int childSeatCount,
+        int? driverAge, bool fullCoverageWaiver, VehicleRentalTerms? terms, CancellationToken cancellationToken)
+    {
         var rentalDays = CalculateRentalDays(pickupDateTimeUtc, returnDateTimeUtc);
         var pickupDate = RentalCalendar.TurkeyDate(pickupDateTimeUtc);
 
@@ -113,12 +154,14 @@ public sealed class PricingService(
             .AsNoTracking()
             .FirstOrDefaultAsync(group => group.Id == vehicleGroupId, cancellationToken);
 
-        if (vehicleGroup is null)
+        if (vehicleGroup is null && terms is null)
         {
             return null;
         }
 
-        var pricingRule = await ResolvePricingRuleAsync(vehicleGroupId, pickupDate, cancellationToken);
+        var pricingRule = terms is null
+            ? await ResolvePricingRuleAsync(vehicleGroupId, pickupDate, cancellationToken)
+            : ResolveVehiclePricingRule(terms, pickupDate);
         if (pricingRule is null)
         {
             return null;
@@ -130,9 +173,23 @@ public sealed class PricingService(
             .Where(office => officeIds.Contains(office.Id))
             .ToDictionaryAsync(office => office.Id, office => office.IsAirport, cancellationToken);
 
+        var campaign = await GetCampaignAsync(campaignCode, vehicleGroupId, rentalDays, pickupDate, cancellationToken);
+        return CalculateAmounts(pricingRule, terms?.DepositAmount ?? vehicleGroup!.DepositAmount,
+            pickupOfficeId, returnOfficeId, officeAirportFlags.Any(flag => flag.Value),
+            pickupDateTimeUtc, returnDateTimeUtc, extraDriverCount, childSeatCount, driverAge, fullCoverageWaiver, campaign);
+    }
+
+    private static PriceBreakdownDto CalculateAmounts(
+        PricingRule pricingRule, decimal configuredDeposit, Guid pickupOfficeId, Guid returnOfficeId,
+        bool hasAirport, DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc, int extraDriverCount,
+        int childSeatCount, int? driverAge, bool fullCoverageWaiver, Campaign? campaign)
+    {
+        var rentalDays = CalculateRentalDays(pickupDateTimeUtc, returnDateTimeUtc);
+        var pickupDate = RentalCalendar.TurkeyDate(pickupDateTimeUtc);
+
         var dailyRate = CalculateDailyRate(pricingRule, pickupDate);
         var baseTotal = CalculateBaseTotal(pricingRule, pickupDateTimeUtc, rentalDays);
-        var airportFee = officeAirportFlags.Any(flag => flag.Value) ? AirportFeeAmount : 0m;
+        var airportFee = hasAirport ? AirportFeeAmount : 0m;
         var oneWayFee = pickupOfficeId != returnOfficeId ? OneWayFeeAmount : 0m;
         var extraDriverFee = extraDriverCount > 0 ? RoundAmount(extraDriverCount * ExtraDriverFeeAmount) : 0m;
         var childSeatFee = childSeatCount > 0 ? RoundAmount(childSeatCount * ChildSeatDailyFeeAmount * rentalDays) : 0m;
@@ -148,14 +205,13 @@ public sealed class PricingService(
             fullCoverageWaiverFee);
 
         var subtotalBeforeDiscount = RoundAmount(baseTotal + extrasTotal);
-        var campaign = await GetCampaignAsync(campaignCode, vehicleGroupId, rentalDays, pickupDate, cancellationToken);
         var campaignDiscount = campaign is null
             ? 0m
             : CalculateCampaignDiscount(campaign, subtotalBeforeDiscount);
 
         campaignDiscount = Math.Clamp(campaignDiscount, 0m, subtotalBeforeDiscount);
 
-        var depositAmount = fullCoverageWaiver ? 0m : RoundAmount(vehicleGroup.DepositAmount);
+        var depositAmount = fullCoverageWaiver ? 0m : RoundAmount(configuredDeposit);
         var preAuthorizationAmount = depositAmount;
         var finalTotal = RoundAmount(subtotalBeforeDiscount - campaignDiscount);
 

@@ -3,8 +3,8 @@ import { Suspense, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import VehicleCard from "@/components/public/VehicleCard";
-import { usePublicVehicles } from "@/hooks/useVehicles";
-import { vehicleGroupName, validCatalogueDates } from "@/lib/vehicle-catalogue";
+import { usePublicVehicles, useOffices, useExactAvailableVehicles } from "@/hooks/useVehicles";
+import { vehicleGroupName, validCatalogueDates, catalogueOffice } from "@/lib/vehicle-catalogue";
 
 function Catalogue() {
   const params = useParams(),
@@ -12,20 +12,30 @@ function Catalogue() {
   const locale = typeof params.locale === "string" ? params.locale : "tr";
   const t = useTranslations("catalogue"),
     tv = useTranslations("vehicles");
-  const { vehicles, isLoading, isError } = usePublicVehicles();
+  const allVehicles = usePublicVehicles();
+  const { offices, isLoading: officesLoading } = useOffices();
+  const dates = validCatalogueDates(search);
+  const pickupOfficeId = catalogueOffice(offices, search.get("pickup") ?? "");
+  const returnOfficeId = catalogueOffice(offices, search.get("return") ?? search.get("pickup") ?? "");
+  const dated = Boolean(dates && search.get("pickup"));
+  const available = useExactAvailableVehicles(dates && pickupOfficeId && returnOfficeId ? {
+    pickupOfficeId, returnOfficeId, pickupDateTimeUtc: dates.pickup, returnDateTimeUtc: dates.returned
+  } : null);
+  const vehicles = dated ? available.vehicles.map(offer => offer.vehicle) : allVehicles.vehicles;
+  const isLoading = dated ? officesLoading || available.isLoading : allVehicles.isLoading;
+  const isError = dated ? available.isError : allVehicles.isError;
   const [group, setGroup] = useState(""),
     [page, setPage] = useState(1),
     [view, setView] = useState("grid");
   const catalogue = vehicles.filter((vehicle) => vehicle.status === "Available");
   const groups = Array.from(
     new Map(
-      catalogue.map((vehicle) => [vehicle.groupId, vehicleGroupName(vehicle, locale)])
+      catalogue.filter(vehicle => vehicle.groupId).map((vehicle) => [vehicle.groupId!, vehicleGroupName(vehicle, locale)])
     ).entries()
   );
   const filtered = catalogue.filter((vehicle) => !group || vehicle.groupId === group);
   const pages = Math.max(1, Math.ceil(filtered.length / 6)),
     current = Math.min(page, pages);
-  const dates = validCatalogueDates(search);
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -85,7 +95,8 @@ function Catalogue() {
             }
           >
             {filtered.slice((current - 1) * 6, current * 6).map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} locale={locale} search={search} />
+              <VehicleCard key={vehicle.id} vehicle={vehicle} locale={locale} search={search}
+                offer={dated ? available.vehicles.find(o => o.vehicle.id === vehicle.id) : undefined} />
             ))}
           </div>
         )}

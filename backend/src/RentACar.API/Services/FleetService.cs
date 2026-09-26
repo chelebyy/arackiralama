@@ -176,7 +176,7 @@ public sealed class FleetService(
             .AsNoTracking()
             .Where(reservation =>
                 ReservationStatusGroups.StockBlocking.Contains(reservation.Status) &&
-                pickupDateTimeUtc < reservation.ReturnDateTime &&
+                pickupDateTimeUtc < (reservation.OccupiedUntilUtc ?? reservation.ReturnDateTime) &&
                 returnDateTimeUtc > reservation.PickupDateTime)
             .Select(reservation => reservation.VehicleId)
             .ToListAsync(cancellationToken);
@@ -236,8 +236,19 @@ public sealed class FleetService(
             .ToList();
     }
 
+    private async Task ValidateRentalTermsAsync(VehicleRentalTerms terms, CancellationToken cancellationToken)
+    {
+        VehicleBookingService.ValidateTerms(terms);
+        if (terms.ExtraOptionIds.Length > 0 && await dbContext.ReservationExtraOptions
+            .CountAsync(option => terms.ExtraOptionIds.Contains(option.Id), cancellationToken) != terms.ExtraOptionIds.Length)
+            throw new ArgumentException("A selected extra option does not exist.");
+    }
+
     public async Task<VehicleDto?> CreateVehicleAsync(CreateVehicleRequest request, CancellationToken cancellationToken = default)
     {
+        if (request.RentalTerms is not null) await ValidateRentalTermsAsync(request.RentalTerms, cancellationToken);
+        if (!request.GroupId.HasValue && request.RentalTerms is null)
+            throw new ArgumentException("Rental terms are required for a vehicle without a legacy group.");
         var vehicle = new Vehicle
         {
             Plate = request.Plate.Trim().ToUpperInvariant(),
@@ -256,7 +267,8 @@ public sealed class FleetService(
             DoorCount = request.DoorCount,
             Engine = request.Engine,
             PowerHp = request.PowerHp,
-            Equipment = request.Equipment ?? []
+            Equipment = request.Equipment ?? [],
+            RentalTerms = request.RentalTerms
         };
 
         await vehicleRepository.AddAsync(vehicle, cancellationToken);
@@ -280,6 +292,7 @@ public sealed class FleetService(
 
     public async Task<VehicleDto?> UpdateVehicleAsync(Guid id, UpdateVehicleRequest request, CancellationToken cancellationToken = default)
     {
+        if (request.RentalTerms is not null) await ValidateRentalTermsAsync(request.RentalTerms, cancellationToken);
         var existingVehicle = await vehicleRepository.GetByIdAsync(id, cancellationToken);
         if (existingVehicle is null)
         {
@@ -298,6 +311,17 @@ public sealed class FleetService(
             Status = existingVehicle.Status.ToString()
         };
 
+        if (!request.GroupId.HasValue && request.RentalTerms is null && existingVehicle.RentalTerms is null)
+            throw new ArgumentException("Rental terms are required for a vehicle without a legacy group.");
+
+        if (existingVehicle.GroupId.HasValue && existingVehicle.GroupId != request.GroupId &&
+            await dbContext.Reservations.AnyAsync(reservation =>
+                reservation.VehicleId == id && reservation.PricingSnapshot == null &&
+                reservation.Status != ReservationStatus.Completed &&
+                reservation.Status != ReservationStatus.Cancelled &&
+                reservation.Status != ReservationStatus.Expired, cancellationToken))
+            throw new ArgumentException("Vehicle group cannot change while active reservations depend on its pricing and deposit.");
+
         existingVehicle.Plate = request.Plate.Trim().ToUpperInvariant();
         existingVehicle.Brand = request.Brand.Trim();
         existingVehicle.Model = request.Model.Trim();
@@ -315,6 +339,7 @@ public sealed class FleetService(
         existingVehicle.Engine = request.Engine;
         existingVehicle.PowerHp = request.PowerHp;
         existingVehicle.Equipment = request.Equipment ?? [];
+        existingVehicle.RentalTerms = request.RentalTerms ?? existingVehicle.RentalTerms;
 
         WriteAuditLog(
             action: "VehicleUpdated",
@@ -567,6 +592,7 @@ public sealed class FleetService(
 
     public async Task<OfficeDto> CreateOfficeAsync(CreateOfficeRequest request, CancellationToken cancellationToken = default)
     {
+        if (request.OperatingPolicy is not null) VehicleBookingService.ValidatePolicy(request.OperatingPolicy);
         var office = new Office
         {
             Name = request.Name.Trim(),
@@ -575,7 +601,8 @@ public sealed class FleetService(
             Phone = request.Phone.Trim(),
             IsAirport = request.IsAirport,
             IsActive = request.IsActive,
-            OpeningHours = request.OpeningHours.Trim()
+            OpeningHours = request.OpeningHours.Trim(),
+            OperatingPolicy = request.OperatingPolicy
         };
 
         await officeRepository.AddAsync(office, cancellationToken);
@@ -597,6 +624,7 @@ public sealed class FleetService(
 
     public async Task<OfficeDto?> UpdateOfficeAsync(Guid id, UpdateOfficeRequest request, CancellationToken cancellationToken = default)
     {
+        if (request.OperatingPolicy is not null) VehicleBookingService.ValidatePolicy(request.OperatingPolicy);
         var existingOffice = await officeRepository.GetByIdAsync(id, cancellationToken);
         if (existingOffice is null)
         {
@@ -621,6 +649,7 @@ public sealed class FleetService(
         existingOffice.IsAirport = request.IsAirport;
         existingOffice.IsActive = request.IsActive;
         existingOffice.OpeningHours = request.OpeningHours.Trim();
+        existingOffice.OperatingPolicy = request.OperatingPolicy ?? existingOffice.OperatingPolicy;
 
         WriteAuditLog(
             action: "OfficeUpdated",
@@ -696,7 +725,7 @@ public sealed class FleetService(
         return user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? user?.Identity?.Name;
     }
 
-    private static VehicleGroupDto MapToDto(VehicleGroup vehicleGroup)
+    internal static VehicleGroupDto MapToDto(VehicleGroup vehicleGroup)
     {
         return new VehicleGroupDto(
             vehicleGroup.Id,
@@ -712,7 +741,7 @@ public sealed class FleetService(
             vehicleGroup.Features);
     }
 
-    private static VehicleDto MapToDto(Vehicle vehicle)
+    internal static VehicleDto MapToDto(Vehicle vehicle)
     {
         return new VehicleDto(
             vehicle.Id,
@@ -734,7 +763,8 @@ public sealed class FleetService(
             vehicle.Engine,
             vehicle.PowerHp,
             vehicle.Equipment,
-            GetPhotoUrls(vehicle));
+            GetPhotoUrls(vehicle),
+            vehicle.RentalTerms);
     }
 
     private static OfficeDto MapToDto(Office office)
@@ -747,7 +777,8 @@ public sealed class FleetService(
             office.Phone,
             office.IsAirport,
             office.IsActive,
-            office.OpeningHours);
+            office.OpeningHours,
+            office.OperatingPolicy);
     }
 
     private static List<string> NormalizeFeatures(IReadOnlyList<string>? features)

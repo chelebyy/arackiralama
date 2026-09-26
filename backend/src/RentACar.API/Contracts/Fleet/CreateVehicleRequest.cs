@@ -8,7 +8,7 @@ public sealed record CreateVehicleRequest(
     string Model,
     int Year,
     string Color,
-    Guid GroupId,
+    Guid? GroupId,
     Guid OfficeId,
     VehicleStatus Status,
     string? Transmission = null,
@@ -19,4 +19,5 @@ public sealed record CreateVehicleRequest(
     int? DoorCount = null,
     string? Engine = null,
     int? PowerHp = null,
-    string[]? Equipment = null);
+    string[]? Equipment = null,
+    RentACar.Core.Entities.VehicleRentalTerms? RentalTerms = null);

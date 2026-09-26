@@ -188,6 +188,54 @@ public sealed class FleetServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData(ReservationStatus.Draft)]
+    [InlineData(ReservationStatus.Hold)]
+    [InlineData(ReservationStatus.PendingPayment)]
+    [InlineData(ReservationStatus.Paid)]
+    [InlineData(ReservationStatus.Active)]
+    [InlineData(ReservationStatus.UnpaidRequest)]
+    [InlineData(ReservationStatus.Confirmed)]
+    public async Task UpdateVehicleAsync_PreservesGroupForActiveSnapshotlessReservation(ReservationStatus status)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34LEG123", group.Id, office.Id);
+        vehicle.RentalTerms = new VehicleRentalTerms { DepositAmount = 9000m, MinAge = 23, MinLicenseYears = 3 };
+        await SeedReservationAsync(vehicle.Id, DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(5), status);
+        var auditCount = _dbContext.AuditLogs.Count();
+        foreach (var groupId in new Guid?[] { null, Guid.NewGuid() })
+        {
+            var request = new UpdateVehicleRequest("34NEW123", "Changed", "Changed", 2023, "Black", groupId, office.Id, VehicleStatus.Available);
+            var action = () => _sut.UpdateVehicleAsync(vehicle.Id, request);
+            await action.Should().ThrowAsync<ArgumentException>().WithMessage("*active reservations depend*");
+            vehicle.GroupId.Should().Be(group.Id);
+            vehicle.Plate.Should().Be("34LEG123");
+            _dbContext.AuditLogs.Count().Should().Be(auditCount);
+        }
+
+        var unchangedGroup = new UpdateVehicleRequest("34LEG123", "Updated", "Corolla", 2024, "White", group.Id, office.Id, VehicleStatus.Available);
+        (await _sut.UpdateVehicleAsync(vehicle.Id, unchangedGroup))!.Brand.Should().Be("Updated");
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.Completed, false)]
+    [InlineData(ReservationStatus.Cancelled, false)]
+    [InlineData(ReservationStatus.Expired, false)]
+    [InlineData(ReservationStatus.Confirmed, true)]
+    public async Task UpdateVehicleAsync_AllowsGroupRemovalWithoutActiveSnapshotDependency(ReservationStatus status, bool hasSnapshot)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34SAFE123", group.Id, office.Id);
+        vehicle.RentalTerms = new VehicleRentalTerms { DepositAmount = 9000m, MinAge = 23, MinLicenseYears = 3 };
+        var reservation = await SeedReservationAsync(vehicle.Id, DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(5), status);
+        if (hasSnapshot) reservation.PricingSnapshot = new ReservationPricingSnapshotV1 { DepositAmount = 2000m };
+        await _dbContext.SaveChangesAsync();
+
+        var request = new UpdateVehicleRequest(vehicle.Plate, vehicle.Brand, vehicle.Model, vehicle.Year, vehicle.Color, null, office.Id, VehicleStatus.Available);
+        (await _sut.UpdateVehicleAsync(vehicle.Id, request))!.GroupId.Should().BeNull();
+        if (hasSnapshot) reservation.PricingSnapshot!.DepositAmount.Should().Be(2000m);
+    }
+
     [Fact]
     public async Task DeleteVehicleAsync_WhenExists_DeletesAndCallsPhotoStorage()
     {

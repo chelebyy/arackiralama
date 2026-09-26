@@ -138,14 +138,15 @@ export default function BookingStep3Page() {
     isGuid(pickupOfficeMatch.id) &&
     isGuid(returnOfficeMatch.id);
   const vehicleGroupId = booking.vehicle?.vehicleGroupId ?? searchParams.get("vehicleGroupId") ?? searchParams.get("vehicle") ?? "";
+  const vehicleId = booking.vehicle ? booking.vehicle.vehicleId : searchParams.get("preferredVehicleId") ?? undefined;
   const {
     data: extraOptions = [],
     error: extraOptionsError,
     isLoading: extraOptionsLoading,
     mutate: retryExtraOptions,
   } = useSWR<PublicReservationExtraOption[], Error>(
-    vehicleGroupId ? ["reservation-extra-options", vehicleGroupId, locale] : null,
-    () => getPublicReservationExtraOptions(vehicleGroupId, locale),
+    vehicleGroupId ? ["reservation-extra-options", vehicleGroupId, vehicleId, locale] : null,
+    () => getPublicReservationExtraOptions(vehicleGroupId, locale, vehicleId),
     { revalidateOnFocus: false }
   );
   const pickupDate = searchParams.get("pickupDate") || "";
@@ -166,6 +167,8 @@ export default function BookingStep3Page() {
     driverLicense: z.string().min(5, t("validation.requiredLicense")),
     driverLicenseCountry: z.string().min(1, t("validation.requiredLicenseCountry")),
     birthDate: z.string().min(1, t("validation.requiredBirthDate")),
+    licenseIssueDate: z.string().min(1, t("driverInfo.licenseIssueDate")),
+    licenseExpiryDate: z.string().min(1, t("driverInfo.licenseExpiryDate")),
     specialRequests: z.string().optional(),
   });
   type Step3FormData = z.infer<typeof step3Schema>;
@@ -218,6 +221,17 @@ export default function BookingStep3Page() {
     formState: { errors },
   } = useForm<Step3FormData>({
     resolver: zodResolver(step3Schema),
+    defaultValues: {
+      firstName: booking.customer?.firstName ?? "",
+      lastName: booking.customer?.lastName ?? "",
+      email: booking.customer?.email ?? "",
+      phone: booking.customer?.phone ?? "",
+      birthDate: booking.driver?.dateOfBirth ?? "",
+      driverLicense: booking.driver?.licenseNumber ?? "",
+      driverLicenseCountry: booking.driver?.licenseCountry ?? "",
+      licenseIssueDate: booking.driver?.licenseIssueDate ?? "",
+      licenseExpiryDate: booking.driver?.licenseExpiryDate ?? "",
+    },
   });
 
   const updateQuantity = (option: PublicReservationExtraOption, quantity: number) => {
@@ -256,8 +270,8 @@ export default function BookingStep3Page() {
         dateOfBirth: data.birthDate,
         licenseNumber: data.driverLicense,
         licenseCountry: data.driverLicenseCountry,
-        licenseIssueDate: "2020-01-01",
-        licenseExpiryDate: "2030-01-01",
+        licenseIssueDate: data.licenseIssueDate,
+        licenseExpiryDate: data.licenseExpiryDate,
         isPrimaryDriver: true,
       }
     );
@@ -388,7 +402,7 @@ export default function BookingStep3Page() {
                   id="driverLicense"
                   {...register("driverLicense")}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  placeholder="License number"
+                  placeholder={t("driverInfo.licenseNumber")}
                 />
               </div>
               {errors.driverLicense && (
@@ -407,13 +421,20 @@ export default function BookingStep3Page() {
                   id="driverLicenseCountry"
                   {...register("driverLicenseCountry")}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  placeholder="e.g. Turkey, Germany, United Kingdom"
+                  placeholder={t("driverInfo.licenseCountry")}
                 />
               </div>
               {errors.driverLicenseCountry && (
                 <p className="mt-1 text-sm text-red-600">{errors.driverLicenseCountry.message}</p>
               )}
             </div>
+            {(["licenseIssueDate", "licenseExpiryDate"] as const).map((field) => (
+              <div key={field}>
+                <label htmlFor={field} className="block text-sm font-medium text-slate-700 mb-2">{t(`driverInfo.${field}`)}</label>
+                <input type="date" id={field} {...register(field)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" />
+                {errors[field] && <p className="mt-1 text-sm text-red-600">{errors[field]?.message}</p>}
+              </div>
+            ))}
           </div>
         </div>
 

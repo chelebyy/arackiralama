@@ -207,12 +207,12 @@ export async function getOffices() {
 }
 
 export async function createOffice(data: CreateOfficeData) {
-  const response = await adminPost<AdminResponse<AdminOffice>>(OFFICES_ENDPOINT, data);
+  const response = await adminPost<AdminResponse<AdminOffice>>(OFFICES_ENDPOINT, { ...data, openingHours: typeof data.openingHours === "string" ? data.openingHours : JSON.stringify(data.openingHours) });
   return unwrapResponse(response);
 }
 
 export async function updateOffice(id: string, data: UpdateOfficeData) {
-  const response = await adminPut<AdminResponse<AdminOffice>>(`${OFFICES_ENDPOINT}/${id}`, data);
+  const response = await adminPut<AdminResponse<AdminOffice>>(`${OFFICES_ENDPOINT}/${id}`, { ...data, openingHours: typeof data.openingHours === "string" ? data.openingHours : JSON.stringify(data.openingHours) });
   return unwrapResponse(response);
 }
 

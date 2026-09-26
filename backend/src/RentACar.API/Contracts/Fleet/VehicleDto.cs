@@ -9,7 +9,7 @@ public sealed record VehicleDto(
     string Model,
     int Year,
     string Color,
-    Guid GroupId,
+    Guid? GroupId,
     Guid OfficeId,
     VehicleStatus Status,
     string? PhotoUrl,
@@ -22,4 +22,5 @@ public sealed record VehicleDto(
     string? Engine = null,
     int? PowerHp = null,
     string[]? Equipment = null,
-    string[]? PhotoUrls = null);
+    string[]? PhotoUrls = null,
+    RentACar.Core.Entities.VehicleRentalTerms? RentalTerms = null);

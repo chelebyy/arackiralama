@@ -658,6 +658,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("opening_hours");
 
+                    b.Property<string>("OperatingPolicy")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("operating_policy");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -1129,6 +1133,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("notes");
+
+                    b.Property<DateTime?>("OccupiedUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occupied_until_utc");
 
                     b.Property<DateTime>("PickupDateTime")
                         .HasColumnType("timestamp with time zone")
@@ -1750,7 +1758,7 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(80)")
                         .HasColumnName("fuel_type");
 
-                    b.Property<Guid>("GroupId")
+                    b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid")
                         .HasColumnName("group_id");
 
@@ -1787,6 +1795,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.Property<int?>("PowerHp")
                         .HasColumnType("integer")
                         .HasColumnName("power_hp");
+
+                    b.Property<string>("RentalTerms")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("rental_terms");
 
                     b.Property<int?>("SeatCount")
                         .HasColumnType("integer")
@@ -2066,8 +2078,7 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.HasOne("RentACar.Core.Entities.VehicleGroup", "Group")
                         .WithMany("Vehicles")
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("RentACar.Core.Entities.Office", "Office")
                         .WithMany("Vehicles")

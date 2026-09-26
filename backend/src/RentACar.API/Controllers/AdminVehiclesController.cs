@@ -39,7 +39,7 @@ public sealed class AdminVehiclesController(
             return BadRequestResponse(validationError);
         }
 
-        if (!await fleetService.VehicleGroupExistsAsync(request.GroupId, cancellationToken))
+        if (request.GroupId.HasValue && !await fleetService.VehicleGroupExistsAsync(request.GroupId.Value, cancellationToken))
         {
             return BadRequestResponse("Gecerli bir arac grubu secilmelidir.");
         }
@@ -54,7 +54,9 @@ public sealed class AdminVehiclesController(
             return BadRequestResponse("Bu plaka baska bir arac tarafindan kullaniliyor.");
         }
 
-        var createdVehicle = await fleetService.CreateVehicleAsync(request, cancellationToken);
+        VehicleDto? createdVehicle;
+        try { createdVehicle = await fleetService.CreateVehicleAsync(request, cancellationToken); }
+        catch (ArgumentException ex) { return BadRequestResponse(ex.Message); }
 
         await auditLogService.LogAsync(
             "Create",
@@ -80,7 +82,7 @@ public sealed class AdminVehiclesController(
             return BadRequestResponse(validationError);
         }
 
-        if (!await fleetService.VehicleGroupExistsAsync(request.GroupId, cancellationToken))
+        if (request.GroupId.HasValue && !await fleetService.VehicleGroupExistsAsync(request.GroupId.Value, cancellationToken))
         {
             return BadRequestResponse("Gecerli bir arac grubu secilmelidir.");
         }
@@ -96,7 +98,11 @@ public sealed class AdminVehiclesController(
         }
 
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
-        var updatedVehicle = await fleetService.UpdateVehicleAsync(id, request, cancellationToken);
+        VehicleDto? updatedVehicle;
+        try { updatedVehicle = await fleetService.UpdateVehicleAsync(id, request, cancellationToken); }
+        catch (ArgumentException ex) { return BadRequestResponse(ex.Message); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23P01" })
+        { return Conflict(ApiResponse<object>.Fail("Araçta etkin rezervasyon var; durum veya ofis değiştirilemez.")); }
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
@@ -120,7 +126,10 @@ public sealed class AdminVehiclesController(
     {
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var deletionOutcome = await fleetService.DeleteVehicleAsync(id, cancellationToken);
+        VehicleDeletionOutcome deletionOutcome;
+        try { deletionOutcome = await fleetService.DeleteVehicleAsync(id, cancellationToken); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23P01" })
+        { return Conflict(ApiResponse<object>.Fail("Araçta etkin rezervasyon var; arşivlenemez.")); }
 
         if (deletionOutcome == VehicleDeletionOutcome.NotFound)
         {
@@ -149,7 +158,10 @@ public sealed class AdminVehiclesController(
     {
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var updatedVehicle = await fleetService.UpdateVehicleStatusAsync(id, request.Status, cancellationToken);
+        VehicleDto? updatedVehicle;
+        try { updatedVehicle = await fleetService.UpdateVehicleStatusAsync(id, request.Status, cancellationToken); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23P01" })
+        { return Conflict(ApiResponse<object>.Fail("Araçta etkin rezervasyon var; durum değiştirilemez.")); }
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
@@ -178,7 +190,10 @@ public sealed class AdminVehiclesController(
 
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var updatedVehicle = await fleetService.TransferVehicleAsync(id, request.TargetOfficeId, request.Status, cancellationToken);
+        VehicleDto? updatedVehicle;
+        try { updatedVehicle = await fleetService.TransferVehicleAsync(id, request.TargetOfficeId, request.Status, cancellationToken); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23P01" })
+        { return Conflict(ApiResponse<object>.Fail("Araçta etkin rezervasyon var; ofis değiştirilemez.")); }
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
@@ -212,7 +227,10 @@ public sealed class AdminVehiclesController(
 
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var updatedVehicle = await fleetService.ScheduleVehicleMaintenanceAsync(id, request.StartDateUtc, request.EndDateUtc, request.Notes, cancellationToken);
+        VehicleDto? updatedVehicle;
+        try { updatedVehicle = await fleetService.ScheduleVehicleMaintenanceAsync(id, request.StartDateUtc, request.EndDateUtc, request.Notes, cancellationToken); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23P01" })
+        { return Conflict(ApiResponse<object>.Fail("Araçta etkin rezervasyon var; bakıma alınamaz.")); }
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));

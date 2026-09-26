@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { RentalTermsEditor } from "./RentalTermsEditor";
+import type { RentalTerms } from "@/lib/rental-policy";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,7 +52,7 @@ const vehicleSchema = z.object({
   model: z.string().min(1, "Model gereklidir"),
   year: z.coerce.number().min(1990, "Yıl 1990 veya daha yeni olmalıdır"),
   color: z.string().min(1, "Renk gereklidir"),
-  groupId: z.string().min(1, "Araç grubu seçilmelidir"),
+  groupId: z.string(),
   officeId: z.string().min(1, "Ofis seçilmelidir"),
   status: z.enum(["Available", "Reserved", "Rented", "Maintenance", "OutOfService", "Retired"]),
   photo: z.array(z.instanceof(File)).optional(),
@@ -87,6 +89,7 @@ export default function VehicleDialog({
   groups
 }: VehicleDialogProps) {
   const isEditing = !!vehicle;
+  const [rentalTerms, setRentalTerms] = useState<RentalTerms | null | undefined>(vehicle?.rentalTerms);
   const savedId = useRef<string | null>(null);
   const normalizeStatus = (
     status: AdminVehicle["status"] | undefined
@@ -117,6 +120,7 @@ export default function VehicleDialog({
 
   useEffect(() => {
     savedId.current = vehicle?.id ?? null;
+    setRentalTerms(vehicle?.rentalTerms);
     if (vehicle) {
       form.reset({
         transmission: vehicle.transmission == null ? "" : String(vehicle.transmission),
@@ -164,7 +168,8 @@ export default function VehicleDialog({
     model: data.model,
     year: data.year,
     color: data.color,
-    groupId: data.groupId,
+    groupId: data.groupId || null,
+    rentalTerms,
     officeId: data.officeId,
     status: data.status,
     transmission: (data.transmission || null) as CreateVehicleData["transmission"],
@@ -227,6 +232,7 @@ export default function VehicleDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <RentalTermsEditor value={rentalTerms} onChange={setRentalTerms} />
             <FormField
               control={form.control}
               name="plate"
@@ -314,14 +320,15 @@ export default function VehicleDialog({
                 name="groupId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Araç Grubu</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Eski araç grubu (isteğe bağlı)</FormLabel>
+                    <Select onValueChange={value => field.onChange(value === "none" ? "" : value)} value={field.value || "none"}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Grup seçin" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="none">Grupsuz araç</SelectItem>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
                             {group.nameTr ?? group.nameEn ?? group.name}

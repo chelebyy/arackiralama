@@ -11,6 +11,7 @@ const setDatesMock = vi.fn();
 const useOfficesMock = vi.fn();
 const getPublicReservationExtraOptionsMock = vi.fn();
 let searchParams = new URLSearchParams();
+let storedDetails: Record<string, unknown> = {};
 let selectedExtras: Array<{
   optionId: string;
   optionVersion: number;
@@ -41,6 +42,7 @@ vi.mock("@/hooks/useBooking", () => ({
   useBookingState: () => ({
     vehicle: { vehicleGroupId: "group-1" },
     selectedExtras,
+    ...storedDetails,
   }),
 }));
 
@@ -56,6 +58,7 @@ describe("BookingStep3Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     selectedExtras = [];
+    storedDetails = {};
     getPublicReservationExtraOptionsMock.mockResolvedValue([
       { id: "child-seat", code: "child_seat", name: "Child Seat", description: "For children", unitPrice: 10, pricingMode: "PER_DAY", maxQuantity: 2, iconKey: "BABY", sortOrder: 1, version: 1 },
       { id: "gps", code: "gps", name: "GPS Navigation", description: "Navigation", unitPrice: 8, pricingMode: "PER_DAY", maxQuantity: 1, iconKey: "SHIELD", sortOrder: 2, version: 2 },
@@ -71,6 +74,27 @@ describe("BookingStep3Page", () => {
     });
   });
 
+  it.each(["group-url", "00000000-0000-0000-0000-000000000000"])("loads exact vehicle extras from a restored URL with group %s", async (groupId) => {
+    storedDetails = { vehicle: undefined };
+    searchParams = new URLSearchParams({ vehicle: groupId, preferredVehicleId: "car-url" });
+
+    const { rerender } = render(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith(groupId, "en", "car-url"));
+
+    searchParams = new URLSearchParams({ vehicle: groupId, preferredVehicleId: "car-url-next" });
+    rerender(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith(groupId, "en", "car-url-next"));
+  });
+
+  it.each(["car-store", undefined])("prefers the stored vehicle identity %s over a stale exact-vehicle URL", async (vehicleId) => {
+    storedDetails = { vehicle: { vehicleGroupId: "group-store", vehicleId } };
+    searchParams = new URLSearchParams({ vehicle: "group-url", preferredVehicleId: "car-url" });
+
+    render(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith("group-store", "en", vehicleId));
+    expect(getPublicReservationExtraOptionsMock).not.toHaveBeenCalledWith(expect.anything(), "en", "car-url");
+  });
+
   it("validates required customer details before advancing", async () => {
     const user = userEvent.setup();
 
@@ -82,6 +106,17 @@ describe("BookingStep3Page", () => {
     expect(screen.getByText("Last name is required")).toBeInTheDocument();
     expect(screen.getByText("Invalid email address")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("restores submitted driver details when returning from checkout", async () => {
+    storedDetails = {
+      customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.test", phone: "+905550000099" },
+      driver: { dateOfBirth: "1990-01-01", licenseNumber: "TEST-LICENCE", licenseCountry: "TR", licenseIssueDate: "2018-06-01", licenseExpiryDate: "2032-06-01" },
+    };
+    render(<BookingStep3Page />);
+    expect(screen.getByLabelText("First Name")).toHaveValue("Jane");
+    expect(screen.getByLabelText("License issue date")).toHaveValue("2018-06-01");
+    expect(screen.getByLabelText("License expiry date")).toHaveValue("2032-06-01");
   });
 
   it("stores server catalog selections with bounded quantities", async () => {
@@ -175,6 +210,8 @@ describe("BookingStep3Page", () => {
     await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
     await user.type(screen.getByLabelText("License Number"), "TR-12345");
     await user.type(screen.getByLabelText("License Country"), "TR");
+    await user.type(screen.getByLabelText("License issue date"), "2018-06-01");
+    await user.type(screen.getByLabelText("License expiry date"), "2032-06-01");
     await user.click(screen.getByRole("button", { name: /continue to payment/i }));
 
     await waitFor(() => {
@@ -192,7 +229,7 @@ describe("BookingStep3Page", () => {
       returnDate: "2026-06-14",
       returnTime: "09:00",
     });
-    expect(updateCustomerDetailsMock).toHaveBeenCalled();
+    expect(updateCustomerDetailsMock).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ licenseIssueDate: "2018-06-01", licenseExpiryDate: "2032-06-01" }));
   });
 
   it("does not continue while direct office slugs have not resolved to backend IDs", async () => {

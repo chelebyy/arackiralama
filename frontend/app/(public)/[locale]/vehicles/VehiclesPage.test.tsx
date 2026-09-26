@@ -9,7 +9,9 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
   useSearchParams: () => new URLSearchParams()
 }));
-vi.mock("@/hooks/useVehicles", () => ({ usePublicVehicles: () => state }));
+vi.mock("@/hooks/useVehicles", () => ({ usePublicVehicles: () => state,
+  useOffices: () => ({ offices: [], isLoading: false }),
+  useExactAvailableVehicles: () => ({ vehicles: [], isLoading: false, isError: false }) }));
 beforeEach(() => {
   state.vehicles = [catalogueVehicle];
   state.isLoading = false;
