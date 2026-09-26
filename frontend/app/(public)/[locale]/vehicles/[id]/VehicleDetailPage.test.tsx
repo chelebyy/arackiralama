@@ -1,138 +1,97 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/messages/en.json";
+import { catalogueVehicle } from "@/lib/test-fixtures/catalogue";
 import VehicleDetailPage from "./page";
-
-const useParamsMock = vi.fn();
-const useSearchParamsMock = vi.fn();
-const useVehicleMock = vi.fn();
-
+const state = vi.hoisted(() => ({
+  search: "",
+  vehicle: undefined as unknown,
+  quotes: [] as unknown[],
+  offices: [] as { id: string; name: string; code?: string }[],
+  request: vi.fn(),
+  isError: false
+}));
+vi.unmock("next-intl");
 vi.mock("next/navigation", () => ({
-  useParams: () => useParamsMock(),
-  useSearchParams: () => useSearchParamsMock(),
+  useParams: () => ({ locale: "en", id: "vehicle-1" }),
+  useSearchParams: () => new URLSearchParams(state.search)
 }));
-
-vi.mock("next/link", () => ({
-  default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
-}));
-
 vi.mock("@/hooks/useVehicles", () => ({
-  useVehicle: (...args: unknown[]) => useVehicleMock(...args),
+  useVehicle: () => ({ vehicle: state.vehicle, isLoading: false, isError: state.isError }),
+  useOffices: () => ({ offices: state.offices }),
+  useAvailableVehicles: (request: unknown) => {
+    state.request(request);
+    return { vehicles: state.quotes, isLoading: false, isError: false };
+  }
 }));
-
-function createVehicle(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "vehicle-1",
-    plate: "07 ABC 001",
-    brand: "Nissan",
-    model: "Qashqai",
-    year: 2024,
-    color: "White",
-    groupId: "group-1",
-    groupName: "SUV",
-    groupNameEn: "SUV Elite",
-    officeId: "office-1",
-    status: "Available",
-    photoUrl: null,
-    dailyPrice: 2500,
-    depositAmount: 5000,
-    minAge: 24,
-    minLicenseYears: 2,
-    features: ["Bluetooth", "CarPlay"],
-    ...overrides,
-  };
-}
-
-describe("VehicleDetailPage", () => {
-  beforeEach(() => {
-    useParamsMock.mockReturnValue({ locale: "en", id: "group-1" });
-    useSearchParamsMock.mockReturnValue(
-      new URLSearchParams({
-        pickup: "ala",
-        return: "gzp",
-        pickupDate: "2026-06-10",
-        pickupTime: "10:00",
-        returnDate: "2026-06-14",
-        returnTime: "09:00",
-      }),
-    );
-    useVehicleMock.mockReturnValue({
-      vehicle: null,
-      isLoading: false,
-      isError: false,
-    });
+beforeEach(() => {
+  state.search = "";
+  state.vehicle = catalogueVehicle;
+  state.quotes = [];
+  state.offices = [{ id: "office-1", name: "Alanya" }];
+  state.isError = false;
+  state.request.mockClear();
+});
+const draw = () =>
+  render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <VehicleDetailPage />
+    </NextIntlClientProvider>
+  );
+describe("Vehicle detail catalogue", () => {
+  it("shows the selected vehicle's actual age and licence requirements without dates", () => {
+    state.vehicle = { ...catalogueVehicle, minAge: 25, minLicenseYears: 4 };
+    draw();
+    expect(within(screen.getByText("Min. Age").parentElement!).getByText("25")).toBeInTheDocument();
+    expect(within(screen.getByText("Minimum licence held (years)").parentElement!).getByText("4")).toBeInTheDocument();
   });
-
-  it("shows a loading state while vehicle detail data is being fetched", () => {
-    useVehicleMock.mockReturnValue({
-      vehicle: null,
-      isLoading: true,
-      isError: false,
-    });
-
-    render(<VehicleDetailPage />);
-
-    expect(screen.getByText("Loading vehicle details...")).toBeInTheDocument();
+  it("selects URL offices after a cold load and preserves later user selections", () => {
+    state.search = "pickup=gzp&return=ala";
+    state.offices = [];
+    const { rerender } = draw();
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("");
+    state.offices = [{ id: "office-1", name: "Alanya", code: "ala" }, { id: "office-2", name: "Gazipasa Airport", code: "gzp" }];
+    const page = <NextIntlClientProvider locale="en" messages={messages}><VehicleDetailPage /></NextIntlClientProvider>;
+    rerender(page);
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("office-2");
+    expect(screen.getAllByRole("combobox")[1]).toHaveValue("office-1");
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "office-1" } });
+    state.offices = [...state.offices];
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><VehicleDetailPage /></NextIntlClientProvider>);
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("office-1");
   });
-
-  it("renders the matched vehicle details and booking call to action", () => {
-    useVehicleMock.mockReturnValue({
-      vehicle: createVehicle(),
-      isLoading: false,
-      isError: false,
-    });
-
-    render(<VehicleDetailPage />);
-
-    expect(screen.getByRole("heading", { name: "Nissan Qashqai" })).toBeInTheDocument();
-    expect(screen.getByText("Bluetooth")).toBeInTheDocument();
-    expect(screen.getByText("CarPlay")).toBeInTheDocument();
-    expect(screen.getByText("₺10000")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute(
-      "href",
-      "/en/booking/step2?pickup=ala&return=gzp&pickupDate=2026-06-10&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=09%3A00&vehicle=group-1&dailyPrice=2500&vehicleName=Nissan+Qashqai",
-    );
+  it("does not offer a zero-price booking when the group has no configured rate", () => {
+    state.search =
+      "pickup=office-1&return=office-1&pickupDate=2099-01-01&pickupTime=10:00&returnDate=2099-01-02&returnTime=10:00";
+    state.quotes = [{ groupId: catalogueVehicle.groupId, dailyPrice: 0 }];
+    draw();
+    expect(screen.queryByRole("link", { name: "Continue booking" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/₺/)).not.toBeInTheDocument();
   });
-
-  it("uses the Turkish group name when the route locale is Turkish", () => {
-    useParamsMock.mockReturnValue({ locale: "tr", id: "vehicle-1" });
-    useVehicleMock.mockReturnValue({
-      vehicle: createVehicle({ groupName: "SUV Türkçe", groupNameEn: "SUV English" }),
-      isLoading: false,
-      isError: false,
-    });
-
-    render(<VehicleDetailPage />);
-
-    expect(screen.getByText("SUV Türkçe")).toBeInTheDocument();
-    expect(screen.queryByText("SUV English")).not.toBeInTheDocument();
+  it("allows undated browsing without asking availability or inventing ratings", () => {
+    draw();
+    expect(screen.getByRole("heading", { name: "Fiat Egea" })).toBeInTheDocument();
+    expect(state.request).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByText(/4.5|2025|₺/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue booking" })).not.toBeInTheDocument();
   });
-
-  it("shows an error message when vehicle details fail to load", () => {
-    useVehicleMock.mockReturnValue({
-      vehicle: null,
-      isLoading: false,
-      isError: true,
-    });
-
-    render(<VehicleDetailPage />);
-
-    expect(screen.getByText("Failed to load vehicle details. Please try again.")).toBeInTheDocument();
+  it("shows actual ordered photos and switches to the next image", () => {
+    state.vehicle = {
+      ...catalogueVehicle,
+      photoUrls: ["/uploads/vehicles/one.png", "/uploads/vehicles/two.png"]
+    };
+    draw();
+    expect(screen.getByRole("img")).toHaveAttribute("src", expect.stringContaining("/one.png"));
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(screen.getByRole("img")).toHaveAttribute("src", expect.stringContaining("/two.png"));
+    expect(screen.getAllByRole("button", { name: /^Photo \d/ })).toHaveLength(2);
   });
-
-  it("cycles vehicle gallery indicators when navigation buttons are clicked", () => {
-    useVehicleMock.mockReturnValue({
-      vehicle: createVehicle({ features: ["Bluetooth"] }),
-      isLoading: false,
-      isError: false,
-    });
-
-    render(<VehicleDetailPage />);
-
-    const nextButton = screen.getByRole("button", { name: "Next image" });
-    fireEvent.click(nextButton);
-
-    const indicators = screen.getAllByRole("button", { name: /View image/i });
-    expect(indicators[1].className).toContain("bg-sky-600");
+  it("rejects stale or reversed date context", () => {
+    state.search =
+      "pickup=office-1&return=office-1&pickupDate=2025-01-01&pickupTime=10:00&returnDate=2025-01-02&returnTime=10:00";
+    draw();
+    expect(state.request).toHaveBeenLastCalledWith(null);
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.catalogue.invalidDates);
   });
 });

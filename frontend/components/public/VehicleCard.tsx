@@ -1,178 +1,48 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import {
-  Users,
-  Fuel,
-  Gauge,
-  Snowflake,
-  Check,
-  Car
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface VehicleCardProps {
-  readonly id: string;
-  readonly name: string;
-  readonly category: string;
-  readonly image?: string;
-  readonly seats: number;
-  readonly doors?: number;
-  readonly transmission: "manual" | "automatic";
-  readonly fuelType: "gasoline" | "diesel" | "hybrid";
-  readonly airConditioning?: boolean;
-  readonly pricePerDay: number;
-  readonly totalPrice?: number;
-  readonly days?: number;
-  readonly freeKm?: number;
-  readonly isAvailable?: boolean;
-  readonly categoryLabel?: string;
-  readonly bookingHref?: Parameters<typeof Link>[0]["href"];
-}
+import VehicleImage from "@/components/public/VehicleImage";
+import type { PublicVehicle } from "@/lib/api/types";
+import { vehicleDetailHref, vehicleGroupName, vehiclePhotos } from "@/lib/vehicle-catalogue";
+import VehicleFacts from "./VehicleFacts";
 
 export default function VehicleCard({
-  id,
-  name,
-  category,
-  image,
-  seats,
-  doors = 4,
-  transmission,
-  fuelType,
-  airConditioning = true,
-  pricePerDay,
-  totalPrice,
-  days = 1,
-  freeKm = 200,
-  isAvailable = true,
-  categoryLabel,
-  bookingHref: bookingHrefOverride,
-}: VehicleCardProps) {
-  const t = useTranslations("vehicles");
-  const bookingHref = bookingHrefOverride ?? {
-    pathname: "/vehicles" as const,
-    query: {
-      preferredVehicleId: id,
-      vehicleName: name,
-      category,
-      dailyPrice: String(pricePerDay),
-    },
-  };
-
+  vehicle,
+  locale,
+  search = new URLSearchParams()
+}: {
+  vehicle: PublicVehicle;
+  locale: string;
+  search?: Pick<URLSearchParams, "get">;
+}) {
+  const t = useTranslations("catalogue");
+  const name = `${vehicle.brand} ${vehicle.model}`;
+  const image = vehiclePhotos(vehicle)[0];
   return (
-    <div
-      className={cn(
-        "@container group relative rounded-2xl bg-white border border-[#E2E8F0]",
-        "overflow-hidden transition-all duration-300",
-        "hover:shadow-xl hover:border-[#0369A1]/30 flex flex-col h-full",
-        !isAvailable && "opacity-70"
-      )}
-    >
-      {/* Image Container */}
-      <div className="relative aspect-[16/10] bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0] overflow-hidden shrink-0">
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <Car className="w-24 h-24 text-[#CBD5E1]" aria-hidden="true" />
-          </div>
-        )}
-
-        {/* Top Badges */}
-        <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
-          <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
-            {categoryLabel ?? t(`categories.${category}`)}
-          </span>
-          <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
-            <Check className="h-3 w-3 shrink-0" />
-            <span className="truncate">{t("freeCancellation")}</span>
-          </span>
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white hover:shadow-lg">
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+        <VehicleImage src={image} alt={name} />
+        <span className="absolute start-3 top-3 rounded-lg bg-white/95 px-3 py-1 text-xs font-semibold text-sky-800">
+          {vehicleGroupName(vehicle, locale)}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">{name}</h3>
+          <p className="text-sm text-slate-500">
+            {vehicle.year} · {vehicle.color}
+          </p>
+        </div>
+        <VehicleFacts vehicle={vehicle} />
+        <div className="mt-auto space-y-3 border-t border-slate-200 pt-4">
+          <p className="text-sm text-slate-600">{t("chooseDates")}</p>
+          <Link
+            href={vehicleDetailHref(vehicle.id, locale, search)}
+            className="block rounded-xl bg-sky-700 px-4 py-3 text-center font-semibold text-white hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          >
+            {t("viewDetails")}
+          </Link>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="p-[var(--space-fluid-sm)] flex flex-col flex-1 space-y-[var(--space-fluid-sm)]">
-        {/* Name */}
-        <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] truncate">
-          {name}
-        </h3>
-
-        {/* Features */}
-        <div className="flex flex-wrap gap-[var(--space-fluid-xs)]">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-            <Users className="h-3.5 w-3.5 text-[#0369A1]" />
-            {seats} {t("features.seats")}
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-            <Gauge className="h-3.5 w-3.5 text-[#0369A1]" />
-            {t(`features.${transmission}`)}
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-            <Fuel className="h-3.5 w-3.5 text-[#0369A1]" />
-            {t(`features.${fuelType}`)}
-          </div>
-          {airConditioning && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-              <Snowflake className="h-3.5 w-3.5 text-[#0369A1]" />
-              {t("features.airConditioning")}
-            </div>
-          )}
-        </div>
-
-        {/* Free KM */}
-        <div className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
-          {t("freeKm", { km: freeKm })}
-        </div>
-
-        {/* Price & CTA */}
-        <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex flex-col gap-[var(--space-fluid-xs)]">
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="flex items-baseline gap-1">
-              <span className="text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
-                ₺ {pricePerDay}
-              </span>
-              <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
-                /{t("pricePerDay")}
-              </span>
-            </div>
-            {days > 1 && totalPrice && (
-              <div className="text-[length:var(--text-fluid-sm)] text-[#64748B] whitespace-nowrap">
-                {t("totalPrice")}: ₺ {totalPrice}
-              </div>
-            )}
-          </div>
-
-          {isAvailable ? (
-            <Link
-              href={bookingHref}
-              className={cn(
-                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
-                "transition-all duration-200",
-                "focus:outline-none focus:ring-2 focus:ring-offset-2",
-                "text-white bg-[#0369A1]",
-                "hover:bg-[#0284C7] active:bg-[#075985]",
-                "cursor-pointer focus:ring-[#0369A1]",
-                "shadow-md hover:shadow-lg"
-              )}
-            >
-              {t("bookNow")}
-            </Link>
-          ) : (
-            <span
-              className={cn(
-                "px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-[length:var(--text-fluid-sm)] font-bold text-center",
-                "text-[#94A3B8] bg-[#F1F5F9]",
-                "cursor-not-allowed"
-              )}
-            >
-              {t("unavailable")}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
+    </article>
   );
 }

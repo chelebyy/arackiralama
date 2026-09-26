@@ -3,21 +3,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
 
-import { useAvailableVehicles, usePublicVehicles, useVehicle, useVehicleGroups } from "./useVehicles";
+import {
+  useAvailableVehicles,
+  usePublicVehicles,
+  useVehicle,
+  useVehicleGroups
+} from "./useVehicles";
 import {
   getAvailableVehicles,
   getPublicVehicles,
   getVehicleById,
-  getVehicleGroups,
+  getVehicleGroups
 } from "@/lib/api/vehicles";
-import type { AvailableVehicleGroup, AvailableVehiclesParams, PublicVehicle } from "@/lib/api/types";
+import type {
+  AvailableVehicleGroup,
+  AvailableVehiclesParams,
+  PublicVehicle
+} from "@/lib/api/types";
 
 vi.mock("@/lib/api/vehicles", () => ({
   getAvailableVehicles: vi.fn(),
   getPublicVehicles: vi.fn(),
   getVehicleById: vi.fn(),
   getVehicleGroups: vi.fn(),
-  getOffices: vi.fn(),
+  getOffices: vi.fn()
 }));
 
 const mockedGetAvailableVehicles = vi.mocked(getAvailableVehicles);
@@ -31,7 +40,7 @@ const wrapper = ({ children }: { children: ReactNode }) =>
 const params: AvailableVehiclesParams = {
   office_id: "ala",
   pickup_datetime: "2026-05-10T10:00:00",
-  return_datetime: "2026-05-12T09:00:00",
+  return_datetime: "2026-05-12T09:00:00"
 };
 
 const availableGroups: AvailableVehicleGroup[] = [
@@ -46,13 +55,12 @@ const availableGroups: AvailableVehicleGroup[] = [
     minAge: 21,
     minLicenseYears: 2,
     features: ["A/C", "Bluetooth", "GPS"],
-    imageUrl: "/images/clio.jpg",
-  },
+    imageUrl: "/images/clio.jpg"
+  }
 ];
 
 const sampleVehicle: PublicVehicle = {
   id: "vehicle-1",
-  plate: "07 ABC 001",
   brand: "Renault",
   model: "Clio",
   year: 2024,
@@ -67,7 +75,7 @@ const sampleVehicle: PublicVehicle = {
   depositAmount: 500,
   minAge: 21,
   minLicenseYears: 2,
-  features: ["A/C"],
+  features: ["A/C"]
 };
 
 describe("useVehicles", () => {
@@ -78,10 +86,13 @@ describe("useVehicles", () => {
   it("fetches available vehicles and reuses cached data across rerenders", async () => {
     mockedGetAvailableVehicles.mockResolvedValue(availableGroups);
 
-    const { result, rerender } = renderHook(({ currentParams }) => useAvailableVehicles(currentParams), {
-      initialProps: { currentParams: params },
-      wrapper,
-    });
+    const { result, rerender } = renderHook(
+      ({ currentParams }) => useAvailableVehicles(currentParams),
+      {
+        initialProps: { currentParams: params },
+        wrapper
+      }
+    );
 
     await waitFor(() => {
       expect(result.current.vehicles).toHaveLength(1);
@@ -112,7 +123,7 @@ describe("useVehicles", () => {
       expect(result.current.vehicles).toHaveLength(1);
     });
 
-    expect(result.current.vehicles[0].plate).toBe("07 ABC 001");
+    expect(result.current.vehicles[0].brand).toBe(sampleVehicle.brand);
   });
 
   it("surfaces fetch errors from vehicle group lookups", async () => {

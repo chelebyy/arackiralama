@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import ReservationTimeline from "@/components/public/ReservationTimeline";
 import { getReservationByPublicCode } from "@/lib/api/reservations";
+import { rentalDateTimeLocal } from "@/lib/rental-datetime";
 
 interface ReservationDetails {
   code: string;
@@ -77,8 +78,8 @@ export default function TrackReservationPage() {
       };
 
       const normalizedStatus = String(result.status ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
-      const pickupDateTime = new Date(result.pickupDateTime);
-      const returnDateTime = new Date(result.returnDateTime);
+      const pickupDateTime = rentalDateTimeLocal(result.pickupDateTime);
+      const returnDateTime = rentalDateTimeLocal(result.returnDateTime);
 
       const mapped: ReservationDetails = {
         code: result.publicCode,
@@ -86,10 +87,10 @@ export default function TrackReservationPage() {
         vehicleGroupName: result.vehicleGroupName,
         pickupLocation: result.pickupOfficeName,
         dropoffLocation: result.returnOfficeName,
-        pickupDate: pickupDateTime.toISOString().slice(0, 10),
-        dropoffDate: returnDateTime.toISOString().slice(0, 10),
-        pickupTime: pickupDateTime.toISOString().slice(11, 16),
-        dropoffTime: returnDateTime.toISOString().slice(11, 16),
+        pickupDate: pickupDateTime.date,
+        dropoffDate: returnDateTime.date,
+        pickupTime: pickupDateTime.time,
+        dropoffTime: returnDateTime.time,
         totalAmount: result.totalAmount,
         depositAmount: result.depositAmount,
         currency: result.currency,
@@ -125,6 +126,7 @@ export default function TrackReservationPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(locale, {
+      timeZone: "Europe/Istanbul",
       weekday: "short",
       day: "numeric",
       month: "long",

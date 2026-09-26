@@ -7,16 +7,26 @@ import type {
   PaginatedResponse,
   Reservation,
   Vehicle,
-  VehicleGroup,
-} from '../types';
+  VehicleCatalogue,
+  VehicleGroup
+} from "../types";
 
-export type AdminVehicleStatus = 'Available' | 'Reserved' | 'Rented' | 'Maintenance' | 'OutOfService' | 'Retired';
-export type AdminUserRole = 'Admin' | 'SuperAdmin';
-export type PricingCalculationType = 'multiplier' | 'fixed';
-export type ReportChangeType = 'increase' | 'decrease' | 'neutral';
-export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+export type AdminVehicleStatus =
+  | "Available"
+  | "Reserved"
+  | "Rented"
+  | "Maintenance"
+  | "OutOfService"
+  | "Retired";
+export type AdminUserRole = "Admin" | "SuperAdmin";
+export type PricingCalculationType = "multiplier" | "fixed";
+export type ReportChangeType = "increase" | "decrease" | "neutral";
+export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 
-export interface AdminVehicle extends Partial<Vehicle> {
+export interface AdminVehicle
+  extends
+    Partial<Omit<Vehicle, "transmission" | "fuelType" | "seatCount" | "luggageCapacity">>,
+    VehicleCatalogue {
   id: string;
   plate: string;
   brand?: string;
@@ -27,8 +37,8 @@ export interface AdminVehicle extends Partial<Vehicle> {
   photoUrl?: string | null;
   officeId: string;
   groupId: string;
-  office?: Pick<AdminOffice, 'id' | 'name'>;
-  group?: Pick<AdminVehicleGroup, 'id' | 'name'>;
+  office?: Pick<AdminOffice, "id" | "name">;
+  group?: Pick<AdminVehicleGroup, "id" | "name">;
   status: AdminVehicleStatus | number;
   officeName?: string;
   groupName?: string;
@@ -49,7 +59,7 @@ export interface AdminVehicleGroup {
   description?: string;
   imageUrl?: string;
   vehicles?: AdminVehicle[];
-  priceRange?: VehicleGroup['priceRange'];
+  priceRange?: VehicleGroup["priceRange"];
   depositAmount: number;
   minAge: number;
   minLicenseYears: number;
@@ -60,7 +70,7 @@ export interface AdminVehicleGroup {
 }
 
 export interface AdminOffice extends Office {
-  type: 'airport' | 'hotel' | 'office';
+  type: "airport" | "hotel" | "office";
 }
 
 export interface AdminReservation extends Reservation {
@@ -123,8 +133,8 @@ export interface PricingRule {
   weekendMultiplier?: number;
 }
 
-export interface Campaign extends Omit<PublicCampaign, 'discountType'> {
-  discountType: PublicCampaign['discountType'] | 'percentage' | 'fixed';
+export interface Campaign extends Omit<PublicCampaign, "discountType"> {
+  discountType: PublicCampaign["discountType"] | "percentage" | "fixed";
   minDays?: number;
   allowedVehicleGroupIds?: string[];
   startDate?: string;
@@ -138,7 +148,7 @@ export interface FeatureFlag {
   description: string;
 }
 
-export type PublicSettingsLocale = 'tr' | 'en' | 'ru' | 'ar' | 'de';
+export type PublicSettingsLocale = "tr" | "en" | "ru" | "ar" | "de";
 
 export interface PublicLocalizedText {
   label?: string | null;
@@ -150,7 +160,9 @@ export interface PublicLocalizedText {
   day?: string | null;
 }
 
-export type PublicLocalizedTextMap = Partial<Record<PublicSettingsLocale | string, PublicLocalizedText>>;
+export type PublicLocalizedTextMap = Partial<
+  Record<PublicSettingsLocale | string, PublicLocalizedText>
+>;
 
 export interface PublicSiteLink {
   id: string;
@@ -171,7 +183,7 @@ export interface PublicSocialLink {
 
 export interface PublicContactChannel {
   id: string;
-  type: 'phone' | 'whatsapp' | 'email' | 'emergency' | string;
+  type: "phone" | "whatsapp" | "email" | "emergency" | string;
   label: string;
   value: string;
   href: string;
@@ -187,7 +199,7 @@ export interface PublicContactOffice {
   address: string;
   phone: string;
   hours: string;
-  type: 'main' | 'airport' | 'branch' | string;
+  type: "main" | "airport" | "branch" | string;
   isVisible: boolean;
   sortOrder: number;
   translations?: PublicLocalizedTextMap | null;
@@ -202,7 +214,7 @@ export interface PublicContactWorkingHour {
   translations?: PublicLocalizedTextMap | null;
 }
 
-export type PublicPageBlockBodyFormat = 'plain' | 'html';
+export type PublicPageBlockBodyFormat = "plain" | "html";
 
 export interface PublicPageBlock {
   id: string;
@@ -307,7 +319,7 @@ export interface PublicSiteSettings {
 
 export type UpdatePublicSiteSettingsData = Omit<
   PublicSiteSettings,
-  'updatedAt' | 'paymentMethods' | 'onlinePaymentEnabled'
+  "updatedAt" | "paymentMethods" | "onlinePaymentEnabled"
 >;
 
 export interface AuditLog {
@@ -370,7 +382,7 @@ export interface AdminListParams {
   pageSize?: number;
   search?: string;
   sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: "asc" | "desc";
 }
 
 export interface VehicleListParams extends AdminListParams {
@@ -381,7 +393,7 @@ export interface VehicleListParams extends AdminListParams {
 
 export interface ReservationListParams extends AdminListParams {
   searchTerm?: string;
-  status?: Reservation['status'];
+  status?: Reservation["status"];
   pickupOfficeId?: string;
   returnOfficeId?: string;
   startDate?: string;
@@ -402,7 +414,7 @@ export interface AuditLogListParams extends AdminListParams {
   endDate?: string;
 }
 
-export interface CreateVehicleData {
+export interface CreateVehicleData extends VehicleCatalogue {
   plate: string;
   brand: string;
   model: string;
@@ -443,7 +455,7 @@ export type UpdateVehicleGroupData = CreateVehicleGroupData;
 export interface CreateOfficeData {
   name: string;
   code: string;
-  type: AdminOffice['type'];
+  type: AdminOffice["type"];
   city: string;
   district: string;
   address: string;
@@ -452,7 +464,7 @@ export interface CreateOfficeData {
   isActive: boolean;
   isAirport: boolean;
   isHotel: boolean;
-  coordinates: AdminOffice['coordinates'];
+  coordinates: AdminOffice["coordinates"];
   openingHours: OpeningHours;
   services: string[];
 }
@@ -528,7 +540,7 @@ export interface CreateCampaignData {
   code: string;
   name?: string;
   description?: string;
-  discountType: 'percentage' | 'fixed';
+  discountType: "percentage" | "fixed";
   discountValue: number;
   minRentalDays: number;
   minDays?: number;
@@ -595,4 +607,4 @@ export type AdminPaginatedResponse<T> =
   | T[]
   | ApiSuccessResponse<PaginatedResponse<T> | T[]>;
 
-export type { ApiSuccessResponse, PaginatedResponse } from '../types';
+export type { ApiSuccessResponse, PaginatedResponse } from "../types";

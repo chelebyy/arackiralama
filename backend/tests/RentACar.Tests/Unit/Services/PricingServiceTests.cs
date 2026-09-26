@@ -34,6 +34,28 @@ public sealed class PricingServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData(1, 9)]
+    [InlineData(9, 1)]
+    [InlineData(1, 1)]
+    public async Task CalculateBreakdownAsync_UsesTurkeyDatesForRulesDaysAndWeekendRates(int pickupHour, int returnHour)
+    {
+        var (group, office, _) = await SeedBasicDataAsync();
+        var localPickup = new DateTime(2030, 5, 10, pickupHour, 0, 0, DateTimeKind.Utc);
+        var localReturn = new DateTime(2030, 5, 13, returnHour, 0, 0, DateTimeKind.Utc);
+        var rule = await SeedPricingRuleAsync(group.Id, 500m, localPickup, localReturn, 1);
+        rule.WeekendMultiplier = 2m;
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _sut.CalculateBreakdownAsync(group.Id, office.Id, office.Id,
+            localPickup.AddHours(-3), localReturn.AddHours(-3), null, 0, 0, null, false);
+
+        result.Should().NotBeNull();
+        result!.RentalDays.Should().Be(3);
+        result.DailyRate.Should().Be(500m);
+        result.BaseTotal.Should().Be(2500m);
+    }
+
     [Fact]
     public async Task CalculateBreakdownAsync_WhenPricingRuleNotFound_ReturnsNull()
     {

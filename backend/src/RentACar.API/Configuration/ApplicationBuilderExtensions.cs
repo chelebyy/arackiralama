@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.FileProviders;
 using RentACar.API.Middleware;
 using RentACar.Infrastructure.Data;
 using Swashbuckle.AspNetCore.SwaggerUI;
@@ -55,6 +56,17 @@ public static class ApplicationBuilderExtensions
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseMiddleware<PublicCustomerAccountSurfaceMiddleware>();
         app.UseMiddleware<IdempotencyMiddleware>();
+        var webRoot = string.IsNullOrWhiteSpace(app.Environment.WebRootPath)
+            ? Path.Combine(app.Environment.ContentRootPath, "wwwroot")
+            : app.Environment.WebRootPath;
+        var vehiclePhotos = Directory.CreateDirectory(Path.Combine(webRoot, "uploads", "vehicles"));
+        var vehiclePhotoProvider = new PhysicalFileProvider(vehiclePhotos.FullName);
+        app.Lifetime.ApplicationStopped.Register(vehiclePhotoProvider.Dispose);
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = vehiclePhotoProvider,
+            RequestPath = "/uploads/vehicles"
+        });
         app.UseStaticFiles();
         app.UseCors(ServiceCollectionExtensions.ApiCorsPolicyName);
         app.UseAuthentication();

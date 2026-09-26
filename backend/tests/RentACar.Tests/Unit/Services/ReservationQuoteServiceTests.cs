@@ -214,6 +214,31 @@ public sealed class ReservationQuoteServiceTests
         _quoteStore.Object,
         NullLogger<ReservationQuoteService>.Instance);
 
+    [Fact]
+    public async Task CreateAsync_ValidatesCampaignUsingTurkeyDateAndRentalDays()
+    {
+        var request = ValidRequest() with
+        {
+            PickupDateTimeUtc = new DateTime(2030, 5, 9, 22, 0, 0, DateTimeKind.Utc),
+            ReturnDateTimeUtc = new DateTime(2030, 5, 13, 6, 0, 0, DateTimeKind.Utc)
+        };
+        SetupValidReferences(request);
+        _pricingService.Setup(service => service.IsCampaignCodeValidAsync("SAVE10", request.VehicleGroupId,
+            3, new DateOnly(2030, 5, 10), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _pricingService.Setup(service => service.CalculateBreakdownAsync(request.VehicleGroupId,
+            request.PickupOfficeId, request.ReturnOfficeId, request.PickupDateTimeUtc, request.ReturnDateTimeUtc,
+            "SAVE10", 0, 0, request.DriverAge, false, It.IsAny<CancellationToken>())).ReturnsAsync(BaseBreakdown());
+        _extraPricingService.Setup(service => service.CalculateAsync(request.VehicleGroupId, request.Locale,
+            3, request.SelectedExtras, It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _quoteStore.Setup(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var result = await CreateService().CreateAsync(request, "test-session");
+
+        result.RentalDays.Should().Be(3);
+        _pricingService.Verify(service => service.IsCampaignCodeValidAsync("SAVE10", request.VehicleGroupId,
+            3, new DateOnly(2030, 5, 10), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private void SetupValidReferences(CreateReservationQuoteRequest request)
     {
         _pricingService.Setup(service => service.VehicleGroupExistsAsync(request.VehicleGroupId, It.IsAny<CancellationToken>())).ReturnsAsync(true);

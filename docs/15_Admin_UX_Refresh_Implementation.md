@@ -1,5 +1,15 @@
 # Admin Public Site & Contact UX Refresh Implementation
 
+## Second catalogue review follow-up — 2026-09-25
+
+API integration suite: 54/54 passed against local PostgreSQL/Redis using explicit IPv4 addresses.
+
+The shared backend pricing calendar now uses Turkey business dates without rewriting stored UTC timestamps. Public detail office selects recover from delayed office loading, and legacy root-relative photo URLs remain supported. Admin authoring behavior is unchanged. Validation: 823 backend / 298 frontend tests passed, production build/TypeScript passed, lint zero errors and one existing warning. Real local quote and delayed-office browser evidence are recorded in the [Package 1 document](Vehicle_Catalogue_Package_1_Implementation.md#second-pr-446-review-fixes--2026-09-25). No merge or deployment.
+
+## Catalogue PR 446 review follow-up — 2026-09-25
+
+The catalogue review follow-up changes public office resolution, rental datetime serialization and image error fallback. Admin behavior is unchanged. All 297 frontend tests, production build and TypeScript passed; lint has zero errors and one existing warning. Local API-backed browser checks verified GZP resolution, matching catalogue/booking UTC instants and image fallback/recovery. No merge or deployment. See [Package 1 evidence](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25) and the synchronized local browser checklist.
+
 **Created:** 2026-07-08  
 **Scope:** Admin usability refresh for Public Site & Contact authoring  
 **Primary user:** Site owner/admin editing customer-facing content  
@@ -309,3 +319,21 @@ Current main (`ce23b54`) was built in an isolated Docker stack with payments and
 The tracking input lacked an accessible name. It now uses the existing localized code prompt as its accessible label, with a focused unit regression test. Tracking E2E selectors were scoped to the reservation form and its actual error element; the not-found test now asserts the displayed error. An opt-in localhost-only E2E test covers unpaid submission through admin detail. Fresh local inventory required synthetic pricing rules before a quote could be produced; this setup and commands are recorded in `13_Local_Docker_Browser_Test_Checklist.md`.
 
 This pass does not reopen the completed Public Site & Contact redesign or establish production/payment-provider acceptance. Existing security-gating limitations above remain separate from the local browser evidence.
+
+## September 24, 2026: vehicle catalogue Package 1
+
+Publication update, September 25: [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is open; see the [session handoff](handoffs/2026-09-25-catalog-package1-pr-handoff.md). Merge and deployment remain unauthorized.
+
+Admin vehicle editing now supports nullable verified specifications, equipment and an ordered photo gallery. Unknown values remain unspecified; legacy photos/model/year and reserved/rented status are preserved. Successful partial uploads remain saved for retry. Only the affected vehicle changes.
+
+The public card/list/detail share these values; admin plate remains available while public DTOs omit it. Local browser acceptance covered editing, valid/invalid uploads, ordering, five languages and RTL/mobile layouts. Header/Hero remain untouched. Backend (818 unit/service/controller, 54 API integration), frontend (290 full-suite tests plus two new admin preservation cases), final build/TypeScript and lint checks passed, with the existing lint warning documented.
+
+See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) and the matching September 24 entry in [the local checklist](13_Local_Docker_Browser_Test_Checklist.md). Group pricing/reservation remains transitional; this is not production or full rental-flow acceptance.
+
+## September 26, 2026: reservation day consistency
+
+Reservation DTO day counts now preserve stored pricing snapshot days; records without a snapshot use the same Turkey rental calendar as pricing. Availability uses quoted days with the same fallback. This removes 3-day/4-day mismatches without rewriting historical quotes. Homepage search defaults were corrected with unchanged Header/Hero and form layout. Validation: 827 backend, 54 API integration, 308 frontend tests; build/TypeScript/lint passed (one existing warning). See the implementation evidence and handoff for local browser proof and pending new-head CI/review.
+
+## September 25, 2026: third catalogue review
+
+Public vehicle detail now exposes the existing API minimum-age and licence-tenure values with five-locale labels. Confirmation/tracking display stored UTC values in Europe/Istanbul, including calendar dates. Admin behavior is unchanged. 304 frontend tests, production build/TypeScript and lint passed; one pre-existing lint warning remains. Synthetic-API local browser checks verified both fixes; no backend rerun, real booking, merge or deployment. See the updated implementation evidence and handoff.

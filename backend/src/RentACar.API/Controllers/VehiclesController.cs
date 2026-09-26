@@ -22,19 +22,16 @@ public sealed class VehiclesController(
     {
         var vehicles = await fleetService.GetVehiclesAsync(cancellationToken);
         var groups = await fleetService.GetVehicleGroupsAsync(cancellationToken);
-        var dailyPrices = await ResolveDailyPricesAsync(
-            vehicles.Select(vehicle => vehicle.GroupId).Distinct().ToArray(),
-            cancellationToken);
 
         var publicVehicles = vehicles
             .Where(vehicle => vehicle.Status == VehicleStatus.Available)
             .Select(vehicle => MapToPublicVehicle(
                 vehicle,
                 groups.FirstOrDefault(group => group.Id == vehicle.GroupId),
-                dailyPrices.GetValueOrDefault(vehicle.GroupId)))
+                null))
             .OrderBy(vehicle => vehicle.Brand)
             .ThenBy(vehicle => vehicle.Model)
-            .ThenBy(vehicle => vehicle.Plate)
+            .ThenBy(vehicle => vehicle.Id)
             .ToList();
 
         return OkResponse(publicVehicles);
@@ -70,7 +67,7 @@ public sealed class VehiclesController(
             return BadRequestResponse("Gecerli bir ofis secilmelidir.");
         }
 
-        if (pickupDateTimeUtc >= returnDateTimeUtc)
+        if (pickupDateTimeUtc < DateTime.UtcNow || pickupDateTimeUtc >= returnDateTimeUtc)
         {
             return BadRequestResponse("Alis tarihi donus tarihinden once olmalidir.");
         }
@@ -110,8 +107,7 @@ public sealed class VehiclesController(
         }
 
         var group = await fleetService.GetVehicleGroupByIdAsync(vehicle.GroupId, cancellationToken);
-        var dailyPrices = await ResolveDailyPricesAsync([vehicle.GroupId], cancellationToken);
-        return OkResponse(MapToPublicVehicle(vehicle, group, dailyPrices.GetValueOrDefault(vehicle.GroupId)));
+        return OkResponse(MapToPublicVehicle(vehicle, group, null));
     }
 
     private async Task<Dictionary<Guid, decimal>> ResolveDailyPricesAsync(
@@ -141,11 +137,10 @@ public sealed class VehiclesController(
             .ToDictionary(grouping => grouping.Key, grouping => CalculateDailyRate(grouping.First(), today));
     }
 
-    private static PublicVehicleDto MapToPublicVehicle(VehicleDto vehicle, VehicleGroupDto? group, decimal dailyPrice)
+    private static PublicVehicleDto MapToPublicVehicle(VehicleDto vehicle, VehicleGroupDto? group, decimal? dailyPrice)
     {
         return new PublicVehicleDto(
             vehicle.Id,
-            vehicle.Plate,
             vehicle.Brand,
             vehicle.Model,
             vehicle.Year,
@@ -160,7 +155,16 @@ public sealed class VehiclesController(
             group?.DepositAmount ?? 0m,
             group?.MinAge ?? 0,
             group?.MinLicenseYears ?? 0,
-            group?.Features ?? []);
+            vehicle.Equipment ?? [],
+            vehicle.Transmission,
+            vehicle.FuelType,
+            vehicle.SeatCount,
+            vehicle.LuggageCapacity,
+            vehicle.BodyType,
+            vehicle.DoorCount,
+            vehicle.Engine,
+            vehicle.PowerHp,
+            vehicle.PhotoUrls ?? (vehicle.PhotoUrl is null ? [] : [vehicle.PhotoUrl]));
     }
 
     private static decimal CalculateDailyRate(PricingRule pricingRule, DateOnly date)

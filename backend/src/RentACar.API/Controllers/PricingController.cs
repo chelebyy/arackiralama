@@ -103,7 +103,7 @@ public sealed class PricingController(
                 campaignCode,
                 vehicleGroupId,
                 rentalDays,
-                DateOnly.FromDateTime(pickupDateTimeUtc),
+                RentalCalendar.TurkeyDate(pickupDateTimeUtc),
                 cancellationToken);
 
             if (!isCampaignCodeValid)
@@ -194,9 +194,7 @@ public sealed class PricingController(
 
     private static int CalculateRentalDays(DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc)
     {
-        var pickupDate = DateOnly.FromDateTime(pickupDateTimeUtc);
-        var returnDate = DateOnly.FromDateTime(returnDateTimeUtc);
-        return Math.Max(1, returnDate.DayNumber - pickupDate.DayNumber);
+        return RentalCalendar.RentalDays(pickupDateTimeUtc, returnDateTimeUtc);
     }
 
     private static PriceBreakdownDto ApplyLegacyCatalogExtras(

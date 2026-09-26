@@ -37,7 +37,7 @@ public sealed class ReservationQuoteService(
                 campaignCode,
                 request.VehicleGroupId,
                 rentalDays,
-                DateOnly.FromDateTime(request.PickupDateTimeUtc),
+                RentalCalendar.TurkeyDate(request.PickupDateTimeUtc),
                 cancellationToken))
         {
             throw new ArgumentException("Campaign code is invalid or expired.");
@@ -243,7 +243,7 @@ public sealed class ReservationQuoteService(
     }
 
     private static int CalculateRentalDays(DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc) =>
-        Math.Max(1, DateOnly.FromDateTime(returnDateTimeUtc).DayNumber - DateOnly.FromDateTime(pickupDateTimeUtc).DayNumber);
+        RentalCalendar.RentalDays(pickupDateTimeUtc, returnDateTimeUtc);
 
     private static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 }

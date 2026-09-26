@@ -1,123 +1,46 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/messages/en.json";
+import { catalogueVehicle } from "@/lib/test-fixtures/catalogue";
 import FeaturedVehicles from "./FeaturedVehicles";
-
-const usePublicVehiclesMock = vi.fn();
-const useParamsMock = vi.fn();
-
+const state = vi.hoisted(() => ({ vehicles: [] as unknown[], isLoading: false, isError: false }));
 vi.mock("next/navigation", () => ({
-  useParams: () => useParamsMock(),
+  useParams: () => ({ locale: "en" }),
+  useSearchParams: () => new URLSearchParams("pickup=ala")
 }));
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => {
-    return (key: string, values?: Record<string, unknown>) => {
-      if (key === "freeKm") return `Günlük ${values?.km} km dahil`;
-      if (key === "pricePerDay") return "Günlük";
-      if (key === "bookNow") return "Hemen Rezerve Et";
-      if (key === "freeCancellation") return "Ücretsiz iptal";
-      if (key === "empty") return "Şu anda gösterilecek araç bulunamadı.";
-      if (key === "features.seats") return "Kişi";
-      if (key === "features.automatic") return "Otomatik";
-      if (key === "features.gasoline") return "Benzin";
-      if (key === "features.airConditioning") return "Klima";
-      return key;
-    };
-  },
-}));
-
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: any) => {
-    const resolvedHref =
-      typeof href === "string"
-        ? href
-        : `${href.pathname}?${new URLSearchParams(href.query).toString()}`;
-    return <a href={resolvedHref} {...props}>{children}</a>;
-  },
-}));
-
-vi.mock("@/hooks/useVehicles", () => ({
-  usePublicVehicles: () => usePublicVehiclesMock(),
-}));
-
-function createVehicle(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "vehicle-1",
-    plate: "07 ABC 001",
-    brand: "Dacia",
-    model: "Duster",
-    year: 2024,
-    color: "White",
-    groupId: "group-suv",
-    groupName: "SUV",
-    groupNameEn: "SUV",
-    officeId: "office-1",
-    status: "Available",
-    photoUrl: null,
-    dailyPrice: 1800,
-    depositAmount: 5000,
-    minAge: 21,
-    minLicenseYears: 2,
-    features: ["Bluetooth"],
-    ...overrides,
-  };
-}
-
-describe("FeaturedVehicles", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-07T09:00:00"));
-    useParamsMock.mockReturnValue({ locale: "tr" });
-    usePublicVehiclesMock.mockReturnValue({
-      vehicles: [createVehicle()],
-      isLoading: false,
-      isError: false,
-    });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.clearAllMocks();
-  });
-
-  it("renders featured vehicles from public API data with backend price and availability-checked booking link", () => {
-    render(<FeaturedVehicles />);
-
-    expect(screen.getByRole("heading", { name: "Dacia Duster" })).toBeInTheDocument();
-    expect(screen.getByText("₺ 1800")).toBeInTheDocument();
-    expect(screen.getByText("SUV")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Hemen Rezerve Et" })).toHaveAttribute(
-      "href",
-      "/tr/booking/step2?pickup=ala&return=ala&pickupDate=2026-06-07&pickupTime=10%3A00&returnDate=2026-06-14&returnTime=10%3A00&vehicle=group-suv&dailyPrice=1800&vehicleName=Dacia+Duster"
+vi.mock("@/hooks/useVehicles", () => ({ usePublicVehicles: () => state }));
+beforeEach(() => {
+  state.vehicles = [];
+  state.isLoading = false;
+  state.isError = false;
+});
+const draw = () =>
+  render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <FeaturedVehicles />
+    </NextIntlClientProvider>
+  );
+describe("Featured catalogue", () => {
+  it("shows exactly four physical vehicles with detail links", () => {
+    state.vehicles = Array.from({ length: 6 }, (_, i) => ({
+      ...catalogueVehicle,
+      id: `vehicle-${i}`,
+      model: `Model ${i}`
+    }));
+    draw();
+    expect(screen.getAllByRole("article")).toHaveLength(4);
+    expect(screen.getAllByRole("link")[0].getAttribute("href")).toBe(
+      "/en/vehicles/vehicle-0?pickup=ala"
     );
   });
-
-  it("resolves relative backend photo URLs before rendering images", () => {
-    usePublicVehiclesMock.mockReturnValue({
-      vehicles: [createVehicle({ photoUrl: "/uploads/vehicles/duster.jpg" })],
-      isLoading: false,
-      isError: false,
-    });
-
-    render(<FeaturedVehicles />);
-
-    expect(screen.getByRole("img", { name: "Dacia Duster" })).toHaveAttribute(
-      "src",
-      "http://localhost:5000/uploads/vehicles/duster.jpg"
-    );
+  it("separates error and empty states", () => {
+    state.isError = true;
+    draw();
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.vehicles.failed);
   });
-
-  it("does not render unavailable vehicles in the featured list", () => {
-    usePublicVehiclesMock.mockReturnValue({
-      vehicles: [createVehicle({ status: "Maintenance" })],
-      isLoading: false,
-      isError: false,
-    });
-
-    render(<FeaturedVehicles />);
-
-    expect(screen.getByText("Şu anda gösterilecek araç bulunamadı.")).toBeInTheDocument();
-    expect(screen.queryByText("Dacia Duster")).not.toBeInTheDocument();
+  it("shows the empty state", () => {
+    draw();
+    expect(screen.getByText(messages.vehicles.empty)).toBeInTheDocument();
   });
 });

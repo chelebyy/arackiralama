@@ -58,7 +58,7 @@ describe("TrackReservationPage", () => {
       },
       pickupOfficeName: "Gazipasa Airport",
       returnOfficeName: "Alanya Center",
-      pickupDateTime: "2026-06-10T09:30:00Z",
+      pickupDateTime: "2026-06-09T22:00:00Z",
       returnDateTime: "2026-06-14T11:00:00Z",
       paymentStatus: "CAPTURED",
       totalAmount: 3200,
@@ -77,6 +77,9 @@ describe("TrackReservationPage", () => {
 
     expect(await screen.findByText("ALN-2026-1001")).toBeInTheDocument();
     expect(screen.getByText("Economy")).toBeInTheDocument();
+    expect(screen.getByText("01:00")).toBeInTheDocument();
+    expect(screen.getByText("14:00")).toBeInTheDocument();
+    expect(screen.getByText("Wed, June 10, 2026")).toBeInTheDocument();
     expect(screen.getByText("₺3200")).toBeInTheDocument();
     expect(screen.getByText("₺5000")).toBeInTheDocument();
     expect(screen.getByTestId("reservation-timeline")).toHaveTextContent("active");

@@ -10,4 +10,13 @@ public sealed record CreateVehicleRequest(
     string Color,
     Guid GroupId,
     Guid OfficeId,
-    VehicleStatus Status);
+    VehicleStatus Status,
+    string? Transmission = null,
+    string? FuelType = null,
+    int? SeatCount = null,
+    int? LuggageCapacity = null,
+    string? BodyType = null,
+    int? DoorCount = null,
+    string? Engine = null,
+    int? PowerHp = null,
+    string[]? Equipment = null);

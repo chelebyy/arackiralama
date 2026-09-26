@@ -37,6 +37,7 @@ public interface IFleetService
         string? notes,
         CancellationToken cancellationToken = default);
     Task<VehicleDto?> UploadVehiclePhotoAsync(Guid id, IFormFile file, CancellationToken cancellationToken = default);
+    Task<VehicleDto?> UpdateVehiclePhotosAsync(Guid id, string[] photoUrls, CancellationToken cancellationToken = default);
 
     Task<VehicleDto?> GetVehicleByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> IsVehiclePlateAvailableAsync(string plate, Guid? excludeVehicleId = null, CancellationToken cancellationToken = default);

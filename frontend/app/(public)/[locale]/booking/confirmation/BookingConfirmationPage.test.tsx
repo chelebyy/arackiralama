@@ -46,7 +46,7 @@ describe("BookingConfirmationPage", () => {
         email: "ada@example.com",
       },
       pickupOfficeName: "Alanya Merkez",
-      pickupDateTime: "2026-06-10T09:30:00Z",
+      pickupDateTime: "2026-06-09T22:00:00Z",
       returnOfficeName: "Gazipaşa Havalimanı",
       returnDateTime: "2026-06-14T11:00:00Z",
       totalAmount: 3200,
@@ -60,8 +60,8 @@ describe("BookingConfirmationPage", () => {
     expect(screen.getByText("booking.payment.summary.title")).toBeInTheDocument();
     expect(screen.getByText("ALN-2026-1001")).toBeInTheDocument();
     expect(await screen.findByText("Economy")).toBeInTheDocument();
-    expect(screen.getByText("Alanya Merkez - 2026-06-10 - 09:30")).toBeInTheDocument();
-    expect(screen.getByText("Gazipaşa Havalimanı - 2026-06-14 - 11:00")).toBeInTheDocument();
+    expect(screen.getByText("Alanya Merkez - 2026-06-10 - 01:00")).toBeInTheDocument();
+    expect(screen.getByText("Gazipaşa Havalimanı - 2026-06-14 - 14:00")).toBeInTheDocument();
     expect(screen.getByText("₺3.200,00")).toBeInTheDocument();
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
     expect(screen.queryByText("ada@example.com")).not.toBeInTheDocument();

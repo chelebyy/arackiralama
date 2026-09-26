@@ -141,7 +141,7 @@ public sealed class ReservationService : IReservationService
                 0, 0, null, false,
                 cancellationToken);
 
-            var rentalDays = (int)Math.Ceiling((returnDateTimeUtc - pickupDateTimeUtc).TotalDays);
+            var rentalDays = pricing?.RentalDays ?? RentalCalendar.RentalDays(pickupDateTimeUtc, returnDateTimeUtc);
 
             if (pricing != null)
             {
@@ -2098,8 +2098,8 @@ public sealed class ReservationService : IReservationService
 
     private ReservationDto MapToDto(Reservation reservation)
     {
-        var rentalDays = (int)Math.Ceiling((reservation.ReturnDateTime - reservation.PickupDateTime).TotalDays);
-        rentalDays = Math.Max(1, rentalDays);
+        var rentalDays = reservation.PricingSnapshot?.RentalDays
+            ?? RentalCalendar.RentalDays(reservation.PickupDateTime, reservation.ReturnDateTime);
 
         var isDraftWithoutAssignedVehicle =
             reservation.Status == ReservationStatus.Draft && reservation.Vehicle == null;

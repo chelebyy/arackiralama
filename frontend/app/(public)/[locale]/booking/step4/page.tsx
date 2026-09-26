@@ -1,4 +1,5 @@
 "use client";
+import { rentalDateTimeUtc } from "@/lib/rental-datetime";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -246,8 +247,8 @@ export default function BookingStep4Page() {
       vehicleGroupId: selectedVehicleGroupId,
       pickupOfficeId,
       returnOfficeId,
-      pickupDateTimeUtc: `${pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
-      returnDateTimeUtc: `${returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
+      pickupDateTimeUtc: rentalDateTimeUtc(pickupDate, booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"),
+      returnDateTimeUtc: rentalDateTimeUtc(returnDate, booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"),
       campaignCode,
       driverAge,
       fullCoverageWaiver: false,
@@ -391,8 +392,8 @@ export default function BookingStep4Page() {
       vehicleGroupId: booking.vehicle?.vehicleGroupId ?? vehicleParam,
       pickupOfficeId,
       returnOfficeId,
-      pickupDateTimeUtc: `${booking.dates?.pickupDate ?? pickupDate}T${booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"}:00Z`,
-      returnDateTimeUtc: `${booking.dates?.returnDate ?? returnDate}T${booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"}:00Z`,
+      pickupDateTimeUtc: rentalDateTimeUtc(booking.dates?.pickupDate ?? pickupDate, booking.dates?.pickupTime ?? searchParams.get("pickupTime") ?? "00:00"),
+      returnDateTimeUtc: rentalDateTimeUtc(booking.dates?.returnDate ?? returnDate, booking.dates?.returnTime ?? searchParams.get("returnTime") ?? "00:00"),
       customer,
       driver,
       campaignCode: activeQuote.appliedCampaignCode ?? undefined,

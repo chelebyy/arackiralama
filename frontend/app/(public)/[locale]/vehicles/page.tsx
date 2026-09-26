@@ -1,460 +1,125 @@
 "use client";
-
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import NextLink from "next/link";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
-import {
-  Car,
-  Users,
-  Briefcase,
-  Fuel,
-  Calendar,
-  MapPin,
-  ChevronRight,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-  Gauge,
-  X,
-  Check,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useOffices, usePublicVehicles } from "@/hooks/useVehicles";
-import { API_CONFIG } from "@/lib/api/config";
-import type { PublicVehicle } from "@/lib/api/types";
+import VehicleCard from "@/components/public/VehicleCard";
+import { usePublicVehicles } from "@/hooks/useVehicles";
+import { vehicleGroupName, validCatalogueDates } from "@/lib/vehicle-catalogue";
 
-function resolveMediaUrl(url: string | null): string {
-  if (!url) return "";
-  if (/^https?:\/\//i.test(url)) return url;
-  const apiOrigin = new URL(API_CONFIG.baseUrl).origin;
-  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
-}
-
-function resolveGroupName(vehicle: PublicVehicle, locale: string): string {
-  if (locale === "tr") return vehicle.groupName || vehicle.groupNameEn || "fleet";
-  return vehicle.groupNameEn || vehicle.groupName || "fleet";
-}
-
-function mapPublicToVehicle(vehicle: PublicVehicle, locale: string): Vehicle {
-  const groupName = resolveGroupName(vehicle, locale);
-
-  return {
-    id: vehicle.id,
-    groupId: vehicle.groupId,
-    name: `${vehicle.brand} ${vehicle.model}`,
-    group: groupName,
-    image: resolveMediaUrl(vehicle.photoUrl),
-    passengers: 5,
-    luggage: 2,
-    transmission: "automatic",
-    fuelType: "gasoline",
-    dailyRate: vehicle.dailyPrice,
-    features: vehicle.features,
-    available: vehicle.status === "Available",
-    meta: `${vehicle.year} · ${vehicle.color} · ${vehicle.plate}`,
-  };
-}
-
-interface Vehicle {
-  id: string;
-  groupId: string;
-  name: string;
-  group: string;
-  image: string;
-  passengers: number;
-  luggage: number;
-  transmission: "manual" | "automatic";
-  fuelType: "gasoline" | "diesel" | "hybrid";
-  dailyRate: number;
-  features: string[];
-  available: boolean;
-  meta: string;
-}
-
-const officeSlugPatterns: Record<string, string> = {
-  ala: "alanya",
-  gzp: "gazipaşa",
-  ayt: "antalya",
-  mahmutlar: "mahmutlar",
-  kargicak: "kargıcak",
-  konakli: "konaklı",
-  avsallar: "avsallar",
-};
-
-function isGuid(value: string): boolean {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-}
-
-function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
-  if (isGuid(slugOrGuid)) return slugOrGuid;
-  const pattern = officeSlugPatterns[slugOrGuid.toLowerCase()];
-  if (!pattern) return slugOrGuid;
-  const matched = offices.find((o) => o.name.toLowerCase().includes(pattern));
-  return matched?.id ?? slugOrGuid;
-}
-
-export default function VehiclesPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
+function Catalogue() {
+  const params = useParams(),
+    search = useSearchParams();
   const locale = typeof params.locale === "string" ? params.locale : "tr";
-  const t = useTranslations("vehicles");
-  const tCommon = useTranslations("common");
-
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedGroup, setSelectedGroup] = useState("all");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const pickupOffice = searchParams.get("pickup") || "ala";
-  const returnOffice = searchParams.get("return") || pickupOffice;
-  const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
-  const pickupTime = searchParams.get("pickupTime") || "10:00";
-  const returnDate = searchParams.get("returnDate") || "2025-04-08";
-  const returnTime = searchParams.get("returnTime") || "09:00";
-
-  const { offices } = useOffices();
-  const pickupOfficeGuid = resolveOfficeGuid(offices, pickupOffice);
-  const pickupOfficeObj = offices.find((o) => o.id === pickupOfficeGuid);
-
-  const { vehicles: publicVehicles, isLoading, isError } = usePublicVehicles();
-
-  const vehicles = publicVehicles
-    .filter((vehicle) => vehicle.status === "Available")
-    .map((vehicle) => mapPublicToVehicle(vehicle, locale));
-  const vehicleGroups = [
-    "all",
-    ...Array.from(new Set(vehicles.map((vehicle) => vehicle.group))).sort((a, b) =>
-      a.localeCompare(b)
-    ),
-  ];
-
-  const filteredVehicles =
-    selectedGroup === "all"
-      ? vehicles
-      : vehicles.filter((v) => v.group === selectedGroup);
-
-  function buildBookingStep2Href(vehicle: Vehicle): string {
-    const query = new URLSearchParams(Object.fromEntries(searchParams.entries()));
-    query.set("pickup", pickupOffice);
-    query.set("return", returnOffice);
-    query.set("pickupDate", pickupDate);
-    query.set("pickupTime", pickupTime);
-    query.set("returnDate", returnDate);
-    query.set("returnTime", returnTime);
-    query.set("vehicle", vehicle.groupId);
-    query.set("dailyPrice", String(vehicle.dailyRate));
-    query.set("vehicleName", vehicle.name);
-    return `/${locale}/booking/step2?${query.toString()}`;
-  }
-
-  const totalPages = Math.ceil(filteredVehicles.length / 6);
-
+  const t = useTranslations("catalogue"),
+    tv = useTranslations("vehicles");
+  const { vehicles, isLoading, isError } = usePublicVehicles();
+  const [group, setGroup] = useState(""),
+    [page, setPage] = useState(1),
+    [view, setView] = useState("grid");
+  const catalogue = vehicles.filter((vehicle) => vehicle.status === "Available");
+  const groups = Array.from(
+    new Map(
+      catalogue.map((vehicle) => [vehicle.groupId, vehicleGroupName(vehicle, locale)])
+    ).entries()
+  );
+  const filtered = catalogue.filter((vehicle) => !group || vehicle.groupId === group);
+  const pages = Math.max(1, Math.ceil(filtered.length / 6)),
+    current = Math.min(page, pages);
+  const dates = validCatalogueDates(search);
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)] py-[var(--space-fluid-md)]">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-[var(--space-fluid-md)]">
-            <div className="flex items-center gap-4 bg-slate-50 px-4 py-3 rounded-lg border border-slate-200 overflow-x-auto">
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <MapPin className="h-4 w-4 text-[#0369A1]" />
-                <span className="text-sm text-slate-700">
-                  {pickupOfficeObj?.name ?? pickupOffice}
-                </span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <Calendar className="h-4 w-4 text-[#0369A1]" />
-                <span className="text-sm text-slate-700">
-                  {pickupDate} &rarr; {returnDate}
-                </span>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <h1 className="text-3xl font-bold text-slate-900">{tv("title")}</h1>
+        <p className="text-slate-600">
+          {dates ? `${search.get("pickupDate")} → ${search.get("returnDate")}` : t("chooseDates")}
+        </p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <label className="grid gap-2 text-sm text-slate-700">
+            {t("group")}
+            <select
+              value={group}
+              onChange={(event) => {
+                setGroup(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-300 bg-white p-3"
+            >
+              <option value="">{t("all")}</option>
+              {groups.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex gap-2">
+            {["grid", "list"].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={view === mode}
+                onClick={() => setView(mode)}
+                className={
+                  view === mode
+                    ? "rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sky-900"
+                    : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700"
+                }
+              >
+                {t(mode)}
+              </button>
+            ))}
           </div>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl px-[var(--space-fluid-md)] lg:px-[var(--space-fluid-lg)] py-[var(--space-fluid-xl)]">
-        <div className="flex flex-col lg:flex-row gap-[var(--space-fluid-xl)]">
-          <button
-            type="button"
-            onClick={() => setMobileFiltersOpen(true)}
-            className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50"
+        {isLoading ? (
+          <p role="status">{tv("loading")}</p>
+        ) : isError ? (
+          <p role="alert">{tv("failed")}</p>
+        ) : !filtered.length ? (
+          <p>{tv("empty")}</p>
+        ) : (
+          <div
+            className={
+              view === "grid"
+                ? "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+                : "grid max-w-2xl grid-cols-1 gap-6"
+            }
           >
-            <SlidersHorizontal className="h-4 w-4" />
-            {tCommon("buttons.filter")}
-          </button>
-
-          <aside
-            className={cn(
-              "fixed inset-0 z-40 lg:relative lg:inset-auto lg:block shrink-0",
-              mobileFiltersOpen ? "block" : "hidden lg:block",
-            )}
-          >
+            {filtered.slice((current - 1) * 6, current * 6).map((vehicle) => (
+              <VehicleCard key={vehicle.id} vehicle={vehicle} locale={locale} search={search} />
+            ))}
+          </div>
+        )}
+        {pages > 1 && (
+          <nav aria-label={t("pages")} className="flex justify-center gap-3">
             <button
               type="button"
-              className="absolute inset-0 bg-black/50 lg:hidden"
-              onClick={() => setMobileFiltersOpen(false)}
-              aria-label="Close filters"
-            />
-            <div className="absolute right-0 top-0 h-full w-80 bg-white p-[var(--space-fluid-lg)] lg:relative lg:w-64 lg:p-0 lg:bg-transparent">
-              <div className="flex items-center justify-between lg:hidden mb-[var(--space-fluid-md)]">
-                <h2 className="text-[length:var(--text-fluid-lg)] font-semibold text-slate-900">{tCommon("buttons.filter")}</h2>
-                <button
-                  type="button"
-                  onClick={() => setMobileFiltersOpen(false)}
-                  className="p-2 hover:bg-slate-100 rounded-lg"
-                  aria-label="Close filters"
-                >
-                  <X className="h-5 w-5 text-slate-500" />
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900 mb-4">{t("title")}</h3>
-                <div className="space-y-2">
-                  {vehicleGroups.map((group) => (
-                    <button
-                      key={group}
-                      type="button"
-                      onClick={() => setSelectedGroup(group)}
-                      className={cn(
-                        "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
-                        selectedGroup === group
-                          ? "bg-[#0369A1]/10 text-[#0369A1] font-medium"
-                          : "text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      {group === "all" && t.has("categories.all")
-                        ? t("categories.all")
-                        : group}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-[var(--space-fluid-lg)]">
-              <p className="text-slate-600">
-                <span className="font-semibold text-[#0369A1]">{filteredVehicles.length}</span>{" "}
-                {t("title").toLowerCase()}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    viewMode === "grid"
-                      ? "bg-[#0369A1]/10 text-[#0369A1]"
-                      : "text-slate-400 hover:text-slate-600 focus:bg-slate-100"
-                  )}
-                  aria-label="Grid view"
-                >
-                  <Grid3X3 className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    viewMode === "list"
-                      ? "bg-[#0369A1]/10 text-[#0369A1]"
-                      : "text-slate-400 hover:text-slate-600 focus:bg-slate-100"
-                  )}
-                  aria-label="List view"
-                >
-                  <List className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {isLoading && (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0369A1] mx-auto" />
-                <p className="mt-4 text-slate-600">{t("loading")}</p>
-              </div>
-            )}
-
-            {isError && (
-              <div className="text-center py-12">
-                <Car className="h-12 w-12 text-red-400 mx-auto" />
-                <p className="mt-4 text-slate-600">{t("failed")}</p>
-              </div>
-            )}
-
-            {!isLoading && !isError && (
-              <>
-              <div
-                className={cn(
-                  "grid gap-[var(--space-fluid-lg)]",
-                  viewMode === "grid"
-                    ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-                    : "grid-cols-1"
-                )}
-              >
-                {filteredVehicles.map((vehicle) => (
-                <div
-                  key={vehicle.id}
-                  className={cn(
-                    "@container group relative rounded-2xl bg-white border border-[#E2E8F0]",
-                    "overflow-hidden transition-all duration-300",
-                    "hover:shadow-xl hover:border-[#0369A1]/30 flex",
-                    viewMode === "list" ? "flex-col @sm:flex-row" : "flex-col h-full"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "relative bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0] overflow-hidden shrink-0",
-                      viewMode === "list" ? "@sm:w-64 aspect-[16/10] @sm:aspect-auto" : "aspect-[16/10]"
-                    )}
-                  >
-                    {vehicle.image && (
-                      <img
-                        src={vehicle.image}
-                        alt={vehicle.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
-                          e.currentTarget.parentElement?.querySelector('.fallback')?.classList.add('flex');
-                        }}
-                      />
-                    )}
-                    <div className={cn("fallback absolute inset-0 items-center justify-center bg-slate-100", vehicle.image ? "hidden" : "flex")}>
-                      <Car className="w-16 h-16 md:w-24 md:h-24 text-[#CBD5E1]" aria-hidden="true" />
-                    </div>
-                    
-                    {/* Top Badges */}
-                    <div className="absolute top-[var(--space-fluid-sm)] left-0 right-0 px-[var(--space-fluid-sm)] flex justify-between items-start gap-[var(--space-fluid-xs)] overflow-hidden pointer-events-none">
-                      <span className="px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-semibold bg-white/90 backdrop-blur-sm text-[#0369A1] shadow-sm whitespace-nowrap truncate max-w-[50%]">
-                        {vehicle.group}
-                      </span>
-                      <span className="flex items-center gap-1 px-[var(--space-fluid-xs)] py-1 rounded-lg text-[10px] @sm:text-xs font-medium bg-[#10B981] text-white shadow-sm whitespace-nowrap truncate max-w-[50%]">
-                        <Check className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{t("freeCancellation")}</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-[var(--space-fluid-sm)] flex flex-col flex-1 space-y-[var(--space-fluid-sm)]">
-                    <h3 className="text-[length:var(--text-fluid-lg)] font-bold text-[#0F172A] truncate">
-                      {vehicle.name}
-                    </h3>
-                    <p className="text-[length:var(--text-fluid-sm)] text-[#64748B] truncate">
-                      {vehicle.meta}
-                    </p>
-
-                    <div className="flex flex-wrap gap-[var(--space-fluid-xs)]">
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-                        <Users className="h-3.5 w-3.5 text-[#0369A1]" />
-                        {vehicle.passengers} {t("features.seats")}
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-                        <Briefcase className="h-3.5 w-3.5 text-[#0369A1]" />
-                        {vehicle.luggage}
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-                        <Gauge className="h-3.5 w-3.5 text-[#0369A1]" />
-                        {t(`features.${vehicle.transmission}`)}
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F8FAFC] text-[length:var(--text-fluid-sm)] text-[#475569]">
-                        <Fuel className="h-3.5 w-3.5 text-[#0369A1]" />
-                        {t(`features.${vehicle.fuelType}`)}
-                      </div>
-                    </div>
-
-                    <div className="pt-[var(--space-fluid-sm)] mt-auto border-t border-[#E2E8F0] flex flex-col gap-[var(--space-fluid-sm)] @md:flex-row @md:items-end @md:justify-between">
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
-                          <span className="break-words text-[length:var(--text-fluid-xl)] font-bold text-[#0F172A] tracking-tight">
-                            {vehicle.dailyRate > 0 ? `₺ ${vehicle.dailyRate}` : t("priceOnRequest")}
-                          </span>
-                          {vehicle.dailyRate > 0 && (
-                            <span className="text-[length:var(--text-fluid-sm)] text-[#64748B]">
-                              /{t("pricePerDay")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {vehicle.available ? (
-                        <NextLink
-                          href={buildBookingStep2Href(vehicle)}
-                          className={cn(
-                            "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
-                            "transition-all duration-200",
-                            "focus:outline-none focus:ring-2 focus:ring-offset-2",
-                            "text-white bg-[#0369A1]",
-                            "hover:bg-[#0284C7] active:bg-[#075985]",
-                            "cursor-pointer focus:ring-[#0369A1]",
-                            "shadow-md hover:shadow-lg"
-                          )}
-                        >
-                          {t("bookNow")}
-                        </NextLink>
-                      ) : (
-                        <span
-                          className={cn(
-                            "w-full px-[var(--space-fluid-sm)] py-[var(--space-fluid-xs)] rounded-xl text-center text-[length:var(--text-fluid-sm)] font-bold whitespace-nowrap @md:w-auto @md:shrink-0",
-                            "text-[#94A3B8] bg-[#F1F5F9]",
-                            "cursor-not-allowed"
-                          )}
-                        >
-                          {t("unavailable")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 transition-colors"
-                >
-                  {tCommon("buttons.back")}
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setCurrentPage(page)}
-                      className={cn(
-                        "w-10 h-10 rounded-lg text-sm font-medium transition-colors",
-                        currentPage === page
-                          ? "bg-[#0369A1] text-white shadow-md border-transparent"
-                          : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 transition-colors"
-                >
-                  {tCommon("buttons.next")}
-                </button>
-              </div>
-            )}
-          </>
-          )}
-          </div>
-        </div>
-      </main>
+              disabled={current === 1}
+              onClick={() => setPage(current - 1)}
+              className="rounded border bg-white p-3 disabled:opacity-50"
+            >
+              {t("previous")}
+            </button>
+            <span className="p-3">
+              {current} / {pages}
+            </span>
+            <button
+              type="button"
+              disabled={current === pages}
+              onClick={() => setPage(current + 1)}
+              className="rounded border bg-white p-3 disabled:opacity-50"
+            >
+              {t("next")}
+            </button>
+          </nav>
+        )}
+      </div>
     </div>
+  );
+}
+export default function VehiclesPage() {
+  return (
+    <Suspense>
+      <Catalogue />
+    </Suspense>
   );
 }

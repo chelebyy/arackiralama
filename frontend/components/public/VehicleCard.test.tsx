@@ -1,72 +1,46 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/messages/en.json";
-
+import { catalogueVehicle } from "@/lib/test-fixtures/catalogue";
 import VehicleCard from "./VehicleCard";
 
-vi.mock("next/link", () => ({
-  default: ({
-    href,
-    children,
-    ...props
-  }: {
-    href: string | { pathname: string; params?: { id?: string }; query?: Record<string, string> };
-    children: React.ReactNode;
-  }) => {
-    const resolvedHref =
-      typeof href === "string"
-        ? href
-        : `${href.pathname}${href.query ? `?${new URLSearchParams(href.query).toString()}` : ""}`;
-    return <a href={resolvedHref} {...props}>{children}</a>;
-  },
-}));
-
-function renderVehicleCard(overrides: Partial<React.ComponentProps<typeof VehicleCard>> = {}) {
-  return render(
-    <NextIntlClientProvider locale="en" messages={messages}>
-      <VehicleCard
-        id="vehicle-1"
-        name="Renault Clio"
-        category="economy"
-        image="/images/clio.jpg"
-        seats={5}
-        transmission="automatic"
-        fuelType="gasoline"
-        pricePerDay={55}
-        {...overrides}
-      />
-    </NextIntlClientProvider>
-  );
-}
-
-describe("VehicleCard", () => {
-  it("renders translated vehicle details and booking CTA", () => {
-    renderVehicleCard();
-
-    expect(screen.getByRole("img", { name: "Renault Clio" })).toBeInTheDocument();
-    expect(screen.getByText("Economy")).toBeInTheDocument();
-    expect(screen.getByText("Free cancellation")).toBeInTheDocument();
-    expect(screen.getByText("5 Seats")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Book Now" })).toHaveAttribute(
-      "href",
-      "/vehicles?preferredVehicleId=vehicle-1&vehicleName=Renault+Clio&category=economy&dailyPrice=55"
+describe("VehicleCard catalogue", () => {
+  it("uses real specifications and forwards only search context to detail", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <VehicleCard
+          vehicle={catalogueVehicle}
+          locale="en"
+          search={new URLSearchParams("pickup=ala&pickupDate=2030-01-01&dailyPrice=1&token=secret")}
+        />
+      </NextIntlClientProvider>
     );
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+    expect(screen.getByText("Diesel")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    const href = screen.getByRole("link", { name: "View vehicle" }).getAttribute("href")!;
+    expect(href).toContain("/en/vehicles/vehicle-1");
+    expect(href).toContain("pickupDate=2030-01-01");
+    expect(href).not.toMatch(/dailyPrice|token|booking/);
+    expect(screen.queryByText(/₺|Free cancellation|200 km/)).not.toBeInTheDocument();
   });
-
-  it("shows per-day and total pricing when the rental spans multiple days", () => {
-    renderVehicleCard({ days: 4, totalPrice: 220 });
-
-    expect(screen.getByText("₺ 55")).toBeInTheDocument();
-    expect(screen.getByText("/per day")).toBeInTheDocument();
-    expect(screen.getByText("Total: ₺ 220")).toBeInTheDocument();
-  });
-
-  it("renders the image fallback and unavailable state when no image is provided", () => {
-    renderVehicleCard({ image: undefined, isAvailable: false });
-
-    expect(screen.queryByRole("img", { name: "Renault Clio" })).not.toBeInTheDocument();
-    expect(screen.getByText("Not available for these dates")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Book Now" })).not.toBeInTheDocument();
+  it("keeps unknown fields unknown and does not invent a price", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <VehicleCard
+          vehicle={{
+            ...catalogueVehicle,
+            transmission: null,
+            fuelType: null,
+            seatCount: null,
+            luggageCapacity: null
+          }}
+          locale="en"
+        />
+      </NextIntlClientProvider>
+    );
+    expect(screen.getAllByText("Not specified")).toHaveLength(4);
+    expect(screen.getByRole("link").getAttribute("href")).toBe("/en/vehicles/vehicle-1");
   });
 });

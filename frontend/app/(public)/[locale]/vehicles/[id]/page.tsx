@@ -1,355 +1,249 @@
 "use client";
-
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import VehicleImage from "@/components/public/VehicleImage";
+import { useVehicle, useOffices, useAvailableVehicles } from "@/hooks/useVehicles";
+import VehicleFacts from "@/components/public/VehicleFacts";
 import {
-  Car,
-  Users,
-  Fuel,
-  Calendar,
-  Gauge,
-  Shield,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Star,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useVehicle } from "@/hooks/useVehicles";
-import { API_CONFIG } from "@/lib/api/config";
-import type { PublicVehicle } from "@/lib/api/types";
+  catalogueSearch,
+  catalogueOffice,
+  equipmentCodes,
+  validCatalogueDates,
+  vehicleGroupName,
+  vehiclePhotos
+} from "@/lib/vehicle-catalogue";
 
-interface VehicleDetail {
-  id: string;
-  name: string;
-  group: string;
-  images: string[];
-  passengers: number;
-  luggage: number;
-  transmission: string;
-  fuelType: string;
-  dailyRate: number;
-  features: string[];
-  specifications: { engine: string; power: string; doors: number; minAge: number; license: string };
-  description: string;
-  rating: number;
-  reviews: number;
-}
-
-function resolveMediaUrl(url: string | null): string {
-  if (!url) return "";
-  if (/^https?:\/\//i.test(url)) return url;
-  const apiOrigin = new URL(API_CONFIG.baseUrl).origin;
-  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
-}
-
-function resolveGroupName(vehicle: PublicVehicle, locale: string): string {
-  if (locale === "tr") return vehicle.groupName || vehicle.groupNameEn || "fleet";
-  return vehicle.groupNameEn || vehicle.groupName || "fleet";
-}
-
-function mapPublicToDetail(vehicle: PublicVehicle, locale: string): VehicleDetail {
-  const name = `${vehicle.brand} ${vehicle.model}`;
-  const groupName = resolveGroupName(vehicle, locale);
-
-  return {
-    id: vehicle.id,
-    name,
-    group: groupName,
-    images: vehicle.photoUrl ? [resolveMediaUrl(vehicle.photoUrl)] : [],
-    passengers: 5,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
-    dailyRate: vehicle.dailyPrice,
-    features: vehicle.features,
-    specifications: {
-      engine: vehicle.color,
-      power: vehicle.plate,
-      doors: 4,
-      minAge: vehicle.minAge,
-      license: "B",
-    },
-    description: `${vehicle.year} model ${name}, ${groupName} grubunda kayıtlı fiziksel filo aracıdır.`,
-    rating: 4.5,
-    reviews: 0,
-  };
-}
-
-const offices = [
-  { id: "ala", name: "Alanya City Center" },
-  { id: "gzp", name: "Gazipasa Airport" },
-  { id: "ayt", name: "Antalya Airport" },
-  { id: "mahmutlar", name: "Mahmutlar" },
-  { id: "kargicak", name: "Kargicak" },
-  { id: "konakli", name: "Konakli" },
-  { id: "avsallar", name: "Avsallar" },
-];
-
-export default function VehicleDetailPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const locale = params.locale as string;
-  const t = useTranslations("vehicles");
-  const tBooking = useTranslations("booking");
-  const [currentImage, setCurrentImage] = useState(0);
-
-  const pickupOffice = searchParams.get("pickup") || "ala";
-  const returnOffice = searchParams.get("return") || "ala";
-  const pickupDate = searchParams.get("pickupDate") || "2025-04-01";
-  const pickupTime = searchParams.get("pickupTime") || "10:00";
-  const returnDate = searchParams.get("returnDate") || "2025-04-08";
-  const returnTime = searchParams.get("returnTime") || "09:00";
-
-  const {
-    vehicle: publicVehicle,
-    isLoading,
-    isError,
-  } = useVehicle(typeof params.id === "string" ? params.id : null);
-  const vehicle: VehicleDetail | null = publicVehicle ? mapPublicToDetail(publicVehicle, locale) : null;
-
-  const getDays = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
-    const diff = Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(1, diff);
-  };
-
-  const days = getDays(pickupDate, returnDate);
-  const totalPrice = (vehicle?.dailyRate ?? 0) * days;
-  const backToVehiclesParams = new URLSearchParams({
-    pickup: pickupOffice,
-    return: returnOffice,
-    pickupDate,
-    pickupTime,
-    returnDate,
-    returnTime,
-  });
-  const bookingParams = new URLSearchParams(backToVehiclesParams);
-  if (publicVehicle) {
-    bookingParams.set("vehicle", publicVehicle.groupId);
-    bookingParams.set("dailyPrice", publicVehicle.dailyPrice.toString());
-    bookingParams.set("vehicleName", `${publicVehicle.brand} ${publicVehicle.model}`);
+function VehicleDetail() {
+  const params = useParams(),
+    search = useSearchParams();
+  const locale = typeof params.locale === "string" ? params.locale : "tr";
+  const t = useTranslations("catalogue"),
+    tv = useTranslations("vehicles"),
+    ts = useTranslations("searchForm");
+  const [imageIndex, setImageIndex] = useState(0);
+  const { vehicle, isLoading, isError } = useVehicle(
+    typeof params.id === "string" ? params.id : null
+  );
+  const { offices } = useOffices();
+  const dates = validCatalogueDates(search);
+  const officeId = catalogueOffice(offices, search.get("pickup") ?? "");
+  const returnOfficeId = catalogueOffice(
+    offices,
+    search.get("return") ?? search.get("pickup") ?? ""
+  );
+  const availability = useAvailableVehicles(
+    dates && officeId && returnOfficeId && vehicle
+      ? {
+          office_id: officeId,
+          pickup_datetime: dates.pickup,
+          return_datetime: dates.returned,
+          vehicle_group_id: vehicle.groupId
+        }
+      : null
+  );
+  const groupQuote = availability.vehicles.find(
+    (group) =>
+      group.groupId === vehicle?.groupId &&
+      Number.isFinite(group.dailyPrice) &&
+      group.dailyPrice > 0
+  );
+  const context = catalogueSearch(search);
+  const booking = new URLSearchParams(context);
+  if (vehicle) {
+    booking.set("vehicle", vehicle.groupId);
+    booking.set("preferredVehicleId", vehicle.id);
+    booking.set("vehicleName", `${vehicle.brand} ${vehicle.model}`);
+    if (groupQuote) booking.set("dailyPrice", String(groupQuote.dailyPrice));
   }
-
+  const images = vehicle ? vehiclePhotos(vehicle) : [];
+  const activeImage = Math.min(imageIndex, Math.max(0, images.length - 1));
+  const name = vehicle ? `${vehicle.brand} ${vehicle.model}` : "";
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          href={`/${locale}/vehicles?${backToVehiclesParams.toString()}`}
-          className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-sky-700 transition-colors mb-6"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          {t("detail.backToSearch")}
+    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <Link href={`/${locale}/vehicles?${context}`} className="text-sm text-sky-800 underline">
+          {tv("detail.backToSearch")}
         </Link>
-
-        {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
-            <p className="mt-4 text-slate-600">{t("detail.loading")}</p>
-          </div>
-        )}
-
-        {isError && (
-          <div className="text-center py-12">
-            <Car className="h-12 w-12 text-red-400 mx-auto" />
-            <p className="mt-4 text-slate-600">{t("detail.failed")}</p>
-          </div>
-        )}
-
-        {!isLoading && !isError && !vehicle && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <Car className="h-12 w-12 text-slate-300 mx-auto" />
-            <h1
-              className="mt-4 text-2xl font-semibold text-slate-900"
-              style={{ fontFamily: "Lexend, sans-serif" }}
-            >
-              {t("detail.notFoundTitle")}
-            </h1>
-            <p className="mt-2 text-slate-600">
-              {t("detail.notFoundBody")}
-            </p>
-            <Link
-              href={`/${locale}/vehicles?${backToVehiclesParams.toString()}`}
-              className="mt-6 inline-flex items-center justify-center rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-800"
-            >
-              {t("detail.backToVehicles")}
-            </Link>
-          </div>
-        )}
-
-        {!isLoading && !isError && vehicle && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="relative bg-slate-100 h-80 lg:h-96 flex items-center justify-center">
-                {vehicle.images[0] ? (
-                  <img
-                    src={vehicle.images[0]}
-                    alt={vehicle.name}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ) : (
-                  <Car className="h-32 w-32 text-slate-300" />
-                )}
-                <button
-                  type="button"
-                  onClick={() => setCurrentImage((p) => (p > 0 ? p - 1 : 2))}
-                  className="absolute left-4 p-2 bg-white/90 rounded-full shadow-lg hover:bg-white"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="h-5 w-5 text-slate-700" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentImage((p) => (p < 2 ? p + 1 : 0))}
-                  className="absolute right-4 p-2 bg-white/90 rounded-full shadow-lg hover:bg-white"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="h-5 w-5 text-slate-700" />
-                </button>
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {[0, 1, 2].map((i) => (
+        {isLoading ? (
+          <p role="status">{tv("detail.loading")}</p>
+        ) : isError ? (
+          <p role="alert">{tv("detail.failed")}</p>
+        ) : !vehicle ? (
+          <p>{tv("detail.notFoundTitle")}</p>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="min-w-0 space-y-6 lg:col-span-2">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div className="flex aspect-[16/10] items-center justify-center bg-slate-100">
+                  <VehicleImage src={images[activeImage]} alt={`${name} — ${activeImage + 1}`} />
+                </div>
+                {images.length > 1 && (
+                  <div className="flex flex-wrap items-center justify-center gap-2 p-3">
                     <button
-                      key={i}
                       type="button"
-                      onClick={() => setCurrentImage(i)}
-                      className={cn(
-                        "w-2.5 h-2.5 rounded-full transition-colors",
-                        currentImage === i ? "bg-sky-600" : "bg-white/70"
-                      )}
-                      aria-label={`View image ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <span className="text-sm font-medium text-sky-700 bg-sky-50 px-3 py-1 rounded-full">
-                    {vehicle.group}
-                  </span>
-                  <h1
-                    className="text-3xl font-bold text-slate-900 mt-3"
-                    style={{ fontFamily: "Lexend, sans-serif" }}
-                  >
-                    {vehicle.name}
-                  </h1>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                    <span className="font-semibold text-slate-900">{vehicle.rating}</span>
-                    <span className="text-slate-500">({vehicle.reviews} {tBooking("reviews")})</span>
+                      onClick={() =>
+                        setImageIndex((activeImage + images.length - 1) % images.length)
+                      }
+                      className="rounded border px-3 py-2"
+                    >
+                      {t("previousPhoto")}
+                    </button>
+                    {images.map((image, index) => (
+                      <button
+                        type="button"
+                        key={image}
+                        aria-label={t("photo", { number: index + 1 })}
+                        aria-pressed={activeImage === index}
+                        onClick={() => setImageIndex(index)}
+                        className="rounded border px-3 py-2 aria-pressed:bg-sky-100 aria-pressed:text-sky-900"
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setImageIndex((activeImage + 1) % images.length)}
+                      className="rounded border px-3 py-2"
+                    >
+                      {t("nextPhoto")}
+                    </button>
                   </div>
-                </div>
-              </div>
-
-              <p className="text-slate-600 leading-relaxed">{vehicle.description}</p>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2
-                className="text-xl font-semibold text-slate-900 mb-4"
-                style={{ fontFamily: "Lexend, sans-serif" }}
-              >
-                {t("detail.features")}
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {vehicle.features.map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg"
-                  >
-                    <Check className="h-4 w-4 text-sky-600 flex-shrink-0" />
-                    <span className="text-sm text-slate-700">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2
-                className="text-xl font-semibold text-slate-900 mb-4"
-                style={{ fontFamily: "Lexend, sans-serif" }}
-              >
-                {t("detail.specifications")}
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: t("detail.color"), value: vehicle.specifications.engine, icon: Gauge },
-                  { label: t("detail.plate"), value: vehicle.specifications.power, icon: Fuel },
-                  { label: t("features.doors"), value: vehicle.specifications.doors, icon: Car },
-                  { label: t("detail.minAge"), value: vehicle.specifications.minAge, icon: Users },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="text-center p-4 bg-slate-50 rounded-lg">
-                    <Icon className="h-6 w-6 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
-                    <p className="text-lg font-semibold text-slate-900">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-24">
-              <div className="text-center pb-6 border-b border-slate-200">
-                <p className="text-sm text-slate-500">{tBooking("totalForDays", { days })}</p>
-                <p className="text-4xl font-bold text-sky-700">
-                  {vehicle.dailyRate > 0 ? `₺${totalPrice}` : t("priceOnRequest")}
-                </p>
-                {vehicle.dailyRate > 0 && (
-                  <p className="text-sm text-slate-500">₺{vehicle.dailyRate} / {t("pricePerDay")}</p>
                 )}
               </div>
-
-              <div className="py-6 space-y-4">
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-sky-600" />
+              <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-6">
+                <p className="text-sm text-sky-800">{vehicleGroupName(vehicle, locale)}</p>
+                <h1 className="text-3xl font-bold text-slate-900">{name}</h1>
+                <p className="text-slate-600">
+                  {vehicle.year} · {vehicle.color}
+                </p>
+                <VehicleFacts vehicle={vehicle} detail />
+                <dl className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="font-medium text-slate-900">{pickupDate}</p>
-                    <p className="text-slate-500">{offices.find((o) => o.id === pickupOffice)?.name}</p>
+                    <dt className="text-slate-500">{tv("detail.minAge")}</dt>
+                    <dd className="font-medium text-slate-800">{vehicle.minAge}</dd>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-sky-600" />
                   <div>
-                    <p className="font-medium text-slate-900">{returnDate}</p>
-                    <p className="text-slate-500">{offices.find((o) => o.id === returnOffice)?.name}</p>
+                    <dt className="text-slate-500">{tv("detail.minLicenseYears")}</dt>
+                    <dd className="font-medium text-slate-800">{vehicle.minLicenseYears}</dd>
                   </div>
-                </div>
-              </div>
-
-              <Link
-                href={`/${locale}/booking/step2?${bookingParams.toString()}`}
-                className="block w-full py-4 bg-sky-700 text-white text-center font-semibold rounded-lg hover:bg-sky-800 transition-colors"
-              >
-                {t("bookNow")}
-              </Link>
-
-              <div className="mt-6 p-4 bg-sky-50 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-sky-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-sky-900">{t("detail.fullProtection")}</p>
-                    <ul className="mt-2 space-y-1 text-xs text-sky-800">
-                      {[t("detail.zeroExcess"), t("detail.theftProtection"), t("detail.assistance")].map((item) => (
-                        <li key={item} className="flex items-center gap-1">
-                          <Check className="h-3 w-3" /> {item}
+                </dl>
+              </section>
+              <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+                <h2 className="text-xl font-semibold">{t("equipment")}</h2>
+                <p className="text-sm text-slate-600">{t("equipmentNote")}</p>
+                {vehicle.features.length ? (
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {vehicle.features
+                      .filter((feature) => equipmentCodes.some((code) => code === feature))
+                      .map((feature) => (
+                        <li key={feature} className="rounded-lg bg-slate-50 p-3">
+                          {t(`values.${feature}`)}
                         </li>
                       ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+                  </ul>
+                ) : (
+                  <p className="text-slate-600">{t("unknown")}</p>
+                )}
+              </section>
             </div>
+            <aside className="min-w-0 space-y-5 self-start rounded-xl border border-slate-200 bg-white p-6">
+              <h2 className="text-xl font-semibold">{t("chooseDates")}</h2>
+              <form action={`/${locale}/vehicles/${vehicle.id}`} method="get" className="space-y-4">
+                {(["pickup", "return"] as const).map((prefix) => (
+                  <fieldset key={prefix} className="space-y-3">
+                    <legend className="font-medium">
+                      {ts(prefix === "pickup" ? "pickupLocation" : "returnLocation")}
+                    </legend>
+                    <label className="grid gap-1 text-sm">
+                      {t("office")}
+                      <select
+                        key={`${prefix}-${(prefix === "pickup" ? officeId : returnOfficeId) ?? ""}`}
+                        name={prefix}
+                        defaultValue={(prefix === "pickup" ? officeId : returnOfficeId) ?? ""}
+                        required
+                        className="w-full min-w-0 rounded border border-slate-300 bg-white p-2"
+                      >
+                        <option value="">{t("select")}</option>
+                        {offices.map((office) => (
+                          <option key={office.id} value={office.id}>
+                            {office.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                      <label className="grid gap-1 text-sm">
+                        {t("date")}
+                        <input
+                          name={`${prefix}Date`}
+                          type="date"
+                          required
+                          defaultValue={search.get(`${prefix}Date`) ?? ""}
+                          className="w-full min-w-0 rounded border border-slate-300 p-2"
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm">
+                        {t("time")}
+                        <input
+                          name={`${prefix}Time`}
+                          type="time"
+                          required
+                          defaultValue={search.get(`${prefix}Time`) ?? ""}
+                          className="w-full min-w-0 rounded border border-slate-300 p-2"
+                        />
+                      </label>
+                    </div>
+                  </fieldset>
+                ))}
+                <button
+                  className="w-full rounded-lg bg-sky-700 px-4 py-3 font-semibold text-white hover:bg-sky-800"
+                  type="submit"
+                >
+                  {t("checkDates")}
+                </button>
+              </form>
+              {search.get("pickupDate") && !dates && (
+                <p role="alert" className="text-sm text-red-700">
+                  {t("invalidDates")}
+                </p>
+              )}
+              {dates && officeId && returnOfficeId && (
+                <div className="space-y-3 border-t pt-4">
+                  {availability.isLoading ? (
+                    <p role="status">{tv("loading")}</p>
+                  ) : availability.isError ? (
+                    <p role="alert">{tv("failed")}</p>
+                  ) : groupQuote ? (
+                    <>
+                      <p className="text-lg font-semibold text-sky-800">
+                        {t("groupRate")}: ₺ {groupQuote.dailyPrice} / {tv("pricePerDay")}
+                      </p>
+                      <p className="text-sm text-slate-600">{t("groupNote")}</p>
+                      <Link
+                        href={`/${locale}/booking/step2?${booking}`}
+                        className="block rounded-lg bg-sky-700 px-4 py-3 text-center font-semibold text-white"
+                      >
+                        {t("continue")}
+                      </Link>
+                    </>
+                  ) : (
+                    <p>{t("noGroupAvailability")}</p>
+                  )}
+                </div>
+              )}
+            </aside>
           </div>
-        </div>
         )}
-      </main>
+      </div>
     </div>
+  );
+}
+export default function VehicleDetailPage() {
+  return (
+    <Suspense>
+      <VehicleDetail />
+    </Suspense>
   );
 }

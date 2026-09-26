@@ -31,7 +31,9 @@ public sealed class AdminVehiclesController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateVehicleRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateVehicleInput(request.Plate, request.Brand, request.Model, request.Year, request.Color);
+        var validationError = ValidateVehicleInput(request.Plate, request.Brand, request.Model, request.Year, request.Color)
+            ?? VehicleCatalogueValidation.Validate(request.Transmission, request.FuelType, request.SeatCount,
+                request.LuggageCapacity, request.BodyType, request.DoorCount, request.Engine, request.PowerHp, request.Equipment);
         if (validationError is not null)
         {
             return BadRequestResponse(validationError);
@@ -70,7 +72,9 @@ public sealed class AdminVehiclesController(
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVehicleRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateVehicleInput(request.Plate, request.Brand, request.Model, request.Year, request.Color);
+        var validationError = ValidateVehicleInput(request.Plate, request.Brand, request.Model, request.Year, request.Color)
+            ?? VehicleCatalogueValidation.Validate(request.Transmission, request.FuelType, request.SeatCount,
+                request.LuggageCapacity, request.BodyType, request.DoorCount, request.Engine, request.PowerHp, request.Equipment);
         if (validationError is not null)
         {
             return BadRequestResponse(validationError);
@@ -228,6 +232,7 @@ public sealed class AdminVehiclesController(
     }
 
     [HttpPost("{id:guid}/photo")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadPhoto(Guid id, [FromForm] IFormFile? file, CancellationToken cancellationToken)
     {
@@ -239,7 +244,15 @@ public sealed class AdminVehiclesController(
 
         var existingVehicle = await fleetService.GetVehicleByIdAsync(id, cancellationToken);
 
-        var updatedVehicle = await fleetService.UploadVehiclePhotoAsync(id, file!, cancellationToken);
+        VehicleDto? updatedVehicle;
+        try
+        {
+            updatedVehicle = await fleetService.UploadVehiclePhotoAsync(id, file!, cancellationToken);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequestResponse(exception.Message);
+        }
         if (updatedVehicle is null)
         {
             return NotFound(ApiResponse<object>.Fail("Arac bulunamadi."));
@@ -256,6 +269,24 @@ public sealed class AdminVehiclesController(
             cancellationToken);
 
         return OkResponse(updatedVehicle, "Arac gorseli yuklendi.");
+    }
+
+    [HttpPut("{id:guid}/photos")]
+    public async Task<IActionResult> UpdatePhotos(Guid id, [FromBody] UpdateVehiclePhotosRequest request, CancellationToken cancellationToken)
+    {
+        if (request.PhotoUrls is null) return BadRequestResponse("Fotograf listesi zorunludur.");
+        try
+        {
+            var updated = await fleetService.UpdateVehiclePhotosAsync(id, request.PhotoUrls, cancellationToken);
+            if (updated is null) return NotFoundResponse("Arac bulunamadi.");
+            await auditLogService.LogAsync("UpdatePhotos", EntityType, id.ToString(), GetCurrentUserId(),
+                null, System.Text.Json.JsonSerializer.Serialize(request), GetClientIpAddress(), cancellationToken);
+            return OkResponse(updated);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequestResponse(exception.Message);
+        }
     }
 
     private static string? ValidateVehicleInput(string plate, string brand, string model, int year, string color)

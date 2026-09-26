@@ -1,5 +1,15 @@
 # Local Docker Browser Test Checklist
 
+## Second catalogue review follow-up — 2026-09-25
+
+API integration: 54/54 passed with explicit `127.0.0.1` PostgreSQL/Redis endpoints after `localhost` attempts stalled. No skipped tests.
+
+Verified Turkey calendar pricing with 823 backend and 298 frontend passing tests, production build/TypeScript, and lint (zero errors, existing warning). Real local API returned three days / TRY 3600 for October 10 01:00 to October 13 09:00. In-browser delayed office response selected both URL offices after the form mounted; a changed selection submitted successfully and displayed the TRY 1200 group rate. Legacy media paths and unsafe URL rejection have regression coverage. No live checkout, merge or deployment. See the [second review evidence](Vehicle_Catalogue_Package_1_Implementation.md#second-pr-446-review-fixes--2026-09-25).
+
+## Catalogue PR 446 review follow-up — 2026-09-25
+
+Three P2 fixes verified locally: GZP code/name matching, consistent Turkey-to-UTC booking requests, and image error fallback. All 297 frontend tests passed; production build/TypeScript passed; lint has zero errors and one existing warning. Browser checks used the local production build and retained API/PostgreSQL/Redis fixtures: GZP request issued, catalogue/booking UTC instants matched, and blocked image fallback plus next-gallery-image recovery worked. No live checkout, merge or deployment. Detailed evidence: [Package 1 implementation](Vehicle_Catalogue_Package_1_Implementation.md#pr-446-review-fixes--2026-09-25).
+
 Date: 2026-06-03
 Scope: Production release rehearsal on local Docker before live deployment
 
@@ -968,3 +978,23 @@ Cleanup evidence captured on 2026-06-04:
 - The local test data is Docker-local only. Volumes were kept intentionally for follow-up debugging because this pass produced local-only reservations/payment/admin smoke records that may be useful if the release owner wants to inspect them before discarding volumes.
 - `docker compose -f backend\docker-compose.yml down` stopped and removed `rentacar-web`, `rentacar-worker`, `rentacar-api`, `rentacar-postgres`, `rentacar-redis`, and the `backend_default` network.
 - Follow-up `docker compose -f backend\docker-compose.yml ps` returned only the header row, confirming no services remained running in this compose stack.
+
+## September 24, 2026: vehicle catalogue Package 1
+
+Publication update, September 25: [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is open; remote checks were initially pending/running. Local acceptance does not replace exact-head CI review.
+
+The catalogue implementation on `codex/catalog-package1` was checked against isolated PostgreSQL (5548), Redis (6388), API (5000) and frontend (3108). Local admin edits, multi-image upload and cover ordering, public data separation, four homepage cards, undated browsing, pickup-date group pricing, five locales, RTL and mobile/desktop layouts were verified. Protected Header/Hero source and visual comparisons showed no change.
+
+Backend checks passed: 818 unit/service/controller tests and 54 API integration tests; the final pickup-date pricing change also passed 25 FleetService tests. Frontend checks passed: 290 tests plus two new admin preservation cases, final production build/TypeScript, and lint with one existing warning. No deployment or production migration was performed.
+
+See [Package 1 implementation and evidence](Vehicle_Catalogue_Package_1_Implementation.md) for exact scope, environment dependencies, validation limitations and retained group-based behavior. This evidence supplements the earlier run; it does not imply production acceptance.
+
+## September 26, 2026: rental calendar and homepage defaults
+
+Passed 827 backend, 54 API integration and 308 frontend tests, production build/TypeScript and lint (one existing warning). Local PostgreSQL5548/Redis6388/API5000/frontend3108 acceptance confirmed future Turkey-local default dates reach catalogue/detail; selecting the configured October10 01:00–October13 09:00 fixture showed TRY1200/day and booking continuation. No reservation was created. Header/Hero files and SearchForm JSX/CSS unchanged; only default-date logic changed. Reservation day fields now follow quoted/snapshot days with RentalCalendar fallback. This is local acceptance; no merge/deployment.
+
+## September 25, 2026: third catalogue review
+
+Confirmation/tracking render UTC instants in Europe/Istanbul, including the correct date across midnight; tracking date labels no longer depend on the browser timezone. Vehicle detail shows the actual minimum age and licence-held years in all locales. 304 frontend tests passed with America/Los_Angeles timezone; production build/TypeScript and lint passed (one existing warning).
+
+Local production browser checks used synthetic API responses, not Docker/backend acceptance: June 9 22:00Z became June 10 01:00, June 14 07:00Z became 10:00, and Turkish detail showed 25 / 4-year eligibility. No reservation or payment was submitted. Header/Hero unchanged; no deployment.
