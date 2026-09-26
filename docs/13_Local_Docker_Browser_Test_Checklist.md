@@ -1,5 +1,38 @@
 # Local Docker Browser Test Checklist
 
+## Current Package 2 local acceptance — September 26, 2026
+
+Package 2 implementation and scoped local acceptance are complete. The user-authorized mobile/RTL, changed-offer, response-loss and competing-booking checks passed against the actual isolated API/PostgreSQL/Redis fixture. Production activation remains a separate release step.
+
+Frontend: 70 files / 332 tests passed under America/Los_Angeles; the final summary-recovery change passed all 4 focused tests, including one new case (333 distinct tests across runs). Final production build/TypeScript passed. Lint: zero errors and one pre-existing warning. Earlier unchanged-backend evidence remains 853 unit and 67 distinct PostgreSQL/Redis API tests.
+
+Browser evidence covers group-less admin save/reopen and booking, five-locale confirmation, Arabic RTL, phone/tablet/desktop views, keyboard operation, explicit acceptance of changed price/conditions, same-body/key recovery after a lost success response, one winner from two exact-booking tabs, and office hours/closed-date/notice/preparation boundaries. Licence dates are now real required inputs; in-memory details survive Back. Failed confirmation lookups retain the code and offer retry without misleading status claims. Header/Hero source and layout are unchanged.
+
+No Package 2 commit, push, PR, merge, deployment or production migration was performed. Enter actual operator policies and review migrated vehicle terms before activation; production migration/restore checks and release authorization remain required. Local viewport checks do not certify physical devices or constitute a general security audit.
+
+See [acceptance evidence](Vehicle_Reservation_Package_2_Acceptance.md), [implementation](Vehicle_Reservation_Package_2_Implementation.md), and [scoped security review](Vehicle_Reservation_Package_2_Completion_Review.md). Earlier entries below are historical snapshots.
+
+### Local acceptance checklist
+
+- [x] Mandatory office policy save/reopen and missing-policy blocking (initial retry evidence).
+- [x] Group-less vehicle editing, retained price, public quote and confirmed booking.
+- [x] Competing exact-vehicle submissions, one winner, localized conflict and no substitution.
+- [x] Changed price/conditions require explicit updated-offer acceptance.
+- [x] Lost success response and identical manual replay produce one reservation and zero payment intents.
+- [x] Closed hours, closed date, notice and 59/60-minute preparation boundary.
+- [x] Five-locale confirmation, Arabic RTL, phone/tablet/desktop, keyboard and Back recovery; Header/Hero unchanged.
+- [x] Scoped public DTO, replay ownership and anonymous admin rejection coverage: existing real API tests and source review. This item is API evidence, not a browser penetration test.
+
+All local acceptance entries are closed within the scope detailed in the evidence record. Production inventory/policy review, migration/restore rehearsal and authorized release remain separate gates. [Admin record](15_Admin_UX_Refresh_Implementation.md) is synchronized.
+
+## Historical catalogue closure — September 26, 2026
+
+Package 1 [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is merged as `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. Its [merge-commit CI](https://github.com/chelebyy/arackiralama/actions/runs/36235314898) passed backend unit/integration, frontend lint/test/build, Docker build and GHCR push; CodeQL, Secret Scan and React Doctor also passed for that SHA. Previous open-PR/no-merge statements below are historical.
+
+The latest local acceptance counts remain 827 backend / 54 API integration / 308 frontend; this documentation update ran no application or browser tests. Older scheduled E2E failures on `9c77715` do not establish current-head behavior. Full E2E on the merge commit, production deployment, migration readiness and production media/inventory checks remain unverified. GHCR publication alone does not close those gates.
+
+[Package 1 evidence](Vehicle_Catalogue_Package_1_Implementation.md) records closure details. [Package 2 plan](Vehicle_Reservation_Package_2_Plan.md) defines future exact-vehicle, price-change, concurrency, unpaid-confirmation and browser acceptance checks. These are planned checks, not passing results. No local services were started for this continuation.
+
 ## Second catalogue review follow-up — 2026-09-25
 
 API integration: 54/54 passed with explicit `127.0.0.1` PostgreSQL/Redis endpoints after `localhost` attempts stalled. No skipped tests.

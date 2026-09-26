@@ -78,6 +78,12 @@ public sealed class IdempotencyMiddleware
             return;
         }
 
+        if (idempotentAttribute.UseQuoteReplay && await HasQuoteRequestAsync(context.Request))
+        {
+            await _next(context);
+            return;
+        }
+
         var redisKey = $"{RedisKeyPrefix}{idempotencyKey}";
 
         // Try to get cached response from Redis
@@ -163,6 +169,28 @@ public sealed class IdempotencyMiddleware
         {
             context.Response.Body = originalBodyStream;
             await memoryStream.DisposeAsync();
+        }
+    }
+
+    private static async Task<bool> HasQuoteRequestAsync(HttpRequest request)
+    {
+        request.EnableBuffering();
+        try
+        {
+            using var body = await JsonDocument.ParseAsync(request.Body, cancellationToken: request.HttpContext.RequestAborted);
+            return body.RootElement.ValueKind != JsonValueKind.Object ||
+                body.RootElement.EnumerateObject().Any(property =>
+                    (string.Equals(property.Name, "quoteId", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(property.Name, "vehicleId", StringComparison.OrdinalIgnoreCase)) &&
+                    property.Value.ValueKind != JsonValueKind.Null);
+        }
+        catch (JsonException)
+        {
+            return true;
+        }
+        finally
+        {
+            request.Body.Position = 0;
         }
     }
 

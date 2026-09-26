@@ -18,4 +18,6 @@ public sealed class IdempotentAttribute : Attribute
     /// will allow the request through without caching.
     /// </summary>
     public bool RequireKey { get; set; } = false;
+
+    public bool UseQuoteReplay { get; set; }
 }

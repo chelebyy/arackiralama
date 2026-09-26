@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import VehicleImage from "@/components/public/VehicleImage";
-import { useVehicle, useOffices, useAvailableVehicles } from "@/hooks/useVehicles";
+import { useVehicle, useOffices, useExactAvailableVehicles } from "@/hooks/useVehicles";
 import VehicleFacts from "@/components/public/VehicleFacts";
 import {
   catalogueSearch,
@@ -33,29 +33,26 @@ function VehicleDetail() {
     offices,
     search.get("return") ?? search.get("pickup") ?? ""
   );
-  const availability = useAvailableVehicles(
+  const availability = useExactAvailableVehicles(
     dates && officeId && returnOfficeId && vehicle
       ? {
-          office_id: officeId,
-          pickup_datetime: dates.pickup,
-          return_datetime: dates.returned,
-          vehicle_group_id: vehicle.groupId
+          pickupOfficeId: officeId,
+          returnOfficeId,
+          pickupDateTimeUtc: dates.pickup,
+          returnDateTimeUtc: dates.returned
         }
       : null
   );
   const groupQuote = availability.vehicles.find(
-    (group) =>
-      group.groupId === vehicle?.groupId &&
-      Number.isFinite(group.dailyPrice) &&
-      group.dailyPrice > 0
+    (offer) => offer.vehicle.id === vehicle?.id && Number.isFinite(offer.finalTotal) && offer.finalTotal > 0
   );
   const context = catalogueSearch(search);
   const booking = new URLSearchParams(context);
   if (vehicle) {
-    booking.set("vehicle", vehicle.groupId);
+    booking.set("vehicle", vehicle.groupId ?? "00000000-0000-0000-0000-000000000000");
     booking.set("preferredVehicleId", vehicle.id);
     booking.set("vehicleName", `${vehicle.brand} ${vehicle.model}`);
-    if (groupQuote) booking.set("dailyPrice", String(groupQuote.dailyPrice));
+    if (groupQuote) booking.set("dailyPrice", String(groupQuote.vehicle.dailyPrice));
   }
   const images = vehicle ? vehiclePhotos(vehicle) : [];
   const activeImage = Math.min(imageIndex, Math.max(0, images.length - 1));
@@ -218,9 +215,9 @@ function VehicleDetail() {
                   ) : groupQuote ? (
                     <>
                       <p className="text-lg font-semibold text-sky-800">
-                        {t("groupRate")}: ₺ {groupQuote.dailyPrice} / {tv("pricePerDay")}
+                        {tv("totalPrice")}: {new Intl.NumberFormat(locale, { style: "currency", currency: groupQuote.currency }).format(groupQuote.finalTotal)}
                       </p>
-                      <p className="text-sm text-slate-600">{t("groupNote")}</p>
+                      <p className="text-sm text-slate-600">{groupQuote.rentalDays} {tv("days")}</p>
                       <Link
                         href={`/${locale}/booking/step2?${booking}`}
                         className="block rounded-lg bg-sky-700 px-4 py-3 text-center font-semibold text-white"
@@ -229,7 +226,7 @@ function VehicleDetail() {
                       </Link>
                     </>
                   ) : (
-                    <p>{t("noGroupAvailability")}</p>
+                    <p>{tv("unavailable")}</p>
                   )}
                 </div>
               )}

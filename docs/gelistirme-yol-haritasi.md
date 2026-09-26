@@ -1,18 +1,26 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
-İkinci inceleme düzeltmelerinin ek doğrulaması: yerel PostgreSQL/Redis ile **54/54 API entegrasyon testi** geçti.
+## Güncel durum — 26 Eylül 2026
 
-**25 Eylül 2026 — İkinci PR inceleme düzeltmeleri:** Backend gün/fiyat/kampanya hesabı Türkiye takvimine bağlandı; geç yüklenen ofis seçimleri ve eski kök-göreli fotoğraf yolları düzeltildi. 823 backend ve 298 frontend testi ile derleme geçti. Gerçek yerel API erken saatli örneği 3 gün/3.600 TL hesapladı; geciktirilen ofis yanıtı tarayıcıda doğrulandı. Header/hero korundu; merge ve dağıtım yapılmadı.
+**Paket 2'nin yerel uygulaması ve kapsam içindeki kabul kontrolleri tamamlandı.** Gerçek araç seçimi, araç bazlı fiyat/koşullar ve ek hizmet uygunluğu, grupsuz araç ekleme, zorunlu admin işletme ayarları ve ödeme teslimde alınacak şekilde otomatik kesinleşme uygulandı.
 
-**25 Eylül 2026 — PR #446 inceleme düzeltmeleri:** Gazipaşa ofis kodu eşleştirmesi, katalog/rezervasyon boyunca ortak UTC saat dönüşümü ve bozuk görsel yedeği düzeltildi. 297 frontend testi, üretim derlemesi ve TypeScript kontrolü geçti; lintte hata yok, mevcut tek uyarı sürüyor. Yerel tarayıcıda ofis sorgusu, saat eşleşmesi ve görsel hata/kurtarma kontrol edildi. Header/hero korundu; merge veya canlı dağıtım yapılmadı. Ayrıntılar: [Paket 1 uygulama belgesi](Vehicle_Catalogue_Package_1_Implementation.md).
+Kullanıcının onayladığı kararlar: Türkiye takvimine göre gün hesabı korunur; mevcut fiyat/koşullar araçlara kopyalanıp araç üzerinden düzenlenir; değişen fiyat/koşullar yeni teklif kabulü gerektirir; geçmiş rezervasyonlar değişmez; ilk sürüm mevcut ofis/teslim kapsamını korur. Ön süre, çalışma saatleri ve hazırlık süresi bilinmediği için gerçek değerleri admin girmelidir. Eksik ayarda otomatik rezervasyon açılmaz.
 
-24 Eylül 2026 · Kaynak kod incelemesi · Uygulama öncesi çalışma
+Doğrulama: **853 backend birim testi**, tam turda **66 PostgreSQL/Redis API entegrasyon testi**, son teklif uç noktası turunda **11 test** geçti. Son tur bir yeni tarihli katalog testi ve genişletilmiş kesinleşmiş rezervasyon süre aşımı kontrolü içerir; toplam 67 farklı API testi doğrulandı. Son tam turda **70 dosyada 332 frontend testi**, ardından yeni hata kurtarma testi dahil **4 onay ekranı testi** geçti; bu turlar toplam 333 farklı testi kapsar. Son üretim derlemesi/TypeScript ve lint geçti (mevcut tek lint uyarısı sürüyor). Veri göçü yalnızca izole test veritabanında denendi; eski rezervasyon tutarı ve fiyat dökümü korundu.
 
-## Önerilen başlangıç
+**Tarayıcı kabulü tamamlandı:** Beş dilde onay ekranı, Arapça RTL, telefon/tablet/masaüstü görünümü, klavye akışı, grupsuz araç kaydetme ve rezervasyon, fiyat/koşul değişikliğinde açık teklif kabulü, iki sekmenin aynı araç için yarışması ve başarılı yanıt kaybından sonra aynı rezervasyona dönüş doğrulandı. Çalışma saatleri, kapalı gün, ön süre ve hazırlık sınırları gerçek yerel API ile denendi. Veritabanında üç kesinleşmiş test rezervasyonu ve sıfır ödeme işlemi var. Dil değişiminde seçim kaybı, hata çevirileri, sabit ehliyet tarihleri, formdan geri dönüş ve özet hatasından kurtarma düzeltildi. Header/hero kaynakları değişmedi. Bu sonuç fiziksel cihaz sertifikasyonu veya genel güvenlik denetimi değildir.
+
+[Son kabul kanıtı](Vehicle_Reservation_Package_2_Acceptance.md), [uygulama](Vehicle_Reservation_Package_2_Implementation.md), [plan](Vehicle_Reservation_Package_2_Plan.md), [odaklı güvenlik incelemesi](Vehicle_Reservation_Package_2_Completion_Review.md) ve [kontrol listesi](13_Local_Docker_Browser_Test_Checklist.md) aynı durumu yansıtıyor. Canlı açılış için gerçek işletme ayarları, temsilî veri göçü/yedekten dönüş incelemesi ve yetkilendirilmiş PR/CI/yayın süreci ayrı olarak bekliyor.
+
+Paket 1, [PR #446](https://github.com/chelebyy/arackiralama/pull/446) ile `f1c34fe` commit'inde birleştirilmişti. Paket 2 aynı tabandan `codex/catalogue-next-plan` dalındaki ayrı worktree'de yerel ve commit edilmemiş değişiklikler olarak duruyor. Paket 2 için PR, merge, canlı dağıtım veya üretim veri göçü yapılmadı; ana çalışma dizinindeki mevcut işler korundu.
+
+Aşağıdaki ilk plan ve eski incelemeler tarihsel bağlamdır. Paket 2 durumunda bu bölüm ve bağlantılı güncel belgeler önceliklidir.
+
+## İlk planın başlangıç önerisi — tarihsel
 
 İlk geliştirme paketi **gerçek araç kataloğu** olmalı: admin paneline bir aracın gerçek bilgilerini girince müşteri aynı bilgileri liste ve detay sayfasında görmeli. Bunun ardından seçilen aracın fiyat, müsaitlik ve rezervasyon boyunca değişmeden korunmasını tamamlayacağız. Yalnızca sayfadaki “grup” etiketini kaldırmak yeterli değil; mevcut fiyatlandırma ve rezervasyon kodu da gruplara bağlı.
 
-Bu belge bir uygulama planıdır. Uygulama kodu değiştirilmedi; test, tarayıcı kabulü, dağıtım veya veri göçü çalıştırılmadı. Önceki test sonuçları bu incelemenin doğrulaması olarak kullanılmadı.
+Bu paragraf 24 Eylül uygulama öncesi incelemesini anlatır: o incelemede uygulama kodu değiştirilmedi; test, tarayıcı kabulü, dağıtım veya veri göçü çalıştırılmadı. Paket 1'in sonraki uygulama ve birleşim durumu yukarıdaki güncel durum bölümündedir.
 
 ## Korunacak kararlar
 
@@ -112,9 +120,9 @@ Uygulama, test kanıtları ve sınırlar: [Paket 1 raporu](Vehicle_Catalogue_Pac
 - Beş dilde aynı anlam, Arapça düzen, klavye kullanımı, hatadan dönüş, mobil akış ve e-posta bağlantıları kontrol edilmeli.
 - Kiralama koşulları ve aydınlatma metni gerçek işleyişe göre hazırlanmalı. Bu belge hukuki uygunluk görüşü veya hazır KVKK metni değildir.
 
-## Karar vermemiz gerekenler
+## Kararlar ve işletme aktivasyonu
 
-İlk araç veri modeli için bu rakamların tamamı gerekli değil. İlgili pakete gelmeden karara bağlanmalı:
+Paket 2 kararları kapandı: mevcut Türkiye gün hesabı ve fiyat/koşullar korunur; araç bazında düzenleme yapılır; ödeme teslimde alınır ve uygun araç otomatik kesinleşir; fiyat/koşul değişirse yeni teklif kabul edilir; geçmiş kayıtlar korunur. Çalışma saatleri, minimum ön süre ve hazırlık aralığı admin tarafından girilecek zorunlu işletme verileridir. Girilmeden exact araç rezervasyonu alınmaz. Aşağıdaki ilk karar envanterinin Paket 3 kapsamı hâlâ geçerlidir; Paket 2 için güncel karar kaydı bağlantılı plandadır.
 
 | Karar | Gerektiği aşama |
 |---|---|
@@ -126,7 +134,7 @@ Uygulama, test kanıtları ve sınırlar: [Paket 1 raporu](Vehicle_Catalogue_Pac
 | Gerçek teslim bölgeleri ve adres/uçuş bilgisinin ne zaman istendiği | Paket 2–3 |
 | Verilerin saklanma/silinme süresi, e-posta sağlayıcısı ve erişim doğrulaması | Paket 3, gerçek veri toplanmadan |
 
-## Planlama güvenlik incelemesi
+## İlk planlama güvenlik incelemesi — tarihsel
 
 Codex Sentinel planlama yaklaşımıyla, yalnızca incelenen kaynak yolları ve önerilen değişiklikler üzerinden değerlendirildi. Bunlar bir sızma testi sonucu değildir.
 

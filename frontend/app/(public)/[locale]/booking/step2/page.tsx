@@ -2,384 +2,73 @@
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Car,
-  Users,
-  Briefcase,
-  Fuel,
-  Gauge,
-  Check,
-  ArrowRight,
-  ArrowLeft,
-  Info,
-  Star,
-} from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { differenceInCalendarDays } from "date-fns";
-import { useAvailableVehicles, useOffices } from "@/hooks/useVehicles";
-import { useBookingActions } from "@/hooks/useBooking";
-import { FuelType, TransmissionType, type AvailableVehicleGroup } from "@/lib/api/types";
 import { useTranslations } from "next-intl";
+import { useExactAvailableVehicles, useOffices } from "@/hooks/useVehicles";
+import { useBookingStore } from "@/hooks/useBooking";
 import { rentalDateTimeUtc } from "@/lib/rental-datetime";
-import { catalogueOffice } from "@/lib/vehicle-catalogue";
+import { catalogueOffice, vehiclePhotos, vehicleGroupName } from "@/lib/vehicle-catalogue";
+import VehicleImage from "@/components/public/VehicleImage";
+import VehicleFacts from "@/components/public/VehicleFacts";
 
-const officeSlugPatterns: Record<string, string> = {
-  ala: "alanya",
-  gzp: "gazipasa",
-  ayt: "antalya",
-  mahmutlar: "mahmutlar",
-  kargicak: "kargicak",
-  konakli: "konakli",
-  avsallar: "avsallar",
-};
-
-function isGuid(value: string): boolean {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-}
-
-function resolveOfficeGuid(offices: { id: string; name: string }[], slugOrGuid: string): string {
-  if (isGuid(slugOrGuid)) return slugOrGuid;
-
-  const inputLower = slugOrGuid.toLowerCase();
-  const directMatch = offices.find((office) => office.name.toLowerCase() === inputLower);
-  if (directMatch) return directMatch.id;
-
-  const pattern = officeSlugPatterns[inputLower] ?? Object.values(officeSlugPatterns).find((value) => inputLower.includes(value));
-  if (!pattern) return slugOrGuid;
-
-  const matched = offices.find((office) => office.name.toLowerCase().includes(pattern));
-  return matched?.id ?? slugOrGuid;
-}
-
-interface VehicleGroup {
-  id: string;
-  name: string;
-  category: string;
-  dailyRate: number;
-  passengers: number;
-  luggage: number;
-  transmission: string;
-  fuelType: string;
-  features: string[];
-  image: string;
-  rating: number;
-  reviews: number;
-}
+const emptyGroup = "00000000-0000-0000-0000-000000000000";
 
 export default function BookingStep2Page() {
-  const params = useParams();
-  const searchParams = useSearchParams();
+  const { locale } = useParams<{ locale: string }>();
+  const search = useSearchParams();
   const router = useRouter();
-  const locale = params.locale as string;
-  const t = useTranslations("booking");
-  const requestedVehicle = searchParams.get("vehicle");
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(requestedVehicle);
-  const autoAdvancedVehicleRef = useRef<string | null>(null);
-  const { setDates, selectVehicle } = useBookingActions();
-
-  function translateVehicleFeature(feature: string): string {
-    switch (feature) {
-      case "AirConditioning":
-        return t("features.airConditioning");
-      case "AutomaticTransmission":
-        return t("features.automatic");
-      default:
-        return feature;
-    }
-  }
-
-  function resolveAvailableGroupName(group: AvailableVehicleGroup): string {
-    if (locale === "tr") return group.groupName || group.groupNameEn || group.groupId;
-    return group.groupNameEn || group.groupName || group.groupId;
-  }
-
-  function mapAvailableGroup(group: AvailableVehicleGroup): VehicleGroup {
-    const groupName = resolveAvailableGroupName(group);
-
-    return {
-      id: group.groupId,
-      name: groupName,
-      category: groupName,
-      dailyRate: group.dailyPrice,
-      passengers: 5,
-      luggage: 2,
-      transmission: t("features.automatic"),
-      fuelType: t("features.gasoline"),
-      features: group.features.map(translateVehicleFeature),
-      image: group.imageUrl ?? "",
-      rating: 4.5,
-      reviews: 0,
-    };
-  }
-
-  const pickupOffice = searchParams.get("pickup") || "ala";
-  const returnOffice = searchParams.get("return") || "ala";
-  const pickupDate = searchParams.get("pickupDate") || "";
-  const pickupTime = searchParams.get("pickupTime") || "10:00";
-  const returnDate = searchParams.get("returnDate") || "";
-  const returnTime = searchParams.get("returnTime") || "09:00";
-
+  const t = useTranslations("booking"), tv = useTranslations("vehicles");
+  const requested = search.get("preferredVehicleId");
+  const [selected, setSelected] = useState<string | null>(requested);
+  const advanced = useRef<string | null>(null);
+  const setDates = useBookingStore(s => s.setDates), setVehicle = useBookingStore(s => s.setVehicle);
   const { offices, isLoading: officesLoading } = useOffices();
-  const pickupOfficeGuid = catalogueOffice(offices, pickupOffice) ?? resolveOfficeGuid(offices, pickupOffice);
-  const returnOfficeGuid = catalogueOffice(offices, returnOffice) ?? resolveOfficeGuid(offices, returnOffice);
-  const pickupOfficeObj = offices.find((office) => office.id === pickupOfficeGuid);
-  const returnOfficeObj = offices.find((office) => office.id === returnOfficeGuid);
-  const canSearchVehicles =
-    pickupDate &&
-    returnDate &&
-    pickupOfficeGuid &&
-    !officesLoading &&
-    (isGuid(pickupOfficeGuid) || pickupOfficeGuid !== pickupOffice) &&
-    returnOfficeGuid &&
-    (isGuid(returnOfficeGuid) || returnOfficeGuid !== returnOffice);
-
-  const { vehicles: availableGroups, isLoading, isError } = useAvailableVehicles(
-    canSearchVehicles
-      ? {
-          office_id: pickupOfficeGuid,
-          pickup_datetime: rentalDateTimeUtc(pickupDate, pickupTime),
-          return_datetime: rentalDateTimeUtc(returnDate, returnTime),
-        }
-      : null
-  );
-
-  const vehicleGroups = availableGroups.map(mapAvailableGroup);
-  const selectedVehicleIsAvailable = vehicleGroups.some((vehicle) => vehicle.id === selectedVehicle);
-
-  const handleContinue = useCallback(() => {
-    if (!selectedVehicle || !selectedVehicleIsAvailable) return;
-    const selectedGroup = availableGroups.find((group) => group.groupId === selectedVehicle);
-    const selectedGroupName = selectedGroup ? resolveAvailableGroupName(selectedGroup) : undefined;
-
-    if (pickupOfficeObj && returnOfficeObj) {
-      setDates({
-        pickupOfficeId: pickupOfficeGuid,
-        pickupOfficeName: pickupOfficeObj.name,
-        pickupDate,
-        pickupTime,
-        returnOfficeId: returnOfficeGuid,
-        returnOfficeName: returnOfficeObj.name,
-        returnDate,
-        returnTime,
-      });
-    }
-
-    if (selectedGroup) {
-      selectVehicle({
-        id: selectedGroup.groupId,
-        name: selectedGroupName ?? selectedGroup.groupName,
-        description: "",
-        imageUrl: selectedGroup.imageUrl ?? "",
-        images: selectedGroup.imageUrl ? [selectedGroup.imageUrl] : [],
-        groupId: selectedGroup.groupId,
-        groupName: selectedGroupName ?? selectedGroup.groupName,
-        transmission: TransmissionType.AUTOMATIC,
-        fuelType: FuelType.PETROL,
-        seatCount: 5,
-        luggageCapacity: 2,
-        hasAirConditioning: selectedGroup.features.includes("AirConditioning"),
-        minDriverAge: selectedGroup.minAge,
-        minLicenseYears: selectedGroup.minLicenseYears,
-        dailyPrice: selectedGroup.dailyPrice,
-        weeklyPrice: selectedGroup.dailyPrice * 7,
-        monthlyPrice: selectedGroup.dailyPrice * 30,
-        features: [],
-        insuranceIncluded: true,
-        mileageLimit: null,
-        extraMileagePrice: null,
-        availableExtras: [],
-      }, pickupOfficeObj as never, returnOfficeObj as never);
-    }
-
-    const queryParams = new URLSearchParams(searchParams.toString());
-    queryParams.set("vehicle", selectedVehicle);
-    if (selectedGroup) {
-      queryParams.set("dailyPrice", selectedGroup.dailyPrice.toString());
-      queryParams.set("vehicleName", selectedGroupName ?? selectedGroup.groupName);
-    }
-    router.push(`/${locale}/booking/step3?${queryParams.toString()}`);
-  }, [
-    availableGroups,
-    locale,
-    pickupDate,
-    pickupOfficeGuid,
-    pickupOfficeObj,
-    pickupTime,
-    returnDate,
-    returnOfficeGuid,
-    returnOfficeObj,
-    returnTime,
-    router,
-    searchParams,
-    selectVehicle,
-    selectedVehicle,
-    selectedVehicleIsAvailable,
-    setDates,
-  ]);
-
+  const pickupId = catalogueOffice(offices, search.get("pickup") ?? "");
+  const returnId = catalogueOffice(offices, search.get("return") ?? search.get("pickup") ?? "");
+  const pickupDate = search.get("pickupDate") ?? "", returnDate = search.get("returnDate") ?? "";
+  const pickupTime = search.get("pickupTime") ?? "10:00", returnTime = search.get("returnTime") ?? "09:00";
+  const { vehicles, isLoading, isError, mutate } = useExactAvailableVehicles(
+    pickupId && returnId && pickupDate && returnDate ? {
+      pickupOfficeId: pickupId, returnOfficeId: returnId,
+      pickupDateTimeUtc: rentalDateTimeUtc(pickupDate, pickupTime),
+      returnDateTimeUtc: rentalDateTimeUtc(returnDate, returnTime)
+    } : null);
+  const selectedOffer = vehicles.find(offer => offer.vehicle.id === selected);
+  const proceed = useCallback(() => {
+    const pickup = offices.find(o => o.id === pickupId), returned = offices.find(o => o.id === returnId);
+    if (!selectedOffer || !pickup || !returned || isLoading || isError) return;
+    const vehicle = selectedOffer.vehicle;
+    setDates({ pickupOfficeId: pickup.id, pickupOfficeName: pickup.name, returnOfficeId: returned.id,
+      returnOfficeName: returned.name, pickupDate, pickupTime, returnDate, returnTime });
+    setVehicle({ vehicleId: vehicle.id, vehicleGroupId: vehicle.groupId ?? emptyGroup,
+      vehicleName: `${vehicle.brand} ${vehicle.model}`, vehicleImage: vehiclePhotos(vehicle)[0] ?? "",
+      dailyPrice: vehicle.dailyPrice!, groupName: vehicleGroupName(vehicle, locale) });
+    const query = new URLSearchParams(search.toString());
+    query.set("vehicle", vehicle.groupId ?? emptyGroup);
+    query.set("preferredVehicleId", vehicle.id);
+    query.set("vehicleName", `${vehicle.brand} ${vehicle.model}`);
+    query.delete("vehicleGroupId");
+    router.push(`/${locale}/booking/step3?${query}`);
+  }, [selectedOffer, offices, pickupId, returnId, pickupDate, pickupTime, returnDate, returnTime, setDates, setVehicle, locale, search, router, isLoading, isError]);
   useEffect(() => {
-    if (
-      !requestedVehicle ||
-      isLoading ||
-      isError ||
-      !selectedVehicleIsAvailable ||
-      autoAdvancedVehicleRef.current === requestedVehicle
-    ) {
-      return;
+    if (requested && selected === requested && selectedOffer && !isLoading && !isError && advanced.current !== requested) {
+      advanced.current = requested;
+      proceed();
     }
+  }, [requested, selected, selectedOffer, isLoading, isError, proceed]);
 
-    autoAdvancedVehicleRef.current = requestedVehicle;
-    handleContinue();
-  }, [handleContinue, isError, isLoading, requestedVehicle, selectedVehicleIsAvailable]);
-
-  const days = Math.max(
-    1,
-    pickupDate && returnDate
-      ? differenceInCalendarDays(new Date(returnDate), new Date(pickupDate))
-      : 7
-  );
-
-  return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1
-          className="text-3xl font-bold text-slate-900 mb-2"
-          style={{ fontFamily: "Lexend, sans-serif" }}
-        >
-          {t("step2.title")}
-        </h1>
-        <p className="text-slate-600">{t("step2.subtitle")}</p>
-      </div>
-
-        {isLoading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto" />
-            <p className="mt-4 text-slate-600">{t("loadingVehicles")}</p>
-          </div>
-        )}
-
-        {isError && (
-          <div className="text-center py-12">
-            <Info className="h-12 w-12 text-red-400 mx-auto" />
-            <p className="mt-4 text-slate-600">{t("failedToLoadVehicles")}</p>
-          </div>
-        )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {vehicleGroups.map((vehicle) => (
-          <button
-            key={vehicle.id}
-            type="button"
-            onClick={() => setSelectedVehicle(vehicle.id)}
-            className={cn(
-              "relative text-left bg-white rounded-xl border-2 overflow-hidden transition-all duration-200",
-              selectedVehicle === vehicle.id
-                ? "border-sky-600 shadow-lg shadow-sky-100"
-                : "border-slate-200 hover:border-sky-300 hover:shadow-md"
-            )}
-          >
-            {selectedVehicle === vehicle.id && (
-              <div className="absolute top-4 right-4 w-8 h-8 bg-sky-600 rounded-full flex items-center justify-center">
-                <Check className="h-5 w-5 text-white" />
-              </div>
-            )}
-
-            <div className="p-6">
-              <div className="flex gap-6">
-                <div className="w-32 h-24 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Car className="h-12 w-12 text-slate-300" />
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-1 rounded-full">
-                        {vehicle.category}
-                      </span>
-                      <h3
-                        className="text-lg font-semibold text-slate-900 mt-1"
-                        style={{ fontFamily: "Lexend, sans-serif" }}
-                      >
-                        {vehicle.name}
-                      </h3>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-sm font-medium text-slate-700">{vehicle.rating}</span>
-                        <span className="text-sm text-slate-400">({vehicle.reviews} {t("reviews")})</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-sky-700">₺{vehicle.dailyRate}</p>
-                      <p className="text-sm text-slate-500">{t("perDay")}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-slate-600 mb-3">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-4 w-4" /> {vehicle.passengers}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Briefcase className="h-4 w-4" /> {vehicle.luggage}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Gauge className="h-4 w-4" /> {vehicle.transmission}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Fuel className="h-4 w-4" /> {vehicle.fuelType}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {vehicle.features.map((feature) => (
-                      <span
-                        key={feature}
-                        className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded"
-                      >
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-sm text-slate-600">
-                      {t("totalForDays", { days })}{" "}
-                      <span className="font-semibold text-slate-900">
-                        ₺{vehicle.dailyRate * days}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-
-        <div className="flex items-center justify-between mt-8">
-        <Link
-          href={`/${locale}/booking/step1?${searchParams.toString()}`}
-          className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          {t("back")}
-        </Link>
-
-        <button
-          type="button"
-          onClick={handleContinue}
-          disabled={!selectedVehicleIsAvailable}
-          className={cn(
-            "inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-lg transition-colors",
-            selectedVehicleIsAvailable
-              ? "bg-sky-700 text-white hover:bg-sky-800"
-              : "bg-slate-200 text-slate-400 cursor-not-allowed"
-          )}
-        >
-          {t("continueToPayment")}
-          <ArrowRight className="h-5 w-5" />
-        </button>
-      </div>
-    </div>
-  );
+  return <div className="mx-auto max-w-6xl space-y-6">
+    <header><h1 className="text-3xl font-bold text-slate-900">{t("step2.title")}</h1><p className="mt-2 text-slate-600">{tv("subtitle")}</p></header>
+    <p className="text-sm text-slate-600">{t("quoteAuthoritative")}</p>
+    {(isLoading || officesLoading) && <p role="status">{t("loadingVehicles")}</p>}
+    {isError && <div role="alert"><p>{t("failedToLoadVehicles")}</p><button type="button" className="mt-3 rounded border p-3" onClick={() => mutate()}>{t("retry")}</button></div>}
+    {!isLoading && !officesLoading && !isError && !vehicles.length && <p>{tv("unavailable")}</p>}
+    {requested && !isLoading && !isError && !vehicles.some(o => o.vehicle.id === requested) && <p role="alert">{tv("unavailable")}</p>}
+    <div className="grid gap-6 md:grid-cols-2">{vehicles.map(offer => <button type="button" key={offer.vehicle.id} aria-pressed={selected === offer.vehicle.id} onClick={() => setSelected(offer.vehicle.id)} className="overflow-hidden rounded-xl border border-slate-200 bg-white text-start aria-pressed:border-sky-600 aria-pressed:ring-2 aria-pressed:ring-sky-600">
+      <div className="aspect-[16/9] bg-slate-100"><VehicleImage src={vehiclePhotos(offer.vehicle)[0]} alt={`${offer.vehicle.brand} ${offer.vehicle.model}`} /></div>
+      <div className="space-y-4 p-6"><h2 className="text-xl font-semibold">{offer.vehicle.brand} {offer.vehicle.model}</h2><p>{offer.vehicle.year} · {offer.vehicle.color}</p><VehicleFacts vehicle={offer.vehicle} />
+        <p className="font-semibold">{new Intl.NumberFormat(locale, { style: "currency", currency: offer.currency }).format(offer.finalTotal)} <span className="text-sm font-normal">/ {offer.rentalDays} {t("days")}</span></p>
+        <p className="text-sm text-slate-600">{tv("detail.minAge")}: {offer.vehicle.minAge} · {tv("detail.minLicenseYears")}: {offer.vehicle.minLicenseYears}</p>
+      </div></button>)}</div>
+    <div className="flex justify-between"><button type="button" className="rounded border px-6 py-3" onClick={() => router.push(`/${locale}/booking?${search}`)}>{t("back")}</button><button type="button" disabled={!selectedOffer || isLoading || Boolean(isError)} onClick={proceed} className="rounded-lg bg-sky-700 px-6 py-3 text-white disabled:opacity-40">{t("continueToPayment")}</button></div>
+  </div>;
 }

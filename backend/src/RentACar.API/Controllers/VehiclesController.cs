@@ -15,8 +15,45 @@ namespace RentACar.API.Controllers;
 [EnableRateLimiting(RateLimitPolicyNames.Standard)]
 public sealed class VehiclesController(
     IFleetService fleetService,
-    IApplicationDbContext dbContext) : BaseApiController
+    IApplicationDbContext dbContext,
+    VehicleBookingService? vehicleBookingService = null) : BaseApiController
 {
+    [HttpGet("available-exact")]
+    public async Task<IActionResult> GetAvailableExact(
+        [FromQuery] Guid pickupOfficeId, [FromQuery] Guid returnOfficeId,
+        [FromQuery] DateTime pickupDateTimeUtc, [FromQuery] DateTime returnDateTimeUtc,
+        [FromQuery] int? driverAge, CancellationToken cancellationToken)
+    {
+        if (vehicleBookingService is null) return StatusCode(503);
+        pickupDateTimeUtc = pickupDateTimeUtc.Kind == DateTimeKind.Local ? pickupDateTimeUtc.ToUniversalTime() : DateTime.SpecifyKind(pickupDateTimeUtc, DateTimeKind.Utc);
+        returnDateTimeUtc = returnDateTimeUtc.Kind == DateTimeKind.Local ? returnDateTimeUtc.ToUniversalTime() : DateTime.SpecifyKind(returnDateTimeUtc, DateTimeKind.Utc);
+        if (pickupOfficeId == Guid.Empty || pickupDateTimeUtc <= DateTime.UtcNow ||
+            pickupDateTimeUtc >= returnDateTimeUtc || returnDateTimeUtc - pickupDateTimeUtc > TimeSpan.FromDays(366))
+            return BadRequestResponse("Invalid office or rental interval.");
+        var vehicles = await fleetService.GetVehiclesAsync(cancellationToken);
+        var groups = await fleetService.GetVehicleGroupsAsync(cancellationToken);
+        var results = new List<object>();
+        foreach (var vehicle in vehicles.Where(v => v.OfficeId == pickupOfficeId && v.Status == VehicleStatus.Available))
+        {
+            try
+            {
+                var offer = await vehicleBookingService.CalculateAsync(new Contracts.Pricing.CreateReservationQuoteRequest
+                {
+                    VehicleId = vehicle.Id, VehicleGroupId = vehicle.GroupId ?? Guid.Empty,
+                    PickupOfficeId = pickupOfficeId, ReturnOfficeId = returnOfficeId,
+                    PickupDateTimeUtc = pickupDateTimeUtc, ReturnDateTimeUtc = returnDateTimeUtc, DriverAge = driverAge
+                }, cancellationToken);
+                results.Add(new
+                {
+                    Vehicle = MapToPublicVehicle(vehicle, groups.FirstOrDefault(g => g.Id == vehicle.GroupId), offer.Pricing.DailyRate),
+                    offer.Pricing.RentalDays, offer.Pricing.FinalTotal, offer.Pricing.Currency
+                });
+            }
+            catch (ReservationQuoteConflictException) { }
+        }
+        return OkResponse(results);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -106,7 +143,9 @@ public sealed class VehiclesController(
             return NotFoundResponse("Arac bulunamadi.");
         }
 
-        var group = await fleetService.GetVehicleGroupByIdAsync(vehicle.GroupId, cancellationToken);
+        var group = vehicle.GroupId.HasValue
+            ? await fleetService.GetVehicleGroupByIdAsync(vehicle.GroupId.Value, cancellationToken)
+            : null;
         return OkResponse(MapToPublicVehicle(vehicle, group, null));
     }
 
@@ -152,9 +191,9 @@ public sealed class VehiclesController(
             vehicle.Status.ToString(),
             vehicle.PhotoUrl,
             dailyPrice,
-            group?.DepositAmount ?? 0m,
-            group?.MinAge ?? 0,
-            group?.MinLicenseYears ?? 0,
+            vehicle.RentalTerms?.DepositAmount ?? group?.DepositAmount ?? 0m,
+            vehicle.RentalTerms?.MinAge ?? group?.MinAge ?? 0,
+            vehicle.RentalTerms?.MinLicenseYears ?? group?.MinLicenseYears ?? 0,
             vehicle.Equipment ?? [],
             vehicle.Transmission,
             vehicle.FuelType,

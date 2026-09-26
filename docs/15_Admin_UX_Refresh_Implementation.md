@@ -1,5 +1,27 @@
 # Admin Public Site & Contact UX Refresh Implementation
 
+## Current Package 2 local acceptance — September 26, 2026
+
+Package 2 implementation and scoped local acceptance are complete. The user-authorized mobile/RTL, changed-offer, response-loss and competing-booking checks passed against the actual isolated API/PostgreSQL/Redis fixture. Production activation remains a separate release step.
+
+Frontend: 70 files / 332 tests passed under America/Los_Angeles; the final summary-recovery change passed all 4 focused tests, including one new case (333 distinct tests across runs). Final production build/TypeScript passed. Lint: zero errors and one pre-existing warning. Earlier unchanged-backend evidence remains 853 unit and 67 distinct PostgreSQL/Redis API tests.
+
+Browser evidence covers group-less admin save/reopen and booking, five-locale confirmation, Arabic RTL, phone/tablet/desktop views, keyboard operation, explicit acceptance of changed price/conditions, same-body/key recovery after a lost success response, one winner from two exact-booking tabs, and office hours/closed-date/notice/preparation boundaries. Licence dates are now real required inputs; in-memory details survive Back. Failed confirmation lookups retain the code and offer retry without misleading status claims. Header/Hero source and layout are unchanged.
+
+No Package 2 commit, push, PR, merge, deployment or production migration was performed. Enter actual operator policies and review migrated vehicle terms before activation; production migration/restore checks and release authorization remain required. Local viewport checks do not certify physical devices or constitute a general security audit.
+
+See [acceptance evidence](Vehicle_Reservation_Package_2_Acceptance.md), [implementation](Vehicle_Reservation_Package_2_Implementation.md), and [scoped security review](Vehicle_Reservation_Package_2_Completion_Review.md). Earlier entries below are historical snapshots.
+
+The [local checklist](13_Local_Docker_Browser_Test_Checklist.md) is synchronized. Synthetic Catalog 2 retains the tested 1300 daily rate / minimum age 23; Catalog 3 remains group-less. Temporary office closures/notice/day changes were reverted.
+
+## Historical catalogue closure — September 26, 2026
+
+Package 1 [PR #446](https://github.com/chelebyy/arackiralama/pull/446) is merged as `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. [Merge-commit CI](https://github.com/chelebyy/arackiralama/actions/runs/36235314898), CodeQL, Secret Scan and React Doctor succeeded; CI includes successful GHCR publication. Production deployment and migration application are unverified. Earlier open-PR/no-merge entries below are retained as historical evidence.
+
+No admin or public source behavior changed in this documentation continuation. Previous local acceptance (827 backend / 54 API integration / 308 frontend tests) was not rerun. Full current-head E2E remains unverified; older failures belong to `9c77715`. See the synchronized [local checklist](13_Local_Docker_Browser_Test_Checklist.md) and [Package 1 closure](Vehicle_Catalogue_Package_1_Implementation.md).
+
+The authorized next deliverable is the [Package 2 plan and decision register](Vehicle_Reservation_Package_2_Plan.md). It specifies future vehicle-level pricing, conditions and extras authoring without requiring operators to create a group. That admin work is not implemented. Public Header/Hero protection, five locales, role enforcement and existing accepted reservation snapshots remain constraints.
+
 ## Second catalogue review follow-up — 2026-09-25
 
 API integration suite: 54/54 passed against local PostgreSQL/Redis using explicit IPv4 addresses.

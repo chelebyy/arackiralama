@@ -1,5 +1,6 @@
 using RentACar.API.Contracts.Pricing;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 
 namespace RentACar.API.Services;
@@ -8,7 +9,10 @@ public sealed class ReservationQuoteService(
     IPricingService pricingService,
     IReservationExtraPricingService extraPricingService,
     IReservationQuoteStore quoteStore,
-    ILogger<ReservationQuoteService> logger) : IReservationQuoteService
+    ILogger<ReservationQuoteService> logger,
+    IVehicleRepository vehicleRepository,
+    IReservationRepository reservationRepository,
+    VehicleBookingService? vehicleBookingService = null) : IReservationQuoteService
 {
     private static readonly TimeSpan QuoteLifetime = TimeSpan.FromMinutes(15);
 
@@ -17,13 +21,28 @@ public sealed class ReservationQuoteService(
         string sessionId,
         CancellationToken cancellationToken = default)
     {
+        request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateRequest(request, sessionId);
+
+        var vehicleOffer = request.VehicleId.HasValue && vehicleBookingService is not null
+            ? await vehicleBookingService.CalculateAsync(request, cancellationToken) : null;
+        if (request.VehicleId.HasValue && vehicleOffer is null)
+        {
+            var vehicle = await vehicleRepository.GetByIdAsync(request.VehicleId.Value, cancellationToken);
+            if (vehicle is null || vehicle.GroupId != request.VehicleGroupId ||
+                vehicle.OfficeId != request.PickupOfficeId || vehicle.Status != VehicleStatus.Available ||
+                await reservationRepository.HasOverlappingReservationsAsync(
+                    vehicle.Id, request.PickupDateTimeUtc, request.ReturnDateTimeUtc, null, cancellationToken))
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
+            }
+        }
 
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
         var campaignCode = NormalizeCampaignCode(request.CampaignCode);
-        if (!await pricingService.VehicleGroupExistsAsync(request.VehicleGroupId, cancellationToken))
+        if (vehicleOffer is null && !await pricingService.VehicleGroupExistsAsync(request.VehicleGroupId, cancellationToken))
         {
             throw new ArgumentException("Vehicle group does not exist.");
         }
@@ -42,7 +61,7 @@ public sealed class ReservationQuoteService(
         {
             throw new ArgumentException("Campaign code is invalid or expired.");
         }
-        var baseBreakdown = await pricingService.CalculateBreakdownAsync(
+        var baseBreakdown = vehicleOffer?.Pricing ?? await pricingService.CalculateBreakdownAsync(
             request.VehicleGroupId,
             request.PickupOfficeId,
             returnOfficeId,
@@ -56,7 +75,7 @@ public sealed class ReservationQuoteService(
             cancellationToken)
             ?? throw new ArgumentException("No pricing rule exists for the selected dates.");
 
-        var quotedExtras = await extraPricingService.CalculateAsync(
+        var quotedExtras = vehicleOffer?.Extras ?? await extraPricingService.CalculateAsync(
             request.VehicleGroupId,
             request.Locale,
             baseBreakdown.RentalDays,
@@ -85,9 +104,12 @@ public sealed class ReservationQuoteService(
             quotedExtras,
             extrasTotal,
             finalTotal);
+        snapshot.BookingConditions = vehicleOffer?.Conditions;
 
         var quote = new ReservationQuoteV1
         {
+            SchemaVersion = request.VehicleId.HasValue ? 2 : 1,
+            VehicleId = request.VehicleId,
             QuoteId = quoteId,
             SessionHash = ReservationQuoteSecurity.HashSessionId(sessionId),
             VehicleGroupId = request.VehicleGroupId,
@@ -131,7 +153,10 @@ public sealed class ReservationQuoteService(
             responseBreakdown.PreAuthorizationAmount,
             responseBreakdown.Currency,
             responseBreakdown.AppliedCampaignCode,
-            responseBreakdown.ExtraItems);
+            responseBreakdown.ExtraItems,
+            request.VehicleId,
+            vehicleOffer is null ? null : new ReservationQuoteConditionsDto(
+                vehicleOffer.Conditions.MinAge, vehicleOffer.Conditions.MinLicenseYears));
     }
 
     private static ReservationPricingSnapshotV1 BuildSnapshot(
@@ -197,9 +222,13 @@ public sealed class ReservationQuoteService(
         {
             throw new ArgumentException("X-Session-Id header is required.");
         }
-        if (request.VehicleGroupId == Guid.Empty || request.PickupOfficeId == Guid.Empty)
+        if ((!request.VehicleId.HasValue && request.VehicleGroupId == Guid.Empty) || request.PickupOfficeId == Guid.Empty)
         {
             throw new ArgumentException("Vehicle group and pickup office are required.");
+        }
+        if (request.VehicleId == Guid.Empty)
+        {
+            throw new ArgumentException("Selected vehicle identifier cannot be empty.");
         }
         if (request.PickupDateTimeUtc >= request.ReturnDateTimeUtc)
         {

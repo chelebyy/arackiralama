@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { OperatingPolicyEditor } from "./OperatingPolicyEditor";
+import type { OperatingPolicy } from "@/lib/rental-policy";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -59,11 +61,11 @@ const officeSchema = z.object({
   name: z.string().min(1, "Ofis adı gereklidir"),
   code: z.string().min(1, "Ofis kodu gereklidir"),
   type: z.enum(["airport", "hotel", "office"]),
-  city: z.string().min(1, "Şehir gereklidir"),
+  city: z.string(),
   district: z.string(),
   address: z.string().min(1, "Adres gereklidir"),
   phone: z.string().min(1, "Telefon gereklidir"),
-  email: z.string().email("Geçerli bir email adresi giriniz"),
+  email: z.string(),
   isActive: z.boolean(),
   isAirport: z.boolean(),
   isHotel: z.boolean(),
@@ -100,6 +102,7 @@ export default function OfficeDialog({
   onSuccess,
 }: OfficeDialogProps) {
   const isEditing = !!office;
+  const [operatingPolicy, setOperatingPolicy] = useState<OperatingPolicy | null | undefined>(office?.operatingPolicy);
 
   const form = useForm<OfficeFormInput, unknown, OfficeFormData>({
     resolver: zodResolver(officeSchema),
@@ -122,21 +125,22 @@ export default function OfficeDialog({
   });
 
   useEffect(() => {
+    setOperatingPolicy(office?.operatingPolicy);
     if (office) {
       form.reset({
         name: office.name,
         code: office.code,
-        type: office.type,
-        city: office.city,
+        type: office.type ?? (office.isAirport ? "airport" : "office"),
+        city: office.city ?? "",
         district: office.district || "",
         address: office.address,
         phone: office.phone,
-        email: office.email,
+        email: office.email ?? "",
         isActive: office.isActive ?? true,
         isAirport: office.isAirport,
-        isHotel: office.isHotel,
+        isHotel: office.isHotel ?? false,
         coordinates: office.coordinates || { latitude: 0, longitude: 0 },
-        openingHours: office.openingHours || defaultOpeningHours,
+        openingHours: typeof office.openingHours === "string" ? defaultOpeningHours : office.openingHours || defaultOpeningHours,
         services: office.services || [],
       });
     } else {
@@ -160,6 +164,7 @@ export default function OfficeDialog({
   }, [office, form, open]);
 
   const buildOfficePayload = (data: OfficeFormData): CreateOfficeData => ({
+    operatingPolicy,
     name: data.name,
     code: data.code,
     type: data.type,
@@ -172,7 +177,7 @@ export default function OfficeDialog({
     isAirport: data.isAirport,
     isHotel: data.isHotel,
     coordinates: data.coordinates,
-    openingHours: data.openingHours,
+    openingHours: typeof office?.openingHours === "string" ? office.openingHours : data.openingHours,
     services: data.services,
   });
 
@@ -196,12 +201,13 @@ export default function OfficeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Ofis Düzenle" : "Yeni Ofis Ekle"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <OperatingPolicyEditor value={operatingPolicy} onChange={setOperatingPolicy} />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

@@ -20,8 +20,11 @@ namespace RentACar.Tests.Unit.Services;
 
 public sealed class ReservationServiceQuotePersistenceTests
 {
-    [Fact]
-    public async Task CreateDraftReservationAsync_PersistsQuoteProofAndReplaysExistingAfterRedisExpiry()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CreateDraftReservationAsync_PersistsQuoteProofAndReplaysExistingAfterRedisExpiry(bool exact, bool unavailable)
     {
         using var factory = new TestDbContextFactory();
         await using var context = factory.CreateContext();
@@ -38,11 +41,42 @@ public sealed class ReservationServiceQuotePersistenceTests
             OfficeId = office.Id,
             Status = VehicleStatus.Available
         };
-        context.AddRange(office, group, vehicle);
+        var otherVehicle = new Vehicle
+        {
+            Plate = "07 OTHER 07",
+            Brand = "Other",
+            Model = "Car",
+            Group = group,
+            GroupId = group.Id,
+            Office = office,
+            OfficeId = office.Id
+        };
+        context.AddRange(office, group);
+        if (exact)
+        {
+            context.Add(otherVehicle);
+        }
+        context.Add(vehicle);
         await context.SaveChangesAsync();
 
         var pickup = new DateTime(2026, 8, 1, 10, 0, 0, DateTimeKind.Utc);
         var quote = CreateQuote(group.Id, office.Id, pickup);
+        quote.VehicleId = exact ? vehicle.Id : null;
+        quote.SchemaVersion = exact ? 2 : 1;
+        if (unavailable)
+        {
+            context.Reservations.Add(new Reservation
+            {
+                VehicleId = vehicle.Id,
+                CustomerId = Guid.NewGuid(),
+                PickupOfficeId = office.Id,
+                ReturnOfficeId = office.Id,
+                PickupDateTime = pickup,
+                ReturnDateTime = pickup.AddDays(3),
+                Status = ReservationStatus.Confirmed
+            });
+            await context.SaveChangesAsync();
+        }
         var quoteStore = new Mock<IReservationQuoteStore>();
         quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>())).ReturnsAsync(quote);
         quoteStore.Setup(store => store.TryClaimAsync(quote.QuoteId, It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -85,6 +119,7 @@ public sealed class ReservationServiceQuotePersistenceTests
             extraPricing.Object);
         var request = new CreateReservationRequest
         {
+            VehicleId = exact ? vehicle.Id : null,
             VehicleGroupId = group.Id,
             PickupOfficeId = office.Id,
             ReturnOfficeId = office.Id,
@@ -103,7 +138,33 @@ public sealed class ReservationServiceQuotePersistenceTests
             }
         };
 
+        if (unavailable)
+        {
+            var failed = () => service.CreateDraftReservationAsync(request);
+            await failed.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*Selected vehicle*");
+            context.Reservations.Should().ContainSingle().Which.VehicleId.Should().Be(vehicle.Id);
+            quoteStore.Verify(store => store.ReleaseClaimAsync(quote.QuoteId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            return;
+        }
+
         var created = await service.CreateDraftReservationAsync(request);
+        created.VehicleId.Should().Be(vehicle.Id);
+        if (exact)
+        {
+            var changedVehicle = () => service.CreateDraftReservationAsync(request with { VehicleId = otherVehicle.Id });
+            var removedVehicle = () => service.CreateDraftReservationAsync(request with { VehicleId = null });
+            await changedVehicle.Should().ThrowAsync<ReservationQuoteConflictException>();
+            await removedVehicle.Should().ThrowAsync<ReservationQuoteConflictException>();
+            var altered = context.Reservations.Single();
+            altered.VehicleId = otherVehicle.Id;
+            altered.Vehicle = otherVehicle;
+            await context.SaveChangesAsync();
+            var changedAllocation = () => service.CreateDraftReservationAsync(request);
+            await changedAllocation.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*Selected vehicle*");
+            altered.VehicleId = vehicle.Id;
+            altered.Vehicle = vehicle;
+            await context.SaveChangesAsync();
+        }
         quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ReservationQuoteV1?)null);
         var replayed = await service.CreateDraftReservationAsync(request with { IdempotencyKey = "idempotency-456" });
@@ -119,6 +180,13 @@ public sealed class ReservationServiceQuotePersistenceTests
         });
 
         created.Id.Should().Be(replayed.Id);
+        var coldVehicleChange = () => service.CreateDraftReservationAsync(request with { VehicleId = otherVehicle.Id });
+        await coldVehicleChange.Should().ThrowAsync<ReservationQuoteConflictException>();
+        if (exact)
+        {
+            var coldVehicleRemoval = () => service.CreateDraftReservationAsync(request with { VehicleId = null });
+            await coldVehicleRemoval.Should().ThrowAsync<ReservationQuoteConflictException>();
+        }
         await crossSessionReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
             .WithMessage("*session*");
         await changedInputReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
@@ -134,6 +202,8 @@ public sealed class ReservationServiceQuotePersistenceTests
         storedReservation.QuoteId.Should().Be(quote.QuoteId);
         storedReservation.PricingSnapshot!.FinalTotal.Should().Be(1548m);
         storedReservation.QuoteReplayProof.Should().NotBeNull();
+        storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 2 : 1);
+        storedReservation.QuoteReplayProof.VehicleId.Should().Be(request.VehicleId);
         storedReservation.QuoteReplayProof!.SessionHash.Should().NotBe("session-123");
         storedReservation.QuoteReplayProof.RequestFingerprint.Should().NotBeNullOrWhiteSpace();
         context.ReservationSelectedExtras.Should().ContainSingle(item =>

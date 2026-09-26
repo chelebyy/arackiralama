@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { Check, Car, Calendar, CreditCard, Hash } from "lucide-react";
@@ -11,28 +11,35 @@ import { rentalDateTimeLocal } from "@/lib/rental-datetime";
 
 export default function BookingConfirmationPage() {
   const t = useTranslations();
+  const locale = useLocale();
   const searchParams = useSearchParams();
 
   const code = searchParams.get("code");
   const isUnpaidRequest = searchParams.get("request") === "unpaid";
   const [reservation, setReservation] = useState<PublicReservationSummary | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const exactDetailsPending = !!searchParams.get("preferredVehicleId") && !reservation;
 
   useEffect(() => {
     if (!code) return;
 
     let cancelled = false;
     setIsLoadingDetails(true);
+    setDetailsError(false);
 
     getReservationByPublicCode(code)
       .then((result) => {
         if (!cancelled) {
           setReservation(result);
+          setDetailsError(!result);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setReservation(null);
+          setDetailsError(true);
         }
       })
       .finally(() => {
@@ -44,7 +51,7 @@ export default function BookingConfirmationPage() {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, retryCount]);
 
   const details = useMemo(() => {
     if (!reservation) return null;
@@ -60,12 +67,12 @@ export default function BookingConfirmationPage() {
       returnDate: [reservation.returnOfficeName, returnDateTime.date, returnDateTime.time]
         .filter(Boolean)
         .join(" - "),
-      total: new Intl.NumberFormat("tr-TR", {
+      total: new Intl.NumberFormat(locale, {
         style: "currency",
         currency: reservation.currency,
       }).format(reservation.totalAmount),
     };
-  }, [reservation]);
+  }, [reservation, locale]);
 
   const hasDetails = !!code || !!details;
 
@@ -77,15 +84,16 @@ export default function BookingConfirmationPage() {
             <Check className="h-10 w-10 text-blue-600" aria-hidden="true" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-            {isUnpaidRequest
+            {exactDetailsPending ? t("booking.confirmation.verificationTitle") : reservation?.status === "Confirmed" ? t("booking.payAtPickup.confirmedTitle") : isUnpaidRequest
               ? t("booking.confirmation.unpaidRequestTitle")
               : t("booking.confirmation.title")}
           </h1>
           <p className="mt-4 text-lg text-slate-600">
-            {isUnpaidRequest
+            {exactDetailsPending ? t(detailsError ? "booking.confirmation.verificationFailed" : "common.labels.loading") : reservation?.status === "Confirmed" ? t("booking.payAtPickup.confirmedMessage") : isUnpaidRequest
               ? t("booking.confirmation.unpaidRequestMessage")
               : t("booking.confirmation.message")}
           </p>
+          {detailsError && <button type="button" onClick={() => setRetryCount((count) => count + 1)} disabled={isLoadingDetails} className="mt-4 rounded-lg border border-sky-700 px-4 py-2 text-sky-800">{t("booking.confirmation.retryDetails")}</button>}
         </div>
 
         {hasDetails && (
@@ -104,7 +112,7 @@ export default function BookingConfirmationPage() {
                 </div>
               )}
               {isLoadingDetails && (
-                <div className="text-sm text-slate-500">Rezervasyon detayları yükleniyor...</div>
+                <div className="text-sm text-slate-500">{t("common.labels.loading")}</div>
               )}
               {details?.vehicle && (
                 <div className="flex items-start justify-between gap-4">

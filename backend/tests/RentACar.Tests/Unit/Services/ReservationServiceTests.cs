@@ -1085,6 +1085,65 @@ public sealed class ReservationServiceTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData("available")]
+    [InlineData("overlap")]
+    [InlineData("status")]
+    [InlineData("cached-other")]
+    [InlineData("changed-selection")]
+    [InlineData("wrong-session")]
+    public async Task CreateHoldAsync_ExactVehicleNeverFallsBackToAnotherGroupMember(string scenario)
+    {
+        var selected = new Vehicle { GroupId = Guid.NewGuid(), OfficeId = Guid.NewGuid() };
+        var other = new Vehicle { GroupId = selected.GroupId, OfficeId = selected.OfficeId };
+        var reservation = new Reservation
+        {
+            VehicleId = scenario == "changed-selection" ? other.Id : selected.Id,
+            Vehicle = selected,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            QuoteReplayProof = new ReservationQuoteReplayProofV1
+            {
+                SchemaVersion = 2, VehicleId = selected.Id,
+                SessionHash = ReservationQuoteSecurity.HashSessionId(scenario == "wrong-session" ? "other-session" : "session")
+            }
+        };
+        if (scenario == "status")
+        {
+            selected.Status = VehicleStatus.Maintenance;
+        }
+        _reservationRepositoryMock.Setup(repository => repository.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        _vehicleRepositoryMock.Setup(repository => repository.GetQueryable())
+            .Returns(new List<Vehicle> { other, selected }.BuildMockDbSet().Object);
+        _reservationRepositoryMock.Setup(repository => repository.HasOverlappingReservationsAsync(
+            selected.Id, reservation.PickupDateTime, reservation.ReturnDateTime, reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scenario == "overlap");
+        _holdServiceMock.Setup(service => service.CreateHoldAsync(reservation.Id, selected.Id,
+            "session", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        if (scenario == "cached-other")
+        {
+            _holdServiceMock.Setup(service => service.GetHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ReservationHoldSnapshot(reservation.Id, other.Id, "session", DateTime.UtcNow.AddMinutes(5)));
+        }
+
+        var result = await _sut.CreateHoldAsync(reservation.Id, "session");
+
+        _holdServiceMock.Verify(service => service.CreateHoldAsync(reservation.Id, other.Id,
+            It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+        if (scenario == "available")
+        {
+            result.Should().NotBeNull();
+            reservation.VehicleId.Should().Be(selected.Id);
+        }
+        else
+        {
+            result.Should().BeNull();
+            reservation.Status.Should().Be(ReservationStatus.Draft);
+        }
+    }
+
     [Fact]
     public async Task CreateHoldAsync_WhenSameGroupExistsInMultipleOffices_PicksReservationOfficeVehicle()
     {

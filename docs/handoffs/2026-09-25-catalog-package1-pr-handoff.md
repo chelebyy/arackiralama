@@ -1,5 +1,39 @@
 # Session handoff: vehicle catalogue Package 1
 
+## Current Package 2 local acceptance — September 26, 2026
+
+Package 2 implementation and scoped local acceptance are complete. The user-authorized mobile/RTL, changed-offer, response-loss and competing-booking checks passed against the actual isolated API/PostgreSQL/Redis fixture. Production activation remains a separate release step.
+
+Frontend: 70 files / 332 tests passed under America/Los_Angeles; the final summary-recovery change passed all 4 focused tests, including one new case (333 distinct tests across runs). Final production build/TypeScript passed. Lint: zero errors and one pre-existing warning. Earlier unchanged-backend evidence remains 853 unit and 67 distinct PostgreSQL/Redis API tests.
+
+Browser evidence covers group-less admin save/reopen and booking, five-locale confirmation, Arabic RTL, phone/tablet/desktop views, keyboard operation, explicit acceptance of changed price/conditions, same-body/key recovery after a lost success response, one winner from two exact-booking tabs, and office hours/closed-date/notice/preparation boundaries. Licence dates are now real required inputs; in-memory details survive Back. Failed confirmation lookups retain the code and offer retry without misleading status claims. Header/Hero source and layout are unchanged.
+
+No Package 2 commit, push, PR, merge, deployment or production migration was performed. Enter actual operator policies and review migrated vehicle terms before activation; production migration/restore checks and release authorization remain required. Local viewport checks do not certify physical devices or constitute a general security audit.
+
+See [acceptance evidence](../Vehicle_Reservation_Package_2_Acceptance.md), [implementation](../Vehicle_Reservation_Package_2_Implementation.md), and [scoped security review](../Vehicle_Reservation_Package_2_Completion_Review.md). Earlier entries below are historical snapshots.
+
+Continue in `C:/Users/muham/.codex/worktrees/catalogue-next-plan/Araç Kiralama`, branch `codex/catalogue-next-plan`, HEAD/base `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. Preserve the dirty primary checkout, active runtime and node_modules junction to the retained local-validation worktree. Local acceptance is complete; the next stage is authorized publication/release review. No additional merge or deployment authority is inferred.
+
+## Historical planning continuation — September 26, 2026
+
+This section supersedes the historical open-PR, checkout and next-action snapshots below. PR #446 merged at `2026-09-26T10:16:54Z`, from head `271b68d15804ceafab5a5e742f15bf8e6d095485` into `main` as `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. Exact merge-commit CI, CodeQL, Secret Scan and React Doctor passed; Docker Push to GHCR succeeded. Production deployment and migration execution were not verified.
+
+The user selected: update Package 1 closure and prepare the Package 2 implementation plan and required decisions. Do not implement Package 2 or merge/deploy this documentation without further authorization. See [Package 2 plan](../Vehicle_Reservation_Package_2_Plan.md) and [closure receipts](../Vehicle_Catalogue_Package_1_Implementation.md#current-closure--september-26-2026).
+
+Fresh fetch verified remote default `main` and local `main` at `f1c34fe`. Primary checkout remains `codex/docs-db-ops-phase0-doc-contract` at `e81eb08`, with its pre-existing untracked files preserved. Current documentation worktree: `C:/Users/muham/.codex/worktrees/catalogue-next-plan/Araç Kiralama`, branch `codex/catalogue-next-plan`, based on `f1c34fe`. The old `C:/All_Project/Araç Kiralama/.worktrees/catalog-package1` is absent and unregistered; do not resume there. Retained worktree cleanup audit timed out without establishing safety; no further worktrees were removed in this continuation.
+
+Next actions:
+
+1. Review the Package 2 decision register and resolve its business-rule gates before implementation. Proposed policies are not approvals.
+2. On implementation authorization, fetch the actual remote default again and use an appropriate clean checkout. Preserve the primary work and this documentation draft.
+3. Implement the plan in dependency order, keeping group compatibility explicit and exact-vehicle identity mandatory for the new flow. Do not silently change historical prices, reservations or old quotes.
+4. Run the plan's focused regression, real PostgreSQL concurrency, migration rehearsal and browser checks. Earlier local tests and merge CI do not validate Package 2.
+5. Obtain separate release authority and verify production readiness. No production operations or external review replies are included in the planning scope.
+
+All following sections are historical Package 1 records. Their past authorization, paths and pending actions do not override this continuation.
+
+Documentation validation: six changed Markdown files, 26 added local links/anchors resolved, and `git diff --check` passed. No application source changed or runtime test reran. The documentation is a local uncommitted draft; no new PR was created in this continuation. The primary checkout's existing untracked roadmap/handoff copies were preserved and are not the updated worktree versions.
+
 ## Second review correction handoff — 2026-09-25
 
 Full API integration suite passed 54/54. For this environment use `127.0.0.1` rather than `localhost` in `RENTACAR_TEST_POSTGRES` and `RENTACAR_TEST_REDIS`; earlier attempts stalled before reporting results. The actual underlying host-resolution cause was not diagnosed.

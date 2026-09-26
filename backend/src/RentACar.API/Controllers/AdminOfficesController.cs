@@ -29,7 +29,9 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
             return BadRequestResponse(validationError);
         }
 
-        var createdOffice = await fleetService.CreateOfficeAsync(request, cancellationToken);
+        OfficeDto createdOffice;
+        try { createdOffice = await fleetService.CreateOfficeAsync(request, cancellationToken); }
+        catch (ArgumentException ex) { return BadRequestResponse(ex.Message); }
         return OkResponse(createdOffice, "Ofis olusturuldu.");
     }
 
@@ -42,7 +44,9 @@ public sealed class AdminOfficesController(IFleetService fleetService) : BaseApi
             return BadRequestResponse(validationError);
         }
 
-        var updatedOffice = await fleetService.UpdateOfficeAsync(id, request, cancellationToken);
+        OfficeDto? updatedOffice;
+        try { updatedOffice = await fleetService.UpdateOfficeAsync(id, request, cancellationToken); }
+        catch (ArgumentException ex) { return BadRequestResponse(ex.Message); }
         if (updatedOffice is null)
         {
             return NotFound(ApiResponse<object>.Fail("Ofis bulunamadi."));

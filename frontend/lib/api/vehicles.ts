@@ -37,6 +37,17 @@ export async function getPublicVehicles(): Promise<PublicVehicle[]> {
   return get<PublicVehicle[]>(API_ENDPOINTS.vehicles.list);
 }
 
+export interface ExactAvailabilityParams {
+  pickupOfficeId: string;
+  returnOfficeId: string;
+  pickupDateTimeUtc: string;
+  returnDateTimeUtc: string;
+}
+export interface ExactVehicleOffer { vehicle: PublicVehicle; rentalDays: number; finalTotal: number; currency: string }
+export function getExactAvailableVehicles(params: ExactAvailabilityParams): Promise<ExactVehicleOffer[]> {
+  return get(`/vehicles/available-exact${buildQueryString({ ...params })}`, { cache: 'no-store' });
+}
+
 export async function getVehicleGroups(): Promise<VehicleGroup[]> {
   return get<VehicleGroup[]>(API_ENDPOINTS.vehicles.groups);
 }

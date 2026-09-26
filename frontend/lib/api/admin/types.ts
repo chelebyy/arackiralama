@@ -10,6 +10,7 @@ import type {
   VehicleCatalogue,
   VehicleGroup
 } from "../types";
+import type { OperatingPolicy, RentalTerms } from "@/lib/rental-policy";
 
 export type AdminVehicleStatus =
   | "Available"
@@ -25,7 +26,7 @@ export type ReportPeriod = "daily" | "weekly" | "monthly" | "quarterly" | "yearl
 
 export interface AdminVehicle
   extends
-    Partial<Omit<Vehicle, "transmission" | "fuelType" | "seatCount" | "luggageCapacity">>,
+    Partial<Omit<Vehicle, "transmission" | "fuelType" | "seatCount" | "luggageCapacity" | "groupId">>,
     VehicleCatalogue {
   id: string;
   plate: string;
@@ -36,7 +37,8 @@ export interface AdminVehicle
   name?: string;
   photoUrl?: string | null;
   officeId: string;
-  groupId: string;
+  groupId: string | null;
+  rentalTerms?: RentalTerms | null;
   office?: Pick<AdminOffice, "id" | "name">;
   group?: Pick<AdminVehicleGroup, "id" | "name">;
   status: AdminVehicleStatus | number;
@@ -70,6 +72,7 @@ export interface AdminVehicleGroup {
 }
 
 export interface AdminOffice extends Office {
+  operatingPolicy?: OperatingPolicy | null;
   type: "airport" | "hotel" | "office";
 }
 
@@ -415,12 +418,13 @@ export interface AuditLogListParams extends AdminListParams {
 }
 
 export interface CreateVehicleData extends VehicleCatalogue {
+  rentalTerms?: RentalTerms | null;
   plate: string;
   brand: string;
   model: string;
   year: number;
   color: string;
-  groupId: string;
+  groupId: string | null;
   officeId: string;
   status: AdminVehicleStatus;
 }
@@ -453,6 +457,7 @@ export interface CreateVehicleGroupData {
 export type UpdateVehicleGroupData = CreateVehicleGroupData;
 
 export interface CreateOfficeData {
+  operatingPolicy?: OperatingPolicy | null;
   name: string;
   code: string;
   type: AdminOffice["type"];
@@ -465,7 +470,7 @@ export interface CreateOfficeData {
   isAirport: boolean;
   isHotel: boolean;
   coordinates: AdminOffice["coordinates"];
-  openingHours: OpeningHours;
+  openingHours: OpeningHours | string;
   services: string[];
 }
 

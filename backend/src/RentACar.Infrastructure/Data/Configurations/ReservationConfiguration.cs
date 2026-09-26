@@ -25,6 +25,7 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.Property(x => x.ReturnOfficeId).HasColumnName("return_office_id");
         builder.Property(x => x.PickupDateTime).HasColumnName("pickup_datetime");
         builder.Property(x => x.ReturnDateTime).HasColumnName("return_datetime");
+        builder.Property(x => x.OccupiedUntilUtc).HasColumnName("occupied_until_utc");
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()

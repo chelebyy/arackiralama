@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/hooks/useVehicles", () => ({
   useVehicle: () => ({ vehicle: state.vehicle, isLoading: false, isError: state.isError }),
   useOffices: () => ({ offices: state.offices }),
-  useAvailableVehicles: (request: unknown) => {
+  useExactAvailableVehicles: (request: unknown) => {
     state.request(request);
     return { vehicles: state.quotes, isLoading: false, isError: false };
   }
@@ -64,7 +64,7 @@ describe("Vehicle detail catalogue", () => {
   it("does not offer a zero-price booking when the group has no configured rate", () => {
     state.search =
       "pickup=office-1&return=office-1&pickupDate=2099-01-01&pickupTime=10:00&returnDate=2099-01-02&returnTime=10:00";
-    state.quotes = [{ groupId: catalogueVehicle.groupId, dailyPrice: 0 }];
+    state.quotes = [{ vehicle: catalogueVehicle, finalTotal: 0, rentalDays: 1, currency: "TRY" }];
     draw();
     expect(screen.queryByRole("link", { name: "Continue booking" })).not.toBeInTheDocument();
     expect(screen.queryByText(/₺/)).not.toBeInTheDocument();

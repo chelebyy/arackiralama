@@ -30,6 +30,7 @@ public static class TestDataSeeder
         await EnsureVehicleGroupsAsync(dbContext, cancellationToken);
         await EnsureVehiclesAsync(dbContext, cancellationToken);
         await EnsurePricingRulesAsync(dbContext, cancellationToken);
+        await ConfigureSyntheticPoliciesAsync(dbContext, cancellationToken);
         await EnsureAdminUserAsync(dbContext, cancellationToken);
         await EnsureFeatureFlagsAsync(dbContext, cancellationToken);
     }
@@ -38,6 +39,32 @@ public static class TestDataSeeder
     /// Gets the seeded admin email.
     /// </summary>
     public static string GetSeedAdminEmail() => SeedAdminEmail;
+
+    private static async Task ConfigureSyntheticPoliciesAsync(RentACarDbContext db, CancellationToken cancellationToken)
+    {
+        var offices = await db.Offices.Where(o => o.Id == OfficeOneId || o.Id == OfficeTwoId).ToListAsync(cancellationToken);
+        foreach (var office in offices)
+            office.OperatingPolicy = new OfficeOperatingPolicy
+            {
+                MinimumNoticeMinutes = 0, PreparationMinutes = 60,
+                PickupWindows = Enum.GetValues<DayOfWeek>().Select(day => new OfficeOperatingWindow { Day = day, StartMinute = 0, EndMinute = 1440 }).ToList(),
+                ReturnWindows = Enum.GetValues<DayOfWeek>().Select(day => new OfficeOperatingWindow { Day = day, StartMinute = 0, EndMinute = 1440 }).ToList()
+            };
+        var vehicles = await db.Vehicles.Include(v => v.Group).Where(v => v.OfficeId == OfficeOneId || v.OfficeId == OfficeTwoId).ToListAsync(cancellationToken);
+        var rates = await db.PricingRules.ToListAsync(cancellationToken);
+        var extraIds = await db.ReservationExtraOptions.Select(e => e.Id).ToArrayAsync(cancellationToken);
+        foreach (var vehicle in vehicles)
+            vehicle.RentalTerms = new VehicleRentalTerms
+            {
+                DepositAmount = vehicle.Group!.DepositAmount, MinAge = vehicle.Group.MinAge,
+                MinLicenseYears = vehicle.Group.MinLicenseYears, ExtraOptionIds = extraIds,
+                Rates = rates.Where(r => r.VehicleGroupId == vehicle.GroupId).Select(r => new VehicleRentalRate
+                { Id = r.Id, StartDate = r.StartDate, EndDate = r.EndDate, DailyPrice = r.DailyPrice,
+                    CalculationType = r.CalculationType, Multiplier = r.Multiplier, WeekdayMultiplier = r.WeekdayMultiplier,
+                    WeekendMultiplier = r.WeekendMultiplier, Priority = r.Priority, CreatedAt = r.CreatedAt }).ToList()
+            };
+        await db.SaveChangesAsync(cancellationToken);
+    }
 
     /// <summary>
     /// Gets the seeded admin password.

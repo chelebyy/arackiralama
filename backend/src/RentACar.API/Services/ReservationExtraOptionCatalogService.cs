@@ -80,10 +80,27 @@ public sealed class ReservationExtraOptionCatalogService(IApplicationDbContext d
             throw new ArgumentException("A valid vehicle group is required.");
         }
 
+        return await GetPublicItemsAsync(vehicleGroupId, null, normalizedLocale, cancellationToken);
+    }
+
+    public async Task<PublicReservationExtraOptionCatalogResponse> GetPublicVehicleCatalogAsync(
+        Guid vehicleId, string locale, CancellationToken cancellationToken = default)
+    {
+        var vehicle = await dbContext.Vehicles.AsNoTracking().SingleOrDefaultAsync(v => v.Id == vehicleId, cancellationToken)
+            ?? throw new ArgumentException("Vehicle does not exist.");
+        return await GetPublicItemsAsync(vehicle.GroupId ?? Guid.Empty, vehicle.RentalTerms?.ExtraOptionIds ?? [],
+            NormalizeLocale(locale), cancellationToken);
+    }
+
+    private async Task<PublicReservationExtraOptionCatalogResponse> GetPublicItemsAsync(
+        Guid vehicleGroupId, Guid[]? allowedOptions, string normalizedLocale, CancellationToken cancellationToken)
+    {
         var items = await dbContext.ReservationExtraOptions
             .AsNoTracking()
             .Where(option => option.IsActive && !option.IsArchived)
-            .Where(option => option.VehicleGroups.Any(group => group.VehicleGroupId == vehicleGroupId))
+            .Where(option => allowedOptions == null
+                ? option.VehicleGroups.Any(group => group.VehicleGroupId == vehicleGroupId)
+                : allowedOptions.Contains(option.Id))
             .Select(option => new
             {
                 Option = option,
