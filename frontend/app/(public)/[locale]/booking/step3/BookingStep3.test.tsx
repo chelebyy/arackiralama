@@ -74,6 +74,27 @@ describe("BookingStep3Page", () => {
     });
   });
 
+  it.each(["group-url", "00000000-0000-0000-0000-000000000000"])("loads exact vehicle extras from a restored URL with group %s", async (groupId) => {
+    storedDetails = { vehicle: undefined };
+    searchParams = new URLSearchParams({ vehicle: groupId, preferredVehicleId: "car-url" });
+
+    const { rerender } = render(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith(groupId, "en", "car-url"));
+
+    searchParams = new URLSearchParams({ vehicle: groupId, preferredVehicleId: "car-url-next" });
+    rerender(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith(groupId, "en", "car-url-next"));
+  });
+
+  it.each(["car-store", undefined])("prefers the stored vehicle identity %s over a stale exact-vehicle URL", async (vehicleId) => {
+    storedDetails = { vehicle: { vehicleGroupId: "group-store", vehicleId } };
+    searchParams = new URLSearchParams({ vehicle: "group-url", preferredVehicleId: "car-url" });
+
+    render(<BookingStep3Page />);
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalledWith("group-store", "en", vehicleId));
+    expect(getPublicReservationExtraOptionsMock).not.toHaveBeenCalledWith(expect.anything(), "en", "car-url");
+  });
+
   it("validates required customer details before advancing", async () => {
     const user = userEvent.setup();
 

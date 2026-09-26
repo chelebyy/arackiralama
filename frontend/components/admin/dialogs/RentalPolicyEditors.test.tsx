@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import type { OperatingPolicy } from "@/lib/rental-policy";
+import type { OperatingPolicy, RentalTerms } from "@/lib/rental-policy";
 import { OperatingPolicyEditor } from "./OperatingPolicyEditor";
 import { RentalTermsEditor } from "./RentalTermsEditor";
 
@@ -25,6 +25,27 @@ describe("Rental policy editors", () => {
     expect(screen.getByLabelText("Teslim başlangıç 1")).toBe(remaining);
     expect(remaining).toHaveValue("11:00");
     expect(screen.getByLabelText("Teslim günü 1")).toHaveValue("2");
+  });
+
+  it("rejects fractional priority while retaining decimal prices and multipliers", () => {
+    function Editor() {
+      const [value, setValue] = useState<RentalTerms>({ depositAmount: 2000, minAge: 23, minLicenseYears: 3, extraOptionIds: [], rates: [
+        { id: "rate-1", startDate: "2026-10-01", endDate: "2026-10-31", dailyPrice: 1800, multiplier: 1, weekdayMultiplier: 1, weekendMultiplier: 1, calculationType: "multiplier" as const, priority: 0, createdAt: "2026-09-01T00:00:00Z" }
+      ] });
+      return <RentalTermsEditor value={value} onChange={setValue} />;
+    }
+    render(<Editor />);
+    const priority = screen.getByLabelText("Öncelik");
+    fireEvent.change(priority, { target: { value: "0.5" } });
+    expect(priority).toBeInvalid();
+    fireEvent.change(priority, { target: { value: "2" } });
+    expect(priority).toBeValid();
+    for (const label of ["Günlük fiyat (TRY)", "Temel çarpan", "Hafta içi çarpanı", "Hafta sonu çarpanı"]) {
+      const input = screen.getByLabelText(label);
+      fireEvent.change(input, { target: { value: "1.25" } });
+      expect(input).toHaveValue(1.25);
+      expect(input).toBeValid();
+    }
   });
 
   it("allows removing an existing extra outside the loaded catalogue page", () => {

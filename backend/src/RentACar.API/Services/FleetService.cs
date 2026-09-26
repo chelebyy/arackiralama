@@ -314,6 +314,14 @@ public sealed class FleetService(
         if (!request.GroupId.HasValue && request.RentalTerms is null && existingVehicle.RentalTerms is null)
             throw new ArgumentException("Rental terms are required for a vehicle without a legacy group.");
 
+        if (existingVehicle.GroupId.HasValue && existingVehicle.GroupId != request.GroupId &&
+            await dbContext.Reservations.AnyAsync(reservation =>
+                reservation.VehicleId == id && reservation.PricingSnapshot == null &&
+                reservation.Status != ReservationStatus.Completed &&
+                reservation.Status != ReservationStatus.Cancelled &&
+                reservation.Status != ReservationStatus.Expired, cancellationToken))
+            throw new ArgumentException("Vehicle group cannot change while active reservations depend on its pricing and deposit.");
+
         existingVehicle.Plate = request.Plate.Trim().ToUpperInvariant();
         existingVehicle.Brand = request.Brand.Trim();
         existingVehicle.Model = request.Model.Trim();

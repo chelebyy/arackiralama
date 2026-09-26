@@ -1,6 +1,26 @@
 # PR 447 review corrections — September 26, 2026
 
-This record covers five correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers six correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Sixth review: starting head 4487d988be36cea982ce66662924659296969051
+
+The [repair plan](PR447_Sixth_Review_Plan.md) records the diagnosis and scope.
+
+| Finding | Correction |
+|---|---|
+| Codex r4112695224 | Fleet updates reject group removal or replacement while non-terminal snapshotless reservations depend on the existing group. Rejection precedes entity/audit mutation. Same-group edits, terminal reservations and snapshot-backed reservations remain supported. |
+| Codex r4112695229 | Step 3 uses the URL preferredVehicleId when no vehicle is stored, in both the extras fetch and cache key. An existing stored vehicle remains authoritative over a stale URL. |
+| Codex r4112695232 | Priority uses step 1; prices and multipliers retain step 0.01. Native input validity rejects fractional priority. |
+| CI job 108480924718 | Type check, lint and tests passed; the build failed with 27 Turbopack Roboto font import errors, including next/font/google queries have exactly one entry. The production build script now uses the supported next build --webpack option. Fonts, dependencies and workflow permissions are unchanged. |
+
+### Sixth-pass validation and security coverage
+
+- 875 backend unit tests passed, including 11 new cases covering every non-terminal reservation status, group removal/replacement, unchanged group edits, terminal reservations and accepted snapshots.
+- 56 focused frontend tests passed across six files. Five new cases cover grouped/group-less URL recovery, cache-key changes, store precedence and integer-versus-decimal numeric validity.
+- Three real PostgreSQL/Redis vehicle-catalogue API tests passed, including two new cases covering unauthorized mutation, HTTP 400 for an active snapshotless dependency with unchanged vehicle state, allowed removal after completion, and retained snapshot deposit for an active snapshot-backed reservation.
+- Standard production build, TypeScript, lint and whitespace checks passed. Existing lint/obsolete Redis constructor warnings remain. Native terminal result retrieval stalled; no result is claimed for the initial broader API run. After verifying no corresponding validation process remained, targeted API/build/lint reruns through the working command runner returned success.
+- Reviewed: authenticated fleet mutation and deposit fallback preservation, exact identity propagation to server-filtered extras, numeric API contract, and build command scope. No additional material concern was found in this bounded pass. Browser/device acceptance, unrelated security paths, provider delivery, production data and deployment were not reviewed or rerun; this is not a security certification.
+- Fetched remote main and local main remain f1c34fe; the dirty primary checkout is preserved. New-head CI must be evaluated separately after push.
 
 ## Fifth review: starting head 59b3ef01cacc831470a6dc1edfb74d11cb5bf081
 

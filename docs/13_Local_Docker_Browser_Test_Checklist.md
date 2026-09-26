@@ -1,6 +1,6 @@
 # Local Docker Browser Test Checklist
 
-Latest PR #447 follow-up: the fifth Codex review on `59b3ef0` is addressed. Exact-vehicle campaigns are validated by the authoritative quote, including vehicles without a group; legacy group validation is retained. Applied status requires the returned campaign code, and campaign/checkout actions wait for pending quote work. Validation: 42 frontend tests, 49 real PostgreSQL/Redis API tests, Webpack production build and TypeScript passed. Lint has one existing warning. Default Turbopack remains blocked by the existing external node_modules junction. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. No browser/device rerun, merge or deployment occurred.
+Latest PR #447 follow-up: the sixth Codex review on `4487d98` is addressed. Active snapshotless reservations retain their vehicle group; step 3 restores exact-vehicle identity from the URL; rate priority accepts integer steps. The failed CI job passed tests but failed the Turbopack Roboto font build. The standard production build now uses supported Webpack. Validation: 875 backend unit tests, 56 frontend tests, three real PostgreSQL/Redis vehicle-catalogue API tests, build and TypeScript passed; lint has one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); new-head CI must be checked after push. No browser/device rerun, merge or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026
 

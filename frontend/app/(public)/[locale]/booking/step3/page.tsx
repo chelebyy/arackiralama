@@ -138,14 +138,15 @@ export default function BookingStep3Page() {
     isGuid(pickupOfficeMatch.id) &&
     isGuid(returnOfficeMatch.id);
   const vehicleGroupId = booking.vehicle?.vehicleGroupId ?? searchParams.get("vehicleGroupId") ?? searchParams.get("vehicle") ?? "";
+  const vehicleId = booking.vehicle ? booking.vehicle.vehicleId : searchParams.get("preferredVehicleId") ?? undefined;
   const {
     data: extraOptions = [],
     error: extraOptionsError,
     isLoading: extraOptionsLoading,
     mutate: retryExtraOptions,
   } = useSWR<PublicReservationExtraOption[], Error>(
-    vehicleGroupId ? ["reservation-extra-options", vehicleGroupId, booking.vehicle?.vehicleId, locale] : null,
-    () => getPublicReservationExtraOptions(vehicleGroupId, locale, booking.vehicle?.vehicleId),
+    vehicleGroupId ? ["reservation-extra-options", vehicleGroupId, vehicleId, locale] : null,
+    () => getPublicReservationExtraOptions(vehicleGroupId, locale, vehicleId),
     { revalidateOnFocus: false }
   );
   const pickupDate = searchParams.get("pickupDate") || "";
