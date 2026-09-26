@@ -327,6 +327,53 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             .Should().Be(RentACar.Core.Enums.ReservationStatus.Confirmed);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GrouplessVehicle_CampaignEligibilityUsesAuthoritativeQuote(bool restricted)
+    {
+        var input = ExactInput() with { VehicleGroupId = Guid.Empty, CampaignCode = "GLOBAL10" };
+        await WithDbContextAsync(async db =>
+        {
+            var vehicle = await db.Vehicles.FindAsync(input.VehicleId);
+            vehicle!.GroupId = null;
+            db.Campaigns.Add(new Campaign
+            {
+                Code = input.CampaignCode, DiscountType = "percentage", DiscountValue = 10,
+                MinDays = 1, ValidFrom = DateOnly.FromDateTime(input.PickupDateTimeUtc).AddDays(-1),
+                ValidUntil = DateOnly.FromDateTime(input.ReturnDateTimeUtc).AddDays(1),
+                AllowedVehicleGroupIds = restricted ? [TestDataSeeder.GroupOneId] : []
+            });
+            await db.SaveChangesAsync();
+            return true;
+        });
+        var session = Guid.NewGuid().ToString();
+        using var quoted = await SendExactQuoteAsync(input, session);
+        var body = await quoted.Content.ReadAsStringAsync();
+        if (restricted)
+        {
+            quoted.StatusCode.Should().Be(HttpStatusCode.Conflict, body);
+            body.Should().Contain("Campaign code is invalid or expired.");
+            (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(0);
+            return;
+        }
+
+        quoted.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var json = JsonDocument.Parse(body);
+        var data = json.RootElement.GetProperty("data");
+        data.GetProperty("appliedCampaignCode").GetString().Should().Be(input.CampaignCode);
+        data.GetProperty("campaignDiscount").GetDecimal().Should().Be(300m);
+        data.GetProperty("finalTotal").GetDecimal().Should().Be(2700m);
+        var request = ExactReservation(input, await QuoteIdAsync(quoted)) with { CampaignCode = input.CampaignCode };
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), true);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync());
+        saved.Status.Should().Be(ReservationStatus.Confirmed);
+        saved.TotalAmount.Should().Be(2700m);
+        saved.PricingSnapshot!.CampaignCode.Should().Be(input.CampaignCode);
+        saved.PricingSnapshot.DiscountTotal.Should().Be(300m);
+    }
+
     [Fact]
     public async Task DatedCatalogue_UsesExactPriceAndExcludesUnavailableVehicle()
     {

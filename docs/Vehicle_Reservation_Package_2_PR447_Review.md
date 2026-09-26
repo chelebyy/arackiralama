@@ -1,6 +1,19 @@
 # PR 447 review corrections — September 26, 2026
 
-This record covers four correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers five correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Fifth review: starting head 59b3ef01cacc831470a6dc1edfb74d11cb5bf081
+
+Codex [r4112582993](https://github.com/chelebyy/arackiralama/pull/447#discussion_r4112582993) correctly identified that the legacy campaign-validation endpoint rejects the empty group identifier used by group-less exact vehicles. Checkout now validates all exact-vehicle campaigns through the authoritative quote endpoint. The legacy group-only path retains its validation request. The UI marks a campaign applied only when the returned quote includes the requested normalized code; pending quote/campaign work blocks duplicate application and checkout submission.
+
+### Fifth-pass validation and security coverage
+
+- All 42 focused frontend tests passed across five files, including four new cases covering grouped/group-less exact vehicles, pending quote controls, rejected-code retry and a quote without the requested campaign. Existing legacy validation tests still pass.
+- All 49 real PostgreSQL/Redis API tests passed. Two new cases prove a global 10% campaign reduces a group-less exact booking from TRY 3,000 to TRY 2,700, persists the campaign/discount in the confirmed reservation snapshot, and rejects a campaign restricted to a vehicle group with HTTP 409. Backend production logic was unchanged.
+- Webpack production build, TypeScript, lint and whitespace checks passed. Lint retains the existing SearchForm.test.tsx warning. The default Turbopack build failed because the pre-existing node_modules junction points outside its inferred root; `corepack pnpm -C frontend build --webpack` passed without changing that shared dependency link or repository build settings.
+- Reviewed: campaign routing, authoritative returned-code handling, pending-request controls, server campaign eligibility and persisted quote totals. Pricing/eligibility remain server-enforced; no additional material concern was found in this scoped source/test pass.
+- Not rerun/reviewed: browser/device acceptance, unrelated security paths, the full backend unit suite, external notification/payment delivery, production data and deployment/migration/restore. Existing browser/unit evidence below is historical. This is not a security certification.
+- Local and fetched remote main remain `f1c34fe`; the active PR worktree continues from `59b3ef0`, preserving the dirty primary checkout. Ten checks and React Doctor passed on that starting head, with GHCR publication skipped. New-head CI/review must be checked separately.
 
 ## Fourth review: starting head b8157a8563c2ecc4939daf21907c57103ea08de7
 

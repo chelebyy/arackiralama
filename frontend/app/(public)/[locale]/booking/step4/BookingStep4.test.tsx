@@ -327,6 +327,9 @@ describe("BookingStep4Page", () => {
   it("validates a campaign code through the API before applying it", async () => {
     const user = userEvent.setup();
     validateCampaignMock.mockResolvedValue({ valid: true });
+    createReservationQuoteMock.mockResolvedValueOnce(baseQuote).mockResolvedValue({
+      ...baseQuote, appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174,
+    });
 
     render(<BookingStep4Page />);
 
@@ -363,6 +366,66 @@ describe("BookingStep4Page", () => {
     const appliedElements = await screen.findAllByText("Applied");
     expect(appliedElements.length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Applied" })).toBeDisabled();
+  });
+
+  it.each(["economy", "00000000-0000-0000-0000-000000000000"])("validates an exact vehicle campaign through its quote with group %s", async (vehicleGroupId) => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleGroupId };
+    createReservationQuoteMock.mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a" });
+    let resolveQuote!: (value: Omit<typeof baseQuote, "appliedCampaignCode"> & { vehicleId: string; appliedCampaignCode: string }) => void;
+    createReservationQuoteMock.mockImplementationOnce(() => new Promise((resolve) => { resolveQuote = resolve; }));
+
+    render(<BookingStep4Page />);
+    await user.type(screen.getByPlaceholderText(/enter code/i), " summer15 ");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(validateCampaignMock).not.toHaveBeenCalled();
+    expect(createReservationQuoteMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vehicleId: "car-a", vehicleGroupId, campaignCode: "SUMMER15" }), "uuid-123"
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /complete booking/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+
+    resolveQuote({ ...baseQuote, vehicleId: "car-a", appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174 });
+    expect(await screen.findByRole("button", { name: "Applied" })).toBeDisabled();
+    expect(screen.getAllByText(/Campaign Code SUMMER15/i)).toHaveLength(2);
+  });
+
+  it("allows retrying a rejected exact vehicle campaign without claiming it was applied", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleGroupId: "00000000-0000-0000-0000-000000000000" };
+    bookingState.selectedExtras = [];
+    createReservationQuoteMock.mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a" })
+      .mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Campaign code is invalid or expired.", code: "CONFLICT", timestamp: "2026-09-26T00:00:00Z", path: "/api/v1/pricing/quote" }))
+      .mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a", appliedCampaignCode: "SUMMER15", campaignDiscount: 15, finalTotal: 174 });
+
+    render(<BookingStep4Page />);
+    const input = screen.getByPlaceholderText(/enter code/i);
+    await user.type(input, "badcode");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled());
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+    expect(validateCampaignMock).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByRole("button", { name: "Applied" })).toBeDisabled();
+  });
+
+  it("does not mark a campaign applied when the quote does not include it", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a" };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "car-a" });
+
+    render(<BookingStep4Page />);
+    await user.type(screen.getByPlaceholderText(/enter code/i), "summer15");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("Invalid campaign code."));
+    expect(screen.queryByRole("button", { name: "Applied" })).not.toBeInTheDocument();
+    expect(validateCampaignMock).not.toHaveBeenCalled();
   });
 
   it("shows an error toast when the campaign code is invalid", async () => {

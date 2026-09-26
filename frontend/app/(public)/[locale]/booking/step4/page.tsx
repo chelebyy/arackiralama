@@ -361,31 +361,39 @@ export default function BookingStep4Page() {
       return;
     }
 
-    const validation = await validateCampaignCode({
-      code: normalizedCode,
-      vehicleGroupId: selectedVehicleGroupId,
-      rentalDays,
-      pickupDate,
-    });
+    if (!selectedVehicleId) {
+      const validation = await validateCampaignCode({
+        code: normalizedCode,
+        vehicleGroupId: selectedVehicleGroupId,
+        rentalDays,
+        pickupDate,
+      });
 
-    if (!validation) {
-      setAppliedCampaign(null);
-      setValue("campaignCode", "");
-      toast.error(t("failedToValidateCampaign"));
-      return;
-    }
+      if (!validation) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("failedToValidateCampaign"));
+        return;
+      }
 
-    if (!validation.valid) {
-      setAppliedCampaign(null);
-      setValue("campaignCode", "");
-      toast.error(t("invalidCampaign"));
-      return;
+      if (!validation.valid) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("invalidCampaign"));
+        return;
+      }
     }
 
     const nextQuote = await refreshQuote(normalizedCode);
     if (nextQuote) {
-      setAppliedCampaign({ code: normalizedCode });
-      setValue("campaignCode", normalizedCode);
+      if (nextQuote.appliedCampaignCode !== normalizedCode) {
+        setAppliedCampaign(null);
+        setValue("campaignCode", "");
+        toast.error(t("invalidCampaign"));
+        return;
+      }
+      setAppliedCampaign({ code: nextQuote.appliedCampaignCode });
+      setValue("campaignCode", nextQuote.appliedCampaignCode);
     }
   };
 
@@ -646,7 +654,7 @@ export default function BookingStep4Page() {
                 <button
                   type="button"
                   onClick={applyCampaign}
-                  disabled={!campaignInput || appliedCampaign !== null || isValidating}
+                  disabled={!campaignInput || appliedCampaign !== null || isValidating || isQuoteLoading || isSubmitting}
                   className={cn(
                     "px-6 py-3 font-medium rounded-lg transition-colors",
                     appliedCampaign
@@ -833,7 +841,7 @@ export default function BookingStep4Page() {
 
           <button
             type="submit"
-            disabled={isSubmitting || paymentMethods.length === 0}
+            disabled={isSubmitting || isValidating || isQuoteLoading || paymentMethods.length === 0}
             onClick={() => {
               submitModeRef.current = selectedPaymentMethod ?? "credit_card";
             }}
