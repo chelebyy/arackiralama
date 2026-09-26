@@ -692,10 +692,13 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Return date must be after pickup date.");
         }
 
+        var newOccupiedUntil = reservation.OccupiedUntilUtc.HasValue
+            ? newReturnDateTime.Add(reservation.OccupiedUntilUtc.Value - reservation.ReturnDateTime)
+            : (DateTime?)null;
         var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
             reservation.VehicleId,
             newPickupDateTime,
-            newReturnDateTime,
+            newOccupiedUntil ?? newReturnDateTime,
             reservation.Id,
             cancellationToken);
 
@@ -748,8 +751,7 @@ public sealed class ReservationService : IReservationService
                 ?? throw new InvalidOperationException("Return office not found.");
         }
 
-        if (reservation.OccupiedUntilUtc.HasValue)
-            reservation.OccupiedUntilUtc = newReturnDateTime.Add(reservation.OccupiedUntilUtc.Value - reservation.ReturnDateTime);
+        reservation.OccupiedUntilUtc = newOccupiedUntil;
         reservation.PickupDateTime = newPickupDateTime;
         reservation.ReturnDateTime = newReturnDateTime;
         reservation.PickupOfficeId = newPickupOfficeId;

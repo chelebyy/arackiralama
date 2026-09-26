@@ -19,6 +19,8 @@ public sealed class VehicleBookingService(
     public async Task<VehicleBookingOffer> CalculateAsync(
         CreateReservationQuoteRequest request, CancellationToken cancellationToken = default, Guid? excludeReservationId = null)
     {
+        if (request.DriverAge is null)
+            throw new ArgumentException("Driver age is required for an exact vehicle quote.");
         request = request with
         {
             PickupDateTimeUtc = request.PickupDateTimeUtc.Kind == DateTimeKind.Local ? request.PickupDateTimeUtc.ToUniversalTime() : DateTime.SpecifyKind(request.PickupDateTimeUtc, DateTimeKind.Utc),
@@ -73,6 +75,47 @@ public sealed class VehicleBookingService(
             MinAge = terms.MinAge!.Value, MinLicenseYears = terms.MinLicenseYears!.Value,
             PreparationMinutes = preparation, PolicyFingerprint = fingerprint, PaymentAtPickup = true
         });
+    }
+
+    public async Task<IReadOnlyList<(Vehicle Vehicle, PriceBreakdownDto Pricing)>> GetAvailableAsync(
+        Guid pickupOfficeId, Guid returnOfficeId, DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc,
+        int? driverAge, CancellationToken cancellationToken = default)
+    {
+        var returnId = returnOfficeId == Guid.Empty ? pickupOfficeId : returnOfficeId;
+        var offices = await db.Offices.AsNoTracking()
+            .Where(o => o.Id == pickupOfficeId || o.Id == returnId)
+            .ToDictionaryAsync(o => o.Id, cancellationToken);
+        var pickup = offices.GetValueOrDefault(pickupOfficeId);
+        var dropoff = offices.GetValueOrDefault(returnId);
+        try
+        {
+            ValidateItinerary(pickup, dropoff, pickupDateTimeUtc, returnDateTimeUtc, DateTime.UtcNow);
+        }
+        catch (ReservationQuoteConflictException)
+        {
+            return [];
+        }
+
+        var occupiedUntil = returnDateTimeUtc.AddMinutes(dropoff!.OperatingPolicy!.PreparationMinutes!.Value);
+        var vehicles = await db.Vehicles.AsNoTracking().Include(v => v.Group)
+            .Where(v => v.OfficeId == pickupOfficeId && v.Status == VehicleStatus.Available &&
+                !db.Reservations.Any(r => r.VehicleId == v.Id &&
+                    ReservationStatusGroups.StockBlocking.Contains(r.Status) &&
+                    r.PickupDateTime < occupiedUntil &&
+                    (r.OccupiedUntilUtc ?? r.ReturnDateTime) > pickupDateTimeUtc))
+            .OrderBy(v => v.Brand).ThenBy(v => v.Model).ThenBy(v => v.Id)
+            .ToListAsync(cancellationToken);
+        var results = new List<(Vehicle, PriceBreakdownDto)>();
+        foreach (var vehicle in vehicles)
+        {
+            if (vehicle.RentalTerms is not { } terms) continue;
+            ValidateTerms(terms);
+            if (driverAge.HasValue && driverAge < terms.MinAge) continue;
+            var breakdown = PricingService.CalculateCataloguePrice(vehicle, pickup!, dropoff,
+                pickupDateTimeUtc, returnDateTimeUtc, driverAge);
+            if (breakdown is not null) results.Add((vehicle, breakdown));
+        }
+        return results;
     }
 
     public async Task ValidateQuoteAsync(ReservationQuoteV1 quote, CreateReservationRequest request,

@@ -717,7 +717,7 @@ public sealed class FleetService(
         return user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? user?.Identity?.Name;
     }
 
-    private static VehicleGroupDto MapToDto(VehicleGroup vehicleGroup)
+    internal static VehicleGroupDto MapToDto(VehicleGroup vehicleGroup)
     {
         return new VehicleGroupDto(
             vehicleGroup.Id,
@@ -733,7 +733,7 @@ public sealed class FleetService(
             vehicleGroup.Features);
     }
 
-    private static VehicleDto MapToDto(Vehicle vehicle)
+    internal static VehicleDto MapToDto(Vehicle vehicle)
     {
         return new VehicleDto(
             vehicle.Id,

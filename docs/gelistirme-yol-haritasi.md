@@ -1,6 +1,6 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
-**PR #447 inceleme düzeltmeleri:** Codex'in üç iş kuralı ve React Doctor'ın altı uyarısı giderildi. 136 odaklı backend birim testi, 17 gerçek API testi, 50 frontend testi ve son derleme/TypeScript geçti. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir.
+**PR #447 ikinci inceleme düzeltmeleri:** `efefb21` üzerindeki üç yeni Codex bulgusu giderildi: toplu müsaitlik sorgusu, güncellemede hazırlık süresi çakışma kontrolü ve araca özel teklifte zorunlu sürücü yaşı. 857 backend birim testi ve 32 gerçek PostgreSQL/Redis API testi geçti; 1 ve 50 araç için sorgu sayısı 2 kaldı. Lint hatasız, önceden var olan tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir. Bu turda frontend kaynakları değişmedi; önceki tarayıcı kanıtları kendi kapsamını korur. Merge/dağıtım yapılmadı.
 
 ## Güncel durum — 26 Eylül 2026
 

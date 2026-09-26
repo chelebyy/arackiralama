@@ -1,6 +1,6 @@
 # Package 2 completion review
 
-Latest PR #447 follow-up: all three Codex findings and six React Doctor warnings are addressed. Focused validation passed: 136 backend unit, 17 real API and 50 frontend tests, plus production build/TypeScript. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the follow-up head. Earlier receipts below retain their original scope.
+Latest PR #447 follow-up: the second Codex review on `efefb21` is addressed with batched catalogue queries, preparation-aware reservation updates and required age for exact quotes. Validation: 857 backend unit tests and 32 real PostgreSQL/Redis API tests passed; catalogue queries stayed at two for both 1 and 50 vehicles. Lint passed with one existing warning. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the new head. Earlier frontend/browser receipts retain their original scope; this pass changes no frontend source and performs no merge or deployment.
 
 September 26, 2026. Scoped source, automated and real local browser review completed. The [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md) closes the mobile/RTL and recovery matrix after the initial [browser retry](Vehicle_Reservation_Package_2_Browser_Retry.md). Production activation is separate.
 

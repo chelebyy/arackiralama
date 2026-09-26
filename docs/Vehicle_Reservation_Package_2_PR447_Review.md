@@ -1,6 +1,36 @@
 # PR 447 review corrections — September 26, 2026
 
-This follow-up addresses the nine React Doctor and Codex inline findings on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). Reviewed starting head: `caa234f9142313ebee01d082a748201fa02a6208`. No merge, production migration or deployment is included.
+This record covers two correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Second review: starting head efefb2120d6f454241fcd36ba36ad2051484d86a
+
+The three new P2 claims were confirmed against source and corrected:
+
+| Review comment | Correction and evidence |
+|---|---|
+| Codex r4112184776 | Dated catalogue loads the itinerary offices once, filters office/status/overlapping reservations in one vehicle query and eagerly loads group metadata. Rental terms and prices are calculated in memory using the same rule selection and amount calculation as individual quotes. The public DTO allowlist remains in place. PostgreSQL command interception measured exactly two read commands for both 1 and 50 vehicles. Grouped and group-less catalogue prices match individual quotes, including airport, one-way and young-driver fees. This measures query count, not production latency. |
+| Codex r4112184778 | Reservation update calculates the shifted occupied-until value before the overlap precheck and saves that same value. A real authenticated API test rejects a one-minute preparation overlap with HTTP 400 and leaves the stored dates unchanged. The exact end boundary succeeds and preserves the preparation offset. |
+| Codex r4112184780 | Exact quote calculation requires DriverAge before database work or quote creation. API tests assert missing age returns HTTP 400, underage returns HTTP 409, minimum eligible age succeeds and legacy group quotes still accept omitted age. Catalogue browsing can still omit age. |
+
+### Second-pass validation
+
+- All 857 backend unit tests passed, including legacy pricing and reservation behavior; the initial focused subset of 180 also passed.
+- All 32 ReservationQuoteEndpointTests passed against isolated temporary PostgreSQL databases and Redis. Fifteen new cases cover the findings plus missing terms/rates/policies, minimum age, catalogue browsing without age, and preparation overlap/boundary filtering.
+- Backend source and API tests compiled successfully. Frontend lint passed with zero errors and the pre-existing SearchForm.test.tsx unused-disable warning.
+- No frontend source changed; production frontend build/browser/device acceptance was not rerun. Earlier evidence below remains historical.
+- Initial compile exposed an entity/DTO mismatch, corrected by reusing FleetService's existing mapping. The first integration launch omitted Docker's implicit postgres username; the fixture connection was corrected before the successful runs. Context-mode command execution returned EPERM; scoped native tools were used.
+- The fetched remote default and local main both remained `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`; corrections continue on the existing PR feature branch, preserving the dirty primary checkout.
+
+### Second-pass scoped security coverage
+
+- Reviewed: request validation, public DTO mapping, office and stock-blocking predicates, preparation interval preservation, and shared pricing. Planning checks required retaining the public allowlist and authoritative booking revalidation; the source/diff pass found no additional material concern in this bounded change.
+- Not reviewed: unrelated auth/payment paths, real payment providers, production performance, deployment/migration/restore, physical devices or full accessibility.
+- Assumptions: catalogue availability remains advisory until the existing transaction-time quote/allocation checks succeed; automated successful checks are not a security certification.
+- Tools run: source/diff inspection, .NET unit and real API tests, PostgreSQL command interception, lint and whitespace checks. CI and external reviews must be checked against the newly pushed commit; React Doctor and ten CI checks passed on the preceding `efefb21` head.
+
+## First review: starting head caa234f9142313ebee01d082a748201fa02a6208
+
+The first pass addressed nine React Doctor and Codex inline findings.
 
 ## Verified findings and corrections
 

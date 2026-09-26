@@ -1,14 +1,18 @@
 using System.Net;
+using System.Data.Common;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using RentACar.API.Contracts.Pricing;
 using RentACar.API.Contracts.Reservations;
 using RentACar.API.Services;
 using RentACar.ApiIntegrationTests.Infrastructure;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
+using RentACar.Infrastructure.Data;
 using Xunit;
 
 namespace RentACar.ApiIntegrationTests.Endpoints;
@@ -455,6 +459,157 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         legacy.StatusCode.Should().Be(HttpStatusCode.BadRequest, await legacy.Content.ReadAsStringAsync());
         (await legacy.Content.ReadAsStringAsync()).Should().Contain("aktif degil");
         (await WithDbContextAsync(db => db.Reservations.CountAsync(r => r.QuoteId == request.QuoteId))).Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(true, null, HttpStatusCode.BadRequest)]
+    [InlineData(false, null, HttpStatusCode.OK)]
+    [InlineData(true, 18, HttpStatusCode.Conflict)]
+    [InlineData(true, 21, HttpStatusCode.OK)]
+    public async Task Quote_RequiresAgeOnlyForExactVehicle(bool exact, int? age, HttpStatusCode expected)
+    {
+        var input = ExactInput() with { VehicleId = exact ? TestDataSeeder.GroupOneId : null, DriverAge = age };
+        using var response = await SendExactQuoteAsync(input, Guid.NewGuid().ToString());
+        response.StatusCode.Should().Be(expected, await response.Content.ReadAsStringAsync());
+        if (expected == HttpStatusCode.BadRequest)
+            (await response.Content.ReadAsStringAsync()).Should().Contain("Driver age is required");
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(50)]
+    public async Task DatedCatalogue_QueryCountIsConstantAndPricesMatchQuotes(int fleetSize)
+    {
+        var input = ExactInput() with { ReturnOfficeId = TestDataSeeder.OfficeTwoId, DriverAge = 22 };
+        var connectionString = await WithDbContextAsync(async db =>
+        {
+            var vehicles = await db.Vehicles.ToListAsync();
+            var template = vehicles.Single(v => v.Id == input.VehicleId);
+            foreach (var vehicle in vehicles) vehicle.Status = VehicleStatus.Maintenance;
+            for (var i = 0; i < fleetSize; i++)
+                db.Vehicles.Add(new Vehicle
+                {
+                    Plate = $"BATCH-{i}", Brand = "Synthetic", Model = "Catalogue", Year = 2026,
+                    OfficeId = input.PickupOfficeId, GroupId = i % 2 == 0 ? null : template.GroupId,
+                    RentalTerms = JsonSerializer.Deserialize<VehicleRentalTerms>(JsonSerializer.Serialize(template.RentalTerms))
+                });
+            await db.SaveChangesAsync();
+            return db.Database.GetConnectionString()!;
+        });
+        var counter = new QueryCounter();
+        await using var context = new RentACarDbContext(new DbContextOptionsBuilder<RentACarDbContext>()
+            .UseNpgsql(connectionString).AddInterceptors(counter).Options);
+        var service = new VehicleBookingService(context, new PricingService(context, new EfUnitOfWork(context)),
+            new ReservationExtraPricingService(context));
+        var offers = await service.GetAvailableAsync(input.PickupOfficeId, input.ReturnOfficeId,
+            input.PickupDateTimeUtc, input.ReturnDateTimeUtc, input.DriverAge);
+        offers.Should().HaveCount(fleetSize);
+        counter.Count.Should().Be(2);
+        foreach (var offer in offers)
+        {
+            var quoted = await service.CalculateAsync(input with
+            {
+                VehicleId = offer.Vehicle.Id, VehicleGroupId = offer.Vehicle.GroupId ?? Guid.Empty
+            });
+            offer.Pricing.Should().BeEquivalentTo(quoted.Pricing);
+            offer.Pricing.AirportFee.Should().Be(250m);
+            offer.Pricing.OneWayFee.Should().Be(500m);
+            offer.Pricing.YoungDriverFee.Should().Be(200m);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1, HttpStatusCode.BadRequest)]
+    [InlineData(0, HttpStatusCode.OK)]
+    public async Task AdminUpdate_ChecksShiftedPreparationInterval(int nextPickupOffset, HttpStatusCode expected)
+    {
+        var pickup = ExactInput().PickupDateTimeUtc;
+        var oldReturn = pickup.AddDays(2);
+        var newReturn = oldReturn.AddHours(1);
+        var occupiedUntil = newReturn.AddHours(1);
+        var id = await WithDbContextAsync(async db =>
+        {
+            var customer = new Customer { FullName = "Synthetic Update", Email = "update@rentacar.test", Phone = "+900000000000" };
+            var reservation = new Reservation
+            {
+                PublicCode = "UPDATE-PREPARATION", Customer = customer, VehicleId = TestDataSeeder.GroupOneId,
+                PickupOfficeId = TestDataSeeder.OfficeOneId, ReturnOfficeId = TestDataSeeder.OfficeOneId,
+                PickupDateTime = pickup, ReturnDateTime = oldReturn, OccupiedUntilUtc = oldReturn.AddHours(1),
+                Status = ReservationStatus.Confirmed, TotalAmount = 2000m
+            };
+            db.Reservations.Add(reservation);
+            db.Reservations.Add(new Reservation
+            {
+                PublicCode = "NEXT-PREPARATION", Customer = customer, VehicleId = reservation.VehicleId,
+                PickupOfficeId = reservation.PickupOfficeId, ReturnOfficeId = reservation.ReturnOfficeId,
+                PickupDateTime = occupiedUntil.AddMinutes(nextPickupOffset), ReturnDateTime = occupiedUntil.AddDays(2),
+                Status = ReservationStatus.Confirmed, TotalAmount = 2000m
+            });
+            await db.SaveChangesAsync();
+            return reservation.Id;
+        });
+        await AuthenticateAsAdminAsync();
+        using var response = await Client.PutAsJsonAsync($"/api/admin/v1/reservations/{id}",
+            new UpdateReservationRequest { ReturnDateTimeUtc = newReturn });
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(expected, body);
+        if (expected == HttpStatusCode.BadRequest) body.Should().Contain("overlapping reservations");
+        var persisted = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        persisted.ReturnDateTime.Should().Be(expected == HttpStatusCode.OK ? newReturn : oldReturn);
+        persisted.OccupiedUntilUtc.Should().Be(expected == HttpStatusCode.OK ? occupiedUntil : oldReturn.AddHours(1));
+    }
+
+    [Theory]
+    [InlineData("missing-terms", false)]
+    [InlineData("missing-rate", false)]
+    [InlineData("underage", false)]
+    [InlineData("missing-policy", false)]
+    [InlineData("preparation-overlap", false)]
+    [InlineData("preparation-boundary", true)]
+    [InlineData("unknown-age", true)]
+    public async Task DatedCatalogue_PreservesEligibilityAndPreparationRules(string scenario, bool included)
+    {
+        var input = ExactInput();
+        await WithDbContextAsync(async db =>
+        {
+            var vehicle = await db.Vehicles.SingleAsync(v => v.Id == input.VehicleId);
+            if (scenario == "missing-terms") vehicle.RentalTerms = null;
+            if (scenario == "missing-rate") vehicle.RentalTerms!.Rates.Clear();
+            if (scenario == "underage") vehicle.RentalTerms!.MinAge = 31;
+            if (scenario == "missing-policy")
+                (await db.Offices.SingleAsync(o => o.Id == input.PickupOfficeId)).OperatingPolicy = null;
+            if (scenario.StartsWith("preparation-", StringComparison.Ordinal))
+                db.Reservations.Add(new Reservation
+                {
+                    PublicCode = "CATALOGUE-PREPARATION", VehicleId = vehicle.Id,
+                    Customer = new Customer { FullName = "Synthetic", Email = "catalogue@rentacar.test", Phone = "+900000000000" },
+                    PickupOfficeId = input.PickupOfficeId, ReturnOfficeId = input.ReturnOfficeId,
+                    PickupDateTime = input.ReturnDateTimeUtc.AddMinutes(scenario == "preparation-overlap" ? 59 : 60),
+                    ReturnDateTime = input.ReturnDateTimeUtc.AddDays(2), Status = ReservationStatus.Confirmed
+                });
+            return await db.SaveChangesAsync();
+        });
+        var query = $"/api/v1/vehicles/available-exact?pickupOfficeId={input.PickupOfficeId}&returnOfficeId={input.ReturnOfficeId}" +
+            $"&pickupDateTimeUtc={Uri.EscapeDataString(input.PickupDateTimeUtc.ToString("O"))}&returnDateTimeUtc={Uri.EscapeDataString(input.ReturnDateTimeUtc.ToString("O"))}" +
+            (scenario == "unknown-age" ? "" : "&driverAge=30");
+        using var response = await Client.GetAsync(query);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        json.RootElement.GetProperty("data").EnumerateArray()
+            .Any(item => item.GetProperty("vehicle").GetProperty("id").GetGuid() == input.VehicleId).Should().Be(included);
+    }
+
+    private sealed class QueryCounter : DbCommandInterceptor
+    {
+        public int Count { get; private set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Count++;
+            return ValueTask.FromResult(result);
+        }
     }
 
     private static CreateReservationQuoteRequest ExactInput() => new()

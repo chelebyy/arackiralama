@@ -30,27 +30,14 @@ public sealed class VehiclesController(
         if (pickupOfficeId == Guid.Empty || pickupDateTimeUtc <= DateTime.UtcNow ||
             pickupDateTimeUtc >= returnDateTimeUtc || returnDateTimeUtc - pickupDateTimeUtc > TimeSpan.FromDays(366))
             return BadRequestResponse("Invalid office or rental interval.");
-        var vehicles = await fleetService.GetVehiclesAsync(cancellationToken);
-        var groups = await fleetService.GetVehicleGroupsAsync(cancellationToken);
-        var results = new List<object>();
-        foreach (var vehicle in vehicles.Where(v => v.OfficeId == pickupOfficeId && v.Status == VehicleStatus.Available))
+        var offers = await vehicleBookingService.GetAvailableAsync(pickupOfficeId, returnOfficeId,
+            pickupDateTimeUtc, returnDateTimeUtc, driverAge, cancellationToken);
+        var results = offers.Select(offer => new
         {
-            try
-            {
-                var offer = await vehicleBookingService.CalculateAsync(new Contracts.Pricing.CreateReservationQuoteRequest
-                {
-                    VehicleId = vehicle.Id, VehicleGroupId = vehicle.GroupId ?? Guid.Empty,
-                    PickupOfficeId = pickupOfficeId, ReturnOfficeId = returnOfficeId,
-                    PickupDateTimeUtc = pickupDateTimeUtc, ReturnDateTimeUtc = returnDateTimeUtc, DriverAge = driverAge
-                }, cancellationToken);
-                results.Add(new
-                {
-                    Vehicle = MapToPublicVehicle(vehicle, groups.FirstOrDefault(g => g.Id == vehicle.GroupId), offer.Pricing.DailyRate),
-                    offer.Pricing.RentalDays, offer.Pricing.FinalTotal, offer.Pricing.Currency
-                });
-            }
-            catch (ReservationQuoteConflictException) { }
-        }
+            Vehicle = MapToPublicVehicle(FleetService.MapToDto(offer.Vehicle),
+                offer.Vehicle.Group is { } group ? FleetService.MapToDto(group) : null, offer.Pricing.DailyRate),
+            offer.Pricing.RentalDays, offer.Pricing.FinalTotal, offer.Pricing.Currency
+        }).ToArray();
         return OkResponse(results);
     }
 
