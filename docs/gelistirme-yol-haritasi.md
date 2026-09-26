@@ -1,5 +1,7 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
+**PR #447 inceleme düzeltmeleri:** Codex'in üç iş kuralı ve React Doctor'ın altı uyarısı giderildi. 136 odaklı backend birim testi, 17 gerçek API testi, 50 frontend testi ve son derleme/TypeScript geçti. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI/inceleme sonucu ayrıca kontrol edilmelidir.
+
 ## Güncel durum — 26 Eylül 2026
 
 **Paket 2'nin yerel uygulaması ve kapsam içindeki kabul kontrolleri tamamlandı.** Gerçek araç seçimi, araç bazlı fiyat/koşullar ve ek hizmet uygunluğu, grupsuz araç ekleme, zorunlu admin işletme ayarları ve ödeme teslimde alınacak şekilde otomatik kesinleşme uygulandı.

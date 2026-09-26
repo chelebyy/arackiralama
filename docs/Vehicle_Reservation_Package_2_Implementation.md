@@ -1,5 +1,7 @@
 # Package 2: exact vehicle, pricing and automatic reservation
 
+Latest PR #447 follow-up: all three Codex findings and six React Doctor warnings are addressed. Focused validation passed: 136 backend unit, 17 real API and 50 frontend tests, plus production build/TypeScript. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the follow-up head. Earlier receipts below retain their original scope.
+
 Updated September 26, 2026. Implementation and scoped local acceptance are complete. Real browser checks cover five locales, mobile/RTL, group-less authoring, changed-offer acceptance, concurrent exact allocation, response-loss replay and office policy boundaries; see the [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md). Implementation commit `22e20c8` on `codex/catalogue-next-plan` is published in [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, deployment or production migration has occurred.
 
 ## Accepted business decisions

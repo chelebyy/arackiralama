@@ -418,7 +418,7 @@ public sealed class ReservationService : IReservationService
         }
 
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(_applicationDbContext, cancellationToken);
-        if (!paymentMethods.UnpaidRequestEnabled)
+        if (!request.VehicleId.HasValue && !paymentMethods.UnpaidRequestEnabled)
         {
             throw new InvalidOperationException("Odeme yapmadan rezervasyon talebi su anda aktif degil.");
         }

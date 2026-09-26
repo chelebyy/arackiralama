@@ -1,5 +1,7 @@
 # Package 2 completion review
 
+Latest PR #447 follow-up: all three Codex findings and six React Doctor warnings are addressed. Focused validation passed: 136 backend unit, 17 real API and 50 frontend tests, plus production build/TypeScript. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the follow-up head. Earlier receipts below retain their original scope.
+
 September 26, 2026. Scoped source, automated and real local browser review completed. The [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md) closes the mobile/RTL and recovery matrix after the initial [browser retry](Vehicle_Reservation_Package_2_Browser_Retry.md). Production activation is separate.
 
 ## Planning security gap analysis

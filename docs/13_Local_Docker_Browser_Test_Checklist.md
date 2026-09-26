@@ -1,5 +1,7 @@
 # Local Docker Browser Test Checklist
 
+Latest PR #447 follow-up: all three Codex findings and six React Doctor warnings are addressed. Focused validation passed: 136 backend unit, 17 real API and 50 frontend tests, plus production build/TypeScript. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md); fresh CI/review must be assessed on the follow-up head. Earlier receipts below retain their original scope.
+
 ## Current Package 2 local acceptance — September 26, 2026
 
 Package 2 implementation and scoped local acceptance are complete. The user-authorized mobile/RTL, changed-offer, response-loss and competing-booking checks passed against the actual isolated API/PostgreSQL/Redis fixture. Production activation remains a separate release step.

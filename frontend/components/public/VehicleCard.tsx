@@ -4,6 +4,7 @@ import VehicleImage from "@/components/public/VehicleImage";
 import type { PublicVehicle } from "@/lib/api/types";
 import { vehicleDetailHref, vehicleGroupName, vehiclePhotos } from "@/lib/vehicle-catalogue";
 import VehicleFacts from "./VehicleFacts";
+import CurrencyAmount from "./CurrencyAmount";
 
 export default function VehicleCard({
   vehicle,
@@ -37,7 +38,7 @@ export default function VehicleCard({
         <VehicleFacts vehicle={vehicle} />
         <div className="mt-auto space-y-3 border-t border-slate-200 pt-4">
           <p className="text-sm text-slate-600">{offer
-            ? new Intl.NumberFormat(locale, { style: "currency", currency: offer.currency }).format(offer.finalTotal)
+            ? <CurrencyAmount locale={locale} currency={offer.currency} amount={offer.finalTotal} />
             : t("chooseDates")}</p>
           <Link
             href={vehicleDetailHref(vehicle.id, locale, search)}

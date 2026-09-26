@@ -21,6 +21,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PriceBreakdown } from "@/components/public/PriceBreakdown";
+import CurrencyAmount from "@/components/public/CurrencyAmount";
 import { differenceInCalendarDays } from "date-fns";
 import { useBookingActions, useBookingState } from "@/hooks/useBooking";
 import { useValidateCampaign } from "@/hooks/usePricing";
@@ -183,7 +184,7 @@ export default function BookingStep4Page() {
             icon: <Banknote className="h-5 w-5" />,
           })
         : null,
-      paymentMethodsAvailability.unpaidRequestEnabled
+      (exactBooking || paymentMethodsAvailability.unpaidRequestEnabled)
         ? ({
             id: "unpaid" as const,
             name: t(exactBooking ? "payAtPickup.title" : "unpaidRequest.title"),
@@ -589,7 +590,7 @@ export default function BookingStep4Page() {
         </h1>
         <p className="text-slate-600">{t("step4.subtitle")}</p>
         {quote && <dl className="mt-4 flex flex-wrap gap-6 rounded-lg border border-slate-200 bg-white p-4 text-sm">
-          <div><dt>{t("payment.summary.deposit")}</dt><dd className="font-semibold">{new Intl.NumberFormat(locale, { style: "currency", currency: quote.currency }).format(quote.depositAmount)}</dd></div>
+          <div><dt>{t("payment.summary.deposit")}</dt><dd className="font-semibold"><CurrencyAmount locale={locale} currency={quote.currency} amount={quote.depositAmount} /></dd></div>
           {quote.conditions && <><div><dt>{vehicleText("detail.minAge")}</dt><dd className="font-semibold">{quote.conditions.minAge}</dd></div><div><dt>{vehicleText("detail.minLicenseYears")}</dt><dd className="font-semibold">{quote.conditions.minLicenseYears}</dd></div></>}
         </dl>}
         {isQuoteLoading && <p className="mt-3 text-sm text-sky-800" role="status">{t("loadingQuote")}</p>}

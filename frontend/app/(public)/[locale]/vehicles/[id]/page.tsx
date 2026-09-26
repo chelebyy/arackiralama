@@ -6,6 +6,7 @@ import Link from "next/link";
 import VehicleImage from "@/components/public/VehicleImage";
 import { useVehicle, useOffices, useExactAvailableVehicles } from "@/hooks/useVehicles";
 import VehicleFacts from "@/components/public/VehicleFacts";
+import CurrencyAmount from "@/components/public/CurrencyAmount";
 import {
   catalogueSearch,
   catalogueOffice,
@@ -215,7 +216,7 @@ function VehicleDetail() {
                   ) : groupQuote ? (
                     <>
                       <p className="text-lg font-semibold text-sky-800">
-                        {tv("totalPrice")}: {new Intl.NumberFormat(locale, { style: "currency", currency: groupQuote.currency }).format(groupQuote.finalTotal)}
+                        {tv("totalPrice")}: <CurrencyAmount locale={locale} currency={groupQuote.currency} amount={groupQuote.finalTotal} />
                       </p>
                       <p className="text-sm text-slate-600">{groupQuote.rentalDays} {tv("days")}</p>
                       <Link

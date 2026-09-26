@@ -459,6 +459,29 @@ describe("BookingStep4Page", () => {
     expect(createReservationQuoteMock).toHaveBeenCalledWith(expect.objectContaining({ vehicleId, pickupDateTimeUtc: "2026-05-09T22:00:00.000Z", returnDateTimeUtc: "2026-05-13T06:00:00.000Z" }), "uuid-123");
   });
 
+  it.each(["disabled", "unavailable"])("confirms exact pay-at-pickup when legacy settings are %s", async (settingsState) => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a", vehicleName: "Fiat Exact" };
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "car-a" });
+    if (settingsState === "unavailable") {
+      getPublicSiteSettingsMock.mockRejectedValueOnce(new Error("settings unavailable"));
+    } else {
+      getPublicSiteSettingsMock.mockResolvedValueOnce({ paymentMethods: {
+        creditCardEnabled: false, debitCardEnabled: false, unpaidRequestEnabled: false,
+        paypalEnabled: false, anyEnabled: false
+      } });
+    }
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(createUnpaidReservationRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleId: "car-a", quoteId: "quote-123" }), expect.any(Object)
+    ));
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(/no active payment method/i)).not.toBeInTheDocument();
+  });
+
   it("shows an error toast and does not redirect when reservation creation fails", async () => {
     const user = userEvent.setup();
 

@@ -1,11 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import type { OperatingPolicy } from "@/lib/rental-policy";
 import { OperatingPolicyEditor } from "./OperatingPolicyEditor";
 import { RentalTermsEditor } from "./RentalTermsEditor";
 
 vi.mock("swr", () => ({ default: () => ({ data: { items: [{ id: "extra-1", code: "seat", translations: [{ locale: "tr", name: "Çocuk koltuğu" }] }] } }) }));
 
 describe("Rental policy editors", () => {
+  it("preserves the remaining window DOM and values after editing and deleting another row", () => {
+    const initial = { minimumNoticeMinutes: 0, preparationMinutes: 60, pickupWindows: [
+      { day: 1, startMinute: 540, endMinute: 720 },
+      { day: 2, startMinute: 600, endMinute: 1080 }
+    ], returnWindows: [], closedDates: [] };
+    function Editor() {
+      const [value, setValue] = useState<OperatingPolicy>(initial);
+      return <OperatingPolicyEditor value={value} onChange={setValue} />;
+    }
+    render(<Editor />);
+    const remaining = screen.getByLabelText("Teslim başlangıç 2");
+    fireEvent.change(remaining, { target: { value: "11:00" } });
+    expect(screen.getByLabelText("Teslim başlangıç 2")).toBe(remaining);
+    fireEvent.click(screen.getAllByRole("button", { name: /^Sil$/ })[0]);
+    expect(screen.getByLabelText("Teslim başlangıç 1")).toBe(remaining);
+    expect(remaining).toHaveValue("11:00");
+    expect(screen.getByLabelText("Teslim günü 1")).toHaveValue("2");
+  });
+
   it("allows removing an existing extra outside the loaded catalogue page", () => {
     const value = { depositAmount: 2000, minAge: 23, minLicenseYears: 3, extraOptionIds: ["unlisted-extra"], rates: [] };
     const change = vi.fn();

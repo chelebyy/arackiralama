@@ -9,6 +9,7 @@ import { rentalDateTimeUtc } from "@/lib/rental-datetime";
 import { catalogueOffice, vehiclePhotos, vehicleGroupName } from "@/lib/vehicle-catalogue";
 import VehicleImage from "@/components/public/VehicleImage";
 import VehicleFacts from "@/components/public/VehicleFacts";
+import CurrencyAmount from "@/components/public/CurrencyAmount";
 
 const emptyGroup = "00000000-0000-0000-0000-000000000000";
 
@@ -66,7 +67,7 @@ export default function BookingStep2Page() {
     <div className="grid gap-6 md:grid-cols-2">{vehicles.map(offer => <button type="button" key={offer.vehicle.id} aria-pressed={selected === offer.vehicle.id} onClick={() => setSelected(offer.vehicle.id)} className="overflow-hidden rounded-xl border border-slate-200 bg-white text-start aria-pressed:border-sky-600 aria-pressed:ring-2 aria-pressed:ring-sky-600">
       <div className="aspect-[16/9] bg-slate-100"><VehicleImage src={vehiclePhotos(offer.vehicle)[0]} alt={`${offer.vehicle.brand} ${offer.vehicle.model}`} /></div>
       <div className="space-y-4 p-6"><h2 className="text-xl font-semibold">{offer.vehicle.brand} {offer.vehicle.model}</h2><p>{offer.vehicle.year} · {offer.vehicle.color}</p><VehicleFacts vehicle={offer.vehicle} />
-        <p className="font-semibold">{new Intl.NumberFormat(locale, { style: "currency", currency: offer.currency }).format(offer.finalTotal)} <span className="text-sm font-normal">/ {offer.rentalDays} {t("days")}</span></p>
+        <p className="font-semibold"><CurrencyAmount locale={locale} currency={offer.currency} amount={offer.finalTotal} /> <span className="text-sm font-normal">/ {offer.rentalDays} {t("days")}</span></p>
         <p className="text-sm text-slate-600">{tv("detail.minAge")}: {offer.vehicle.minAge} · {tv("detail.minLicenseYears")}: {offer.vehicle.minLicenseYears}</p>
       </div></button>)}</div>
     <div className="flex justify-between"><button type="button" className="rounded border px-6 py-3" onClick={() => router.push(`/${locale}/booking?${search}`)}>{t("back")}</button><button type="button" disabled={!selectedOffer || isLoading || Boolean(isError)} onClick={proceed} className="rounded-lg bg-sky-700 px-6 py-3 text-white disabled:opacity-40">{t("continueToPayment")}</button></div>

@@ -88,6 +88,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             QuoteId = quoteId,
             Locale = quoteRequest.Locale,
             DriverAge = quoteRequest.DriverAge,
+            Driver = new DriverInfoRequest { LicenseExpiryDate = pickup.AddYears(2) },
             Customer = new CustomerInfoRequest
             {
                 FirstName = "Quote",
@@ -178,6 +179,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
                 ReturnDateTimeUtc = input.ReturnDateTimeUtc,
                 QuoteId = json.RootElement.GetProperty("data").GetProperty("quoteId").GetGuid(),
                 DriverAge = 30,
+                Driver = new DriverInfoRequest { LicenseExpiryDate = pickup.AddYears(2) },
                 Customer = new CustomerInfoRequest
                 {
                     FirstName = "Synthetic", LastName = "Exact",
@@ -382,6 +384,79 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         saved.Status.Should().Be(changed ? RentACar.Core.Enums.ReservationStatus.Draft : RentACar.Core.Enums.ReservationStatus.Hold);
     }
 
+    [Theory]
+    [InlineData("missing", false, HttpStatusCode.BadRequest)]
+    [InlineData("missing", true, HttpStatusCode.BadRequest)]
+    [InlineData("absent-driver", true, HttpStatusCode.BadRequest)]
+    [InlineData("expired", true, HttpStatusCode.Conflict)]
+    [InlineData("return-day", true, HttpStatusCode.OK)]
+    public async Task ExactBooking_RequiresLicenseExpiryThroughTurkeyReturnDate(string expiryCase, bool unpaid, HttpStatusCode expected)
+    {
+        var input = ExactInput() with { ReturnDateTimeUtc = ExactInput().ReturnDateTimeUtc.Date.AddHours(22) };
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var returnDate = input.ReturnDateTimeUtc.Date.AddDays(1);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        request = request with
+        {
+            Driver = expiryCase == "absent-driver" ? null : request.Driver! with
+            {
+                LicenseExpiryDate = expiryCase switch
+                {
+                    "missing" => null,
+                    "expired" => returnDate.AddDays(-1),
+                    _ => returnDate
+                }
+            }
+        };
+        using var response = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        response.StatusCode.Should().Be(expected, await response.Content.ReadAsStringAsync());
+        var count = await WithDbContextAsync(db => db.Reservations.CountAsync(r => r.QuoteId == request.QuoteId));
+        count.Should().Be(expected == HttpStatusCode.OK ? 1 : 0);
+        if (expected != HttpStatusCode.OK)
+        {
+            using var retry = await SendReservationAsync(request with { Driver = new DriverInfoRequest { LicenseExpiryDate = returnDate } },
+                session, Guid.NewGuid().ToString(), unpaid);
+            retry.StatusCode.Should().Be(HttpStatusCode.OK, await retry.Content.ReadAsStringAsync());
+        }
+    }
+
+    [Fact]
+    public async Task ExactPayAtPickup_WorksWithLegacyUnpaidDisabled_WhileLegacyRemainsDisabled()
+    {
+        await WithDbContextAsync(async db =>
+        {
+            foreach (var name in new[] { PaymentMethodFeatureFlags.UnpaidRequest, PaymentMethodFeatureFlags.OnlinePayment })
+            {
+                var flag = await db.FeatureFlags.SingleOrDefaultAsync(f => f.Name == name);
+                if (flag is null)
+                    db.FeatureFlags.Add(new FeatureFlag { Name = name, Enabled = false, Description = "Local regression fixture" });
+                else
+                    flag.Enabled = false;
+            }
+            await db.SaveChangesAsync();
+            return true;
+        });
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        using var response = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid: true);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var saved = await WithDbContextAsync(db => db.Reservations.SingleAsync(r => r.QuoteId == request.QuoteId));
+        saved.Status.Should().Be(RentACar.Core.Enums.ReservationStatus.Confirmed);
+        saved.UnpaidRequestExpiresAtUtc.Should().BeNull();
+        (await WithDbContextAsync(db => db.PaymentIntents.CountAsync())).Should().Be(0);
+
+        using var legacy = await SendReservationAsync(request with { VehicleId = null, QuoteId = null },
+            Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), unpaid: true);
+        legacy.StatusCode.Should().Be(HttpStatusCode.BadRequest, await legacy.Content.ReadAsStringAsync());
+        (await legacy.Content.ReadAsStringAsync()).Should().Contain("aktif degil");
+        (await WithDbContextAsync(db => db.Reservations.CountAsync(r => r.QuoteId == request.QuoteId))).Should().Be(1);
+    }
+
     private static CreateReservationQuoteRequest ExactInput() => new()
     {
         VehicleId = TestDataSeeder.GroupOneId, VehicleGroupId = TestDataSeeder.GroupOneId,
@@ -396,6 +471,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         PickupOfficeId = input.PickupOfficeId, ReturnOfficeId = input.ReturnOfficeId,
         PickupDateTimeUtc = input.PickupDateTimeUtc, ReturnDateTimeUtc = input.ReturnDateTimeUtc,
         QuoteId = quoteId, DriverAge = input.DriverAge,
+        Driver = new DriverInfoRequest { LicenseExpiryDate = input.ReturnDateTimeUtc.AddYears(2) },
         Customer = new CustomerInfoRequest
         {
             FirstName = "Synthetic", LastName = "Policy", Phone = "+900000000000",

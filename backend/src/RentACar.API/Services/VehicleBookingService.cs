@@ -101,9 +101,10 @@ public sealed class VehicleBookingService(
             throw new ReservationQuoteConflictException("Price or rental conditions changed. Request a new quote.");
         var birth = request.Driver?.DateOfBirth ?? request.Customer.DateOfBirth;
         var license = request.Driver?.LicenseIssueDate ?? request.Customer.DriverLicenseIssueDate;
+        var expiry = request.Driver?.LicenseExpiryDate;
         var pickup = RentalCalendar.TurkeyDate(quote.PickupDateTimeUtc);
-        if (birth is null || license is null)
-            throw new ArgumentException("Driver birth date and license issue date are required.");
+        if (birth is null || license is null || expiry is null)
+            throw new ArgumentException("Driver birth date and license issue and expiry dates are required.");
         var birthDate = DateOnly.FromDateTime(birth.Value);
         var licenseDate = DateOnly.FromDateTime(license.Value);
         var age = pickup.Year - birthDate.Year;
@@ -111,7 +112,7 @@ public sealed class VehicleBookingService(
         if (age != quote.DriverAge || age < offer.Conditions.MinAge || licenseDate > pickup ||
             licenseDate.AddYears(offer.Conditions.MinLicenseYears) > pickup)
             throw new ReservationQuoteConflictException("Driver does not meet the quoted rental conditions.");
-        if (request.Driver?.LicenseExpiryDate is { } expiry && DateOnly.FromDateTime(expiry) < RentalCalendar.TurkeyDate(quote.ReturnDateTimeUtc))
+        if (DateOnly.FromDateTime(expiry.Value) < RentalCalendar.TurkeyDate(quote.ReturnDateTimeUtc))
             throw new ReservationQuoteConflictException("Driver license expires before the rental ends.");
     }
 
