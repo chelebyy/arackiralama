@@ -1,6 +1,6 @@
 # Package 2: exact vehicle, pricing and automatic reservation
 
-Updated September 26, 2026. Package 2 implementation and scoped local acceptance are complete. The authorized mobile/RTL and recovery continuation passed against the real local API/PostgreSQL/Redis; see the [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md) and [implementation record](Vehicle_Reservation_Package_2_Implementation.md). Changes remain uncommitted. Production activation and release are separate and have not occurred.
+Updated September 26, 2026. Package 2 implementation and scoped local acceptance are complete. The authorized mobile/RTL and recovery continuation passed against the real local API/PostgreSQL/Redis; see the [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md) and [implementation record](Vehicle_Reservation_Package_2_Implementation.md). Implementation commit `22e20c8` is published in [PR #447](https://github.com/chelebyy/arackiralama/pull/447); review and CI are pending. Production activation and release are separate and have not occurred.
 
 ## Baseline and outcome
 

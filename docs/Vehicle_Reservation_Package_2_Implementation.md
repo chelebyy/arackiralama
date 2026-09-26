@@ -1,6 +1,6 @@
 # Package 2: exact vehicle, pricing and automatic reservation
 
-Updated September 26, 2026. Implementation and scoped local acceptance are complete. Real browser checks cover five locales, mobile/RTL, group-less authoring, changed-offer acceptance, concurrent exact allocation, response-loss replay and office policy boundaries; see the [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md). Changes are uncommitted on `codex/catalogue-next-plan`; no Package 2 PR, deployment or production migration has occurred.
+Updated September 26, 2026. Implementation and scoped local acceptance are complete. Real browser checks cover five locales, mobile/RTL, group-less authoring, changed-offer acceptance, concurrent exact allocation, response-loss replay and office policy boundaries; see the [acceptance record](Vehicle_Reservation_Package_2_Acceptance.md). Implementation commit `22e20c8` on `codex/catalogue-next-plan` is published in [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, deployment or production migration has occurred.
 
 ## Accepted business decisions
 
@@ -72,13 +72,13 @@ The local entries of the stack-aware checklist in [document 13](13_Local_Docker_
 
 ## Rollout and preservation
 
-1. Review and commit this worktree, then use the normal PR/CI/review process. Merge/deployment still needs operational authorization.
+1. Complete PR #447 CI/review on its current head. Merge/deployment still needs operational authorization.
 2. Before production migration, inventory vehicle/group mappings, missing rates and unknown terms without exporting customer data; rehearse against a sanitized representative database and measure migration locks/duration. Local synthetic tests do not prove production data readiness.
 3. Retain a verified backup/restore path. Deploy schema and application compatibly; retain legacy group APIs for existing callers.
 4. Enter actual operator-approved office policies and inspect migrated vehicle prices/conditions before enabling customer use. No default hours or preparation duration should be guessed.
 5. If new exact bookings must stop, deactivate the affected office through its existing admin control while retaining bookings, snapshots and replay data. This also stops that office's other new bookings. Do not delete confirmed records or run the destructive Down migration as an operational rollback.
 6. Schema rollback is unsafe once group-less vehicles or new contracts exist. The generated Down migration has a null-group guard but still removes policy columns; it was used only in an isolated migration test.
 
-Active worktree: `C:/Users/muham/.codex/worktrees/catalogue-next-plan/Araç Kiralama`, branch `codex/catalogue-next-plan`, base/HEAD `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. Fetched remote default and local main matched that commit at implementation start. The primary dirty checkout remains on its older branch and was not switched or reset.
+Active worktree: `C:/Users/muham/.codex/worktrees/catalogue-next-plan/Araç Kiralama`, branch `codex/catalogue-next-plan`, base `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`, implementation commit `22e20c8`. Fetched remote default and local main matched that commit at implementation start. The primary dirty checkout remains on its older branch and was not switched or reset.
 
-The frontend node_modules junction points to the retained local-validation-20260923 worktree. Preserve both until dependency consumers are audited. No worktree cleanup, branch deletion, commit, push, Package 2 PR or release was performed.
+The frontend node_modules junction points to the retained local-validation-20260923 worktree. Preserve both until dependency consumers are audited. Commit and push were authorized and PR #447 was opened. No worktree cleanup, branch deletion, merge or release was performed.

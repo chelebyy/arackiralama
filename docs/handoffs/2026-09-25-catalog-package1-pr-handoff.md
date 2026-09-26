@@ -8,7 +8,7 @@ Frontend: 70 files / 332 tests passed under America/Los_Angeles; the final summa
 
 Browser evidence covers group-less admin save/reopen and booking, five-locale confirmation, Arabic RTL, phone/tablet/desktop views, keyboard operation, explicit acceptance of changed price/conditions, same-body/key recovery after a lost success response, one winner from two exact-booking tabs, and office hours/closed-date/notice/preparation boundaries. Licence dates are now real required inputs; in-memory details survive Back. Failed confirmation lookups retain the code and offer retry without misleading status claims. Header/Hero source and layout are unchanged.
 
-No Package 2 commit, push, PR, merge, deployment or production migration was performed. Enter actual operator policies and review migrated vehicle terms before activation; production migration/restore checks and release authorization remain required. Local viewport checks do not certify physical devices or constitute a general security audit.
+Package 2 implementation commit `22e20c8` is published in [PR #447](https://github.com/chelebyy/arackiralama/pull/447); current-head CI and review remain pending. No merge, deployment or production migration was performed. Enter actual operator policies and review migrated vehicle terms before activation; production migration/restore checks and release authorization remain required. Local viewport checks do not certify physical devices or constitute a general security audit.
 
 See [acceptance evidence](../Vehicle_Reservation_Package_2_Acceptance.md), [implementation](../Vehicle_Reservation_Package_2_Implementation.md), and [scoped security review](../Vehicle_Reservation_Package_2_Completion_Review.md). Earlier entries below are historical snapshots.
 

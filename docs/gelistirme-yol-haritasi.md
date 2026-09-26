@@ -12,7 +12,7 @@ Doğrulama: **853 backend birim testi**, tam turda **66 PostgreSQL/Redis API ent
 
 [Son kabul kanıtı](Vehicle_Reservation_Package_2_Acceptance.md), [uygulama](Vehicle_Reservation_Package_2_Implementation.md), [plan](Vehicle_Reservation_Package_2_Plan.md), [odaklı güvenlik incelemesi](Vehicle_Reservation_Package_2_Completion_Review.md) ve [kontrol listesi](13_Local_Docker_Browser_Test_Checklist.md) aynı durumu yansıtıyor. Canlı açılış için gerçek işletme ayarları, temsilî veri göçü/yedekten dönüş incelemesi ve yetkilendirilmiş PR/CI/yayın süreci ayrı olarak bekliyor.
 
-Paket 1, [PR #446](https://github.com/chelebyy/arackiralama/pull/446) ile `f1c34fe` commit'inde birleştirilmişti. Paket 2 aynı tabandan `codex/catalogue-next-plan` dalındaki ayrı worktree'de yerel ve commit edilmemiş değişiklikler olarak duruyor. Paket 2 için PR, merge, canlı dağıtım veya üretim veri göçü yapılmadı; ana çalışma dizinindeki mevcut işler korundu.
+Paket 1, [PR #446](https://github.com/chelebyy/arackiralama/pull/446) ile `f1c34fe` commit'inde birleştirilmişti. Paket 2 aynı tabandan `codex/catalogue-next-plan` dalındaki ayrı worktree'de `22e20c8` uygulama commit'iyle kaydedilip [PR #447](https://github.com/chelebyy/arackiralama/pull/447) açıldı. PR'ın güncel commit'i için CI ve inceleme sonucu bekleniyor. Merge, canlı dağıtım veya üretim veri göçü yapılmadı; ana çalışma dizinindeki mevcut işler korundu.
 
 Aşağıdaki ilk plan ve eski incelemeler tarihsel bağlamdır. Paket 2 durumunda bu bölüm ve bağlantılı güncel belgeler önceliklidir.
 

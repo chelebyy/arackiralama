@@ -12,7 +12,7 @@
 
 The former `catalog-package1` worktree is absent from both the directory and current Git registration. Its removal was not performed in this continuation. Other retained worktrees were preserved: the standard cleanup audit timed out after 60 seconds without results, so removal eligibility was not established.
 
-After the documentation/planning deliverable, the user authorized Package 2 implementation. Its first local exact-vehicle contract slice and new test evidence are recorded in [Package 2 implementation](Vehicle_Reservation_Package_2_Implementation.md); the [plan](Vehicle_Reservation_Package_2_Plan.md) still has unresolved business and rollout gates. Earlier statements that PR #446 is open or that merge has not occurred are historical snapshots. The original primary checkout remains on its existing feature branch; synchronized local `main` does not mean that checkout contains Package 1.
+After the documentation/planning deliverable, the user authorized Package 2 implementation. Its completed local implementation and acceptance are recorded in [Package 2 implementation](Vehicle_Reservation_Package_2_Implementation.md) and [PR #447](https://github.com/chelebyy/arackiralama/pull/447); the [plan](Vehicle_Reservation_Package_2_Plan.md) retains actual operator activation and rollout gates. Earlier statements that PR #446 is open or that merge has not occurred are historical snapshots. The original primary checkout remains on its existing feature branch; synchronized local `main` does not mean that checkout contains Package 1.
 
 ## Second PR 446 review fixes — 2026-09-25
 

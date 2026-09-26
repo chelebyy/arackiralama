@@ -1,5 +1,7 @@
 # Package 2 local acceptance — September 26, 2026
 
+Publication: implementation commit `22e20c8` is in [PR #447](https://github.com/chelebyy/arackiralama/pull/447). The results below are local validation receipts; remote checks and review must be assessed on the PR's latest head. No merge or production rollout has occurred.
+
 Package 2 implementation and scoped local acceptance are complete. This record covers the authorized mobile/RTL and recovery continuation on `codex/catalogue-next-plan`, based on `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`. Tests used the production-build frontend on port 3108, API on 5000, PostgreSQL on 5548 and Redis on 6388, with isolated database `rentacar_pkg2_browser_20260926`. Payments were disabled. All bookings and operator edits below are synthetic local fixtures.
 
 ## Browser evidence
