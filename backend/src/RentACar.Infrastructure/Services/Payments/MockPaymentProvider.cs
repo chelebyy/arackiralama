@@ -91,28 +91,27 @@ public sealed class MockPaymentProvider(
         PaymentCallbackProviderRequest callback,
         CancellationToken cancellationToken = default)
     {
-        if (callback.BankResponse.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new TimeoutException("Mock provider simulated timeout while verifying payment.");
-        }
+        var verification = PaymentThreeDsCallbackVerifier.Verify(
+            callback.ProviderIntentId,
+            callback.BankResponse,
+            _options.Mock.WebhookSecret,
+            "MOCK_3DS_VERIFICATION_FAILED",
+            "Mock 3DS callback verification failed.");
 
-        var isFailure = callback.BankResponse.Contains("fail", StringComparison.OrdinalIgnoreCase)
-            || callback.BankResponse.Contains("cancel", StringComparison.OrdinalIgnoreCase);
-
-        if (isFailure)
+        if (!verification.IsSucceeded)
         {
             return Task.FromResult(new PaymentVerificationProviderResult
             {
                 Status = PaymentProviderIntentStatus.Failed,
-                FailureCode = "MOCK_3DS_FAILED",
-                FailureMessage = "Mock provider marked payment as failed."
+                FailureCode = verification.FailureCode,
+                FailureMessage = verification.FailureMessage
             });
         }
 
         return Task.FromResult(new PaymentVerificationProviderResult
         {
             Status = PaymentProviderIntentStatus.Succeeded,
-            TransactionId = $"mock-tx-{Guid.NewGuid():N}"
+            TransactionId = verification.TransactionId
         });
     }
 

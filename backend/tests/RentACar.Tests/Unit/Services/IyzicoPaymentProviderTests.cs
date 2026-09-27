@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RentACar.Core.Interfaces.Payments;
@@ -73,10 +76,8 @@ public sealed class IyzicoPaymentProviderTests
 
     [Theory]
     [InlineData("timeout")]
-    [InlineData("fail")]
-    [InlineData("cancel")]
-    [InlineData("timeout-fail-cancel")]
-    public async Task VerifyPaymentAsync_DoesNotUseBankResponseTriggerStrings(string bankResponse)
+    [InlineData("approved-by-attacker")]
+    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_ReturnsFailedResult(string bankResponse)
     {
         var sut = CreateSut();
 
@@ -87,8 +88,25 @@ public sealed class IyzicoPaymentProviderTests
             RawPayload = "{}"
         });
 
+        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
+        Assert.Equal("IYZICO_3DS_VERIFICATION_FAILED", result.FailureCode);
+    }
+
+    [Fact]
+    public async Task VerifyPaymentAsync_WhenBankResponseIsSignedSuccess_ReturnsSucceededResult()
+    {
+        var sut = CreateSut();
+        var bankResponse = CreateSignedThreeDsPayload("intent-1", "success", "iyzico-tx-1", "iyzico-secret");
+
+        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        {
+            ProviderIntentId = "intent-1",
+            BankResponse = bankResponse,
+            RawPayload = bankResponse
+        });
+
         Assert.Equal(PaymentProviderIntentStatus.Succeeded, result.Status);
-        Assert.False(string.IsNullOrWhiteSpace(result.TransactionId));
+        Assert.Equal("iyzico-tx-1", result.TransactionId);
     }
 
     [Theory]
@@ -377,6 +395,23 @@ public sealed class IyzicoPaymentProviderTests
         Assert.StartsWith("iyzico-capture-", result.ReferenceId);
     }
 
+    private static string CreateSignedThreeDsPayload(string providerIntentId, string status, string transactionId, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToString("O");
+        var payload = $"{providerIntentId}.{status}.{transactionId}.{timestamp}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+
+        return JsonSerializer.Serialize(new
+        {
+            providerIntentId,
+            status,
+            transactionId,
+            timestamp,
+            signature = $"sha256={signature}"
+        });
+    }
+
     private static IyzicoPaymentProvider CreateSut(
         string baseUrl = "https://sandbox-api.iyzipay.com",
         int intentExpiresMinutes = 15)
@@ -387,7 +422,8 @@ public sealed class IyzicoPaymentProviderTests
                 IntentExpiresMinutes = intentExpiresMinutes,
                 Iyzico = new IyzicoProviderOptions
                 {
-                    BaseUrl = baseUrl
+                    BaseUrl = baseUrl,
+                    SecretKey = "iyzico-secret"
                 }
             }),
             NullLogger<IyzicoPaymentProvider>.Instance);
