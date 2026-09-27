@@ -1036,6 +1036,95 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         }
     }
 
+    [Theory]
+    [InlineData("none")]
+    [InlineData("deposit")]
+    [InlineData("rate")]
+    [InlineData("allowed-extra")]
+    [InlineData("pickup-window")]
+    [InlineData("return-window")]
+    [InlineData("closed-date")]
+    public async Task ExactHold_PolicyCollectionOrderIsIgnoredButContentChangesAreRejected(string change)
+    {
+        var input = ExactInput() with { ReturnOfficeId = TestDataSeeder.OfficeTwoId };
+        await WithDbContextAsync(async db =>
+        {
+            var vehicle = await db.Vehicles.SingleAsync(v => v.Id == input.VehicleId);
+            vehicle.RentalTerms!.Rates.Add(new VehicleRentalRate
+            {
+                StartDate = DateOnly.FromDateTime(input.PickupDateTimeUtc.AddYears(-2)),
+                EndDate = DateOnly.FromDateTime(input.PickupDateTimeUtc.AddYears(-1)), DailyPrice = 1m
+            });
+            vehicle.RentalTerms.ExtraOptionIds.Length.Should().BeGreaterThan(1);
+            foreach (var office in await db.Offices.Where(o => o.Id == input.PickupOfficeId || o.Id == input.ReturnOfficeId).ToListAsync())
+            {
+                var policy = office.OperatingPolicy!;
+                policy.PickupWindows = Enum.GetValues<DayOfWeek>().SelectMany(day => new[]
+                {
+                    new OfficeOperatingWindow { Day = day, StartMinute = 0, EndMinute = 720 },
+                    new OfficeOperatingWindow { Day = day, StartMinute = 720, EndMinute = 1440 }
+                }).ToList();
+                policy.ReturnWindows = policy.PickupWindows.Select(w => new OfficeOperatingWindow
+                    { Day = w.Day, StartMinute = w.StartMinute, EndMinute = w.EndMinute }).ToList();
+                policy.ClosedDates = [DateOnly.FromDateTime(input.PickupDateTimeUtc.AddYears(1)),
+                    DateOnly.FromDateTime(input.PickupDateTimeUtc.AddYears(1).AddDays(1))];
+            }
+            return await db.SaveChangesAsync();
+        });
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK, await quote.Content.ReadAsStringAsync());
+        var quoteId = await QuoteIdAsync(quote);
+        using var draft = await SendReservationAsync(ExactReservation(input, quoteId), session, Guid.NewGuid().ToString());
+        draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+        var id = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        await WithDbContextAsync(async db =>
+        {
+            var vehicle = await db.Vehicles.SingleAsync(v => v.Id == input.VehicleId);
+            vehicle.RentalTerms!.Rates.Reverse();
+            vehicle.RentalTerms.ExtraOptionIds = vehicle.RentalTerms.ExtraOptionIds.Reverse().ToArray();
+            foreach (var office in await db.Offices.Where(o => o.Id == input.PickupOfficeId || o.Id == input.ReturnOfficeId).ToListAsync())
+            {
+                office.OperatingPolicy!.PickupWindows.Reverse();
+                office.OperatingPolicy.ReturnWindows.Reverse();
+                office.OperatingPolicy.ClosedDates = office.OperatingPolicy.ClosedDates.Reverse().ToArray();
+            }
+            return await db.SaveChangesAsync();
+        });
+        using var reordered = await SendExactQuoteAsync(input, session);
+        reordered.StatusCode.Should().Be(HttpStatusCode.OK, await reordered.Content.ReadAsStringAsync());
+        var store = Services.GetRequiredService<IReservationQuoteStore>();
+        var accepted = await store.GetAsync(quoteId);
+        var equivalent = await store.GetAsync(await QuoteIdAsync(reordered));
+        equivalent!.PricingSnapshot.BookingConditions!.PolicyFingerprint.Should().Be(accepted!.PricingSnapshot.BookingConditions!.PolicyFingerprint);
+        if (change != "none")
+        {
+            await WithDbContextAsync(async db =>
+            {
+                var vehicle = await db.Vehicles.SingleAsync(v => v.Id == input.VehicleId);
+                var pickup = await db.Offices.SingleAsync(o => o.Id == input.PickupOfficeId);
+                var dropoff = await db.Offices.SingleAsync(o => o.Id == input.ReturnOfficeId);
+                switch (change)
+                {
+                    case "deposit": vehicle.RentalTerms!.DepositAmount += 1m; break;
+                    case "rate": vehicle.RentalTerms!.Rates.ForEach(rate => rate.DailyPrice += 1m); break;
+                    case "allowed-extra": vehicle.RentalTerms!.ExtraOptionIds = vehicle.RentalTerms.ExtraOptionIds.Skip(1).ToArray(); break;
+                    case "pickup-window": pickup.OperatingPolicy!.PickupWindows.First(w => w.StartMinute == 0).StartMinute = 1; break;
+                    case "return-window": dropoff.OperatingPolicy!.ReturnWindows.First(w => w.StartMinute == 0).StartMinute = 1; break;
+                    case "closed-date": dropoff.OperatingPolicy!.ClosedDates = [DateOnly.FromDateTime(input.ReturnDateTimeUtc)]; break;
+                }
+                return await db.SaveChangesAsync();
+            });
+        }
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{id}/hold");
+        message.Headers.Add("X-Session-Id", session);
+        using var hold = await Client.SendAsync(message);
+        hold.StatusCode.Should().Be(change == "none" ? HttpStatusCode.OK : HttpStatusCode.Conflict, await hold.Content.ReadAsStringAsync());
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        saved.Status.Should().Be(change == "none" ? ReservationStatus.Hold : ReservationStatus.Draft);
+    }
+
     private static CreateReservationRequest ExactReservation(CreateReservationQuoteRequest input, Guid quoteId) => new()
     {
         VehicleId = input.VehicleId, VehicleGroupId = input.VehicleGroupId,

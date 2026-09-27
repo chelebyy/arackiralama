@@ -1,6 +1,19 @@
 # PR 447 review corrections
 
-This record covers nine correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers ten correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Tenth review: starting head b3a9748f89998a4470b80805ab78b87d053768d6
+
+Codex r4115119784 identified order-sensitive collections still present in the policy fingerprint. The hash payload now sorts rates by their unique IDs, allowed extra IDs by ID, both operating-window lists by day/start/end, and closed dates by date with set semantics. Full rate content, scalar terms, office policies, pricing and selected extras remain part of the fingerprint. Canonicalization creates ordered projections without mutating stored policies or changing rate selection.
+
+### Validation and scope
+
+- 66 focused VehicleBookingPolicyTests/PricingServiceTests cases passed.
+- All 11 selected real PostgreSQL/Redis API cases passed. Seven new cases reverse rates, allowed extras, pickup/return windows and closed dates for distinct pickup and return offices, confirm equal fingerprints, and then either acquire the original draft's hold or reject a real deposit/rate/allowed-extra/pickup-window/return-window/closed-date change with 409. Existing reversed selected-extra, changed-policy and expired-quote hold recovery cases also passed.
+- Backend compilation and whitespace checks passed. Existing unit-test warnings concern obsolete RedisConnectionException constructors. No frontend changes; frontend tests, lint, production build and browser/device checks were not repeated.
+- Planning and scoped source review preserved complete policy content and fail-closed validation while removing collection-order dependence. Reviewed: fingerprint inputs, unique rate IDs, nonmutating projections, unchanged rate-selection logic, authoritative hold revalidation and HTTP conflict mapping. No additional material issue was found in this scope.
+- Not reviewed: unrelated authorization, external payment providers, production deployment/configuration, browser rendering or full accessibility. No security guarantee is implied. No new external API usage, dependency or schema migration was introduced; Context7 was unnecessary for this business-logic change.
+- Starting-head CI passed all ten active checks; GHCR publication was skipped. A fresh fetch confirmed remote default and local main at f1c34fecde4b0b9a79ffa19201d744d1be33c6ba. Work continues on the existing PR branch from b3a9748; new-head CI and renewed Codex review remain separate gates.
 
 ## Ninth review: starting head 9de0e982a7e76d372b1ce0f7e1c62d6535817e07
 

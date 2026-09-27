@@ -66,8 +66,15 @@ public sealed class VehicleBookingService(
             request.SelectedExtras ?? [], cancellationToken);
         var fingerprint = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            vehicle.Id, vehicle.GroupId, vehicle.OfficeId, terms,
-            PickupPolicy = pickup!.OperatingPolicy, ReturnPolicy = dropoff.OperatingPolicy,
+            vehicle.Id, vehicle.GroupId, vehicle.OfficeId,
+            terms = new
+            {
+                terms.DepositAmount, terms.MinAge, terms.MinLicenseYears,
+                Rates = terms.Rates.OrderBy(rate => rate.Id).ToArray(),
+                ExtraOptionIds = terms.ExtraOptionIds.Order().ToArray()
+            },
+            PickupPolicy = CanonicalPolicy(pickup!.OperatingPolicy!),
+            ReturnPolicy = CanonicalPolicy(dropoff.OperatingPolicy!),
             Pricing = breakdown, Extras = selections.OrderBy(extra => extra.ExtraOptionId).ThenBy(extra => extra.OptionVersion).ToArray()
         })));
         return new VehicleBookingOffer(breakdown, selections, new ReservationBookingConditions
@@ -76,6 +83,16 @@ public sealed class VehicleBookingService(
             PreparationMinutes = preparation, PolicyFingerprint = fingerprint, PaymentAtPickup = true
         });
     }
+
+    private static object CanonicalPolicy(OfficeOperatingPolicy policy) => new
+    {
+        policy.MinimumNoticeMinutes, policy.PreparationMinutes,
+        PickupWindows = policy.PickupWindows.OrderBy(window => window.Day)
+            .ThenBy(window => window.StartMinute).ThenBy(window => window.EndMinute).ToArray(),
+        ReturnWindows = policy.ReturnWindows.OrderBy(window => window.Day)
+            .ThenBy(window => window.StartMinute).ThenBy(window => window.EndMinute).ToArray(),
+        ClosedDates = policy.ClosedDates.Distinct().Order().ToArray()
+    };
 
     public async Task<IReadOnlyList<(Vehicle Vehicle, PriceBreakdownDto Pricing)>> GetAvailableAsync(
         Guid pickupOfficeId, Guid returnOfficeId, DateTime pickupDateTimeUtc, DateTime returnDateTimeUtc,
