@@ -9,7 +9,7 @@ public class Vehicle : BaseEntity
     public string Model { get; set; } = string.Empty;
     public int Year { get; set; }
     public string Color { get; set; } = string.Empty;
-    public Guid GroupId { get; set; }
+    public Guid? GroupId { get; set; }
     public Guid OfficeId { get; set; }
     public VehicleStatus Status { get; set; } = VehicleStatus.Available;
     public string? PhotoUrl { get; set; }
@@ -23,6 +23,7 @@ public class Vehicle : BaseEntity
     public int? PowerHp { get; set; }
     public string[] Equipment { get; set; } = [];
     public string[] PhotoUrls { get; set; } = [];
+    public VehicleRentalTerms? RentalTerms { get; set; }
 
     public VehicleGroup? Group { get; set; }
     public Office? Office { get; set; }

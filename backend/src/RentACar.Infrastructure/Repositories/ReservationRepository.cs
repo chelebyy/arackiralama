@@ -82,7 +82,7 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
             .AsNoTracking()
             .Where(r => r.VehicleId == vehicleId)
             .Where(r => ReservationStatusGroups.StockBlocking.Contains(r.Status))
-            .Where(r => r.PickupDateTime < returnDateTime && r.ReturnDateTime > pickupDateTime);
+            .Where(r => r.PickupDateTime < returnDateTime && (r.OccupiedUntilUtc ?? r.ReturnDateTime) > pickupDateTime);
 
         if (excludeReservationId.HasValue)
         {

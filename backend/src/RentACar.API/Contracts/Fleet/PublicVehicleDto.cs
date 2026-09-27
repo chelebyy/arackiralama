@@ -6,7 +6,7 @@ public sealed record PublicVehicleDto(
     string Model,
     int Year,
     string Color,
-    Guid GroupId,
+    Guid? GroupId,
     string GroupName,
     string GroupNameEn,
     Guid OfficeId,

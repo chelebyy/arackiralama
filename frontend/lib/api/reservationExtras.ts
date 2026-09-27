@@ -8,6 +8,7 @@ import type {
 
 export interface CreateReservationQuoteData {
   vehicleGroupId: string;
+  vehicleId?: string;
   pickupOfficeId: string;
   returnOfficeId: string;
   pickupDateTimeUtc: string;
@@ -21,9 +22,11 @@ export interface CreateReservationQuoteData {
 
 export async function getPublicReservationExtraOptions(
   vehicleGroupId: string,
-  locale: string
+  locale: string,
+  vehicleId?: string
 ): Promise<PublicReservationExtraOption[]> {
   const query = new URLSearchParams({ vehicleGroupId, locale });
+  if (vehicleId) query.set('vehicleId', vehicleId);
   const response = await get<{ items: PublicReservationExtraOption[] }>(
     `${API_ENDPOINTS.reservationExtras.catalog}?${query.toString()}`,
     { cache: 'no-store' }

@@ -9,6 +9,7 @@ public class Office : BaseEntity
     public bool IsAirport { get; set; }
     public bool IsActive { get; set; } = true;
     public string OpeningHours { get; set; } = string.Empty;
+    public OfficeOperatingPolicy? OperatingPolicy { get; set; }
 
     public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

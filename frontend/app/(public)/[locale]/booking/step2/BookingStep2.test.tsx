@@ -1,178 +1,102 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
 import BookingStep2Page from "./page";
+import { useBookingStore } from "@/hooks/useBooking";
+import { catalogueVehicle } from "@/lib/test-fixtures/catalogue";
+import type { ExactVehicleOffer } from "@/lib/api/vehicles";
 
-const pushMock = vi.fn();
-const availabilityRequestMock = vi.fn();
-let searchParams = new URLSearchParams();
-let availableVehiclesState: {
-  vehicles: Array<{ groupId: string; groupName: string; groupNameEn: string; availableCount: number; dailyPrice: number; currency: string; depositAmount: number; minAge: number; minLicenseYears: number; features: string[]; imageUrl: string | null }>;
-  isLoading: boolean;
-  isError: boolean | null;
-};
-let officesState: { id: string; name: string; code?: string }[];
-
+const state = vi.hoisted(() => ({
+  search: "", offers: [] as ExactVehicleOffer[], loading: false, error: false,
+  push: vi.fn(), request: vi.fn(), mutate: vi.fn()
+}));
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ locale: "en" }),
-  useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => searchParams,
+  useParams: () => ({ locale: "en" }), useRouter: () => ({ push: state.push }),
+  useSearchParams: () => new URLSearchParams(state.search)
 }));
-
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a>,
-}));
-
 vi.mock("@/hooks/useVehicles", () => ({
-  useAvailableVehicles: (request: unknown) => (availabilityRequestMock(request), {
-    vehicles: availableVehiclesState.vehicles,
-    isLoading: availableVehiclesState.isLoading,
-    isError: availableVehiclesState.isError,
-    mutate: vi.fn(),
-  }),
-  useOffices: () => ({
-    offices: officesState,
-    isLoading: false,
-    isError: null,
-  }),
+  useExactAvailableVehicles: (params: unknown) => {
+    state.request(params);
+    return { vehicles: state.offers, isLoading: state.loading, isError: state.error, mutate: state.mutate };
+  },
+  useOffices: () => ({ offices: [{ id: "office-1", name: "Alanya", code: "ala" }], isLoading: false })
 }));
-
-describe("BookingStep2Page", () => {
-  it("uses the catalogue UTC instant and office code for availability", () => {
-    searchParams.set("pickup", "gzp");
-    searchParams.set("pickupTime", "01:00");
-    officesState = [{ id: "22222222-2222-2222-2222-222222222222", code: "gzp", name: "Renamed airport" }];
+beforeEach(() => {
+  vi.clearAllMocks();
+  useBookingStore.getState().clearBooking();
+  state.search = "pickup=ala&return=ala&pickupDate=2099-10-10&pickupTime=01:00&returnDate=2099-10-13&returnTime=09:00";
+  state.loading = false;
+  state.error = false;
+  state.offers = [
+    { vehicle: { ...catalogueVehicle, id: "car-a", officeId: "office-1", dailyPrice: 1200 }, rentalDays: 3, finalTotal: 3600, currency: "TRY" },
+    { vehicle: { ...catalogueVehicle, id: "car-b", model: "Panda", groupId: null, dailyPrice: 1000 }, rentalDays: 3, finalTotal: 3000, currency: "TRY" }
+  ];
+});
+describe("Exact vehicle booking selection", () => {
+  it("uses Turkey instants and both resolved office IDs", () => {
     render(<BookingStep2Page />);
-    expect(availabilityRequestMock).toHaveBeenLastCalledWith({ office_id: "22222222-2222-2222-2222-222222222222", pickup_datetime: "2026-05-09T22:00:00.000Z", return_datetime: "2026-05-13T06:00:00.000Z" });
-  });
-  beforeEach(() => {
-    availabilityRequestMock.mockReset();
-    pushMock.mockReset();
-    availableVehiclesState = {
-      vehicles: [
-        { groupId: "economy", groupName: "Fiat Egea Or Similar", groupNameEn: "Fiat Egea Or Similar", availableCount: 5, dailyPrice: 45, currency: "TRY", depositAmount: 500, minAge: 21, minLicenseYears: 2, features: ["A/C", "Bluetooth", "GPS"], imageUrl: null },
-        { groupId: "compact", groupName: "Renault Megane Or Similar", groupNameEn: "Renault Megane Or Similar", availableCount: 3, dailyPrice: 55, currency: "TRY", depositAmount: 600, minAge: 21, minLicenseYears: 2, features: ["A/C", "Cruise Control", "Parking Sensors"], imageUrl: null },
-        { groupId: "midsize", groupName: "VW Passat Or Similar", groupNameEn: "VW Passat Or Similar", availableCount: 2, dailyPrice: 75, currency: "TRY", depositAmount: 800, minAge: 23, minLicenseYears: 3, features: ["Leather Seats", "Sunroof", "Navigation"], imageUrl: null },
-        { groupId: "luxury", groupName: "BMW 3 Series Or Similar", groupNameEn: "BMW 3 Series Or Similar", availableCount: 2, dailyPrice: 95, currency: "TRY", depositAmount: 1000, minAge: 25, minLicenseYears: 5, features: ["Leather Seats", "Premium Sound", "Parking Assistant"], imageUrl: null },
-        { groupId: "minivan", groupName: "Mercedes Vito Or Similar", groupNameEn: "Mercedes Vito Or Similar", availableCount: 1, dailyPrice: 120, currency: "TRY", depositAmount: 1200, minAge: 25, minLicenseYears: 5, features: ["Extra Space", "Dual A/C", "Rear Camera"], imageUrl: null },
-        { groupId: "suv", groupName: "Audi Q5 Or Similar", groupNameEn: "Audi Q5 Or Similar", availableCount: 2, dailyPrice: 110, currency: "TRY", depositAmount: 1000, minAge: 25, minLicenseYears: 5, features: ["4WD", "Panoramic Roof", "Virtual Cockpit"], imageUrl: null },
-      ],
-      isLoading: false,
-      isError: null,
-    };
-    officesState = [
-      { id: "11111111-1111-1111-1111-111111111111", name: "Alanya Şehir Merkezi" },
-      { id: "22222222-2222-2222-2222-222222222222", name: "Gazipaşa Havalimanı" },
-      { id: "33333333-3333-3333-3333-333333333333", name: "Antalya Havalimanı" },
-    ];
-    searchParams = new URLSearchParams({
-      pickup: "ala",
-      return: "gzp",
-      pickupDate: "2026-05-10",
-      pickupTime: "10:00",
-      returnDate: "2026-05-13",
-      returnTime: "09:00",
+    expect(state.request).toHaveBeenLastCalledWith({
+      pickupOfficeId: "office-1", returnOfficeId: "office-1",
+      pickupDateTimeUtc: "2099-10-09T22:00:00.000Z", returnDateTimeUtc: "2099-10-13T06:00:00.000Z"
     });
   });
-
-  it("displays rental duration pricing for each vehicle group", () => {
+  it("requires a concrete vehicle before continuing", () => {
     render(<BookingStep2Page />);
-
-    expect(screen.getAllByText("Total for {days} days:")).toHaveLength(6);
-    expect(screen.getByText("₺135")).toBeInTheDocument();
-    expect(screen.getByText("₺165")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue to payment/i })).toBeDisabled();
+    expect(state.push).not.toHaveBeenCalled();
   });
-
-  it("keeps the continue button disabled until a vehicle is selected", async () => {
+  it("stores the selected actual vehicle and supports no legacy group", async () => {
     const user = userEvent.setup();
-
     render(<BookingStep2Page />);
-
-    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
-    expect(continueButton).toBeDisabled();
-
-    await user.click(screen.getByRole("button", { name: /fiat egea or similar/i }));
-
-    expect(continueButton).toBeEnabled();
-  });
-
-  it("navigates to step 3 with the selected vehicle id", async () => {
-    const user = userEvent.setup();
-
-    render(<BookingStep2Page />);
-
-    await user.click(screen.getByRole("button", { name: /renault megane or similar/i }));
+    await user.click(screen.getByRole("button", { name: /Fiat Panda/i }));
     await user.click(screen.getByRole("button", { name: /continue to payment/i }));
-
-    expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
-    );
-  });
-
-  it("preselects the vehicle group supplied in the query string", async () => {
-    const user = userEvent.setup();
-    searchParams.set("vehicle", "compact");
-
-    render(<BookingStep2Page />);
-
-    const continueButton = screen.getByRole("button", { name: /continue to payment/i });
-    expect(continueButton).toBeEnabled();
-
-    await user.click(continueButton);
-
-    expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
-    );
-  });
-
-  it("auto-advances a preselected available vehicle after availability is loaded", async () => {
-    searchParams.set("vehicle", "compact");
-
-    render(<BookingStep2Page />);
-
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith(
-        "/en/booking/step3?pickup=ala&return=gzp&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=compact&dailyPrice=55&vehicleName=Renault+Megane+Or+Similar"
-      );
+    expect(useBookingStore.getState().vehicle).toMatchObject({
+      vehicleId: "car-b", vehicleGroupId: "00000000-0000-0000-0000-000000000000", vehicleName: "Fiat Panda", dailyPrice: 1000
     });
+    expect(state.push).toHaveBeenCalledWith(expect.stringContaining("preferredVehicleId=car-b"));
   });
-
-  it("shows a loading state while available vehicles are being fetched", () => {
-    availableVehiclesState.isLoading = true;
-
+  it("automatically advances only the requested exact available vehicle", async () => {
+    state.search += "&preferredVehicleId=car-a";
     render(<BookingStep2Page />);
-
-    expect(screen.getByText("Loading available vehicles...")).toBeInTheDocument();
+    await waitFor(() => expect(state.push).toHaveBeenCalledTimes(1));
+    expect(useBookingStore.getState().vehicle?.vehicleId).toBe("car-a");
   });
-
-  it("shows an error state when vehicle loading fails", () => {
-    availableVehiclesState.isError = true;
-
+  it("does not substitute a sibling when the requested vehicle is unavailable", () => {
+    state.search += "&preferredVehicleId=missing";
     render(<BookingStep2Page />);
-
-    expect(screen.getByText("Failed to load vehicles. Please try again.")).toBeInTheDocument();
+    expect(state.push).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /continue to payment/i })).toBeDisabled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
-
-  it("uses the resolved pickup office guid when the pickup slug matches a known office", async () => {
+  it("waits for availability before auto advance", () => {
+    state.search += "&preferredVehicleId=car-a";
+    state.loading = true;
+    const { rerender } = render(<BookingStep2Page />);
+    expect(state.push).not.toHaveBeenCalled();
+    state.loading = false;
+    rerender(<BookingStep2Page />);
+    expect(state.push).toHaveBeenCalledTimes(1);
+  });
+  it("blocks stale selection when availability fails and supports retry", async () => {
+    state.search += "&preferredVehicleId=car-a";
+    state.error = true;
     const user = userEvent.setup();
-
-    searchParams = new URLSearchParams({
-      pickup: "gzp",
-      return: "ala",
-      pickupDate: "2026-05-10",
-      pickupTime: "10:00",
-      returnDate: "2026-05-13",
-      returnTime: "09:00",
-    });
-
     render(<BookingStep2Page />);
-
-    await user.click(screen.getByRole("button", { name: /fiat egea or similar/i }));
+    expect(state.push).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+    expect(state.mutate).toHaveBeenCalled();
+  });
+  it("uses the server total and actual catalogue facts without group ratings", () => {
+    render(<BookingStep2Page />);
+    expect(screen.getByText(/3,600/)).toBeInTheDocument();
+    expect(screen.queryByText(/4\.5|or similar/i)).not.toBeInTheDocument();
+  });
+  it("clears extras when another exact vehicle is chosen", async () => {
+    useBookingStore.setState({ vehicle: { vehicleId: "car-a", vehicleGroupId: "g", vehicleName: "A", vehicleImage: "", dailyPrice: 1000, groupName: "" }, selectedExtras: [{ optionId: "old" } as never] });
+    const user = userEvent.setup();
+    render(<BookingStep2Page />);
+    await user.click(screen.getByRole("button", { name: /Fiat Panda/i }));
     await user.click(screen.getByRole("button", { name: /continue to payment/i }));
-
-    expect(pushMock).toHaveBeenCalledWith(
-      "/en/booking/step3?pickup=gzp&return=ala&pickupDate=2026-05-10&pickupTime=10%3A00&returnDate=2026-05-13&returnTime=09%3A00&vehicle=economy&dailyPrice=45&vehicleName=Fiat+Egea+Or+Similar"
-    );
+    expect(useBookingStore.getState().selectedExtras).toEqual([]);
   });
 });

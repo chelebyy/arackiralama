@@ -54,7 +54,7 @@ export interface PublicVehicle extends VehicleCatalogue {
   model: string;
   year: number;
   color: string;
-  groupId: string;
+  groupId: string | null;
   groupName: string;
   groupNameEn: string;
   officeId: string;
@@ -320,6 +320,8 @@ export interface ReservationQuoteExtraItem {
 }
 
 export interface ReservationQuote {
+  conditions?: { minAge: number; minLicenseYears: number } | null;
+  vehicleId?: string | null;
   quoteId: string;
   expiresAtUtc: string;
   dailyRate: number;
@@ -464,6 +466,7 @@ export interface ValidateCampaignResponse {
 
 export interface CreateReservationData {
   vehicleGroupId: string;
+  vehicleId?: string;
   pickupOfficeId: string;
   returnOfficeId: string;
   pickupDateTimeUtc: string;

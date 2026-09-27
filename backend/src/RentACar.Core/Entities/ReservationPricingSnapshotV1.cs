@@ -3,6 +3,7 @@ namespace RentACar.Core.Entities;
 public class ReservationPricingSnapshotV1
 {
     public int SchemaVersion { get; set; } = 1;
+    public ReservationBookingConditions? BookingConditions { get; set; }
     public decimal DailyRate { get; set; }
     public int RentalDays { get; set; }
     public decimal BaseTotal { get; set; }

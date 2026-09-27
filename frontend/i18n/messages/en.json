@@ -209,6 +209,8 @@
       "birthDate": "Date of Birth",
       "licenseNumber": "License Number",
       "licenseCountry": "License Country",
+      "licenseIssueDate": "License issue date",
+      "licenseExpiryDate": "License expiry date",
       "flightNumber": "Flight Number (if applicable)"
     },
     "payment": {
@@ -237,6 +239,9 @@
       }
     },
     "confirmation": {
+      "verificationTitle": "Reservation details",
+      "verificationFailed": "The reservation status could not be verified. Keep your booking code and try again shortly.",
+      "retryDetails": "Retry verification",
       "title": "Reservation Confirmed!",
       "message": "Your reservation has been successfully created. Details have been sent to your email address.",
       "unpaidRequestTitle": "Request Received!",
@@ -297,7 +302,15 @@
     "refreshQuote": "Refresh quote",
     "failedToRefreshQuote": "The price quote could not be refreshed. Please try again.",
     "quoteExpired": "The price quote has expired. Try again after the current quote is ready.",
-    "quoteConfirmationRequired": "Extra options changed. Review the updated quote and confirm again.",
+    "quoteConfirmationRequired": "The price or rental conditions changed. Review and accept the updated offer.",
+    "acceptUpdatedQuote": "Accept updated offer",
+    "vehicleUnavailable": "This vehicle is no longer available for your dates. Go back and choose another vehicle.",
+    "rentalPolicyUnavailable": "Online booking is not available for this vehicle yet. Please contact us.",
+    "rentalPolicyMismatch": "These times do not meet the office opening hours or advance-booking requirements. Please change your dates or times.",
+    "driverNotEligible": "The driver does not meet this vehicle’s age or licence requirements.",
+    "bookingNetworkError": "The response could not be received. Try again; the same booking attempt will be checked.",
+    "bookingRetryPending": "The booking result could not be verified yet. Retry the same request or contact us before creating another booking.",
+    "reservationFailed": "Your booking could not be completed. Please try again.",
     "fees": {
       "airport": "Airport pickup fee",
       "oneWay": "One-way return fee",
@@ -324,6 +337,12 @@
     "processingPayment": "Processing payment...",
     "failedToProcessPayment": "Failed to process payment. Please try again.",
     "paymentMethodsUnavailable": "There is no active payment method for online booking right now. Please contact us.",
+    "payAtPickup": {
+      "title": "Pay at pickup",
+      "description": "Your reservation is confirmed immediately when the vehicle is available. Pay when you collect it.",
+      "confirmedTitle": "Your reservation is confirmed",
+      "confirmedMessage": "Your selected vehicle is reserved. Payment is due at pickup."
+    },
     "unpaidRequest": {
       "title": "Request without online payment",
       "description": "Your request will be sent to our team and the selected vehicle will be blocked for 24 hours."

@@ -392,6 +392,42 @@ public sealed class PaymentServiceTests : IDisposable
         trackedDepositIntent.Status.Should().Be(PaymentStatus.Authorized);
     }
 
+    [Theory]
+    [InlineData(false, 325)]
+    [InlineData(true, 325)]
+    [InlineData(false, 0)]
+    [InlineData(true, 0)]
+    public async Task CreateDepositPreAuthorizationAsync_UsesAcceptedSnapshotInsteadOfCurrentVehicleTerms(bool groupless, int acceptedDeposit)
+    {
+        var provider = new FakePaymentProvider();
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationWithDepositAmountAsync(750m, ReservationStatus.Paid);
+        reservation.PricingSnapshot = new ReservationPricingSnapshotV1 { DepositAmount = acceptedDeposit };
+        reservation.Vehicle!.RentalTerms = new VehicleRentalTerms { DepositAmount = 999m };
+        if (groupless)
+        {
+            reservation.Vehicle.GroupId = null;
+            reservation.Vehicle.Group = null;
+        }
+        await _dbContext.SaveChangesAsync();
+        await SeedPaymentIntentAsync(reservation.Id, "snapshot-main-payment", PaymentStatus.Succeeded,
+            providerIntentId: "snapshot-main-intent", providerTransactionId: "snapshot-main-transaction");
+
+        var result = await sut.CreateDepositPreAuthorizationAsync(reservation.Id);
+
+        result.Should().NotBeNull();
+        provider.CreatePreAuthorizationCallCount.Should().Be(acceptedDeposit > 0 ? 1 : 0);
+        if (acceptedDeposit > 0)
+        {
+            result!.Amount.Should().Be(acceptedDeposit);
+            provider.LastCreatePreAuthorizationRequest!.Amount.Should().Be(acceptedDeposit);
+        }
+        else
+        {
+            result!.Status.Should().Be("Skipped");
+        }
+    }
+
     [Fact]
     public async Task CreateDepositPreAuthorizationAsync_WhenReservationDoesNotExist_ReturnsNull()
     {

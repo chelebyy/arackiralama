@@ -28,6 +28,32 @@ public class IdempotencyMiddlewareTests
             .Returns(_databaseMock.Object);
     }
 
+    [Theory]
+    [InlineData("{\"quoteId\":\"quote\"}")]
+    [InlineData("{\"QuoteId\":\"quote\"}")]
+    [InlineData("{\"quoteId\":null,\"vehicleId\":\"vehicle\"}")]
+    [InlineData("invalid-json")]
+    public async Task InvokeAsync_QuoteEndpointRevalidatesRequestInsteadOfReplayingCache(string body)
+    {
+        var context = CreateHttpContext("POST", Guid.NewGuid().ToString());
+        context.SetEndpoint(CreateEndpointWithAttribute(new IdempotentAttribute { UseQuoteReplay = true }));
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        var reachedHandler = false;
+        var middleware = new IdempotencyMiddleware(async current =>
+        {
+            reachedHandler = true;
+            using var reader = new StreamReader(current.Request.Body, leaveOpen: true);
+            (await reader.ReadToEndAsync()).Should().Be(body);
+            current.Response.StatusCode = 409;
+        }, _loggerMock.Object);
+
+        await middleware.InvokeAsync(context, _redisMock.Object);
+
+        reachedHandler.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(409);
+        _databaseMock.Verify(database => database.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+    }
+
     [Fact]
     public async Task InvokeAsync_WithoutIdempotencyKey_PassesThrough()
     {

@@ -80,6 +80,25 @@ function resetBookingStore() {
 }
 
 describe("useBooking", () => {
+  it("persists exact identity and clears extras when changing cars within one group", () => {
+    const { result: actions } = renderHook(() => useBookingActions());
+    const extra: SelectedBookingExtra = {
+      optionId: "gps", optionVersion: 1, code: "gps", name: "GPS", description: "",
+      quantity: 1, unitPrice: 8, pricingMode: "PER_DAY",
+    };
+    act(() => {
+      actions.current.selectVehicle(sampleVehicle, sampleOffice, sampleOffice, "car-a");
+      actions.current.updateExtras([extra]);
+    });
+    expect(useBookingStore.getState().vehicle?.vehicleId).toBe("car-a");
+    expect(JSON.parse(localStorage.getItem("car-rental-booking-storage")!).state.vehicle.vehicleId).toBe("car-a");
+    act(() => actions.current.selectVehicle(sampleVehicle, sampleOffice, sampleOffice, "car-a"));
+    expect(useBookingStore.getState().selectedExtras).toEqual([extra]);
+    act(() => actions.current.selectVehicle(sampleVehicle, sampleOffice, sampleOffice, "car-b"));
+    expect(useBookingStore.getState().selectedExtras).toEqual([]);
+    act(() => actions.current.selectVehicle(sampleVehicle, sampleOffice, sampleOffice));
+    expect(useBookingStore.getState().vehicle?.vehicleId).toBeUndefined();
+  });
   beforeEach(() => {
     resetBookingStore();
   });

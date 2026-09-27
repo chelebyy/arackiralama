@@ -13,6 +13,7 @@ public class Reservation : BaseEntity
     public Guid ReturnOfficeId { get; set; }
     public DateTime PickupDateTime { get; set; }
     public DateTime ReturnDateTime { get; set; }
+    public DateTime? OccupiedUntilUtc { get; set; }
     public ReservationStatus Status { get; set; } = ReservationStatus.Draft;
     public decimal TotalAmount { get; set; }
     public string? Notes { get; set; }

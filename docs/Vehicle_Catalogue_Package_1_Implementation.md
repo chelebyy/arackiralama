@@ -1,5 +1,19 @@
 # Package 1: real vehicle catalogue
 
+## Current closure — September 26, 2026
+
+[PR #446](https://github.com/chelebyy/arackiralama/pull/446) was merged at `2026-09-26T10:16:54Z`. Reviewed PR head: `271b68d15804ceafab5a5e742f15bf8e6d095485`; squash merge/default-branch commit: `f1c34fecde4b0b9a79ffa19201d744d1be33c6ba`.
+
+- Exact merge-commit [CI run 36235314898](https://github.com/chelebyy/arackiralama/actions/runs/36235314898) succeeded: backend unit tests, backend integration tests, frontend lint/test/build, Docker Build and Docker Push to GHCR.
+- CodeQL [36235314871](https://github.com/chelebyy/arackiralama/actions/runs/36235314871), Secret Scan [36235314844](https://github.com/chelebyy/arackiralama/actions/runs/36235314844), and React Doctor [36235314924](https://github.com/chelebyy/arackiralama/actions/runs/36235314924) succeeded on that same commit.
+- Latest documented local evidence remains 827 backend, 54 API integration and 308 frontend tests, build/TypeScript and lint with one existing warning. These were not rerun for this documentation-only continuation.
+- Older E2E run [36229522711](https://github.com/chelebyy/arackiralama/actions/runs/36229522711) failed on `9c77715`; it is neither a failure receipt nor a pass receipt for the merge commit. Full current-head E2E remains unverified in this closure.
+- Image publication is verified; production deployment, migration application, inventory correctness and production storage lifecycle were not verified. Existing media-decoding/orphan-cleanup and group-reservation limitations remain.
+
+The former `catalog-package1` worktree is absent from both the directory and current Git registration. Its removal was not performed in this continuation. Other retained worktrees were preserved: the standard cleanup audit timed out after 60 seconds without results, so removal eligibility was not established.
+
+After the documentation/planning deliverable, the user authorized Package 2 implementation. Its completed local implementation and acceptance are recorded in [Package 2 implementation](Vehicle_Reservation_Package_2_Implementation.md) and [PR #447](https://github.com/chelebyy/arackiralama/pull/447); the [plan](Vehicle_Reservation_Package_2_Plan.md) retains actual operator activation and rollout gates. Earlier statements that PR #446 is open or that merge has not occurred are historical snapshots. The original primary checkout remains on its existing feature branch; synchronized local `main` does not mean that checkout contains Package 1.
+
 ## Second PR 446 review fixes — 2026-09-25
 
 API integration validation also passed: 54/54 tests using the retained local PostgreSQL/Redis containers with explicit `127.0.0.1` addresses. Initial `localhost` runs stalled and were stopped/timed out; the IPv4 retry completed in 48 seconds. This is an environment workaround, not a proven DNS root-cause diagnosis.

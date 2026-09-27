@@ -15,14 +15,14 @@ public sealed class ReservationsController(IReservationService reservationServic
 {
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
-    [Idempotent(ExpirationHours = 24)]
+    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true)]
     public async Task<IActionResult> Create(
         [FromBody] CreateReservationRequest request,
         CancellationToken cancellationToken,
         [FromHeader(Name = "X-Session-Id")] string? sessionId = null,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
     {
-        if (request.VehicleGroupId == Guid.Empty)
+        if (request.VehicleGroupId == Guid.Empty && !request.VehicleId.HasValue)
         {
             return BadRequestResponse("Geçerli bir araç grubu seçilmelidir.");
         }
@@ -68,7 +68,7 @@ public sealed class ReservationsController(IReservationService reservationServic
 
     [HttpPost("unpaid-requests")]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
-    [Idempotent(ExpirationHours = 24)]
+    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true)]
     public async Task<IActionResult> CreateUnpaidRequest(
         [FromBody] CreateReservationRequest request,
         CancellationToken cancellationToken,
@@ -98,7 +98,9 @@ public sealed class ReservationsController(IReservationService reservationServic
                 IdempotencyKey = idempotencyKey?.Trim()
             };
             var reservation = await reservationService.CreateUnpaidRequestAsync(request, cancellationToken);
-            return OkResponse(reservation, "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
+            return OkResponse(reservation, reservation.Status == "Confirmed"
+                ? "Rezervasyon kesinleşti. Ödeme araç tesliminde alınacaktır."
+                : "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
         }
         catch (ReservationQuoteConflictException ex)
         {
@@ -115,7 +117,7 @@ public sealed class ReservationsController(IReservationService reservationServic
 
         static bool vehicleGroupOrOfficeInvalid(CreateReservationRequest request)
         {
-            return request.VehicleGroupId == Guid.Empty || request.PickupOfficeId == Guid.Empty;
+            return (request.VehicleGroupId == Guid.Empty && !request.VehicleId.HasValue) || request.PickupOfficeId == Guid.Empty;
         }
     }
 
@@ -168,6 +170,10 @@ public sealed class ReservationsController(IReservationService reservationServic
             }
 
             return OkResponse(hold, "Rezervasyon 15 dakika süreyle tutuldu.");
+        }
+        catch (ReservationQuoteConflictException ex)
+        {
+            return Conflict(ApiResponse<object>.Fail(ex.Message));
         }
         catch (InvalidOperationException ex)
         {

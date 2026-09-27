@@ -17,11 +17,14 @@ public sealed class ReservationExtraOptionsController(
     public async Task<IActionResult> Get(
         [FromQuery] Guid vehicleGroupId,
         [FromQuery] string locale,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] Guid? vehicleId = null)
     {
         try
         {
-            return OkResponse(await catalogService.GetPublicCatalogAsync(vehicleGroupId, locale, cancellationToken));
+            return OkResponse(vehicleId.HasValue
+                ? await catalogService.GetPublicVehicleCatalogAsync(vehicleId.Value, locale, cancellationToken)
+                : await catalogService.GetPublicCatalogAsync(vehicleGroupId, locale, cancellationToken));
         }
         catch (ArgumentException exception)
         {

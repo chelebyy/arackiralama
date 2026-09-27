@@ -8,4 +8,5 @@ public sealed record OfficeDto(
     string Phone,
     bool IsAirport,
     bool IsActive,
-    string OpeningHours);
+    string OpeningHours,
+    RentACar.Core.Entities.OfficeOperatingPolicy? OperatingPolicy = null);

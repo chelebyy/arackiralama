@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useLocale } from "next-intl";
+import { useParams, useSearchParams } from "next/navigation";
 import { Link, usePathname, localeLabels, routing, type Locale } from "@/i18n/routing";
 import Flag from "react-world-flags";
 import { ChevronDown, Globe } from "lucide-react";
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils";
 export default function LanguageSwitcher() {
   const locale = useLocale();
   const pathname = usePathname();
+  const params = useParams();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +68,7 @@ export default function LanguageSwitcher() {
               <Link
                 key={loc}
                 // @ts-expect-error next-intl Link typing doesn't accept dynamic route pathname strings
-                href={pathname}
+                href={{ pathname, params, query: Object.fromEntries(searchParams.entries()) }}
                 locale={loc}
                 role="menuitem"
                 aria-current={isActive ? "true" : undefined}

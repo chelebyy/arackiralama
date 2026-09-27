@@ -84,17 +84,17 @@ public sealed class ReservationServiceTests
             .Returns(_redisDatabaseMock.Object);
 
         _redisDatabaseMock
-            .Setup(x => x.StringSetAsync(
+            .Setup(x => x.LockTakeAsync(
                 It.IsAny<RedisKey>(),
                 It.IsAny<RedisValue>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<When>(),
+                It.IsAny<TimeSpan>(),
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(true);
 
         _redisDatabaseMock
-            .Setup(x => x.KeyDeleteAsync(
+            .Setup(x => x.LockReleaseAsync(
                 It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
                 CommandFlags.None))
             .ReturnsAsync(true);
 
@@ -1085,6 +1085,100 @@ public sealed class ReservationServiceTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData("available")]
+    [InlineData("overlap")]
+    [InlineData("status")]
+    [InlineData("cached-other")]
+    [InlineData("changed-selection")]
+    [InlineData("wrong-session")]
+    [InlineData("lock-retry")]
+    [InlineData("lock-timeout")]
+    public async Task CreateHoldAsync_ExactVehicleNeverFallsBackToAnotherGroupMember(string scenario)
+    {
+        var selected = new Vehicle { GroupId = Guid.NewGuid(), OfficeId = Guid.NewGuid() };
+        var other = new Vehicle { GroupId = selected.GroupId, OfficeId = selected.OfficeId };
+        var reservation = new Reservation
+        {
+            VehicleId = scenario == "changed-selection" ? other.Id : selected.Id,
+            Vehicle = selected,
+            PickupDateTime = DateTime.UtcNow.AddDays(1),
+            ReturnDateTime = DateTime.UtcNow.AddDays(3),
+            Status = ReservationStatus.Draft,
+            QuoteReplayProof = new ReservationQuoteReplayProofV1
+            {
+                SchemaVersion = 2, VehicleId = selected.Id,
+                SessionHash = ReservationQuoteSecurity.HashSessionId(scenario == "wrong-session" ? "other-session" : "session")
+            }
+        };
+        if (scenario == "status")
+        {
+            selected.Status = VehicleStatus.Maintenance;
+        }
+        _reservationRepositoryMock.Setup(repository => repository.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        _vehicleRepositoryMock.Setup(repository => repository.GetQueryable())
+            .Returns(new List<Vehicle> { other, selected }.BuildMockDbSet().Object);
+        _reservationRepositoryMock.Setup(repository => repository.HasOverlappingReservationsAsync(
+            selected.Id, reservation.PickupDateTime, reservation.ReturnDateTime, reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scenario == "overlap");
+        _holdServiceMock.Setup(service => service.CreateHoldAsync(reservation.Id, selected.Id,
+            "session", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        if (scenario == "cached-other")
+        {
+            _holdServiceMock.Setup(service => service.GetHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ReservationHoldSnapshot(reservation.Id, other.Id, "session", DateTime.UtcNow.AddMinutes(5)));
+        }
+
+        ReservationHoldDto? result = null;
+        var lockKey = $"hold:exact:{selected.Id:N}";
+        if (scenario == "lock-retry")
+        {
+            _redisDatabaseMock.SetupSequence(db => db.LockTakeAsync(lockKey, It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan>(), CommandFlags.None)).ReturnsAsync(false).ReturnsAsync(true);
+        }
+        if (scenario == "lock-timeout")
+        {
+            _redisDatabaseMock.Setup(db => db.LockTakeAsync(lockKey, It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan>(), CommandFlags.None)).ReturnsAsync(false);
+        }
+        if (scenario is "overlap" or "status")
+        {
+            var hold = () => _sut.CreateHoldAsync(reservation.Id, "session");
+            await hold.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("Selected vehicle is unavailable*");
+        }
+        else if (scenario == "lock-timeout")
+        {
+            var hold = () => _sut.CreateHoldAsync(reservation.Id, "session");
+            await hold.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*already being used*");
+            _redisDatabaseMock.Verify(db => db.LockReleaseAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(),
+                CommandFlags.None), Times.Never);
+        }
+        else
+        {
+            result = await _sut.CreateHoldAsync(reservation.Id, "session");
+        }
+
+        _holdServiceMock.Verify(service => service.CreateHoldAsync(reservation.Id, other.Id,
+            It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+        if (scenario is "available" or "lock-retry")
+        {
+            result.Should().NotBeNull();
+            reservation.VehicleId.Should().Be(selected.Id);
+            var acquisition = _redisDatabaseMock.Invocations.Last(call => call.Method.Name == "LockTakeAsync");
+            acquisition.Arguments[0].Should().Be((RedisKey)lockKey);
+            var token = (RedisValue)acquisition.Arguments[1];
+            _redisDatabaseMock.Verify(db => db.LockReleaseAsync(lockKey, token, CommandFlags.None), Times.Once);
+            _redisDatabaseMock.Verify(db => db.LockTakeAsync(lockKey, token, It.IsAny<TimeSpan>(),
+                CommandFlags.None), Times.Exactly(scenario == "lock-retry" ? 2 : 1));
+        }
+        else
+        {
+            result.Should().BeNull();
+            reservation.Status.Should().Be(ReservationStatus.Draft);
+        }
+    }
+
     [Fact]
     public async Task CreateHoldAsync_WhenSameGroupExistsInMultipleOffices_PicksReservationOfficeVehicle()
     {
@@ -1309,11 +1403,10 @@ public sealed class ReservationServiceTests
             .ReturnsAsync(reservation);
 
         _redisDatabaseMock
-            .Setup(x => x.StringSetAsync(
+            .Setup(x => x.LockTakeAsync(
                 It.IsAny<RedisKey>(),
                 It.IsAny<RedisValue>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<When>(),
+                It.IsAny<TimeSpan>(),
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(false);
 
@@ -2476,6 +2569,50 @@ public sealed class ReservationServiceTests
         freshUnpaidRequest.Status.Should().Be(ReservationStatus.UnpaidRequest);
         freshUnpaidRequest.UnpaidRequestExpiresAtUtc.Should().NotBeNull();
         _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task ExactVehicleAssignment_WhenEitherContractMarkerExists_RejectsMutation(
+        bool replayProof, bool bookingConditions, bool unassign)
+    {
+        var selectedId = Guid.NewGuid();
+        var reservation = new Reservation
+        {
+            VehicleId = selectedId, PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(8),
+            QuoteReplayProof = replayProof ? new ReservationQuoteReplayProofV1 { SchemaVersion = 2, VehicleId = selectedId } : null,
+            PricingSnapshot = bookingConditions ? new ReservationPricingSnapshotV1 { BookingConditions = new ReservationBookingConditions() } : null
+        };
+        _reservationRepositoryMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        Func<Task> act = async () =>
+        {
+            if (unassign) await _sut.UnassignVehicleAsync(reservation.Id);
+            else await _sut.AssignVehicleAsync(reservation.Id, Guid.NewGuid());
+        };
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>();
+        reservation.VehicleId.Should().Be(selectedId);
+        _applicationDbContextMock.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AssignVehicleAsync_WhenStoredVehicleDisagreesWithProof_RejectsSameVehicle()
+    {
+        var reservation = new Reservation
+        {
+            VehicleId = Guid.NewGuid(),
+            QuoteReplayProof = new ReservationQuoteReplayProofV1 { SchemaVersion = 2, VehicleId = Guid.NewGuid() }
+        };
+        _reservationRepositoryMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        Func<Task> act = () => _sut.AssignVehicleAsync(reservation.Id, reservation.VehicleId);
+        await act.Should().ThrowAsync<ReservationQuoteConflictException>();
+        _applicationDbContextMock.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

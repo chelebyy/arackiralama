@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -37,6 +38,7 @@ public sealed class ReservationService : IReservationService
     private readonly ILogger<ReservationService> _logger;
     private readonly IReservationQuoteStore? _quoteStore;
     private readonly IReservationExtraPricingService? _extraPricingService;
+    private readonly VehicleBookingService? _vehicleBookingService;
     private readonly bool _allowLoadTestSessionPartition;
     private readonly TimeSpan _defaultHoldDuration = TimeSpan.FromMinutes(15);
     private readonly TimeSpan _maxHoldDuration = TimeSpan.FromMinutes(15);
@@ -62,7 +64,8 @@ public sealed class ReservationService : IReservationService
         IConfiguration configuration,
         ILogger<ReservationService> logger,
         IReservationQuoteStore? quoteStore = null,
-        IReservationExtraPricingService? extraPricingService = null)
+        IReservationExtraPricingService? extraPricingService = null,
+        VehicleBookingService? vehicleBookingService = null)
     {
         _reservationRepository = reservationRepository;
         _customerRepository = customerRepository;
@@ -82,6 +85,7 @@ public sealed class ReservationService : IReservationService
         _logger = logger;
         _quoteStore = quoteStore;
         _extraPricingService = extraPricingService;
+        _vehicleBookingService = vehicleBookingService;
     }
 
     public async Task<IReadOnlyList<AvailableVehicleGroupDto>> SearchAvailabilityAsync(
@@ -247,8 +251,9 @@ public sealed class ReservationService : IReservationService
         // explicitly allowlisted here may leave this method, to prevent leaking
         // customer/driver PII, plates, internal ids, or stats through an
         // unauthenticated route.
-        var vehicleGroupName =
-            reservation.Vehicle?.Group?.NameTr
+        var vehicleGroupName = reservation.QuoteReplayProof?.VehicleId.HasValue == true
+            ? $"{reservation.Vehicle?.Brand} {reservation.Vehicle?.Model}".Trim()
+            : reservation.Vehicle?.Group?.NameTr
             ?? reservation.Vehicle?.Brand
             ?? string.Empty;
 
@@ -294,15 +299,16 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default)
     {
+        request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateQuoteAndLegacyCombination(request);
-        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, "draft", cancellationToken);
         if (existingReservation is not null)
         {
             return MapToDto(existingReservation);
         }
 
         // Validate vehicle group availability
-        var isAvailable = await IsVehicleGroupAvailableAsync(
+        var isAvailable = request.VehicleId.HasValue || await IsVehicleGroupAvailableAsync(
             request.VehicleGroupId,
             request.PickupOfficeId,
             request.PickupDateTimeUtc,
@@ -311,6 +317,10 @@ public sealed class ReservationService : IReservationService
 
         if (!isAvailable)
         {
+            if (request.VehicleId.HasValue)
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
+            }
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
@@ -320,6 +330,7 @@ public sealed class ReservationService : IReservationService
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var pricingContext = await ResolveReservationPricingAsync(request, returnOfficeId, cancellationToken);
 
         var vehicle = await FindAvailableVehicleAsync(
@@ -328,15 +339,19 @@ public sealed class ReservationService : IReservationService
             request.PickupDateTimeUtc,
             request.ReturnDateTimeUtc,
             request.SessionId,
-            cancellationToken);
+            cancellationToken,
+            request.VehicleId);
 
         if (vehicle is null)
         {
             await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
+            if (request.VehicleId.HasValue)
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
+            }
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
@@ -351,11 +366,12 @@ public sealed class ReservationService : IReservationService
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Draft,
+            OccupiedUntilUtc = request.ReturnDateTimeUtc.AddMinutes(pricingContext.Snapshot?.BookingConditions?.PreparationMinutes ?? 0),
             TotalAmount = pricingContext.Pricing.FinalTotal,
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
             PricingSnapshot = pricingContext.Snapshot,
-            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot)
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot, "draft")
         };
         ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
         AddSelectedExtraSnapshots(reservation, pricingContext.QuotedExtras);
@@ -394,20 +410,21 @@ public sealed class ReservationService : IReservationService
         CreateReservationRequest request,
         CancellationToken cancellationToken = default)
     {
+        request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateQuoteAndLegacyCombination(request);
-        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, "unpaid", cancellationToken);
         if (existingReservation is not null)
         {
             return MapToDto(existingReservation);
         }
 
         var paymentMethods = await PaymentMethodFeatureFlags.GetAvailabilityAsync(_applicationDbContext, cancellationToken);
-        if (!paymentMethods.UnpaidRequestEnabled)
+        if (!request.VehicleId.HasValue && !paymentMethods.UnpaidRequestEnabled)
         {
             throw new InvalidOperationException("Odeme yapmadan rezervasyon talebi su anda aktif degil.");
         }
 
-        var isAvailable = await IsVehicleGroupAvailableAsync(
+        var isAvailable = request.VehicleId.HasValue || await IsVehicleGroupAvailableAsync(
             request.VehicleGroupId,
             request.PickupOfficeId,
             request.PickupDateTimeUtc,
@@ -416,6 +433,10 @@ public sealed class ReservationService : IReservationService
 
         if (!isAvailable)
         {
+            if (request.VehicleId.HasValue)
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
+            }
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
@@ -423,6 +444,7 @@ public sealed class ReservationService : IReservationService
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
+        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var pricingContext = await ResolveReservationPricingAsync(request, returnOfficeId, cancellationToken);
 
         var vehicle = await FindAvailableVehicleAsync(
@@ -431,15 +453,19 @@ public sealed class ReservationService : IReservationService
             request.PickupDateTimeUtc,
             request.ReturnDateTimeUtc,
             request.SessionId,
-            cancellationToken);
+            cancellationToken,
+            request.VehicleId);
 
         if (vehicle is null)
         {
             await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
+            if (request.VehicleId.HasValue)
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
+            }
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-        await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var reservation = new Reservation
         {
@@ -454,13 +480,15 @@ public sealed class ReservationService : IReservationService
             ReturnOffice = await _officeRepository.GetByIdAsync(returnOfficeId, cancellationToken),
             PickupDateTime = request.PickupDateTimeUtc,
             ReturnDateTime = request.ReturnDateTimeUtc,
-            Status = ReservationStatus.UnpaidRequest,
+            Status = pricingContext.Snapshot?.BookingConditions?.PaymentAtPickup == true
+                ? ReservationStatus.Confirmed : ReservationStatus.UnpaidRequest,
+            OccupiedUntilUtc = request.ReturnDateTimeUtc.AddMinutes(pricingContext.Snapshot?.BookingConditions?.PreparationMinutes ?? 0),
             TotalAmount = pricingContext.Pricing.FinalTotal,
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
             PricingSnapshot = pricingContext.Snapshot,
-            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot),
-            UnpaidRequestExpiresAtUtc = now.AddHours(24),
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot, "unpaid"),
+            UnpaidRequestExpiresAtUtc = pricingContext.Snapshot?.BookingConditions?.PaymentAtPickup == true ? null : now.AddHours(24),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -471,6 +499,13 @@ public sealed class ReservationService : IReservationService
         {
             await _reservationRepository.AddAsync(reservation, cancellationToken);
             await SaveChangesWithConcurrencyHandlingAsync(cancellationToken);
+
+            if (reservation.Status == ReservationStatus.Confirmed)
+            {
+                var notificationLocale = ResolveNotificationLocale(NormalizeLocale(request.Locale));
+                await QueueReservationConfirmedNotificationsAsync(reservation, cancellationToken, notificationLocale);
+                await QueueReservationReminderNotificationsAsync(reservation, cancellationToken, notificationLocale);
+            }
 
             if (transaction != null)
             {
@@ -487,6 +522,10 @@ public sealed class ReservationService : IReservationService
             }
 
             await ReleaseQuoteClaimAsync(pricingContext, cancellationToken);
+            if (request.VehicleId.HasValue)
+            {
+                throw new ReservationQuoteConflictException("Selected vehicle is no longer available for these dates.");
+            }
             throw new InvalidOperationException("Selected vehicle is no longer available for these dates.", ex);
         }
         catch
@@ -543,10 +582,14 @@ public sealed class ReservationService : IReservationService
 
         var customer = await GetOrCreateManualCustomerAsync(request, cancellationToken);
         var totalAmount = request.TotalAmount;
+        PriceBreakdownDto? manualPricing = null;
         if (!totalAmount.HasValue)
         {
-            var pricing = await _pricingService.CalculateBreakdownAsync(
-                vehicle.GroupId,
+            var pricing = vehicle.RentalTerms is not null && _pricingService is PricingService vehiclePricing
+                ? await vehiclePricing.CalculateForVehicleAsync(vehicle, request.PickupOfficeId, request.ReturnOfficeId,
+                    request.PickupDateTimeUtc, request.ReturnDateTimeUtc, null, null, false, cancellationToken)
+                : await _pricingService.CalculateBreakdownAsync(
+                vehicle.GroupId ?? Guid.Empty,
                 request.PickupOfficeId,
                 request.ReturnOfficeId,
                 request.PickupDateTimeUtc,
@@ -560,10 +603,27 @@ public sealed class ReservationService : IReservationService
 
             totalAmount = pricing?.FinalTotal
                 ?? throw new InvalidOperationException("Could not calculate pricing for the reservation");
+            manualPricing = pricing;
         }
 
         await using var transaction = await TryBeginTransactionAsync(cancellationToken);
         var now = DateTime.UtcNow;
+        ReservationPricingSnapshotV1? manualSnapshot = null;
+        if (vehicle.RentalTerms is { } manualTerms)
+        {
+            VehicleBookingService.ValidateTerms(manualTerms);
+            var rentalDays = RentalCalendar.RentalDays(request.PickupDateTimeUtc, request.ReturnDateTimeUtc);
+            manualSnapshot = manualPricing is not null
+                ? CreatePricingSnapshot(Guid.Empty, now, now, manualPricing, [])
+                : new ReservationPricingSnapshotV1
+                {
+                    RentalDays = rentalDays, DailyRate = RoundAmount(totalAmount.Value / rentalDays),
+                    BaseTotal = totalAmount.Value, FinalTotal = totalAmount.Value,
+                    DepositAmount = manualTerms.DepositAmount!.Value,
+                    PreAuthorizationAmount = manualTerms.DepositAmount.Value,
+                    IssuedAtUtc = now, ExpiresAtUtc = now
+                };
+        }
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
@@ -579,6 +639,8 @@ public sealed class ReservationService : IReservationService
             ReturnDateTime = request.ReturnDateTimeUtc,
             Status = ReservationStatus.Confirmed,
             TotalAmount = totalAmount.Value,
+            PricingSnapshot = manualSnapshot,
+            OccupiedUntilUtc = request.ReturnDateTimeUtc.AddMinutes(returnOffice.OperatingPolicy?.PreparationMinutes ?? 0),
             Notes = request.Notes,
             CreatedAt = now,
             UpdatedAt = now
@@ -639,15 +701,40 @@ public sealed class ReservationService : IReservationService
         var newPickupOfficeId = request.PickupOfficeId ?? reservation.PickupOfficeId;
         var newReturnOfficeId = request.ReturnOfficeId ?? reservation.ReturnOfficeId;
 
+        var itineraryOrDriverChanged = newPickupDateTime != reservation.PickupDateTime ||
+            newReturnDateTime != reservation.ReturnDateTime || newPickupOfficeId != reservation.PickupOfficeId ||
+            newReturnOfficeId != reservation.ReturnOfficeId || request.Driver is not null ||
+            request.Customer?.DateOfBirth is not null || request.Customer?.DriverLicenseIssueDate is not null;
+        if (reservation.PricingSnapshot?.BookingConditions is not null || !itineraryOrDriverChanged)
+        {
+            if (itineraryOrDriverChanged)
+                throw new ReservationQuoteConflictException("Changing the quoted itinerary or driver requires a new quote and reservation.");
+            if (request.Customer is not null) await ApplyCustomerUpdateAsync(reservation, request.Customer, cancellationToken);
+            if (request.Notes is not null) reservation.Notes = request.Notes;
+            reservation.UpdatedAt = DateTime.UtcNow;
+            await _applicationDbContext.SaveChangesAsync(cancellationToken);
+            return MapToDto(reservation);
+        }
+
         if (newReturnDateTime <= newPickupDateTime)
         {
             throw new InvalidOperationException("Return date must be after pickup date.");
         }
 
+        var newOccupiedUntil = reservation.OccupiedUntilUtc.HasValue
+            ? newReturnDateTime.Add(reservation.OccupiedUntilUtc.Value - reservation.ReturnDateTime)
+            : (DateTime?)null;
+        Office? newReturnOffice = null;
+        if (newReturnOfficeId != reservation.ReturnOfficeId)
+        {
+            newReturnOffice = await _officeRepository.GetByIdAsync(newReturnOfficeId, cancellationToken)
+                ?? throw new InvalidOperationException("Return office not found.");
+            newOccupiedUntil = newReturnDateTime.AddMinutes(newReturnOffice.OperatingPolicy?.PreparationMinutes ?? 0);
+        }
         var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
             reservation.VehicleId,
             newPickupDateTime,
-            newReturnDateTime,
+            newOccupiedUntil ?? newReturnDateTime,
             reservation.Id,
             cancellationToken);
 
@@ -656,20 +743,24 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Vehicle has overlapping reservations");
         }
 
-        var vehicleGroupId = reservation.Vehicle?.GroupId
-            ?? await _vehicleRepository
-                .GetQueryable()
-                .Where(x => x.Id == reservation.VehicleId)
-                .Select(x => x.GroupId)
-                .FirstOrDefaultAsync(cancellationToken);
+        var vehicle = reservation.Vehicle ?? await _vehicleRepository.GetQueryable()
+            .FirstOrDefaultAsync(x => x.Id == reservation.VehicleId, cancellationToken);
+        var vehicleGroupId = vehicle?.GroupId;
 
-        if (vehicleGroupId == Guid.Empty)
+        if (vehicle is null || (vehicle.RentalTerms is null && (vehicleGroupId is null || vehicleGroupId == Guid.Empty)))
         {
             throw new InvalidOperationException("Vehicle group not found.");
         }
 
-        var pricing = await _pricingService.CalculateBreakdownAsync(
-            vehicleGroupId,
+        var driverAge = CalculateAgeAt(
+            request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
+            newPickupDateTime);
+        var pricing = vehicle.RentalTerms is not null && _pricingService is PricingService vehiclePricing
+            ? await vehiclePricing.CalculateForVehicleAsync(vehicle, newPickupOfficeId, newReturnOfficeId,
+                newPickupDateTime, newReturnDateTime, reservation.PricingSnapshot?.CampaignCode, driverAge,
+                reservation.PricingSnapshot?.CoverageWaiverFee > 0m, cancellationToken)
+            : await _pricingService.CalculateBreakdownAsync(
+            vehicleGroupId ?? Guid.Empty,
             newPickupOfficeId,
             newReturnOfficeId,
             newPickupDateTime,
@@ -677,9 +768,7 @@ public sealed class ReservationService : IReservationService
             reservation.PricingSnapshot?.CampaignCode,
             0,
             0,
-            CalculateAgeAt(
-                request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth ?? reservation.DriverDateOfBirth,
-                newPickupDateTime),
+            driverAge,
             reservation.PricingSnapshot?.CoverageWaiverFee > 0m,
             cancellationToken);
 
@@ -694,12 +783,12 @@ public sealed class ReservationService : IReservationService
                 ?? throw new InvalidOperationException("Pickup office not found.");
         }
 
-        if (request.ReturnOfficeId.HasValue && request.ReturnOfficeId.Value != reservation.ReturnOfficeId)
+        if (newReturnOffice is not null)
         {
-            reservation.ReturnOffice = await _officeRepository.GetByIdAsync(request.ReturnOfficeId.Value, cancellationToken)
-                ?? throw new InvalidOperationException("Return office not found.");
+            reservation.ReturnOffice = newReturnOffice;
         }
 
+        reservation.OccupiedUntilUtc = newOccupiedUntil;
         reservation.PickupDateTime = newPickupDateTime;
         reservation.ReturnDateTime = newReturnDateTime;
         reservation.PickupOfficeId = newPickupOfficeId;
@@ -717,6 +806,8 @@ public sealed class ReservationService : IReservationService
                 ExtrasTotal = extrasTotal,
                 CampaignDiscount = campaignDiscount,
                 FinalTotal = finalTotal,
+                DepositAmount = existingSnapshot.DepositAmount,
+                PreAuthorizationAmount = existingSnapshot.PreAuthorizationAmount,
                 ExtraItems = quotedExtras.Select(ToExtraLineItemDto).ToArray()
             };
             reservation.PricingSnapshot = CreatePricingSnapshot(
@@ -793,6 +884,8 @@ public sealed class ReservationService : IReservationService
         CancellationToken cancellationToken = default)
     {
         string? holdCreationLockKey = null;
+        var holdCreationLockToken = Guid.NewGuid().ToString("N");
+        var lockAcquired = false;
 
         var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
         if (reservation == null)
@@ -817,6 +910,15 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
+        var exactVehicleId = reservation.QuoteReplayProof?.VehicleId;
+        if (exactVehicleId.HasValue &&
+            (reservation.VehicleId != exactVehicleId.Value ||
+             reservation.QuoteReplayProof!.SchemaVersion != 2 ||
+             !ReservationQuoteSecurity.SessionHashMatches(reservation.QuoteReplayProof.SessionHash, sessionId)))
+        {
+            return null;
+        }
+
         var selectedVehicle = reservation.Vehicle;
         var vehicleGroupId = selectedVehicle?.GroupId;
         if (vehicleGroupId == null)
@@ -827,7 +929,7 @@ public sealed class ReservationService : IReservationService
             vehicleGroupId = selectedVehicle?.GroupId;
         }
 
-        if (vehicleGroupId == null || selectedVehicle == null)
+        if ((vehicleGroupId == null && !exactVehicleId.HasValue) || selectedVehicle == null)
         {
             _logger.LogWarning(
                 "Reservation {ReservationId} could not resolve a vehicle group from vehicle {VehicleId}",
@@ -848,21 +950,27 @@ public sealed class ReservationService : IReservationService
 
         try
         {
-            holdCreationLockKey = BuildHoldCreationLockKey(
-                vehicleGroupId.Value,
+            holdCreationLockKey = exactVehicleId.HasValue
+                ? $"hold:exact:{exactVehicleId.Value:N}"
+                : BuildHoldCreationLockKey(
+                vehicleGroupId!.Value,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime,
                 sessionId);
 
-            var lockAcquired = await _redis.GetDatabase().StringSetAsync(
-                holdCreationLockKey,
-                reservationId.ToString("N"),
-                _holdCreationLockTtl,
-                When.NotExists,
-                CommandFlags.None);
+            for (var attempt = 0; attempt < (exactVehicleId.HasValue ? 21 : 1); attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (attempt > 0) await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                lockAcquired = await _redis.GetDatabase().LockTakeAsync(
+                    holdCreationLockKey, holdCreationLockToken, _holdCreationLockTtl, CommandFlags.None);
+                if (lockAcquired) break;
+            }
 
             if (!lockAcquired)
             {
+                if (exactVehicleId.HasValue)
+                    throw new ReservationQuoteConflictException("Reservation is already being used. Please retry.");
                 _logger.LogWarning(
                     "CreateHoldAsync lock is already held for vehicle group {VehicleGroupId} between {PickupDate} and {ReturnDate}",
                     reservation.VehicleId,
@@ -874,6 +982,10 @@ public sealed class ReservationService : IReservationService
             var existingHold = await _holdService.GetHoldAsync(reservationId, cancellationToken);
             if (existingHold != null && existingHold.ExpiresAt > DateTime.UtcNow)
             {
+                if (exactVehicleId.HasValue && existingHold.VehicleId != exactVehicleId.Value)
+                {
+                    return null;
+                }
                 if (!string.Equals(existingHold.SessionId, sessionId, StringComparison.Ordinal))
                 {
                     _logger.LogWarning(
@@ -903,16 +1015,19 @@ public sealed class ReservationService : IReservationService
             }
 
             var candidateVehicles = await GetOrderedCandidateVehiclesAsync(
-                vehicleGroupId.Value,
+                vehicleGroupId ?? Guid.Empty,
                 pickupOfficeId,
                 sessionId,
-                cancellationToken);
+                cancellationToken,
+                exactVehicleId);
 
             if (candidateVehicles.Count == 0)
             {
                 _logger.LogWarning(
                     "No available vehicle found for reservation {ReservationId}",
                     reservationId);
+                if (exactVehicleId.HasValue)
+                    throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
                 return null;
             }
 
@@ -921,7 +1036,7 @@ public sealed class ReservationService : IReservationService
                 var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
                     vehicle.Id,
                     reservation.PickupDateTime,
-                    reservation.ReturnDateTime,
+                    reservation.OccupiedUntilUtc ?? reservation.ReturnDateTime,
                     reservationId,
                     cancellationToken);
 
@@ -934,6 +1049,8 @@ public sealed class ReservationService : IReservationService
 
                 try
                 {
+                    if (reservation.PricingSnapshot?.BookingConditions is not null && _vehicleBookingService is not null)
+                        await _vehicleBookingService.ValidateDraftForHoldAsync(reservation, cancellationToken);
                     reservation.Status = ReservationStatus.Hold;
                     reservation.VehicleId = vehicle.Id;
                     reservation.UpdatedAt = DateTime.UtcNow;
@@ -1003,13 +1120,15 @@ public sealed class ReservationService : IReservationService
             _logger.LogWarning(
                 "No hold could be created for reservation {ReservationId} after checking all candidate vehicles",
                 reservationId);
+            if (exactVehicleId.HasValue)
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
             return null;
         }
         finally
         {
-            if (holdCreationLockKey is not null)
+            if (lockAcquired && holdCreationLockKey is not null)
             {
-                await _redis.GetDatabase().KeyDeleteAsync(holdCreationLockKey);
+                await _redis.GetDatabase().LockReleaseAsync(holdCreationLockKey, holdCreationLockToken, CommandFlags.None);
             }
         }
     }
@@ -1384,6 +1503,14 @@ public sealed class ReservationService : IReservationService
             return null;
         }
 
+        if (reservation.QuoteReplayProof is { SchemaVersion: >= 2 } || reservation.PricingSnapshot?.BookingConditions is not null)
+        {
+            if (vehicleId != reservation.VehicleId ||
+                (reservation.QuoteReplayProof?.VehicleId is { } quotedVehicleId && vehicleId != quotedVehicleId))
+                throw new ReservationQuoteConflictException("Changing the selected vehicle requires a new quote and reservation.");
+            return MapToDto(reservation);
+        }
+
         var vehicle = await _vehicleRepository.GetByIdAsync(vehicleId, cancellationToken);
         if (vehicle == null)
         {
@@ -1394,7 +1521,7 @@ public sealed class ReservationService : IReservationService
         var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
             vehicleId,
             reservation.PickupDateTime,
-            reservation.ReturnDateTime,
+            reservation.OccupiedUntilUtc ?? reservation.ReturnDateTime,
             reservationId,
             cancellationToken);
 
@@ -1423,6 +1550,9 @@ public sealed class ReservationService : IReservationService
         {
             return null;
         }
+
+        if (reservation.QuoteReplayProof is { SchemaVersion: >= 2 } || reservation.PricingSnapshot?.BookingConditions is not null)
+            throw new ReservationQuoteConflictException("Removing the selected vehicle requires a new quote and reservation.");
 
         reservation.VehicleId = Guid.Empty;
         reservation.UpdatedAt = DateTime.UtcNow;
@@ -1594,7 +1724,10 @@ public sealed class ReservationService : IReservationService
 
             try
             {
-                await _extraPricingService.ValidateCurrentAvailabilityAsync(
+                if (quote.VehicleId.HasValue && _vehicleBookingService is not null)
+                    await _vehicleBookingService.ValidateQuoteAsync(quote, request, cancellationToken);
+                else
+                    await _extraPricingService.ValidateCurrentAvailabilityAsync(
                     quote.VehicleGroupId,
                     quote.SelectedExtras,
                     cancellationToken);
@@ -1749,6 +1882,7 @@ public sealed class ReservationService : IReservationService
 
     private async Task<Reservation?> ResolveExistingQuoteReservationAsync(
         CreateReservationRequest request,
+        string checkoutOperation,
         CancellationToken cancellationToken)
     {
         var reservation = await FindReservationByQuoteIdAsync(request.QuoteId, cancellationToken);
@@ -1756,12 +1890,27 @@ public sealed class ReservationService : IReservationService
         {
             return null;
         }
+        if (request.VehicleId.HasValue && reservation.QuoteReplayProof is null)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
+        }
+        if ((request.VehicleId.HasValue || reservation.QuoteReplayProof?.CheckoutOperation is not null) &&
+            reservation.QuoteReplayProof?.CheckoutOperation != checkoutOperation)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote checkout operation changed. Request a new quote.");
+        }
         if (!request.QuoteId.HasValue || string.IsNullOrWhiteSpace(request.SessionId))
         {
             throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
         }
+        if (request.VehicleId.HasValue && reservation.VehicleId != request.VehicleId.Value)
+        {
+            throw new ReservationQuoteConflictException("Selected vehicle no longer matches the reservation.");
+        }
 
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty ? request.PickupOfficeId : request.ReturnOfficeId;
+        if (request.VehicleId.HasValue)
+            ValidatePersistedQuoteReplayProof(reservation, request, returnOfficeId);
         var quote = _quoteStore is null
             ? null
             : await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken);
@@ -1796,7 +1945,8 @@ public sealed class ReservationService : IReservationService
     private static ReservationQuoteReplayProofV1? CreateQuoteReplayProof(
         CreateReservationRequest request,
         Guid returnOfficeId,
-        ReservationPricingSnapshotV1? snapshot)
+        ReservationPricingSnapshotV1? snapshot,
+        string checkoutOperation)
     {
         if (!request.QuoteId.HasValue || snapshot is null || string.IsNullOrWhiteSpace(request.SessionId))
         {
@@ -1806,7 +1956,9 @@ public sealed class ReservationService : IReservationService
         var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
         return new ReservationQuoteReplayProofV1
         {
-            SchemaVersion = 1,
+            SchemaVersion = request.VehicleId.HasValue ? 2 : 1,
+            VehicleId = request.VehicleId,
+            CheckoutOperation = checkoutOperation,
             SessionHash = ReservationQuoteSecurity.HashSessionId(request.SessionId),
             RequestFingerprint = ReservationQuoteSecurity.HashRequestFingerprint(canonicalRequest),
             CreatedAtUtc = DateTime.UtcNow
@@ -1820,7 +1972,9 @@ public sealed class ReservationService : IReservationService
     {
         var proof = reservation.QuoteReplayProof;
         var snapshot = reservation.PricingSnapshot;
-        if (proof is null || proof.SchemaVersion != 1 || snapshot is null ||
+        if (proof is null || proof.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
+            proof.VehicleId != request.VehicleId ||
+            (request.VehicleId.HasValue && reservation.VehicleId != request.VehicleId.Value) || snapshot is null ||
             reservation.QuoteId != request.QuoteId || snapshot.QuoteId != request.QuoteId)
         {
             throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
@@ -1855,7 +2009,7 @@ public sealed class ReservationService : IReservationService
                 item.UnitPrice.ToString(CultureInfo.InvariantCulture),
                 item.PricingMode)));
 
-        return string.Join("|",
+        var canonicalRequest = string.Join("|",
             "reservation-quote-replay-v1",
             request.QuoteId?.ToString("N") ?? string.Empty,
             request.VehicleGroupId.ToString("N"),
@@ -1870,10 +2024,27 @@ public sealed class ReservationService : IReservationService
             snapshot.SchemaVersion.ToString(CultureInfo.InvariantCulture),
             snapshot.FinalTotal.ToString(CultureInfo.InvariantCulture),
             extras);
+
+        return request.VehicleId.HasValue
+            ? JsonSerializer.Serialize(new
+            {
+                Version = "reservation-quote-replay-v2",
+                request.VehicleId,
+                Offer = canonicalRequest,
+                snapshot.BookingConditions?.PolicyFingerprint,
+                request.Customer,
+                request.Driver,
+                request.Notes
+            })
+            : canonicalRequest;
     }
 
     private static void ValidateQuoteAndLegacyCombination(CreateReservationRequest request)
     {
+        if (request.VehicleId == Guid.Empty || (request.VehicleId.HasValue && !request.QuoteId.HasValue))
+        {
+            throw new ReservationQuoteConflictException("Exact vehicle reservations require a valid vehicle and quote.");
+        }
         if (request.QuoteId.HasValue && (request.ExtraDriverCount != 0 || request.ChildSeatCount != 0))
         {
             throw new InvalidOperationException("Legacy extra quantities cannot be combined with QuoteId.");
@@ -1889,8 +2060,13 @@ public sealed class ReservationService : IReservationService
             ? null
             : request.CampaignCode.Trim().ToUpperInvariant();
         var submittedDateOfBirth = request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth;
-        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, request.PickupDateTimeUtc);
-        if (quote.VehicleGroupId != request.VehicleGroupId ||
+        var pickupDate = request.VehicleId.HasValue
+            ? RentalCalendar.TurkeyDate(NormalizeUtc(request.PickupDateTimeUtc)).ToDateTime(TimeOnly.MinValue)
+            : request.PickupDateTimeUtc;
+        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, pickupDate);
+        if (quote.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
+            quote.VehicleId != request.VehicleId ||
+            quote.VehicleGroupId != request.VehicleGroupId ||
             quote.PickupOfficeId != request.PickupOfficeId ||
             quote.ReturnOfficeId != returnOfficeId ||
             NormalizeUtc(quote.PickupDateTimeUtc) != NormalizeUtc(request.PickupDateTimeUtc) ||
@@ -2454,13 +2630,15 @@ public sealed class ReservationService : IReservationService
         DateTime pickupDateTime,
         DateTime returnDateTime,
         string? sessionId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? exactVehicleId = null)
     {
         var vehicles = await GetOrderedCandidateVehiclesAsync(
             vehicleGroupId,
             pickupOfficeId,
             sessionId,
-            cancellationToken);
+            cancellationToken,
+            exactVehicleId);
 
         if (vehicles.Count == 0)
         {
@@ -2489,14 +2667,20 @@ public sealed class ReservationService : IReservationService
         Guid vehicleGroupId,
         Guid pickupOfficeId,
         string? sessionId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? exactVehicleId = null)
     {
         var vehicleQuery = _vehicleRepository
             .GetQueryable()
             .Where(v =>
-                v.GroupId == vehicleGroupId &&
+                (exactVehicleId.HasValue || v.GroupId == vehicleGroupId) &&
                 v.OfficeId == pickupOfficeId &&
                 v.Status == VehicleStatus.Available);
+
+        if (exactVehicleId.HasValue)
+        {
+            vehicleQuery = vehicleQuery.Where(vehicle => vehicle.Id == exactVehicleId.Value);
+        }
 
         var vehicles = vehicleQuery.Provider is IAsyncQueryProvider
             ? await vehicleQuery.ToListAsync(cancellationToken)
@@ -2622,7 +2806,8 @@ public sealed class ReservationService : IReservationService
 
     private async Task QueueReservationConfirmedNotificationsAsync(
         Reservation reservation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? localeOverride = null)
     {
         var customer = await ResolveCustomerAsync(reservation, cancellationToken);
         if (customer == null)
@@ -2630,7 +2815,7 @@ public sealed class ReservationService : IReservationService
             return;
         }
 
-        var locale = ResolveNotificationLocale(customer.Nationality);
+        var locale = localeOverride ?? ResolveNotificationLocale(customer.Nationality);
         var variables = new Dictionary<string, string>
         {
             ["PublicCode"] = reservation.PublicCode
@@ -2665,7 +2850,8 @@ public sealed class ReservationService : IReservationService
 
     private async Task QueueReservationReminderNotificationsAsync(
         Reservation reservation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? localeOverride = null)
     {
         var customer = await ResolveCustomerAsync(reservation, cancellationToken);
         if (customer == null)
@@ -2673,7 +2859,7 @@ public sealed class ReservationService : IReservationService
             return;
         }
 
-        var locale = ResolveNotificationLocale(customer.Nationality);
+        var locale = localeOverride ?? ResolveNotificationLocale(customer.Nationality);
         var variables = new Dictionary<string, string>
         {
             ["PublicCode"] = reservation.PublicCode

@@ -1,4 +1,11 @@
 import useSWR from 'swr';
+import { getExactAvailableVehicles, type ExactAvailabilityParams } from '@/lib/api/vehicles';
+
+export function useExactAvailableVehicles(params: ExactAvailabilityParams | null) {
+  const { data, error, isLoading, mutate } = useSWR(params ? ['exact-vehicles', params] : null,
+    () => getExactAvailableVehicles(params!), { revalidateOnFocus: true, dedupingInterval: 5000 });
+  return { vehicles: data ?? [], isLoading, isError: error, mutate };
+}
 import {
   getAvailableVehicles,
   getOffices,

@@ -2,9 +2,11 @@ namespace RentACar.Core.Entities;
 
 public sealed class ReservationQuoteV1
 {
+    public int SchemaVersion { get; set; } = 1;
     public Guid QuoteId { get; set; }
     public string SessionHash { get; set; } = string.Empty;
     public Guid VehicleGroupId { get; set; }
+    public Guid? VehicleId { get; set; }
     public Guid PickupOfficeId { get; set; }
     public Guid ReturnOfficeId { get; set; }
     public DateTime PickupDateTimeUtc { get; set; }

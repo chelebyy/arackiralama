@@ -22,6 +22,7 @@ interface BookingDates {
 
 interface BookingVehicle {
   vehicleGroupId: string;
+  vehicleId?: string;
   vehicleName: string;
   vehicleImage: string;
   dailyPrice: number;
@@ -82,7 +83,8 @@ export const useBookingStore = create<BookingState & BookingActions>()(
       setVehicle: (vehicle) => set((state) => ({
         vehicle,
         selectedExtras:
-          state.vehicle?.vehicleGroupId === vehicle.vehicleGroupId ? state.selectedExtras : [],
+          state.vehicle?.vehicleGroupId === vehicle.vehicleGroupId &&
+          state.vehicle?.vehicleId === vehicle.vehicleId ? state.selectedExtras : [],
       })),
 
       setExtras: (selectedExtras) => set({ selectedExtras }),
@@ -167,9 +169,10 @@ export function useBookingActions() {
   const store = useBookingStore();
 
   const selectVehicle = useCallback(
-    (vehicle: Vehicle, pickupOffice: Office, returnOffice: Office) => {
+    (vehicle: Vehicle, pickupOffice: Office, returnOffice: Office, exactVehicleId?: string) => {
       store.setVehicle({
         vehicleGroupId: vehicle.id,
+        vehicleId: exactVehicleId,
         vehicleName: vehicle.name,
         vehicleImage: vehicle.imageUrl,
         dailyPrice: vehicle.dailyPrice,

@@ -4,6 +4,8 @@ namespace RentACar.API.Services;
 
 public interface IReservationExtraOptionCatalogService
 {
+    Task<PublicReservationExtraOptionCatalogResponse> GetPublicVehicleCatalogAsync(
+        Guid vehicleId, string locale, CancellationToken cancellationToken = default);
     Task<AdminReservationExtraOptionListResponse> GetAdminListAsync(
         string? search,
         string? status,

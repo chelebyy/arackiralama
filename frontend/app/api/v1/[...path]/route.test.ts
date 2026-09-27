@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GET, POST } from "./route";
+import { GET, OPTIONS, POST } from "./route";
 
 const makeContext = (path: string[]) => ({
   params: Promise.resolve({ path }),
@@ -10,6 +10,34 @@ const makeContext = (path: string[]) => ({
 describe("/api/v1/[...path] route", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([["pricing", "quote"], ["reservations"]])("preserves booking ownership and retry headers for %s", async (...path) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const request = new NextRequest(`http://localhost:3001/api/v1/${path.join("/")}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "X-Session-Id": "browser-session",
+        "Idempotency-Key": "booking-attempt",
+        "authorization": "Bearer must-not-forward",
+        "cookie": "admin=must-not-forward",
+        "x-forwarded-for": "untrusted",
+      },
+      body: "{}",
+    });
+    await POST(request, makeContext(path));
+    const headers = fetchMock.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get("x-session-id")).toBe("browser-session");
+    expect(headers.get("idempotency-key")).toBe("booking-attempt");
+    expect(headers.get("authorization")).toBeNull();
+    expect(headers.get("cookie")).toBeNull();
+    expect(headers.get("x-forwarded-for")).toBeNull();
+  });
+
+  it("allows the booking headers in preflight", async () => {
+    const response = await OPTIONS();
+    expect(response.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type, X-Session-Id, Idempotency-Key");
   });
 
   it("forwards public GET requests to the backend API", async () => {

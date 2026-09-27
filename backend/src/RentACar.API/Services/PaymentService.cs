@@ -1110,6 +1110,11 @@ public sealed class PaymentService(
             return 0m;
         }
 
+        if (reservation.PricingSnapshot is { } snapshot)
+        {
+            return snapshot.DepositAmount;
+        }
+
         var vehicle = await _dbContext.Vehicles
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == reservation.VehicleId, cancellationToken);

@@ -7,4 +7,5 @@ public sealed record UpdateOfficeRequest(
     string Phone,
     bool IsAirport,
     bool IsActive,
-    string OpeningHours);
+    string OpeningHours,
+    RentACar.Core.Entities.OfficeOperatingPolicy? OperatingPolicy = null);

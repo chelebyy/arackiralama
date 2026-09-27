@@ -14,6 +14,8 @@ public sealed class ReservationQuoteServiceTests
     private readonly Mock<IPricingService> _pricingService = new();
     private readonly Mock<IReservationExtraPricingService> _extraPricingService = new();
     private readonly Mock<IReservationQuoteStore> _quoteStore = new();
+    private readonly Mock<IVehicleRepository> _vehicleRepository = new();
+    private readonly Mock<IReservationRepository> _reservationRepository = new();
 
     [Fact]
     public async Task CreateAsync_AddsGenericExtrasToFinalTotalAndStoresSessionHash()
@@ -212,7 +214,71 @@ public sealed class ReservationQuoteServiceTests
         _pricingService.Object,
         _extraPricingService.Object,
         _quoteStore.Object,
-        NullLogger<ReservationQuoteService>.Instance);
+        NullLogger<ReservationQuoteService>.Instance,
+        _vehicleRepository.Object,
+        _reservationRepository.Object);
+
+    [Fact]
+    public async Task CreateAsync_BindsExactVehicleToVersionedQuote()
+    {
+        var request = ValidRequest() with { VehicleId = Guid.NewGuid(), CampaignCode = null };
+        SetupValidReferences(request);
+        _vehicleRepository.Setup(repository => repository.GetByIdAsync(request.VehicleId.Value, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Vehicle { Id = request.VehicleId.Value, GroupId = request.VehicleGroupId, OfficeId = request.PickupOfficeId });
+        _pricingService.Setup(service => service.CalculateBreakdownAsync(request.VehicleGroupId,
+            request.PickupOfficeId, request.ReturnOfficeId, request.PickupDateTimeUtc, request.ReturnDateTimeUtc,
+            null, 0, 0, request.DriverAge, false, It.IsAny<CancellationToken>())).ReturnsAsync(BaseBreakdown());
+        _extraPricingService.Setup(service => service.CalculateAsync(request.VehicleGroupId, request.Locale,
+            3, request.SelectedExtras, It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        ReservationQuoteV1? stored = null;
+        _quoteStore.Setup(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>()))
+            .Callback<ReservationQuoteV1, CancellationToken>((quote, _) => stored = quote).Returns(Task.CompletedTask);
+
+        var response = await CreateService().CreateAsync(request, "exact-session");
+
+        response.VehicleId.Should().Be(request.VehicleId);
+        stored!.VehicleId.Should().Be(request.VehicleId);
+        stored.SchemaVersion.Should().Be(2);
+        _reservationRepository.Verify(repository => repository.HasOverlappingReservationsAsync(
+            request.VehicleId.Value, request.PickupDateTimeUtc, request.ReturnDateTimeUtc, null,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("group")]
+    [InlineData("office")]
+    [InlineData("status")]
+    [InlineData("overlap")]
+    public async Task CreateAsync_RejectsIneligibleExactVehicleBeforePricing(string reason)
+    {
+        var request = ValidRequest() with { VehicleId = Guid.NewGuid() };
+        var vehicle = new Vehicle
+        {
+            Id = request.VehicleId.Value,
+            GroupId = reason == "group" ? Guid.NewGuid() : request.VehicleGroupId,
+            OfficeId = reason == "office" ? Guid.NewGuid() : request.PickupOfficeId,
+            Status = reason == "status" ? RentACar.Core.Enums.VehicleStatus.Maintenance : RentACar.Core.Enums.VehicleStatus.Available
+        };
+        _vehicleRepository.Setup(repository => repository.GetByIdAsync(request.VehicleId.Value, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reason == "missing" ? null : vehicle);
+        _reservationRepository.Setup(repository => repository.HasOverlappingReservationsAsync(
+            vehicle.Id, request.PickupDateTimeUtc, request.ReturnDateTimeUtc, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reason == "overlap");
+
+        var action = () => CreateService().CreateAsync(request, "exact-session");
+
+        await action.Should().ThrowAsync<ReservationQuoteConflictException>();
+        _quoteStore.Verify(store => store.SaveAsync(It.IsAny<ReservationQuoteV1>(), It.IsAny<CancellationToken>()), Times.Never);
+        _pricingService.Invocations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsEmptyExactVehicleIdentifier()
+    {
+        var action = () => CreateService().CreateAsync(ValidRequest() with { VehicleId = Guid.Empty }, "session");
+        await action.Should().ThrowAsync<ArgumentException>();
+    }
 
     [Fact]
     public async Task CreateAsync_ValidatesCampaignUsingTurkeyDateAndRentalDays()

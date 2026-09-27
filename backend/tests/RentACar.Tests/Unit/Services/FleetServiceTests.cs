@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Text.Json;
 using Moq;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Services;
@@ -176,6 +177,40 @@ public sealed class FleetServiceTests : IDisposable
         result!.Plate.Should().Be("34DEF456");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateVehicleAsync_AuditsCompletePreviousAndCurrentRentalTerms(bool hadTerms)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34AUD001", group.Id, office.Id);
+        var extra = new ReservationExtraOption { Code = "audit-extra", MaxQuantity = 1, IsActive = true };
+        _dbContext.ReservationExtraOptions.Add(extra);
+        var previous = hadTerms ? new VehicleRentalTerms
+        {
+            DepositAmount = 500, MinAge = 21, MinLicenseYears = 2,
+            Rates = [new() { StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31), DailyPrice = 1000 }]
+        } : null;
+        var current = new VehicleRentalTerms
+        {
+            DepositAmount = 1000, MinAge = 25, MinLicenseYears = 4, ExtraOptionIds = [extra.Id],
+            Rates = [new() { StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31),
+                DailyPrice = 1500, Priority = 2, WeekendMultiplier = 1.5m, CalculationType = "fixed" }]
+        };
+        vehicle.RentalTerms = previous;
+        await _dbContext.SaveChangesAsync();
+
+        await _sut.UpdateVehicleAsync(vehicle.Id, new UpdateVehicleRequest(vehicle.Plate, vehicle.Brand,
+            vehicle.Model, vehicle.Year, vehicle.Color, group.Id, office.Id, vehicle.Status, RentalTerms: current));
+
+        var audit = _dbContext.AuditLogs.Single(entry => entry.Action == "VehicleUpdated");
+        using var details = JsonDocument.Parse(audit.Details!);
+        details.RootElement.GetProperty("Previous").GetProperty("RentalTerms").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(previous));
+        details.RootElement.GetProperty("Current").GetProperty("RentalTerms").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(current));
+    }
+
     [Fact]
     public async Task UpdateVehicleAsync_WhenNotExists_ReturnsNull()
     {
@@ -186,6 +221,54 @@ public sealed class FleetServiceTests : IDisposable
         var result = await _sut.UpdateVehicleAsync(Guid.NewGuid(), request);
 
         result.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.Draft)]
+    [InlineData(ReservationStatus.Hold)]
+    [InlineData(ReservationStatus.PendingPayment)]
+    [InlineData(ReservationStatus.Paid)]
+    [InlineData(ReservationStatus.Active)]
+    [InlineData(ReservationStatus.UnpaidRequest)]
+    [InlineData(ReservationStatus.Confirmed)]
+    public async Task UpdateVehicleAsync_PreservesGroupForActiveSnapshotlessReservation(ReservationStatus status)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34LEG123", group.Id, office.Id);
+        vehicle.RentalTerms = new VehicleRentalTerms { DepositAmount = 9000m, MinAge = 23, MinLicenseYears = 3 };
+        await SeedReservationAsync(vehicle.Id, DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(5), status);
+        var auditCount = _dbContext.AuditLogs.Count();
+        foreach (var groupId in new Guid?[] { null, Guid.NewGuid() })
+        {
+            var request = new UpdateVehicleRequest("34NEW123", "Changed", "Changed", 2023, "Black", groupId, office.Id, VehicleStatus.Available);
+            var action = () => _sut.UpdateVehicleAsync(vehicle.Id, request);
+            await action.Should().ThrowAsync<ArgumentException>().WithMessage("*active reservations depend*");
+            vehicle.GroupId.Should().Be(group.Id);
+            vehicle.Plate.Should().Be("34LEG123");
+            _dbContext.AuditLogs.Count().Should().Be(auditCount);
+        }
+
+        var unchangedGroup = new UpdateVehicleRequest("34LEG123", "Updated", "Corolla", 2024, "White", group.Id, office.Id, VehicleStatus.Available);
+        (await _sut.UpdateVehicleAsync(vehicle.Id, unchangedGroup))!.Brand.Should().Be("Updated");
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.Completed, false)]
+    [InlineData(ReservationStatus.Cancelled, false)]
+    [InlineData(ReservationStatus.Expired, false)]
+    [InlineData(ReservationStatus.Confirmed, true)]
+    public async Task UpdateVehicleAsync_AllowsGroupRemovalWithoutActiveSnapshotDependency(ReservationStatus status, bool hasSnapshot)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34SAFE123", group.Id, office.Id);
+        vehicle.RentalTerms = new VehicleRentalTerms { DepositAmount = 9000m, MinAge = 23, MinLicenseYears = 3 };
+        var reservation = await SeedReservationAsync(vehicle.Id, DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(5), status);
+        if (hasSnapshot) reservation.PricingSnapshot = new ReservationPricingSnapshotV1 { DepositAmount = 2000m };
+        await _dbContext.SaveChangesAsync();
+
+        var request = new UpdateVehicleRequest(vehicle.Plate, vehicle.Brand, vehicle.Model, vehicle.Year, vehicle.Color, null, office.Id, VehicleStatus.Available);
+        (await _sut.UpdateVehicleAsync(vehicle.Id, request))!.GroupId.Should().BeNull();
+        if (hasSnapshot) reservation.PricingSnapshot!.DepositAmount.Should().Be(2000m);
     }
 
     [Fact]
@@ -257,6 +340,36 @@ public sealed class FleetServiceTests : IDisposable
         result!.Code.Should().Be("ala");
         result!.Name.Should().Be("Alanya Merkez");
         result!.IsActive.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateOfficeAsync_RecordsPreviousAndCurrentOperatingPolicy(bool hadPolicy)
+    {
+        var office = await SeedOfficeAsync("Alanya");
+        OfficeOperatingPolicy Policy(int minutes) => new()
+        {
+            MinimumNoticeMinutes = minutes,
+            PreparationMinutes = minutes,
+            PickupWindows = [new() { Day = DayOfWeek.Monday, StartMinute = minutes, EndMinute = 1200 }],
+            ReturnWindows = [new() { Day = DayOfWeek.Tuesday, StartMinute = minutes, EndMinute = 1300 }],
+            ClosedDates = [new DateOnly(2026, 12, minutes / 30)]
+        };
+        var previous = hadPolicy ? Policy(30) : null;
+        var current = Policy(60);
+        office.OperatingPolicy = previous;
+        await _dbContext.SaveChangesAsync();
+
+        await _sut.UpdateOfficeAsync(office.Id, new UpdateOfficeRequest(
+            "ala", "Alanya", "Address", "+900000000000", false, true, "09:00-18:00", current));
+
+        var audit = _dbContext.AuditLogs.Single(entry => entry.Action == "OfficeUpdated");
+        using var details = JsonDocument.Parse(audit.Details!);
+        details.RootElement.GetProperty("Previous").GetProperty("OperatingPolicy").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(previous));
+        details.RootElement.GetProperty("Current").GetProperty("OperatingPolicy").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(current));
     }
 
     [Fact]

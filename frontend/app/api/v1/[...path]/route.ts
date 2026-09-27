@@ -62,7 +62,7 @@ export async function OPTIONS() {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, X-Session-Id, Idempotency-Key",
     },
   });
 }
@@ -83,9 +83,11 @@ async function forward(
   const headers = new Headers();
   headers.set("accept", "application/json");
 
-  const contentType = req.headers.get("content-type");
-  if (contentType) {
-    headers.set("content-type", contentType);
+  for (const name of ["content-type", "x-session-id", "idempotency-key"]) {
+    const value = req.headers.get(name);
+    if (value) {
+      headers.set(name, value);
+    }
   }
 
   const init: RequestInit = {

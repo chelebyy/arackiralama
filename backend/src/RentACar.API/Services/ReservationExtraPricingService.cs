@@ -19,6 +19,19 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
         IReadOnlyList<SelectedReservationExtraInput> selections,
         CancellationToken cancellationToken = default)
     {
+        return await CalculateCoreAsync(vehicleGroupId, null, locale, rentalDays, selections, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ReservationQuotedExtraV1>> CalculateForVehicleAsync(
+        Vehicle vehicle, string locale, int rentalDays, IReadOnlyList<SelectedReservationExtraInput> selections,
+        CancellationToken cancellationToken = default) =>
+        CalculateCoreAsync(vehicle.GroupId ?? Guid.Empty, vehicle.RentalTerms?.ExtraOptionIds,
+            locale, rentalDays, selections, cancellationToken);
+
+    private async Task<IReadOnlyList<ReservationQuotedExtraV1>> CalculateCoreAsync(
+        Guid vehicleGroupId, Guid[]? allowedOptions, string locale, int rentalDays,
+        IReadOnlyList<SelectedReservationExtraInput> selections, CancellationToken cancellationToken)
+    {
         var normalizedLocale = NormalizeLocale(locale);
         if (rentalDays < 1)
         {
@@ -57,7 +70,7 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
         foreach (var selection in selections)
         {
             var option = options[selection.OptionId];
-            ValidateQuoteSelection(option, selection, vehicleGroupId);
+            ValidateQuoteSelection(option, selection, vehicleGroupId, allowedOptions);
             var translation = option.Translations.SingleOrDefault()
                 ?? throw new ArgumentException($"Extra option {option.Code} has no {normalizedLocale} translation.");
             var total = option.PricingMode == ReservationExtraPricingMode.PerDay
@@ -170,7 +183,7 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
     private static void ValidateQuoteSelection(
         ReservationExtraOption option,
         SelectedReservationExtraInput selection,
-        Guid vehicleGroupId)
+        Guid vehicleGroupId, Guid[]? allowedOptions = null)
     {
         if (!option.IsActive || option.IsArchived)
         {
@@ -184,7 +197,8 @@ public sealed class ReservationExtraPricingService(IApplicationDbContext dbConte
         {
             throw new ReservationQuoteConflictException($"Extra option {option.Code} exceeds its maximum quantity.");
         }
-        if (option.VehicleGroups.All(group => group.VehicleGroupId != vehicleGroupId))
+        if (allowedOptions is null ? option.VehicleGroups.All(group => group.VehicleGroupId != vehicleGroupId)
+            : !allowedOptions.Contains(option.Id))
         {
             throw new ReservationQuoteConflictException($"Extra option {option.Code} is not available for this vehicle group.");
         }

@@ -129,6 +129,10 @@ public sealed class AdminReservationsController(
 
             return OkResponse(reservation, "Arac rezervasyona atandi.");
         }
+        catch (ReservationQuoteConflictException ex)
+        {
+            return Conflict(ApiResponse<object>.Fail(ex.Message));
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequestResponse(ex.Message);
@@ -146,7 +150,15 @@ public sealed class AdminReservationsController(
             return NotFound(ApiResponse<object>.Fail("Rezervasyon bulunamadi."));
         }
 
-        var reservation = await reservationService.UnassignVehicleAsync(id, cancellationToken);
+        ReservationDto? reservation;
+        try
+        {
+            reservation = await reservationService.UnassignVehicleAsync(id, cancellationToken);
+        }
+        catch (ReservationQuoteConflictException ex)
+        {
+            return Conflict(ApiResponse<object>.Fail(ex.Message));
+        }
 
         if (reservation == null)
         {

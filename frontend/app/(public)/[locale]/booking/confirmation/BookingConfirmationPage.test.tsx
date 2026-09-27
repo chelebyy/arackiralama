@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import BookingConfirmationPage from "./page";
 
@@ -11,6 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "tr",
   useTranslations: () => (key: string) => key,
 }));
 
@@ -74,6 +76,19 @@ describe("BookingConfirmationPage", () => {
     expect(screen.getByText("booking.confirmation.instructions")).toBeInTheDocument();
     expect(screen.queryByText("booking.payment.summary.title")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "navigation.home" })).toHaveAttribute("href", "/");
+  });
+
+  it("keeps the code and retries failed exact-booking verification without claiming a temporary request", async () => {
+    const user = userEvent.setup();
+    searchParams = new URLSearchParams({ code: "TEST-CODE", request: "unpaid", preferredVehicleId: "vehicle-1" });
+    getReservationByPublicCodeMock.mockRejectedValueOnce(new Error("rate limited")).mockResolvedValueOnce({ publicCode: "TEST-CODE", status: "Confirmed", vehicleGroupName: "Exact vehicle", pickupDateTime: "2026-10-10T07:00:00Z", returnDateTime: "2026-10-13T07:00:00Z", totalAmount: 3600, currency: "TRY" });
+    render(<BookingConfirmationPage />);
+    expect(await screen.findByText("booking.confirmation.verificationFailed")).toBeInTheDocument();
+    expect(screen.getByText("TEST-CODE")).toBeInTheDocument();
+    expect(screen.queryByText("booking.confirmation.unpaidRequestMessage")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "booking.confirmation.retryDetails" }));
+    expect(await screen.findByText("booking.payAtPickup.confirmedTitle")).toBeInTheDocument();
+    expect(getReservationByPublicCodeMock).toHaveBeenCalledTimes(2);
   });
 
   it("uses the unpaid request confirmation copy when requested", () => {
