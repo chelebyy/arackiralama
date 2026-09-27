@@ -502,8 +502,9 @@ public sealed class ReservationService : IReservationService
 
             if (reservation.Status == ReservationStatus.Confirmed)
             {
-                await QueueReservationConfirmedNotificationsAsync(reservation, cancellationToken);
-                await QueueReservationReminderNotificationsAsync(reservation, cancellationToken);
+                var notificationLocale = ResolveNotificationLocale(NormalizeLocale(request.Locale));
+                await QueueReservationConfirmedNotificationsAsync(reservation, cancellationToken, notificationLocale);
+                await QueueReservationReminderNotificationsAsync(reservation, cancellationToken, notificationLocale);
             }
 
             if (transaction != null)
@@ -2059,7 +2060,10 @@ public sealed class ReservationService : IReservationService
             ? null
             : request.CampaignCode.Trim().ToUpperInvariant();
         var submittedDateOfBirth = request.Driver?.DateOfBirth ?? request.Customer?.DateOfBirth;
-        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, request.PickupDateTimeUtc);
+        var pickupDate = request.VehicleId.HasValue
+            ? RentalCalendar.TurkeyDate(NormalizeUtc(request.PickupDateTimeUtc)).ToDateTime(TimeOnly.MinValue)
+            : request.PickupDateTimeUtc;
+        var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, pickupDate);
         if (quote.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
             quote.VehicleId != request.VehicleId ||
             quote.VehicleGroupId != request.VehicleGroupId ||
@@ -2802,7 +2806,8 @@ public sealed class ReservationService : IReservationService
 
     private async Task QueueReservationConfirmedNotificationsAsync(
         Reservation reservation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? localeOverride = null)
     {
         var customer = await ResolveCustomerAsync(reservation, cancellationToken);
         if (customer == null)
@@ -2810,7 +2815,7 @@ public sealed class ReservationService : IReservationService
             return;
         }
 
-        var locale = ResolveNotificationLocale(customer.Nationality);
+        var locale = localeOverride ?? ResolveNotificationLocale(customer.Nationality);
         var variables = new Dictionary<string, string>
         {
             ["PublicCode"] = reservation.PublicCode
@@ -2845,7 +2850,8 @@ public sealed class ReservationService : IReservationService
 
     private async Task QueueReservationReminderNotificationsAsync(
         Reservation reservation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? localeOverride = null)
     {
         var customer = await ResolveCustomerAsync(reservation, cancellationToken);
         if (customer == null)
@@ -2853,7 +2859,7 @@ public sealed class ReservationService : IReservationService
             return;
         }
 
-        var locale = ResolveNotificationLocale(customer.Nationality);
+        var locale = localeOverride ?? ResolveNotificationLocale(customer.Nationality);
         var variables = new Dictionary<string, string>
         {
             ["PublicCode"] = reservation.PublicCode

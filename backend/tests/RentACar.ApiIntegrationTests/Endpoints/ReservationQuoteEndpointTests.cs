@@ -678,11 +678,15 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task UnpaidConfirmation_QueuesNotificationsOnceOnlyForExactBooking(bool exact)
+    [InlineData(false, "tr", "tr-TR")]
+    [InlineData(true, "tr", "tr-TR")]
+    [InlineData(true, "en", "en-US")]
+    [InlineData(true, "de", "de-DE")]
+    [InlineData(true, "ar", "ar-SA")]
+    [InlineData(true, "ru", "ru-RU")]
+    public async Task UnpaidConfirmation_QueuesNotificationsOnceOnlyForExactBooking(bool exact, string locale, string notificationLocale)
     {
-        var input = ExactInput() with { VehicleId = exact ? TestDataSeeder.GroupOneId : null };
+        var input = ExactInput() with { VehicleId = exact ? TestDataSeeder.GroupOneId : null, Locale = locale };
         var session = Guid.NewGuid().ToString();
         using var quote = await SendExactQuoteAsync(input, session);
         quote.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -703,6 +707,8 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             jobs.Count(j => j.ScheduledAt == input.ReturnDateTimeUtc.AddHours(-24)).Should().Be(2);
             jobs.Select(j => JsonDocument.Parse(j.Payload).RootElement.GetProperty("TemplateKey").GetString())
                 .Distinct().Should().HaveCount(3);
+            jobs.Select(j => JsonDocument.Parse(j.Payload).RootElement.GetProperty("Locale").GetString())
+                .Should().OnlyContain(value => value == notificationLocale);
         }
     }
 
@@ -1125,12 +1131,51 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         saved.Status.Should().Be(change == "none" ? ReservationStatus.Hold : ReservationStatus.Draft);
     }
 
+    [Theory]
+    [InlineData(20, 29, false)]
+    [InlineData(21, 30, false)]
+    [InlineData(22, 30, false)]
+    [InlineData(23, 30, false)]
+    [InlineData(21, 30, true)]
+    [InlineData(21, 29, false)]
+    public async Task ExactBirthdayBooking_ValidatesAgeOnTurkeyPickupDate(int utcHour, int quotedAge, bool unpaid)
+    {
+        var birthday = DateTime.UtcNow.Date.AddDays(11);
+        var pickup = birthday.AddDays(-1).AddHours(utcHour);
+        var input = ExactInput() with { PickupDateTimeUtc = pickup, ReturnDateTimeUtc = pickup.AddDays(3), DriverAge = quotedAge };
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK, await quote.Content.ReadAsStringAsync());
+        var original = ExactReservation(input, await QuoteIdAsync(quote));
+        var request = original with { Customer = original.Customer with { DateOfBirth = birthday.AddYears(-30) } };
+        var accepted = quotedAge == (utcHour >= 21 ? 30 : 29);
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        created.StatusCode.Should().Be(accepted ? HttpStatusCode.OK : HttpStatusCode.Conflict, await created.Content.ReadAsStringAsync());
+        if (!accepted)
+        {
+            (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(0);
+            return;
+        }
+        using var json = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var id = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        if (!unpaid)
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{id}/hold");
+            message.Headers.Add("X-Session-Id", session);
+            using var hold = await Client.SendAsync(message);
+            hold.StatusCode.Should().Be(HttpStatusCode.OK, await hold.Content.ReadAsStringAsync());
+        }
+        using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
+        (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(1);
+    }
+
     private static CreateReservationRequest ExactReservation(CreateReservationQuoteRequest input, Guid quoteId) => new()
     {
         VehicleId = input.VehicleId, VehicleGroupId = input.VehicleGroupId,
         PickupOfficeId = input.PickupOfficeId, ReturnOfficeId = input.ReturnOfficeId,
         PickupDateTimeUtc = input.PickupDateTimeUtc, ReturnDateTimeUtc = input.ReturnDateTimeUtc,
-        QuoteId = quoteId, DriverAge = input.DriverAge,
+        QuoteId = quoteId, DriverAge = input.DriverAge, Locale = input.Locale,
         Driver = new DriverInfoRequest { LicenseExpiryDate = input.ReturnDateTimeUtc.AddYears(2) },
         Customer = new CustomerInfoRequest
         {

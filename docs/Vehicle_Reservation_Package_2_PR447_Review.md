@@ -1,6 +1,23 @@
 # PR 447 review corrections
 
-This record covers ten correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers eleven correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Eleventh review: starting head 05c5ac2e490886f287904b601a8f42f867379a46
+
+| Finding | Correction |
+|---|---|
+| Codex r4115165775 | Exact quote validation normalizes the pickup timestamp and calculates submitted driver age from RentalCalendar.TurkeyDate, matching authoritative eligibility and hold validation. Group-only legacy age behavior remains unchanged. |
+| Codex r4115165778 | Immediate exact pay-at-pickup confirmation passes the normalized checkout language, mapped to the supported notification culture, into both confirmation and reminder queue methods. Existing call sites retain the nationality fallback. |
+
+### Validation and scope
+
+- 107 focused ReservationServiceTests, ReservationServiceQuotePersistenceTests and VehicleBookingPolicyTests passed.
+- All 13 selected real PostgreSQL/Redis API cases passed. Six birthday cases cover the preceding Turkey evening and midnight through 02:00 on the birthday, draft and immediate confirmation, successful hold/replay and rejection of an incorrect quoted age.
+- Notification cases cover Turkish, English, German, Arabic and Russian email/SMS confirmation and pickup/return reminder payloads. An identical replay leaves exactly six jobs; the legacy group path still queues none here. The existing queue-failure case proves rollback and successful retry.
+- Backend compilation and whitespace checks passed. No frontend changes, production build, browser or device rerun. Native command results stalled during validation; context-mode command execution supplied the recorded passing results after verifying the persisted edits.
+- Planning and scoped source review preserved server-side age eligibility, operation/session replay checks, transactional notification creation and idempotence. Reviewed: Turkey calendar boundary, checkout-to-queue locale mapping, existing notification fallback and rollback behavior. No additional material issue was found in these paths.
+- Not reviewed: unrelated authorization, external email/SMS delivery, payment providers, production configuration, browser rendering or full accessibility. Tests enqueue jobs locally; they do not send external notifications. No new dependency, external API or schema change; Context7 was unnecessary for this business-logic correction.
+- Starting-head CI passed all ten active checks; GHCR publication was skipped. A fresh fetch confirmed remote default and local main at f1c34fecde4b0b9a79ffa19201d744d1be33c6ba. Work continues on the existing PR branch from 05c5ac2. New-head CI and renewed Codex review remain separate gates.
 
 ## Tenth review: starting head b3a9748f89998a4470b80805ab78b87d053768d6
 
