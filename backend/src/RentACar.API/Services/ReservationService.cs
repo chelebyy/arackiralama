@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -882,6 +883,8 @@ public sealed class ReservationService : IReservationService
         CancellationToken cancellationToken = default)
     {
         string? holdCreationLockKey = null;
+        var holdCreationLockToken = Guid.NewGuid().ToString("N");
+        var lockAcquired = false;
 
         var reservation = await _reservationRepository.GetByIdAsync(reservationId, cancellationToken);
         if (reservation == null)
@@ -946,21 +949,27 @@ public sealed class ReservationService : IReservationService
 
         try
         {
-            holdCreationLockKey = BuildHoldCreationLockKey(
-                vehicleGroupId ?? exactVehicleId!.Value,
+            holdCreationLockKey = exactVehicleId.HasValue
+                ? $"hold:exact:{exactVehicleId.Value:N}"
+                : BuildHoldCreationLockKey(
+                vehicleGroupId!.Value,
                 reservation.PickupDateTime,
                 reservation.ReturnDateTime,
                 sessionId);
 
-            var lockAcquired = await _redis.GetDatabase().StringSetAsync(
-                holdCreationLockKey,
-                reservationId.ToString("N"),
-                _holdCreationLockTtl,
-                When.NotExists,
-                CommandFlags.None);
+            for (var attempt = 0; attempt < (exactVehicleId.HasValue ? 21 : 1); attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (attempt > 0) await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                lockAcquired = await _redis.GetDatabase().LockTakeAsync(
+                    holdCreationLockKey, holdCreationLockToken, _holdCreationLockTtl, CommandFlags.None);
+                if (lockAcquired) break;
+            }
 
             if (!lockAcquired)
             {
+                if (exactVehicleId.HasValue)
+                    throw new ReservationQuoteConflictException("Reservation is already being used. Please retry.");
                 _logger.LogWarning(
                     "CreateHoldAsync lock is already held for vehicle group {VehicleGroupId} between {PickupDate} and {ReturnDate}",
                     reservation.VehicleId,
@@ -1116,9 +1125,9 @@ public sealed class ReservationService : IReservationService
         }
         finally
         {
-            if (holdCreationLockKey is not null)
+            if (lockAcquired && holdCreationLockKey is not null)
             {
-                await _redis.GetDatabase().KeyDeleteAsync(holdCreationLockKey);
+                await _redis.GetDatabase().LockReleaseAsync(holdCreationLockKey, holdCreationLockToken, CommandFlags.None);
             }
         }
     }
@@ -1899,6 +1908,8 @@ public sealed class ReservationService : IReservationService
         }
 
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty ? request.PickupOfficeId : request.ReturnOfficeId;
+        if (request.VehicleId.HasValue)
+            ValidatePersistedQuoteReplayProof(reservation, request, returnOfficeId);
         var quote = _quoteStore is null
             ? null
             : await _quoteStore.GetAsync(request.QuoteId.Value, cancellationToken);
@@ -2014,7 +2025,16 @@ public sealed class ReservationService : IReservationService
             extras);
 
         return request.VehicleId.HasValue
-            ? $"reservation-quote-replay-v2|{request.VehicleId.Value:N}|{canonicalRequest}|{snapshot.BookingConditions?.PolicyFingerprint ?? string.Empty}"
+            ? JsonSerializer.Serialize(new
+            {
+                Version = "reservation-quote-replay-v2",
+                request.VehicleId,
+                Offer = canonicalRequest,
+                snapshot.BookingConditions?.PolicyFingerprint,
+                request.Customer,
+                request.Driver,
+                request.Notes
+            })
             : canonicalRequest;
     }
 

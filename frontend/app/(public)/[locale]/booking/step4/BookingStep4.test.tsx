@@ -565,11 +565,11 @@ describe("BookingStep4Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("does not mint a new quote when the current quote is already in use", async () => {
+  it.each(["reservation", "hold"])("does not mint a new quote when %s is already in use", async (stage) => {
     const user = userEvent.setup();
-    createReservationMock.mockRejectedValueOnce(new ApiError({
+    (stage === "hold" ? placeHoldMock : createReservationMock).mockRejectedValueOnce(new ApiError({
       statusCode: 409,
-      message: "Reservation quote is already being used or was consumed.",
+      message: stage === "hold" ? "Reservation is already being used. Please retry." : "Reservation quote is already being used or was consumed.",
       code: "CONFLICT",
       timestamp: "2026-07-12T14:00:00Z",
       path: "/api/reservations",
@@ -591,6 +591,7 @@ describe("BookingStep4Page", () => {
     expect(getPublicReservationExtraOptionsMock).not.toHaveBeenCalled();
     expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
     expect(updateExtrasMock).not.toHaveBeenCalled();
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
 

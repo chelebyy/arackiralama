@@ -13,7 +13,9 @@ using RentACar.ApiIntegrationTests.Infrastructure;
 using RentACar.Core.Entities;
 using RentACar.Core.Constants;
 using RentACar.Core.Enums;
+using RentACar.Core.Interfaces;
 using RentACar.Infrastructure.Data;
+using StackExchange.Redis;
 using Xunit;
 
 namespace RentACar.ApiIntegrationTests.Endpoints;
@@ -858,6 +860,180 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.QuoteId == request.QuoteId));
         saved.Status.Should().Be(unpaidFirst ? ReservationStatus.Confirmed : ReservationStatus.Draft);
         saved.QuoteReplayProof!.CheckoutOperation.Should().Be(unpaidFirst ? "unpaid" : "draft");
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExactReplay_RejectsChangedPersonalDetailsWithWarmAndExpiredQuote(bool unpaid, bool expired)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        if (expired)
+        {
+            var redis = Services.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
+            (await redis.KeyDeleteAsync($"reservation_quote:{request.QuoteId:N}")).Should().BeTrue();
+            (await Services.GetRequiredService<IReservationQuoteStore>().GetAsync(request.QuoteId!.Value)).Should().BeNull();
+        }
+        CreateReservationRequest[] changes =
+        [
+            request with { Customer = request.Customer with { Email = "changed@example.test" } },
+            request with { Driver = request.Driver! with { LicenseExpiryDate = input.ReturnDateTimeUtc.AddYears(3) } }
+        ];
+        foreach (var changed in changes)
+        {
+            using var rejected = await SendReservationAsync(changed, session, Guid.NewGuid().ToString(), unpaid);
+            rejected.StatusCode.Should().Be(HttpStatusCode.Conflict, await rejected.Content.ReadAsStringAsync());
+        }
+        using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
+        var saved = await WithDbContextAsync(db => db.Reservations.Include(r => r.Customer).SingleAsync());
+        saved.Customer!.FullName.Should().Be($"{request.Customer.FirstName} {request.Customer.LastName}");
+        saved.DriverLicenseExpiryDate.Should().Be(request.Driver!.LicenseExpiryDate);
+        saved.Notes.Should().Be(request.Notes);
+    }
+
+    [Fact]
+    public async Task ExactQuote_ExtrasOrderDoesNotChangeFingerprintOrInvalidateHold()
+    {
+        var extras = await WithDbContextAsync(async db =>
+        {
+            var options = await db.ReservationExtraOptions.OrderBy(e => e.Id).Take(2).ToListAsync();
+            options.Should().HaveCount(2);
+            foreach (var option in options)
+            {
+                option.IsActive = true;
+                option.IsArchived = false;
+            }
+            var vehicle = await db.Vehicles.SingleAsync(v => v.Id == TestDataSeeder.GroupOneId);
+            vehicle.RentalTerms!.ExtraOptionIds = options.Select(e => e.Id).ToArray();
+            await db.SaveChangesAsync();
+            return options.Select(e => new SelectedReservationExtraInput { OptionId = e.Id, OptionVersion = e.Version, Quantity = 1 }).ToArray();
+        });
+        var input = ExactInput() with { SelectedExtras = extras };
+        var session = Guid.NewGuid().ToString();
+        using var first = await SendExactQuoteAsync(input, session);
+        using var second = await SendExactQuoteAsync(input with { SelectedExtras = extras.Reverse().ToArray() }, session);
+        first.StatusCode.Should().Be(HttpStatusCode.OK, await first.Content.ReadAsStringAsync());
+        second.StatusCode.Should().Be(HttpStatusCode.OK, await second.Content.ReadAsStringAsync());
+        var store = Services.GetRequiredService<IReservationQuoteStore>();
+        var firstQuote = await store.GetAsync(await QuoteIdAsync(first));
+        var secondQuote = await store.GetAsync(await QuoteIdAsync(second));
+        firstQuote!.PricingSnapshot.BookingConditions!.PolicyFingerprint.Should().Be(secondQuote!.PricingSnapshot.BookingConditions!.PolicyFingerprint);
+        using var draft = await SendReservationAsync(ExactReservation(input, firstQuote.QuoteId), session, Guid.NewGuid().ToString());
+        draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var reservation = await db.Reservations.Include(r => r.Vehicle).Include(r => r.SelectedExtras).SingleAsync();
+        reservation.SelectedExtras = reservation.SelectedExtras.OrderByDescending(e => e.ExtraOptionId).ToList();
+        await scope.ServiceProvider.GetRequiredService<VehicleBookingService>().ValidateDraftForHoldAsync(reservation, CancellationToken.None);
+        await transaction.RollbackAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConcurrentExactHolds_SerializeOneVehicleWithoutBlockingAnother(bool sameVehicle)
+    {
+        var secondId = sameVehicle ? TestDataSeeder.GroupOneId : await WithDbContextAsync(async db =>
+        {
+            var original = await db.Vehicles.AsNoTracking().SingleAsync(v => v.Id == TestDataSeeder.GroupOneId);
+            var other = new Vehicle
+            {
+                Plate = "SYNTHETIC-PARALLEL", Brand = original.Brand, Model = original.Model,
+                Year = original.Year, GroupId = original.GroupId, OfficeId = original.OfficeId,
+                RentalTerms = original.RentalTerms
+            };
+            db.Vehicles.Add(other);
+            await db.SaveChangesAsync();
+            return other.Id;
+        });
+        var requests = new List<(Guid Id, string Session)>();
+        foreach (var vehicleId in new[] { TestDataSeeder.GroupOneId, secondId })
+        {
+            var input = ExactInput() with { VehicleId = vehicleId };
+            var session = Guid.NewGuid().ToString();
+            using var quote = await SendExactQuoteAsync(input, session);
+            quote.StatusCode.Should().Be(HttpStatusCode.OK, await quote.Content.ReadAsStringAsync());
+            using var draft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(quote)), session, Guid.NewGuid().ToString());
+            draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+            using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+            requests.Add((json.RootElement.GetProperty("data").GetProperty("id").GetGuid(), session));
+        }
+        var results = await Task.WhenAll(requests.Select(async request =>
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{request.Id}/hold");
+            message.Headers.Add("X-Session-Id", request.Session);
+            using var response = await Client.SendAsync(message);
+            return (response.StatusCode, Body: await response.Content.ReadAsStringAsync());
+        }));
+        results.Count(r => r.StatusCode == HttpStatusCode.OK).Should().Be(sameVehicle ? 1 : 2,
+            string.Join("; ", results.Select(r => r.Body)));
+        if (sameVehicle)
+        {
+            var loser = results.Single(r => r.StatusCode != HttpStatusCode.OK);
+            loser.StatusCode.Should().Be(HttpStatusCode.Conflict, loser.Body);
+            loser.Body.Should().Contain("Selected vehicle is unavailable");
+        }
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().ToListAsync());
+        saved.Count(r => r.Status == ReservationStatus.Hold).Should().Be(sameVehicle ? 1 : 2);
+        saved.Select(r => r.VehicleId).Should().BeEquivalentTo(new[] { TestDataSeeder.GroupOneId, secondId });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExactHold_ContentionPreservesOwnerAndAllowsRetry(bool releaseDuringWait)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var draft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(quote)), session, Guid.NewGuid().ToString());
+        draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+        var id = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        var redis = Services.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
+        var key = $"hold:exact:{input.VehicleId:N}";
+        var owner = Guid.NewGuid().ToString();
+        (await redis.LockTakeAsync(key, owner, TimeSpan.FromSeconds(30))).Should().BeTrue();
+        try
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{id}/hold");
+            message.Headers.Add("X-Session-Id", session);
+            var pending = Client.SendAsync(message);
+            if (releaseDuringWait)
+            {
+                await Task.Delay(250);
+                pending.IsCompleted.Should().BeFalse();
+                (await redis.LockReleaseAsync(key, owner)).Should().BeTrue();
+            }
+            using var response = await pending;
+            response.StatusCode.Should().Be(releaseDuringWait ? HttpStatusCode.OK : HttpStatusCode.Conflict,
+                await response.Content.ReadAsStringAsync());
+            if (!releaseDuringWait)
+            {
+                (await response.Content.ReadAsStringAsync()).Should().Contain("already being used");
+                (await redis.StringGetAsync(key)).ToString().Should().Be(owner);
+                (await redis.LockReleaseAsync(key, owner)).Should().BeTrue();
+                using var retry = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{id}/hold");
+                retry.Headers.Add("X-Session-Id", session);
+                using var retried = await Client.SendAsync(retry);
+                retried.StatusCode.Should().Be(HttpStatusCode.OK, await retried.Content.ReadAsStringAsync());
+            }
+        }
+        finally
+        {
+            await redis.LockReleaseAsync(key, owner);
+        }
     }
 
     private static CreateReservationRequest ExactReservation(CreateReservationQuoteRequest input, Guid quoteId) => new()

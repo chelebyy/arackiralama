@@ -84,17 +84,17 @@ public sealed class ReservationServiceTests
             .Returns(_redisDatabaseMock.Object);
 
         _redisDatabaseMock
-            .Setup(x => x.StringSetAsync(
+            .Setup(x => x.LockTakeAsync(
                 It.IsAny<RedisKey>(),
                 It.IsAny<RedisValue>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<When>(),
+                It.IsAny<TimeSpan>(),
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(true);
 
         _redisDatabaseMock
-            .Setup(x => x.KeyDeleteAsync(
+            .Setup(x => x.LockReleaseAsync(
                 It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
                 CommandFlags.None))
             .ReturnsAsync(true);
 
@@ -1092,6 +1092,8 @@ public sealed class ReservationServiceTests
     [InlineData("cached-other")]
     [InlineData("changed-selection")]
     [InlineData("wrong-session")]
+    [InlineData("lock-retry")]
+    [InlineData("lock-timeout")]
     public async Task CreateHoldAsync_ExactVehicleNeverFallsBackToAnotherGroupMember(string scenario)
     {
         var selected = new Vehicle { GroupId = Guid.NewGuid(), OfficeId = Guid.NewGuid() };
@@ -1129,10 +1131,28 @@ public sealed class ReservationServiceTests
         }
 
         ReservationHoldDto? result = null;
+        var lockKey = $"hold:exact:{selected.Id:N}";
+        if (scenario == "lock-retry")
+        {
+            _redisDatabaseMock.SetupSequence(db => db.LockTakeAsync(lockKey, It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan>(), CommandFlags.None)).ReturnsAsync(false).ReturnsAsync(true);
+        }
+        if (scenario == "lock-timeout")
+        {
+            _redisDatabaseMock.Setup(db => db.LockTakeAsync(lockKey, It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan>(), CommandFlags.None)).ReturnsAsync(false);
+        }
         if (scenario is "overlap" or "status")
         {
             var hold = () => _sut.CreateHoldAsync(reservation.Id, "session");
             await hold.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("Selected vehicle is unavailable*");
+        }
+        else if (scenario == "lock-timeout")
+        {
+            var hold = () => _sut.CreateHoldAsync(reservation.Id, "session");
+            await hold.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*already being used*");
+            _redisDatabaseMock.Verify(db => db.LockReleaseAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(),
+                CommandFlags.None), Times.Never);
         }
         else
         {
@@ -1141,10 +1161,16 @@ public sealed class ReservationServiceTests
 
         _holdServiceMock.Verify(service => service.CreateHoldAsync(reservation.Id, other.Id,
             It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
-        if (scenario == "available")
+        if (scenario is "available" or "lock-retry")
         {
             result.Should().NotBeNull();
             reservation.VehicleId.Should().Be(selected.Id);
+            var acquisition = _redisDatabaseMock.Invocations.Last(call => call.Method.Name == "LockTakeAsync");
+            acquisition.Arguments[0].Should().Be((RedisKey)lockKey);
+            var token = (RedisValue)acquisition.Arguments[1];
+            _redisDatabaseMock.Verify(db => db.LockReleaseAsync(lockKey, token, CommandFlags.None), Times.Once);
+            _redisDatabaseMock.Verify(db => db.LockTakeAsync(lockKey, token, It.IsAny<TimeSpan>(),
+                CommandFlags.None), Times.Exactly(scenario == "lock-retry" ? 2 : 1));
         }
         else
         {
@@ -1377,11 +1403,10 @@ public sealed class ReservationServiceTests
             .ReturnsAsync(reservation);
 
         _redisDatabaseMock
-            .Setup(x => x.StringSetAsync(
+            .Setup(x => x.LockTakeAsync(
                 It.IsAny<RedisKey>(),
                 It.IsAny<RedisValue>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<When>(),
+                It.IsAny<TimeSpan>(),
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(false);
 

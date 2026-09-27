@@ -148,11 +148,40 @@ public sealed class ReservationServiceQuotePersistenceTests
         }
 
         var created = await service.CreateDraftReservationAsync(request);
+        async Task RejectPersonalChangesAsync()
+        {
+            var driver = request.Driver ?? new DriverInfoRequest();
+            CreateReservationRequest[] changes =
+            [
+                request with { Customer = request.Customer with { FirstName = "Changed" } },
+                request with { Customer = request.Customer with { LastName = "Changed" } },
+                request with { Customer = request.Customer with { Email = "changed@example.test" } },
+                request with { Customer = request.Customer with { Phone = "+900000000001" } },
+                request with { Customer = request.Customer with { IdentityNumber = "SYNTHETIC-123" } },
+                request with { Customer = request.Customer with { DriverLicenseNumber = "SYNTHETIC-456" } },
+                request with { Customer = request.Customer with { DateOfBirth = pickup.AddYears(-30) } },
+                request with { Customer = request.Customer with { DriverLicenseIssueDate = pickup.AddYears(-5) } },
+                request with { Driver = driver with { FirstName = "Changed" } },
+                request with { Driver = driver with { LastName = "Changed" } },
+                request with { Driver = driver with { LicenseNumber = "SYNTHETIC-789" } },
+                request with { Driver = driver with { LicenseCountry = "DE" } },
+                request with { Driver = driver with { DateOfBirth = pickup.AddYears(-30) } },
+                request with { Driver = driver with { LicenseIssueDate = pickup.AddYears(-5) } },
+                request with { Driver = driver with { LicenseExpiryDate = pickup.AddYears(3) } },
+                request with { Notes = "Changed pickup instructions" }
+            ];
+            foreach (var changed in changes)
+            {
+                var replay = () => service.CreateDraftReservationAsync(changed);
+                await replay.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*inputs*");
+            }
+        }
         created.VehicleId.Should().Be(vehicle.Id);
         var warmCrossOperation = () => service.CreateUnpaidRequestAsync(request);
         await warmCrossOperation.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*checkout operation*");
         if (exact)
         {
+            await RejectPersonalChangesAsync();
             var changedVehicle = () => service.CreateDraftReservationAsync(request with { VehicleId = otherVehicle.Id });
             var removedVehicle = () => service.CreateDraftReservationAsync(request with { VehicleId = null });
             await changedVehicle.Should().ThrowAsync<ReservationQuoteConflictException>();
@@ -169,6 +198,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         }
         quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ReservationQuoteV1?)null);
+        if (exact) await RejectPersonalChangesAsync();
         var replayed = await service.CreateDraftReservationAsync(request with { IdempotencyKey = "idempotency-456" });
         var coldCrossOperation = () => service.CreateUnpaidRequestAsync(request);
         await coldCrossOperation.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*checkout operation*");

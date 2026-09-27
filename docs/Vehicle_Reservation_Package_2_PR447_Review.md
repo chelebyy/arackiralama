@@ -1,6 +1,25 @@
 # PR 447 review corrections
 
-This record covers eight correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers nine correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Ninth review: starting head 9de0e982a7e76d372b1ce0f7e1c62d6535817e07
+
+| Finding | Correction |
+|---|---|
+| Codex r4115020994 | Sort quoted extras by option ID and version before hashing the booking policy. Reversed request order and reversed persisted selection order retain the accepted fingerprint. |
+| Codex r4115021000 | Key exact allocation locks by vehicle, retry contention for up to 21 attempts with 100 ms delays, and return a retryable 409 when still busy. A unique acquisition token and atomic LockReleaseAsync prevent a losing or expired owner from deleting another request's lock. Legacy group lock keys and single-attempt behavior remain compatible. |
+| Codex r4115021004 | Hash a structured exact replay payload containing customer, driver and notes inputs in addition to the accepted offer. Validate the persisted proof even while the Redis quote exists. Changed inputs return 409; identical inputs with a new idempotency key resolve to the existing reservation. Legacy group replay remains unchanged; earlier exact fingerprints fail closed. |
+
+### Validation and scope
+
+- 148 focused backend unit tests passed, including all 16 personal-input changes with warm and cold quote state, lock retries, contention timeout and token-matched release.
+- The initial full ReservationQuoteEndpointTests run passed 47 cases and failed four new personal-input cases because their large HTTP matrix hit the existing five-request rate limit. Production limits were preserved. The complete field matrix moved to service tests; HTTP coverage retains changed email and licence expiry plus identical retry for draft/unpaid and warm/cold combinations.
+- The corrected nine-case real PostgreSQL/Redis run passed. It includes the four replay combinations, canonical extras with reversed persisted order, lock ownership on timeout and subsequent retry, acquisition after contention clears, and simultaneous holds for the same versus different exact vehicles. Across the two runs, all 53 distinct API cases have a passing result; the complete API class was not rerun after the test-only corrections.
+- 41 frontend tests passed across checkout and reservation hooks, including a busy hold returning 409 without creating a replacement quote or starting payment. TypeScript and lint passed; lint retains one existing SearchForm.test.tsx warning. No frontend production changes, production build, browser or device rerun.
+- Planning and scoped source review covered replay identity/session/operation boundaries, unchanged input preservation, lock ownership, bounded waiting and cancellation, and authoritative database overlap enforcement. No additional material concern was identified in these changed paths. Replay inputs are hashed, not added to logs or persisted as another plaintext payload.
+- Not reviewed: unrelated authorization paths, external payment providers, production configuration/migrations/restore, browser rendering or full accessibility. Local API tests use isolated databases and Redis prefixes. No security guarantee is implied.
+- Tools run: focused tests, real API tests, TypeScript, lint, source/diff and whitespace checks. Context7 supplied StackExchange.Redis ownership-token guidance for LockTakeAsync/LockReleaseAsync. Initial test compilation errors were corrected to use the actual Customer.FullName and mutable VehicleRentalTerms model.
+- Starting-head CI passed all ten active checks; GHCR publication was skipped. Fetched remote default and local main remain f1c34fecde4b0b9a79ffa19201d744d1be33c6ba; the existing PR checkout continues from 9de0e98. New-head CI and renewed Codex review are separate gates.
 
 ## Eighth review: starting head faffa3a6ab0240d771c050642723b639f8cfca8f
 

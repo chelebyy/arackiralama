@@ -68,7 +68,7 @@ public sealed class VehicleBookingService(
         {
             vehicle.Id, vehicle.GroupId, vehicle.OfficeId, terms,
             PickupPolicy = pickup!.OperatingPolicy, ReturnPolicy = dropoff.OperatingPolicy,
-            Pricing = breakdown, Extras = selections
+            Pricing = breakdown, Extras = selections.OrderBy(extra => extra.ExtraOptionId).ThenBy(extra => extra.OptionVersion).ToArray()
         })));
         return new VehicleBookingOffer(breakdown, selections, new ReservationBookingConditions
         {
