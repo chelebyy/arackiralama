@@ -630,14 +630,17 @@ describe("BookingStep4Page", () => {
     expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
   });
 
-  it("requires acceptance of changed conditions even when the price is unchanged", async () => {
+  it.each([
+    "Price or rental conditions changed. Request a new quote.",
+    "Reservation quote checkout operation changed. Request a new quote.",
+  ])("requires fresh offer acceptance for a conflict even when the price is unchanged: %s", async (message) => {
     const user = userEvent.setup();
     bookingState.vehicle = { ...baseVehicle, vehicleId: "vehicle-1" };
     bookingState.selectedExtras = [];
     createReservationQuoteMock
       .mockResolvedValueOnce({ ...baseQuote, vehicleId: "vehicle-1", conditions: { minAge: 21, minLicenseYears: 2 } })
       .mockResolvedValue({ ...baseQuote, quoteId: "updated-quote", vehicleId: "vehicle-1", conditions: { minAge: 25, minLicenseYears: 3 } });
-    createUnpaidReservationRequestMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Price or rental conditions changed. Request a new quote.", code: "CONFLICT", timestamp: "2026-09-26T10:00:00Z", path: "/api/reservations" }));
+    createUnpaidReservationRequestMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message, code: "CONFLICT", timestamp: "2026-09-26T10:00:00Z", path: "/api/reservations" }));
     render(<BookingStep4Page />);
     await user.click(await screen.findByRole("radio", { name: /pay at pickup/i }));
     await user.click(screen.getByRole("checkbox"));
@@ -685,6 +688,40 @@ describe("BookingStep4Page", () => {
     ]);
     expect(createPaymentIntentMock).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "Reservation quote has expired. Request a new quote.",
+    "Price or rental conditions changed. Request a new quote.",
+  ])("recovers from an exact draft hold conflict after explicit acceptance: %s", async (message) => {
+    const user = userEvent.setup();
+    let sequence = 0;
+    Object.defineProperty(globalThis, "crypto", { value: { randomUUID: () => `hold-recovery-${++sequence}` }, configurable: true });
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "car-a" };
+    createReservationQuoteMock.mockResolvedValueOnce({ ...baseQuote, vehicleId: "car-a" })
+      .mockResolvedValue({ ...baseQuote, vehicleId: "car-a", quoteId: "quote-replacement" });
+    placeHoldMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message, code: "CONFLICT", timestamp: "2026-09-27", path: "/hold" }))
+      .mockResolvedValue({ id: "res-replacement", publicCode: "ALN-NEW" });
+    createReservationMock.mockResolvedValueOnce({ id: "res-stale", publicCode: "ALN-OLD" })
+      .mockResolvedValue({ id: "res-replacement", publicCode: "ALN-NEW" });
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /^credit card/i }));
+    await user.type(await screen.findByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+
+    const accept = await screen.findByRole("button", { name: "Accept updated offer" });
+    expect(createReservationMock).toHaveBeenCalledTimes(1);
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+    await user.click(accept);
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    await waitFor(() => expect(createPaymentIntentMock).toHaveBeenCalledWith(expect.objectContaining({ reservationId: "res-replacement" })));
+    expect(createReservationMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ quoteId: "quote-replacement" }), expect.anything());
+    expect(createReservationMock.mock.calls[1][1].idempotencyKey).not.toBe(createReservationMock.mock.calls[0][1].idempotencyKey);
   });
 
   it("shows an error toast and stops when the reservation hold cannot be created", async () => {

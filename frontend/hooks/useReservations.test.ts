@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
+import { ApiError } from "@/lib/api/client";
 
 import {
   useCreateReservation,
@@ -142,6 +143,19 @@ describe("useReservations", () => {
 
     expect(holdResult).toBeNull();
     expect(result.current.error?.message).toBe("hold failed");
+  });
+
+  it("propagates hold conflicts so checkout can recover with a fresh quote", async () => {
+    const error = new ApiError({ statusCode: 409, message: "Reservation quote has expired. Request a new quote.", code: "CONFLICT", timestamp: "2026-09-27", path: "/hold" });
+    mockedPlaceHold.mockRejectedValue(error);
+    const { result } = renderHook(() => usePlaceHold(), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.placeHold("reservation-1")).rejects.toBe(error);
+    });
+
+    expect(result.current.error).toBe(error);
+    expect(result.current.isPlacingHold).toBe(false);
   });
 
   it("extends an existing hold and returns the updated reservation", async () => {

@@ -300,7 +300,7 @@ public sealed class ReservationService : IReservationService
     {
         request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateQuoteAndLegacyCombination(request);
-        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, "draft", cancellationToken);
         if (existingReservation is not null)
         {
             return MapToDto(existingReservation);
@@ -370,7 +370,7 @@ public sealed class ReservationService : IReservationService
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
             PricingSnapshot = pricingContext.Snapshot,
-            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot)
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot, "draft")
         };
         ApplyDriverSnapshot(reservation, request.Customer, request.Driver);
         AddSelectedExtraSnapshots(reservation, pricingContext.QuotedExtras);
@@ -411,7 +411,7 @@ public sealed class ReservationService : IReservationService
     {
         request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateQuoteAndLegacyCombination(request);
-        var existingReservation = await ResolveExistingQuoteReservationAsync(request, cancellationToken);
+        var existingReservation = await ResolveExistingQuoteReservationAsync(request, "unpaid", cancellationToken);
         if (existingReservation is not null)
         {
             return MapToDto(existingReservation);
@@ -486,7 +486,7 @@ public sealed class ReservationService : IReservationService
             Notes = request.Notes,
             QuoteId = pricingContext.QuoteId,
             PricingSnapshot = pricingContext.Snapshot,
-            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot),
+            QuoteReplayProof = CreateQuoteReplayProof(request, returnOfficeId, pricingContext.Snapshot, "unpaid"),
             UnpaidRequestExpiresAtUtc = pricingContext.Snapshot?.BookingConditions?.PaymentAtPickup == true ? null : now.AddHours(24),
             CreatedAt = now,
             UpdatedAt = now
@@ -1862,12 +1862,22 @@ public sealed class ReservationService : IReservationService
 
     private async Task<Reservation?> ResolveExistingQuoteReservationAsync(
         CreateReservationRequest request,
+        string checkoutOperation,
         CancellationToken cancellationToken)
     {
         var reservation = await FindReservationByQuoteIdAsync(request.QuoteId, cancellationToken);
         if (reservation is null)
         {
             return null;
+        }
+        if (request.VehicleId.HasValue && reservation.QuoteReplayProof is null)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote retry cannot be verified.");
+        }
+        if ((request.VehicleId.HasValue || reservation.QuoteReplayProof?.CheckoutOperation is not null) &&
+            reservation.QuoteReplayProof?.CheckoutOperation != checkoutOperation)
+        {
+            throw new ReservationQuoteConflictException("Reservation quote checkout operation changed. Request a new quote.");
         }
         if (!request.QuoteId.HasValue || string.IsNullOrWhiteSpace(request.SessionId))
         {
@@ -1913,7 +1923,8 @@ public sealed class ReservationService : IReservationService
     private static ReservationQuoteReplayProofV1? CreateQuoteReplayProof(
         CreateReservationRequest request,
         Guid returnOfficeId,
-        ReservationPricingSnapshotV1? snapshot)
+        ReservationPricingSnapshotV1? snapshot,
+        string checkoutOperation)
     {
         if (!request.QuoteId.HasValue || snapshot is null || string.IsNullOrWhiteSpace(request.SessionId))
         {
@@ -1925,6 +1936,7 @@ public sealed class ReservationService : IReservationService
         {
             SchemaVersion = request.VehicleId.HasValue ? 2 : 1,
             VehicleId = request.VehicleId,
+            CheckoutOperation = checkoutOperation,
             SessionHash = ReservationQuoteSecurity.HashSessionId(request.SessionId),
             RequestFingerprint = ReservationQuoteSecurity.HashRequestFingerprint(canonicalRequest),
             CreatedAtUtc = DateTime.UtcNow

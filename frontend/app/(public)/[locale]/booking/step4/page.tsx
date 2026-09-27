@@ -54,6 +54,7 @@ const isRefreshableQuoteConflict = (error: unknown) => {
     error.message === "Reservation quote has expired. Request a new quote." ||
     error.message === "Price or rental conditions changed. Request a new quote." ||
     error.message === "Reservation inputs no longer match the issued quote." ||
+    error.message === "Reservation quote checkout operation changed. Request a new quote." ||
     error.message.startsWith("A quoted extra option ") ||
     error.message.startsWith("One or more reservation extra options ") ||
     error.message.startsWith("Extra option ");
@@ -528,7 +529,16 @@ export default function BookingStep4Page() {
         return;
       }
 
-      const holdResult = await placeHold(reservation.id, { durationMinutes: 15 }, getSessionId());
+      let holdResult;
+      try {
+        holdResult = await placeHold(reservation.id, { durationMinutes: 15 }, getSessionId());
+      } catch (error) {
+        if (!isRefreshableQuoteConflict(error)) throw error;
+        const refreshedQuote = await refreshQuote(appliedCampaign?.code);
+        setRequiresQuoteConfirmation(true);
+        if (refreshedQuote) setQuoteError(t("quoteConfirmationRequired"));
+        return;
+      }
 
       if (!holdResult) {
         toast.error(t("failedToHoldReservation"));

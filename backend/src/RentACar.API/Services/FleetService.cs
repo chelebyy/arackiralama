@@ -639,7 +639,8 @@ public sealed class FleetService(
             existingOffice.Phone,
             existingOffice.IsAirport,
             existingOffice.IsActive,
-            existingOffice.OpeningHours
+            existingOffice.OpeningHours,
+            existingOffice.OperatingPolicy
         };
 
         existingOffice.Name = request.Name.Trim();
@@ -666,7 +667,8 @@ public sealed class FleetService(
                     existingOffice.Phone,
                     existingOffice.IsAirport,
                     existingOffice.IsActive,
-                    existingOffice.OpeningHours
+                    existingOffice.OpeningHours,
+                    existingOffice.OperatingPolicy
                 }
             });
         await unitOfWork.SaveChangesAsync(cancellationToken);

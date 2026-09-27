@@ -1,4 +1,5 @@
 import useSWR, { useSWRConfig } from 'swr';
+import { ApiError } from '@/lib/api/client';
 import { useCallback, useState } from 'react';
 import {
   createReservation,
@@ -90,6 +91,7 @@ export function usePlaceHold() {
         return reservation;
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to place hold'));
+        if (err instanceof ApiError && err.statusCode === 409) throw err;
         return null;
       } finally {
         setIsPlacingHold(false);

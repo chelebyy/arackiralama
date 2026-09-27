@@ -281,6 +281,9 @@ export default function BookingStep3Page() {
     router.push(`/${locale}/booking/step4?${queryParams.toString()}`);
   };
 
+  const vehicleSelectionParams = new URLSearchParams(searchParams.toString());
+  vehicleSelectionParams.delete("preferredVehicleId");
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
@@ -546,7 +549,7 @@ export default function BookingStep3Page() {
 
         <div className="flex items-center justify-between">
           <Link
-            href={`/${locale}/booking/step2?${searchParams.toString()}`}
+            href={`/${locale}/booking/step2?${vehicleSelectionParams.toString()}`}
             className="inline-flex items-center gap-2 px-6 py-3 text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />

@@ -149,6 +149,8 @@ public sealed class ReservationServiceQuotePersistenceTests
 
         var created = await service.CreateDraftReservationAsync(request);
         created.VehicleId.Should().Be(vehicle.Id);
+        var warmCrossOperation = () => service.CreateUnpaidRequestAsync(request);
+        await warmCrossOperation.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*checkout operation*");
         if (exact)
         {
             var changedVehicle = () => service.CreateDraftReservationAsync(request with { VehicleId = otherVehicle.Id });
@@ -168,6 +170,8 @@ public sealed class ReservationServiceQuotePersistenceTests
         quoteStore.Setup(store => store.GetAsync(quote.QuoteId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ReservationQuoteV1?)null);
         var replayed = await service.CreateDraftReservationAsync(request with { IdempotencyKey = "idempotency-456" });
+        var coldCrossOperation = () => service.CreateUnpaidRequestAsync(request);
+        await coldCrossOperation.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("*checkout operation*");
         var crossSessionReplay = () => service.CreateDraftReservationAsync(request with
         {
             SessionId = "attacker-session",
@@ -204,6 +208,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         storedReservation.QuoteReplayProof.Should().NotBeNull();
         storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 2 : 1);
         storedReservation.QuoteReplayProof.VehicleId.Should().Be(request.VehicleId);
+        storedReservation.QuoteReplayProof.CheckoutOperation.Should().Be("draft");
         storedReservation.QuoteReplayProof!.SessionHash.Should().NotBe("session-123");
         storedReservation.QuoteReplayProof.RequestFingerprint.Should().NotBeNullOrWhiteSpace();
         context.ReservationSelectedExtras.Should().ContainSingle(item =>

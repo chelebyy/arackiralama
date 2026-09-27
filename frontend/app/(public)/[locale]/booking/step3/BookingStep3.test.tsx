@@ -55,6 +55,18 @@ vi.mock("@/hooks/useVehicles", () => ({
 }));
 
 describe("BookingStep3Page", () => {
+  it("returns to vehicle selection without the automatic detail handoff", async () => {
+    searchParams = new URLSearchParams({ preferredVehicleId: "car-a", pickup: "ala", return: "gzp", pickupDate: "2026-10-01", returnDate: "2026-10-03" });
+    render(<BookingStep3Page />);
+    const back = screen.getByRole("link", { name: /back/i });
+    const url = new URL(back.getAttribute("href")!, "https://example.test");
+    expect(url.pathname).toBe("/en/booking/step2");
+    expect(url.searchParams.has("preferredVehicleId")).toBe(false);
+    expect(url.searchParams.get("pickup")).toBe("ala");
+    expect(url.searchParams.get("returnDate")).toBe("2026-10-03");
+    await waitFor(() => expect(getPublicReservationExtraOptionsMock).toHaveBeenCalled());
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     selectedExtras = [];

@@ -1,6 +1,33 @@
-# PR 447 review corrections — September 26, 2026
+# PR 447 review corrections
 
-This record covers six correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers seven correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Seventh review: starting head 5e2bcd04f863b8e7c57efb06ef65894313a817bb
+
+| Finding | Correction |
+|---|---|
+| Codex r4114857893 | The hold hook propagates HTTP 409. Checkout refreshes expired/changed offers, requires explicit acceptance, then creates a new draft with a new quote and idempotency key. No payment starts before successful hold acquisition. Non-refreshable conflicts retain the existing specific error handling. |
+| Codex r4114857894 | OfficeUpdated audit details include complete Previous and Current OperatingPolicy values, covering initial configuration and subsequent changes to notice, preparation, windows and closed dates. |
+| Codex r4114857896 | The step-3 Back link removes preferredVehicleId while retaining itinerary parameters, so step 2 does not automatically advance again. Initial vehicle-detail handoff remains supported. |
+| Codex r4114857899 | Server-created replay proofs persist CheckoutOperation in the existing JSON column. Replay checks this value before returning an existing reservation, both with and without the Redis quote. A cross-operation request returns 409 and checkout obtains a fresh offer for explicit acceptance. Exact proofs without operation metadata fail closed; historical group-only proofs retain compatibility. No database migration is needed. |
+
+### Validation
+
+- 137 focused backend unit tests passed: FleetServiceTests, ReservationServiceTests and ReservationServiceQuotePersistenceTests. Audit tests compare complete policy JSON, including null previous state; replay tests cover live and expired Redis quote state.
+- All 41 ReservationQuoteEndpointTests passed against isolated PostgreSQL databases and Redis. Both endpoint directions reject cross-operation replay with the original or a different idempotency key; same-operation retries still succeed and preserve stored status.
+- A final three-case real API run passed after extending hold recovery coverage: unchanged policy, changed policy and expired accepted snapshot. The two conflicts leave the old draft nonblocking; a fresh quote/draft acquires the sole hold successfully. There are 42 distinct API cases across these runs.
+- Four frontend files / 59 tests passed, followed by all 34 step-4 tests after adding the operation-conflict case: 60 distinct frontend tests across runs. Coverage includes hook error propagation, the Back-link destination, explicit replacement-offer acceptance, idempotency-key rotation and withholding payment until the replacement hold succeeds.
+- Production build and TypeScript passed. Lint passed with zero errors and the existing SearchForm.test.tsx unused-disable warning. Existing build warnings concern lockfile-root inference, middleware deprecation and an Edge Runtime dependency.
+- Initial frontend attempts required correcting test setup: Windows command-wrapper path parsing, explicit credit-card selection and sequential UUIDs for key-rotation assertions. Production guards were retained.
+
+### Scoped security coverage and boundaries
+
+- Reviewed: operation/session/quote replay boundaries, persisted JSON proof mapping, hold-error recovery, explicit customer acceptance and office-policy audit details. Planning required preserving session verification and immutable accepted terms, preventing cross-operation success, and avoiding automatic payment on refreshed terms. The final source/diff pass found no additional material concern within this scope.
+- Not reviewed: unrelated authentication paths, real payment providers, production deployment/migration/restore, browser/device rendering and full accessibility. Earlier browser evidence is historical and does not validate this follow-up.
+- Assumptions: PostgreSQL overlap enforcement and existing endpoint authorization remain authoritative; mocks verify frontend interaction, not provider behavior. Test databases are isolated local fixtures.
+- Tools run: source/diff review, Context7 EF Core value-conversion documentation, focused unit/frontend tests, real PostgreSQL/Redis API tests, lint, production build/TypeScript and whitespace checks.
+- Fetched remote default and local main both remain f1c34fecde4b0b9a79ffa19201d744d1be33c6ba. Work continues on the existing PR branch; the dirty primary checkout is preserved. The worktree cleanup audit skipped every candidate because of uncommitted files, unreviewed ignored content or absent exact-head merge evidence; none was removed.
+- Assess CI and renewed Codex review on the newly pushed commit. Existing ECC Tools comments describe heuristic evidence/app-permission gaps; this change does not alter GitHub App permissions or claim general security certification.
 
 ## Sixth review: starting head 4487d988be36cea982ce66662924659296969051
 

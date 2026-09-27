@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Text.Json;
 using Moq;
 using RentACar.API.Contracts.Fleet;
 using RentACar.API.Services;
@@ -305,6 +306,36 @@ public sealed class FleetServiceTests : IDisposable
         result!.Code.Should().Be("ala");
         result!.Name.Should().Be("Alanya Merkez");
         result!.IsActive.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateOfficeAsync_RecordsPreviousAndCurrentOperatingPolicy(bool hadPolicy)
+    {
+        var office = await SeedOfficeAsync("Alanya");
+        OfficeOperatingPolicy Policy(int minutes) => new()
+        {
+            MinimumNoticeMinutes = minutes,
+            PreparationMinutes = minutes,
+            PickupWindows = [new() { Day = DayOfWeek.Monday, StartMinute = minutes, EndMinute = 1200 }],
+            ReturnWindows = [new() { Day = DayOfWeek.Tuesday, StartMinute = minutes, EndMinute = 1300 }],
+            ClosedDates = [new DateOnly(2026, 12, minutes / 30)]
+        };
+        var previous = hadPolicy ? Policy(30) : null;
+        var current = Policy(60);
+        office.OperatingPolicy = previous;
+        await _dbContext.SaveChangesAsync();
+
+        await _sut.UpdateOfficeAsync(office.Id, new UpdateOfficeRequest(
+            "ala", "Alanya", "Address", "+900000000000", false, true, "09:00-18:00", current));
+
+        var audit = _dbContext.AuditLogs.Single(entry => entry.Action == "OfficeUpdated");
+        using var details = JsonDocument.Parse(audit.Details!);
+        details.RootElement.GetProperty("Previous").GetProperty("OperatingPolicy").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(previous));
+        details.RootElement.GetProperty("Current").GetProperty("OperatingPolicy").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(current));
     }
 
     [Fact]

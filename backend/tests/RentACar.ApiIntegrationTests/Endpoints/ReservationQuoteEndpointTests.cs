@@ -399,9 +399,10 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task GrouplessDraft_HoldRevalidatesAcceptedPolicy(bool changed)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GrouplessDraft_HoldRevalidatesAcceptedPolicy(bool changed, bool expired)
     {
         await WithDbContextAsync(async db =>
         {
@@ -428,12 +429,39 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
                 return true;
             });
         }
+        if (expired)
+        {
+            await WithDbContextAsync(async db =>
+            {
+                var reservation = await db.Reservations.FindAsync(id);
+                reservation!.PricingSnapshot!.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1);
+                await db.SaveChangesAsync();
+                return true;
+            });
+        }
         using var holdRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{id}/hold");
         holdRequest.Headers.Add("X-Session-Id", session);
         using var hold = await Client.SendAsync(holdRequest);
-        hold.StatusCode.Should().Be(changed ? HttpStatusCode.Conflict : HttpStatusCode.OK, await hold.Content.ReadAsStringAsync());
+        hold.StatusCode.Should().Be(changed || expired ? HttpStatusCode.Conflict : HttpStatusCode.OK, await hold.Content.ReadAsStringAsync());
         var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
-        saved.Status.Should().Be(changed ? RentACar.Core.Enums.ReservationStatus.Draft : RentACar.Core.Enums.ReservationStatus.Hold);
+        saved.Status.Should().Be(changed || expired ? ReservationStatus.Draft : ReservationStatus.Hold);
+        if (changed || expired)
+        {
+            using var freshQuote = await SendExactQuoteAsync(input, session);
+            freshQuote.StatusCode.Should().Be(HttpStatusCode.OK, await freshQuote.Content.ReadAsStringAsync());
+            using var freshDraft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(freshQuote)), session, Guid.NewGuid().ToString());
+            freshDraft.StatusCode.Should().Be(HttpStatusCode.OK, await freshDraft.Content.ReadAsStringAsync());
+            using var freshJson = JsonDocument.Parse(await freshDraft.Content.ReadAsStringAsync());
+            var freshId = freshJson.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+            freshId.Should().NotBe(id);
+            using var freshHoldRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{freshId}/hold");
+            freshHoldRequest.Headers.Add("X-Session-Id", session);
+            using var freshHold = await Client.SendAsync(freshHoldRequest);
+            freshHold.StatusCode.Should().Be(HttpStatusCode.OK, await freshHold.Content.ReadAsStringAsync());
+            var reservations = await WithDbContextAsync(db => db.Reservations.AsNoTracking().Where(r => r.Id == id || r.Id == freshId).ToListAsync());
+            reservations.Should().ContainSingle(r => r.Status == ReservationStatus.Hold && r.Id == freshId);
+            reservations.Should().ContainSingle(r => r.Status == ReservationStatus.Draft && r.Id == id);
+        }
     }
 
     [Theory]
@@ -763,6 +791,33 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         PickupDateTimeUtc = DateTime.UtcNow.Date.AddDays(10).AddHours(10),
         ReturnDateTimeUtc = DateTime.UtcNow.Date.AddDays(13).AddHours(10), DriverAge = 30
     };
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExactQuoteReplay_RejectsChangedCheckoutOperation(bool unpaidFirst)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        var request = ExactReservation(input, await QuoteIdAsync(quote));
+        var key = Guid.NewGuid().ToString();
+        using var created = await SendReservationAsync(request, session, key, unpaidFirst);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+
+        foreach (var retryKey in new[] { key, Guid.NewGuid().ToString() })
+        {
+            using var wrongOperation = await SendReservationAsync(request, session, retryKey, !unpaidFirst);
+            wrongOperation.StatusCode.Should().Be(HttpStatusCode.Conflict, await wrongOperation.Content.ReadAsStringAsync());
+            using var sameOperation = await SendReservationAsync(request, session, retryKey, unpaidFirst);
+            sameOperation.StatusCode.Should().Be(HttpStatusCode.OK, await sameOperation.Content.ReadAsStringAsync());
+        }
+
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.QuoteId == request.QuoteId));
+        saved.Status.Should().Be(unpaidFirst ? ReservationStatus.Confirmed : ReservationStatus.Draft);
+        saved.QuoteReplayProof!.CheckoutOperation.Should().Be(unpaidFirst ? "unpaid" : "draft");
+    }
 
     private static CreateReservationRequest ExactReservation(CreateReservationQuoteRequest input, Guid quoteId) => new()
     {
