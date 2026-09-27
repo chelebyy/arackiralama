@@ -1,6 +1,25 @@
 # PR 447 review corrections
 
-This record covers seven correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+This record covers eight correction passes on [PR #447](https://github.com/chelebyy/arackiralama/pull/447). No merge, production migration or deployment is included.
+
+## Eighth review: starting head faffa3a6ab0240d771c050642723b639f8cfca8f
+
+| Finding | Correction |
+|---|---|
+| Codex r4114965584 | Exact holds throw ReservationQuoteConflictException with the vehicle-unavailable message when the selected vehicle is no longer a candidate or all candidates overlap. The precheck includes the reservation's preparation tail. Legacy group selection retains its existing fallback/null behavior. The existing frontend conflict path offers dated vehicle reselection and prevents payment. |
+| Codex r4114965587 | VehicleUpdated audit details retain complete previous/current RentalTerms, including rates, deposit, driver requirements and allowed extra IDs. Initial configuration records a null previous value. |
+| Codex r4114965591 | Manual/legacy updates load a changed return office before checking overlap and use its preparation minutes for both the precheck and persisted OccupiedUntilUtc. A missing destination retains the existing error; absent destination policy follows manual creation's zero-preparation fallback. Unchanged offices preserve the accepted interval, and exact quoted itineraries still require a new reservation. |
+
+### Validation and scope
+
+- 139 focused backend unit tests passed, including complete rental-term audit JSON and exact versus legacy hold behavior.
+- 40 frontend tests passed across checkout and reservation hooks. The new competing-hold regression verifies dated reselection, no automatic replacement quote, no vehicle substitution and no payment intent.
+- Frontend TypeScript and lint passed; lint retains one existing SearchForm.test.tsx warning. Production frontend code is unchanged, so its build/browser/device checks were not repeated.
+- All 25 selected real PostgreSQL/Redis API tests passed. Two new grouped/group-less cases create competing exact drafts before either holds; only the first becomes Hold and the second receives HTTP 409 without substitution. Eight new return-office cases cover snapshot-backed manual and snapshotless legacy reservations, longer/shorter/unconfigured preparation, one-minute overlap rejection and exact-boundary success. Existing hold recovery, manual deposit preservation, reassignment occupancy and exact-identity restrictions also passed.
+- Reviewed: selected-vehicle availability/occupancy checks, existing session verification and 409 mapping, destination preparation intervals, unchanged exact-quote restrictions, immutable deposit preservation and audit snapshots. Planning retained server-side overlap enforcement and explicit vehicle reselection; source/diff review found no additional material issue within this scope.
+- Not reviewed: unrelated authorization paths, real payment-provider behavior, production configuration/migrations/restore, browser/device rendering or full accessibility. Tests use isolated local databases and Redis prefixes; no external provider is called.
+- Tools run: source/diff inspection, focused unit/frontend tests, TypeScript, lint and whitespace checks. Existing EF JSON mapping documentation was reused; the change introduces no new framework API or schema migration.
+- Starting-head CI passed all ten active checks; GHCR publication was skipped. Fetched remote default and local main remain f1c34fecde4b0b9a79ffa19201d744d1be33c6ba, while the existing PR checkout continues from faffa3a. Assess new-head CI and renewed Codex review separately.
 
 ## Seventh review: starting head 5e2bcd04f863b8e7c57efb06ef65894313a817bb
 

@@ -610,6 +610,28 @@ describe("BookingStep4Page", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it("offers vehicle reselection when a competing exact draft wins the hold", async () => {
+    const user = userEvent.setup();
+    bookingState.vehicle = { ...baseVehicle, vehicleId: "vehicle-1" };
+    searchParams.set("preferredVehicleId", "vehicle-1");
+    createReservationQuoteMock.mockResolvedValue({ ...baseQuote, vehicleId: "vehicle-1" });
+    placeHoldMock.mockRejectedValueOnce(new ApiError({ statusCode: 409, message: "Selected vehicle is unavailable for this itinerary.", code: "CONFLICT", timestamp: "2026-09-27", path: "/hold" }));
+    render(<BookingStep4Page />);
+    await user.click(await screen.findByRole("radio", { name: /^credit card/i }));
+    await user.type(screen.getByLabelText("Card Number"), "4111 1111 1111 1111");
+    await user.type(screen.getByLabelText("Name on Card"), "Jane Doe");
+    await user.type(screen.getByLabelText("Expiry Date"), "12/30");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /complete booking/i }));
+    const recovery = await screen.findByRole("link", { name: "Back to search" });
+    expect(recovery).toHaveAttribute("href", "/en/vehicles?pickupDate=2026-05-10&returnDate=2026-05-13");
+    expect(createReservationQuoteMock).toHaveBeenCalledTimes(1);
+    expect(createReservationMock).toHaveBeenCalledTimes(1);
+    expect(createPaymentIntentMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it("reuses the identical reservation attempt after a lost response", async () => {
     const user = userEvent.setup();
     let sequence = 0;

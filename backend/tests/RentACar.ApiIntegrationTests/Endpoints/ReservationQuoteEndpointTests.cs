@@ -795,6 +795,47 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task CompetingExactDrafts_SecondHoldReturnsVehicleUnavailable(bool groupless)
+    {
+        if (groupless)
+        {
+            await WithDbContextAsync(async db =>
+            {
+                var vehicle = await db.Vehicles.FindAsync(TestDataSeeder.GroupOneId);
+                vehicle!.GroupId = null;
+                return await db.SaveChangesAsync();
+            });
+        }
+        var input = ExactInput() with { VehicleGroupId = groupless ? Guid.Empty : TestDataSeeder.GroupOneId };
+        var sessions = new[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString() };
+        var ids = new List<Guid>();
+        foreach (var session in sessions)
+        {
+            using var quote = await SendExactQuoteAsync(input, session);
+            quote.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var draft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(quote)), session, Guid.NewGuid().ToString());
+            draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+            using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+            ids.Add(json.RootElement.GetProperty("data").GetProperty("id").GetGuid());
+        }
+        for (var i = 0; i < ids.Count; i++)
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{ids[i]}/hold");
+            message.Headers.Add("X-Session-Id", sessions[i]);
+            using var hold = await Client.SendAsync(message);
+            var body = await hold.Content.ReadAsStringAsync();
+            hold.StatusCode.Should().Be(i == 0 ? HttpStatusCode.OK : HttpStatusCode.Conflict, body);
+            if (i == 1) body.Should().Contain("Selected vehicle is unavailable");
+        }
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().Where(r => ids.Contains(r.Id)).ToListAsync());
+        saved.Should().ContainSingle(r => r.Status == ReservationStatus.Hold && r.Id == ids[0]);
+        saved.Should().ContainSingle(r => r.Status == ReservationStatus.Draft && r.Id == ids[1]);
+        saved.Should().OnlyContain(r => r.VehicleId == input.VehicleId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task ExactQuoteReplay_RejectsChangedCheckoutOperation(bool unpaidFirst)
     {
         var input = ExactInput();

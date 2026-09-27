@@ -1128,7 +1128,16 @@ public sealed class ReservationServiceTests
                 .ReturnsAsync(new ReservationHoldSnapshot(reservation.Id, other.Id, "session", DateTime.UtcNow.AddMinutes(5)));
         }
 
-        var result = await _sut.CreateHoldAsync(reservation.Id, "session");
+        ReservationHoldDto? result = null;
+        if (scenario is "overlap" or "status")
+        {
+            var hold = () => _sut.CreateHoldAsync(reservation.Id, "session");
+            await hold.Should().ThrowAsync<ReservationQuoteConflictException>().WithMessage("Selected vehicle is unavailable*");
+        }
+        else
+        {
+            result = await _sut.CreateHoldAsync(reservation.Id, "session");
+        }
 
         _holdServiceMock.Verify(service => service.CreateHoldAsync(reservation.Id, other.Id,
             It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);

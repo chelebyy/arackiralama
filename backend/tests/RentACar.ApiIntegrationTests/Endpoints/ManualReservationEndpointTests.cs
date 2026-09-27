@@ -14,6 +14,58 @@ namespace RentACar.ApiIntegrationTests.Endpoints;
 public sealed class ManualReservationEndpointTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
     [Theory]
+    [InlineData(false, 120, 119, HttpStatusCode.BadRequest)]
+    [InlineData(true, 120, 119, HttpStatusCode.BadRequest)]
+    [InlineData(false, 120, 120, HttpStatusCode.OK)]
+    [InlineData(true, 120, 120, HttpStatusCode.OK)]
+    [InlineData(false, 15, 120, HttpStatusCode.OK)]
+    [InlineData(true, 15, 120, HttpStatusCode.OK)]
+    [InlineData(false, -1, 120, HttpStatusCode.OK)]
+    [InlineData(true, -1, 120, HttpStatusCode.OK)]
+    public async Task ChangeReturnOffice_UsesDestinationPreparationBeforeCheckingOverlap(
+        bool hasSnapshot, int preparationMinutes, int nextPickupMinutes, HttpStatusCode expected)
+    {
+        var pickup = DateTime.UtcNow.Date.AddDays(10).AddHours(10);
+        var until = pickup.AddDays(3);
+        var id = await WithDbContextAsync(async db =>
+        {
+            var office = await db.Offices.FindAsync(TestDataSeeder.OfficeTwoId);
+            if (preparationMinutes < 0) office!.OperatingPolicy = null;
+            else office!.OperatingPolicy!.PreparationMinutes = preparationMinutes;
+            var customer = new Customer { FullName = "Synthetic Office", Email = "office-change@rentacar.test", Phone = "+900000000000" };
+            var reservation = new Reservation
+            {
+                PublicCode = "OFFICE-CHANGE", Customer = customer, VehicleId = TestDataSeeder.GroupOneId,
+                PickupOfficeId = TestDataSeeder.OfficeOneId, ReturnOfficeId = TestDataSeeder.OfficeOneId,
+                PickupDateTime = pickup, ReturnDateTime = until, OccupiedUntilUtc = until.AddMinutes(30),
+                Status = ReservationStatus.Confirmed, TotalAmount = 3000m,
+                PricingSnapshot = hasSnapshot ? new ReservationPricingSnapshotV1 { FinalTotal = 3000, DepositAmount = 500 } : null
+            };
+            db.Reservations.Add(reservation);
+            db.Reservations.Add(new Reservation
+            {
+                PublicCode = "OFFICE-NEXT", Customer = customer, VehicleId = TestDataSeeder.GroupOneId,
+                PickupOfficeId = TestDataSeeder.OfficeOneId, ReturnOfficeId = TestDataSeeder.OfficeOneId,
+                PickupDateTime = until.AddMinutes(nextPickupMinutes), ReturnDateTime = until.AddDays(2),
+                Status = ReservationStatus.Confirmed, TotalAmount = 2000m
+            });
+            await db.SaveChangesAsync();
+            return reservation.Id;
+        });
+        await AuthenticateAsAdminAsync();
+        using var response = await Client.PutAsJsonAsync($"/api/admin/v1/reservations/{id}",
+            new UpdateReservationRequest { ReturnOfficeId = TestDataSeeder.OfficeTwoId });
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(expected, body);
+        if (expected == HttpStatusCode.BadRequest) body.Should().Contain("overlapping reservations");
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        saved.ReturnOfficeId.Should().Be(expected == HttpStatusCode.OK ? TestDataSeeder.OfficeTwoId : TestDataSeeder.OfficeOneId);
+        saved.OccupiedUntilUtc.Should().Be(until.AddMinutes(expected == HttpStatusCode.OK ? Math.Max(0, preparationMinutes) : 30));
+        if (hasSnapshot) saved.PricingSnapshot!.DepositAmount.Should().Be(500);
+        if (expected == HttpStatusCode.BadRequest) saved.TotalAmount.Should().Be(3000);
+    }
+
+    [Theory]
     [InlineData(false, false, 0)]
     [InlineData(false, false, 750)]
     [InlineData(false, true, 0)]

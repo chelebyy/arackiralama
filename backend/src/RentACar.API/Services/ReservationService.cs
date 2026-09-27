@@ -722,6 +722,13 @@ public sealed class ReservationService : IReservationService
         var newOccupiedUntil = reservation.OccupiedUntilUtc.HasValue
             ? newReturnDateTime.Add(reservation.OccupiedUntilUtc.Value - reservation.ReturnDateTime)
             : (DateTime?)null;
+        Office? newReturnOffice = null;
+        if (newReturnOfficeId != reservation.ReturnOfficeId)
+        {
+            newReturnOffice = await _officeRepository.GetByIdAsync(newReturnOfficeId, cancellationToken)
+                ?? throw new InvalidOperationException("Return office not found.");
+            newOccupiedUntil = newReturnDateTime.AddMinutes(newReturnOffice.OperatingPolicy?.PreparationMinutes ?? 0);
+        }
         var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
             reservation.VehicleId,
             newPickupDateTime,
@@ -774,10 +781,9 @@ public sealed class ReservationService : IReservationService
                 ?? throw new InvalidOperationException("Pickup office not found.");
         }
 
-        if (request.ReturnOfficeId.HasValue && request.ReturnOfficeId.Value != reservation.ReturnOfficeId)
+        if (newReturnOffice is not null)
         {
-            reservation.ReturnOffice = await _officeRepository.GetByIdAsync(request.ReturnOfficeId.Value, cancellationToken)
-                ?? throw new InvalidOperationException("Return office not found.");
+            reservation.ReturnOffice = newReturnOffice;
         }
 
         reservation.OccupiedUntilUtc = newOccupiedUntil;
@@ -1010,6 +1016,8 @@ public sealed class ReservationService : IReservationService
                 _logger.LogWarning(
                     "No available vehicle found for reservation {ReservationId}",
                     reservationId);
+                if (exactVehicleId.HasValue)
+                    throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
                 return null;
             }
 
@@ -1018,7 +1026,7 @@ public sealed class ReservationService : IReservationService
                 var hasOverlap = await _reservationRepository.HasOverlappingReservationsAsync(
                     vehicle.Id,
                     reservation.PickupDateTime,
-                    reservation.ReturnDateTime,
+                    reservation.OccupiedUntilUtc ?? reservation.ReturnDateTime,
                     reservationId,
                     cancellationToken);
 
@@ -1102,6 +1110,8 @@ public sealed class ReservationService : IReservationService
             _logger.LogWarning(
                 "No hold could be created for reservation {ReservationId} after checking all candidate vehicles",
                 reservationId);
+            if (exactVehicleId.HasValue)
+                throw new ReservationQuoteConflictException("Selected vehicle is unavailable for this itinerary.");
             return null;
         }
         finally

@@ -177,6 +177,40 @@ public sealed class FleetServiceTests : IDisposable
         result!.Plate.Should().Be("34DEF456");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateVehicleAsync_AuditsCompletePreviousAndCurrentRentalTerms(bool hadTerms)
+    {
+        var (office, group) = await SeedOfficeAndGroupAsync();
+        var vehicle = await SeedVehicleAsync("34AUD001", group.Id, office.Id);
+        var extra = new ReservationExtraOption { Code = "audit-extra", MaxQuantity = 1, IsActive = true };
+        _dbContext.ReservationExtraOptions.Add(extra);
+        var previous = hadTerms ? new VehicleRentalTerms
+        {
+            DepositAmount = 500, MinAge = 21, MinLicenseYears = 2,
+            Rates = [new() { StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31), DailyPrice = 1000 }]
+        } : null;
+        var current = new VehicleRentalTerms
+        {
+            DepositAmount = 1000, MinAge = 25, MinLicenseYears = 4, ExtraOptionIds = [extra.Id],
+            Rates = [new() { StartDate = new DateOnly(2026, 1, 1), EndDate = new DateOnly(2026, 12, 31),
+                DailyPrice = 1500, Priority = 2, WeekendMultiplier = 1.5m, CalculationType = "fixed" }]
+        };
+        vehicle.RentalTerms = previous;
+        await _dbContext.SaveChangesAsync();
+
+        await _sut.UpdateVehicleAsync(vehicle.Id, new UpdateVehicleRequest(vehicle.Plate, vehicle.Brand,
+            vehicle.Model, vehicle.Year, vehicle.Color, group.Id, office.Id, vehicle.Status, RentalTerms: current));
+
+        var audit = _dbContext.AuditLogs.Single(entry => entry.Action == "VehicleUpdated");
+        using var details = JsonDocument.Parse(audit.Details!);
+        details.RootElement.GetProperty("Previous").GetProperty("RentalTerms").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(previous));
+        details.RootElement.GetProperty("Current").GetProperty("RentalTerms").GetRawText()
+            .Should().Be(JsonSerializer.Serialize(current));
+    }
+
     [Fact]
     public async Task UpdateVehicleAsync_WhenNotExists_ReturnsNull()
     {

@@ -308,6 +308,7 @@ public sealed class FleetService(
             existingVehicle.Color,
             existingVehicle.GroupId,
             existingVehicle.OfficeId,
+            existingVehicle.RentalTerms,
             Status = existingVehicle.Status.ToString()
         };
 
@@ -357,6 +358,7 @@ public sealed class FleetService(
                     existingVehicle.Color,
                     existingVehicle.GroupId,
                     existingVehicle.OfficeId,
+                    existingVehicle.RentalTerms,
                     Status = existingVehicle.Status.ToString()
                 }
             });
