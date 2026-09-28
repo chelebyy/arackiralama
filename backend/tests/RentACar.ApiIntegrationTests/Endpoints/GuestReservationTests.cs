@@ -22,6 +22,51 @@ namespace RentACar.ApiIntegrationTests.Endpoints;
 
 public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
+    [Fact]
+    public async Task AccessLimits_SeparateSignedBffClientsAndRejectSpoofedPartitions()
+    {
+        for (var client = 0; client < 26; client++)
+        {
+            for (var attempt = 0; attempt < 4; attempt++)
+            {
+                using var request = SignedRequest(client, attempt % 2 == 0 ? "request" : "verify");
+                using var response = await Client.SendAsync(request);
+                response.StatusCode.Should().Be(attempt % 2 == 0 ? HttpStatusCode.OK : HttpStatusCode.Unauthorized);
+            }
+        }
+        using var fifth = await Client.SendAsync(SignedRequest(0, "request"));
+        fifth.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var sixth = await Client.SendAsync(SignedRequest(0, "verify"));
+        sixth.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        for (var i = 0; i < 6; i++)
+        {
+            using var forged = SignedRequest(i + 100, "request");
+            forged.Headers.Remove("X-Guest-Signature");
+            forged.Headers.Add("X-Guest-Signature", new string('0', 64));
+            using var response = await Client.SendAsync(forged);
+            response.StatusCode.Should().Be(i < 5 ? HttpStatusCode.OK : HttpStatusCode.TooManyRequests);
+        }
+    }
+
+    private static HttpRequestMessage SignedRequest(int client, string action)
+    {
+        const string secret = "test-only-guest-proxy-secret-at-least-32-characters";
+        var path = "/api/guest/v1/reservation/" + action;
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var partition = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(client.ToString())));
+        var signature = Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(System.Text.Encoding.UTF8.GetBytes(secret),
+            System.Text.Encoding.UTF8.GetBytes($"{timestamp}\n{partition}\nPOST\n{path}")));
+        var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = action == "request" ? JsonContent.Create(new GuestAccessRequest("UNKNOWN", "nobody@example.test")) :
+                JsonContent.Create(new GuestVerificationRequest(Guid.NewGuid(), "INVALID"))
+        };
+        request.Headers.Add("X-Guest-Client", partition);
+        request.Headers.Add("X-Guest-Timestamp", timestamp);
+        request.Headers.Add("X-Guest-Signature", signature);
+        return request;
+    }
+
     private static readonly DriverDeclaration Declaration = new()
     {
         AgeAtPickup = 30, LicenseYearsAtPickup = 8,

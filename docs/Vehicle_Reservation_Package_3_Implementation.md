@@ -71,4 +71,10 @@ Before authorized release:
 
 ## Baseline
 
+## PR 457 review validation
+
+Review corrections passed 910 backend unit tests, 20 PostgreSQL/Redis guest integration tests, the 364-test frontend suite plus the subsequently added HTTP-error regression (8 BFF tests passed), production Webpack/TypeScript build, and lint (zero errors, one existing SearchForm test warning). Chromium passed seven guest scenarios on desktop and seven on mobile, including cooldown/Enter submission and all five locales; four controlled Step 4 payment/quote scenarios also passed. Their fixtures now use declarations and the current server conflict/explicit-acceptance contract. Compose configuration and Nginx syntax checks passed; independent Data Protection providers verified persisted-key decryption across provider recreation.
+
+The broad real-catalog payment suite was attempted but did not reach checkout: the isolated local seed has 120 vehicles and zero configured `rental_terms`, so dated search correctly returns no offers. These changes do not claim full catalogue-driven E2E or full deployed HTTPS/SMTP acceptance. No production data or shared existing test database was modified. Security review covered the touched BFF signatures/partitioning, neutral challenge responses, key sharing, driver JSON minimization and expired-mail dispatch. Production ingress isolation, secret provisioning, encrypted key storage and delivery remain unverified; a focused independent security review and the release checklist above remain available before activation.
+
 Implementation started from freshly fetched remote default `main` at `1a352c984972a3c6a705b10073563eca470b92fc`, the merged Package 2 PR #447 commit. Local `main` was synchronized at start. The active feature checkout is separate from the dirty primary checkout. These are baseline facts, not a claim that the primary working directory is now on main.

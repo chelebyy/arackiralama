@@ -83,6 +83,7 @@ public record ReservationDriverDto
 {
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
+    public RentACar.Core.Entities.DriverDeclaration? Declaration { get; init; }
     [System.Text.Json.Serialization.JsonIgnore]
     public DateTime? DateOfBirth { get; init; }
     [System.Text.Json.Serialization.JsonIgnore]

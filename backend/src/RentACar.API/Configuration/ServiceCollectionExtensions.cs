@@ -347,6 +347,9 @@ public static class ServiceCollectionExtensions
         string loadTestSessionHeaderName,
         bool allowLoadTestSessionPartition)
     {
+        var guestClient = GuestProxyIdentity.Partition(context,
+            context.RequestServices.GetRequiredService<IConfiguration>()["GuestAccess:ProxySecret"]);
+        if (guestClient is not null) return guestClient;
         if (allowLoadTestSessionPartition)
         {
             var loadTestSessionId = context.Request.Headers[loadTestSessionHeaderName].ToString();

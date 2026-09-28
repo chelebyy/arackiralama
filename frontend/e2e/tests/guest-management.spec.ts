@@ -9,6 +9,37 @@ const initial = {
   cancellationFee: 25, changeFee: 10, csrfToken: "synthetic-csrf",
 };
 
+test("resend cooldown preserves the active challenge and allows retry after a minute", async ({ page }) => {
+  await page.clock.install();
+  let requests = 0;
+  await page.route("**/api/guest/**", async route => {
+    if (route.request().url().endsWith("/request")) {
+      requests++;
+      await route.fulfill({ json: { challengeId: `challenge-${requests}` } });
+    } else if (route.request().url().endsWith("/verify")) {
+      expect(route.request().postDataJSON().challengeId).toBe("challenge-1");
+      await route.fulfill({ status: 401, json: { code: "access_invalid" } });
+    } else await route.fulfill({ status: 401, json: { code: "access_invalid" } });
+  });
+  const copy = guestCopy("en");
+  await page.goto("/en/manage-reservation");
+  await page.getByLabel(copy.reference, { exact: true }).fill("REF");
+  await page.getByLabel(copy.email, { exact: true }).fill("guest@example.test");
+  const send = page.getByRole("button", { name: copy.sendCode, exact: true });
+  await send.click();
+  await expect(send).toBeDisabled();
+  await page.getByLabel(copy.email, { exact: true }).press("Enter");
+  await page.getByLabel(copy.code, { exact: true }).fill("CODE");
+  await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: copy.expired })).toBeVisible();
+  expect(requests).toBe(1);
+  await page.clock.fastForward(61000);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(send).toBeDisabled();
+  expect(requests).toBe(2);
+});
+
 for (const locale of ["tr", "en", "de", "ru", "ar"]) {
   test(`guest verification and cancellation in ${locale}`, async ({ page }) => {
     const copy = guestCopy(locale);
@@ -26,6 +57,7 @@ for (const locale of ["tr", "en", "de", "ru", "ar"]) {
         expect(route.request().postDataJSON()).toMatchObject({ publicCode: "SYNTHETIC-REF", email: "guest@example.test", locale });
         await route.fulfill({ json: { challengeId: "synthetic-challenge" } });
       } else if (path.endsWith("/verify")) {
+        expect(route.request().postDataJSON()).toEqual({ challengeId: "synthetic-challenge", code: "SYNTHETIC" });
         verified = true;
         await route.fulfill({ json: { csrfToken: "synthetic-csrf" } });
       } else if (path.endsWith("/cancel")) {
@@ -41,6 +73,7 @@ for (const locale of ["tr", "en", "de", "ru", "ar"]) {
     await page.getByLabel(copy.reference, { exact: true }).fill("SYNTHETIC-REF");
     await page.getByLabel(copy.email, { exact: true }).fill("guest@example.test");
     await page.getByRole("button", { name: copy.sendCode, exact: true }).click();
+    await expect(page.getByRole("button", { name: copy.sendCode, exact: true })).toBeDisabled();
     await page.getByLabel(copy.code, { exact: true }).fill("SYNTHETIC");
     await page.getByRole("button", { name: copy.verify, exact: true }).click();
     await expect(page.getByText("SYNTHETIC-REF", { exact: true })).toBeVisible();

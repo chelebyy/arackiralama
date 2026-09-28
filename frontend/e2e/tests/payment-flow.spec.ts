@@ -18,9 +18,10 @@ async function fillDriverDetails(page: Page) {
   await page.locator("input[name='lastName']").fill("User");
   await page.locator("#email").fill("test@example.com");
   await page.locator("#phone").fill("+905551234567");
-  await page.locator("#birthDate").fill("1990-01-01");
-  await page.locator("#driverLicense").fill("TR12345678");
-  await page.locator("#driverLicenseCountry").fill("Turkey");
+  await page.locator('[name="ageAtPickup"]').fill("30");
+  await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+  await page.locator('[name="licenseValidThroughReturn"]').check();
+  await page.locator('[name="documentsAvailableAtPickup"]').check();
 }
 
 test.describe("Payment Flow (Mock)", () => {

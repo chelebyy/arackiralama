@@ -449,18 +449,24 @@ export default function ReservationDetailPage() {
                     {r.driver.firstName} {r.driver.lastName}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ehliyet No</span>
-                  <span>{r.driver.licenseNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ehliyet Ülkesi</span>
-                  <span>{r.driver.licenseCountry}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ehliyet Bitiş</span>
-                  <span>{r.driver.licenseExpiryDate}</span>
-                </div>
+                {r.driver.declaration && <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Teslim tarihindeki yaş</span>
+                    <span>{r.driver.declaration.ageAtPickup}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ehliyet süresi (yıl)</span>
+                    <span>{r.driver.declaration.licenseYearsAtPickup}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">İadeye kadar geçerli ehliyet beyanı</span>
+                    <span>{r.driver.declaration.licenseValidThroughReturn ? "Evet" : "Hayır"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Belgeler teslimde sunulacak</span>
+                    <span>{r.driver.declaration.documentsAvailableAtPickup ? "Evet" : "Hayır"}</span>
+                  </div>
+                </>}
               </>
             ) : (
               <div className="text-muted-foreground">Sürücü bilgisi bulunmuyor</div>

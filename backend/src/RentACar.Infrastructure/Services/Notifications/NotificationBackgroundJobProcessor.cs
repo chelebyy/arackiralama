@@ -65,6 +65,15 @@ public sealed class NotificationBackgroundJobProcessor(
                     _ => throw new InvalidOperationException($"Unsupported notification job type: {job.Type}")
                 };
 
+                if (result.Skipped)
+                {
+                    job.Status = BackgroundJobStatus.Cancelled;
+                    job.LastError = "Guest access code expired before delivery.";
+                    job.UpdatedAt = DateTime.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    continue;
+                }
+
                 if (!result.Success)
                 {
                     throw new InvalidOperationException(result.FailureMessage ?? $"Notification provider returned {result.FailureCode ?? "unknown_error"}.");
@@ -109,7 +118,11 @@ public sealed class NotificationBackgroundJobProcessor(
         var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("Email job payload could not be deserialized.");
 
+        if (GuestReservationMail.IsExpiredAccess(payload, DateTimeOffset.UtcNow))
+            return new NotificationJobResult(true, null, null, Skipped: true);
         var message = notificationTemplateService.RenderEmail(payload);
+        if (GuestReservationMail.IsExpiredAccess(payload, DateTimeOffset.UtcNow))
+            return new NotificationJobResult(true, null, null, Skipped: true);
         var result = await emailProvider.SendAsync(message, cancellationToken);
         return new NotificationJobResult(result.Success, result.FailureCode, result.FailureMessage);
     }
@@ -124,5 +137,5 @@ public sealed class NotificationBackgroundJobProcessor(
         return new NotificationJobResult(result.Success, result.FailureCode, result.FailureMessage);
     }
 
-    private sealed record NotificationJobResult(bool Success, string? FailureCode, string? FailureMessage);
+    private sealed record NotificationJobResult(bool Success, string? FailureCode, string? FailureMessage, bool Skipped = false);
 }

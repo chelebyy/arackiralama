@@ -56,12 +56,20 @@ describe("guest BFF", () => {
     expect(await response.json()).toEqual({ code: "unavailable" });
   });
   it("restores CSRF on reload and clears cookies after logout", async () => {
-    vi.stubGlobal("fetch", upstream.mockResolvedValue(Response.json({ publicCode: "REF" })));
+    vi.stubGlobal("fetch", upstream.mockImplementation(async () => Response.json({ publicCode: "REF" })));
     const headers = { cookie: "guest_reservation_session=stored; guest_reservation_csrf=csrf", "x-guest-csrf": "csrf" };
     const view = await GET(request("view", "GET", headers), context("view"));
     expect(await view.json()).toMatchObject({ publicCode: "REF", csrfToken: "csrf" });
     const logout = await POST(request("logout", "POST", headers), context("logout"));
     expect(logout.cookies.get("guest_reservation_session")?.maxAge).toBe(0);
     expect(logout.cookies.get("guest_reservation_csrf")?.maxAge).toBe(0);
+  });
+  it("returns upstream status without trying to parse its error body", async () => {
+    const json = vi.fn().mockRejectedValue(new Error("not JSON"));
+    vi.stubGlobal("fetch", upstream.mockResolvedValue({ ok: false, status: 429, json }));
+    const response = await POST(request("request"), context("request"));
+    expect(response.status).toBe(429);
+    expect(json).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ code: "unavailable" });
   });
 });

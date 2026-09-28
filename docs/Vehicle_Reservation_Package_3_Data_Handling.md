@@ -1,5 +1,15 @@
 # Package 3 data handling and activation design
 
+## Guest proxy and shared key configuration
+
+Configure the same independently generated secret (at least 32 characters) as API `GuestAccess:ProxySecret` and web `GUEST_PROXY_SECRET`. Set web `GUEST_CLIENT_IP_HEADER` to the single-address header overwritten by the trusted ingress. Never expose the web origin directly or trust a caller-supplied forwarding chain. `backend/nginx.local.conf` demonstrates overwriting this header from the socket address; with another proxy in front, configure its verified real-IP boundary explicitly. The committed Compose secret is local development only.
+
+The BFF hashes the edge address with HMAC, then signs the partition, timestamp, HTTP method and API path. The API accepts signatures within 60 seconds and uses that partition in both global and endpoint limiters. Invalid/missing signatures retain the socket-IP limits. Production BFF requests fail closed if edge identity configuration is missing. Direct local development without either setting retains socket-IP behavior. No IP address is sent in the signed partition header.
+
+API and Worker use the same application name and durable `GuestAccess:KeyRingPath`; local Compose mounts `guest_keys:/keys` in both and initializes permissions. This local volume is not encrypted at rest. Production still requires protected shared storage/certificate configuration, restricted permissions and tested backup/key recovery. Access-mail jobs are checked for expiry before rendering and immediately before provider dispatch; expired/malformed deadlines cancel the job without retries. Mail states the stored absolute UTC expiry, not ten minutes after delivery. Provider/network delivery time remains outside the application's control.
+
+The resend cooldown is enforced in the management page, preserving the active challenge and the API's neutral random response for unknown/cooldown lookups. Reusing an existing challenge ID only for matching records would expose an enumeration signal, so the API response contract is unchanged.
+
 Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
 
 ## Classification and current implementation

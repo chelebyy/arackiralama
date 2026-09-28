@@ -2345,7 +2345,9 @@ public sealed class ReservationService : IReservationService
 
     private static ReservationDriverDto? BuildDriverDto(Reservation reservation)
     {
-        if (string.IsNullOrWhiteSpace(reservation.DriverLicenseNumber))
+        if (string.IsNullOrWhiteSpace(reservation.DriverFirstName) &&
+            string.IsNullOrWhiteSpace(reservation.DriverLastName) &&
+            reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration is null)
         {
             return null;
         }
@@ -2354,11 +2356,7 @@ public sealed class ReservationService : IReservationService
         {
             FirstName = reservation.DriverFirstName ?? string.Empty,
             LastName = reservation.DriverLastName ?? string.Empty,
-            DateOfBirth = reservation.DriverDateOfBirth,
-            LicenseNumber = reservation.DriverLicenseNumber,
-            LicenseCountry = reservation.DriverLicenseCountry ?? string.Empty,
-            LicenseIssueDate = reservation.DriverLicenseIssueDate,
-            LicenseExpiryDate = reservation.DriverLicenseExpiryDate
+            Declaration = reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration
         };
     }
 

@@ -314,6 +314,32 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
+    public async Task GetReservationByIdAsync_ReturnsAllowlistedDriverWithoutLegacyLicense()
+    {
+        var declaration = new DriverDeclaration
+        {
+            AgeAtPickup = 30, LicenseYearsAtPickup = 8,
+            LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+        };
+        var reservation = new Reservation
+        {
+            Id = Guid.NewGuid(), PublicCode = "DECLARATION", DriverFirstName = "Test", DriverLastName = "Driver",
+            PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(8),
+            PricingSnapshot = new ReservationPricingSnapshotV1
+            {
+                RentalDays = 3, BookingConditions = new ReservationBookingConditions { DriverDeclaration = declaration }
+            }
+        };
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var result = await _sut.GetReservationByIdAsync(reservation.Id, default);
+        result!.Driver.Should().NotBeNull();
+        result.Driver!.FirstName.Should().Be("Test");
+        result.Driver.Declaration.Should().BeEquivalentTo(declaration);
+        var json = System.Text.Json.JsonSerializer.Serialize(result.Driver);
+        json.Should().NotContain("LicenseNumber").And.NotContain("DateOfBirth");
+    }
+
+    [Fact]
     public async Task SearchAvailabilityAsync_WhenCalledTwice_UsesCacheAndAvoidsRecomputation()
     {
         // Arrange

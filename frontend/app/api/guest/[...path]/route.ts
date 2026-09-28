@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_BACKEND_BASE_URL } from "@/lib/auth/constants";
+import { guestProxyHeaders } from "@/lib/guest-proxy";
 
 const sessionName = "guest_reservation_session";
 const csrfName = "guest_reservation_csrf";
@@ -26,13 +27,14 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
     const body = req.method === "GET" ? undefined : await req.text();
     if (body && new TextEncoder().encode(body).length > 8192)
       return NextResponse.json({ code: "invalid_request" }, { status: 413, headers });
-    const response = await fetch(DEFAULT_BACKEND_BASE_URL.replace(/\/$/, "") +
-      "/api/guest/v1/reservation" + (path === "view" ? "" : "/" + path), {
+    const upstreamPath = "/api/guest/v1/reservation" + (path === "view" ? "" : "/" + path);
+    Object.assign(upstreamHeaders, guestProxyHeaders(req.headers, req.method, upstreamPath));
+    const response = await fetch(DEFAULT_BACKEND_BASE_URL.replace(/\/$/, "") + upstreamPath, {
       method: req.method, body, headers: upstreamHeaders, cache: "no-store", signal: AbortSignal.timeout(15000),
     });
-    const data = await response.json().catch(() => ({ code: "unavailable" }));
     if (!response.ok) return NextResponse.json({ code: response.status === 401 ? "access_invalid" : "unavailable" },
       { status: response.status, headers });
+    const data = await response.json();
     const result = NextResponse.json(path === "verify" ? { success: true, csrfToken: data.csrfToken } :
       path === "view" ? { ...data, csrfToken: csrf } : data, { headers });
     const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const,
