@@ -52,4 +52,3 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
 }
 export const GET = forward;
 export const POST = forward;
-

@@ -20,7 +20,6 @@ public sealed class GuestAccessConfiguration : IEntityTypeConfiguration<GuestRes
         builder.HasOne<Reservation>().WithMany().HasForeignKey(x => x.ReservationId).OnDelete(DeleteBehavior.Cascade);
     }
 }
-
 public sealed class ReservationAmendmentConfiguration : IEntityTypeConfiguration<ReservationAmendment>
 {
     public void Configure(EntityTypeBuilder<ReservationAmendment> builder)
@@ -33,4 +32,3 @@ public sealed class ReservationAmendmentConfiguration : IEntityTypeConfiguration
         builder.HasOne<GuestReservationAccess>().WithMany().HasForeignKey(x => x.AccessId).OnDelete(DeleteBehavior.Restrict);
     }
 }
-

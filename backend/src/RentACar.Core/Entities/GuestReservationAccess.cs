@@ -29,4 +29,3 @@ public sealed class ReservationAmendment : BaseEntity
     public string? PreviousSnapshot { get; set; }
     public string? ResultJson { get; set; }
 }
-

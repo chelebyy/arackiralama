@@ -10,7 +10,7 @@ Paket 2, PR #447 ile `1a352c984972a3c6a705b10073563eca470b92fc` commit'inde birl
 
 Yerel kanıt: 896 backend birim testi, 70 mevcut kesin araç/teklif API testi, 19 yeni misafir yönetimi/posta API testi, 359 frontend testi ve üretim derlemesi geçti. Beş dilde 12 masaüstü/mobil tarayıcı senaryosu kontrollü API yanıtlarıyla doğrulandı; gerçek PostgreSQL/Redis ve localhost SMTP kontrolleri ayrı testlerdir. Lint hatasızdır, mevcut tek uyarı sürer.
 
-[Paket 3 uygulama ve sınırlar](Vehicle_Reservation_Package_3_Implementation.md), [veri/anahtar yaşam döngüsü](Vehicle_Reservation_Package_3_Data_Handling.md), [plan](Vehicle_Reservation_Package_3_Plan.md). PR/uzak CI, merge, canlı dağıtım, gerçek e-posta gönderimi ve tarihsel veri temizliği yapılmadı.
+[Paket 3 uygulama ve sınırlar](Vehicle_Reservation_Package_3_Implementation.md), [veri/anahtar yaşam döngüsü](Vehicle_Reservation_Package_3_Data_Handling.md), [plan](Vehicle_Reservation_Package_3_Plan.md). [PR #457](https://github.com/chelebyy/arackiralama/pull/457) açıldı; uzak CI sonucu son PR commit'i için ayrıca kontrol edilmelidir. Merge, canlı dağıtım, gerçek e-posta gönderimi ve tarihsel veri temizliği yapılmadı.
 
 **Sıradaki geliştirme:** Paket 4 — korunan header/hero dışındaki sayfaları sadeleştirme ve gerçek işletme metinleri. Canlı açılıştan önce Paket 3'ün işletme kuralları, saklama süreleri, ortak korumalı anahtar deposu ve tam dağıtım zinciri kabulü ayrıca tamamlanmalıdır.
 

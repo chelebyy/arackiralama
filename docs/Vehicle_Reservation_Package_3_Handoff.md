@@ -2,7 +2,7 @@
 
 ## Durum ve çalışma alanı
 
-Paket 3 yerel uygulaması ve kapsamlı yerel doğrulaması tamamlandı. Bu belge, 28 Eylül 2026 tarihli PR hazırlığı için devam noktasını kaydeder. PR yayımlandığında bağlantısı bu bölüme eklenecektir; uzak CI sonucu ayrıca doğrulanmalıdır.
+Paket 3 yerel uygulaması ve kapsamlı yerel doğrulaması tamamlandı. [PR #457](https://github.com/chelebyy/arackiralama/pull/457) 28 Eylül 2026 tarihinde `main` hedefiyle açıldı. İlk uygulama commit'i `706b7ab`; sonraki belge/biçim düzeltmeleri aynı PR'dedir. Uzak CI sonucu bu belgede başarılı kabul edilmez; son PR commit'i üzerinden kontrol edilmelidir.
 
 - Dal: `codex/guest-reservations`.
 - Çalışma ağacı: `C:\Users\muham\.codex\worktrees\guest-reservations\Araç Kiralama`.

@@ -67,7 +67,7 @@ Before authorized release:
 5. Check trusted-proxy/rate-limit behavior, customer email changes, cookie isolation, cross-reservation denial and concurrent admin actions.
 6. Confirm agreed settlement wording and live email/legal texts. Obtain separate deployment authorization.
 
-No PR, merge, production migration, live sending, historical purge or worktree removal was performed. The primary checkout's unrelated work remains intact. A read-only old-worktree audit timed out without a report; uncertain worktrees were preserved.
+[PR #457](https://github.com/chelebyy/arackiralama/pull/457) publishes the implementation and handoff for review. Remote CI must be checked at the current PR head; local results above do not establish CI success. No merge, production migration, live sending, historical purge or worktree removal was performed. The primary checkout's unrelated work remains intact. A read-only old-worktree audit timed out without a report; uncertain worktrees were preserved.
 
 ## Baseline
 

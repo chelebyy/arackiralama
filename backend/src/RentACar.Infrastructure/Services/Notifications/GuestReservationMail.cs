@@ -36,4 +36,3 @@ public static class GuestReservationMail
         return new EmailMessageRequest { ToEmail = request.ToEmail, Subject = subject, PlainTextBody = body };
     }
 }
-

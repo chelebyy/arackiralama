@@ -14,4 +14,3 @@ public sealed record GuestAmendmentRequest(DateTime PickupDateTimeUtc, DateTime 
     DriverDeclaration Declaration);
 public sealed record GuestAmendmentConfirmation(Guid AmendmentId, decimal AcceptedTotal);
 public sealed record GuestSessionResult(string SessionToken, string CsrfToken, DateTime ExpiresAt);
-
