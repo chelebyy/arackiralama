@@ -41,6 +41,12 @@ export default function ManageReservationPage() {
     return () => clearTimeout(timer);
   }, [requestCoolingDown]);
 
+  function clearReservationState() {
+    setView(null); setOffer(null); csrf.current = "";
+    setCancelAccepted(false); setDates({ pickup: "", returnDate: "" });
+    setDeclaration(emptyDeclaration);
+  }
+
   async function request<T>(path: string, body?: unknown): Promise<T> {
     const response = await fetch("/api/guest/" + path, {
       method: body === undefined ? "GET" : "POST", cache: "no-store",
@@ -49,7 +55,8 @@ export default function ManageReservationPage() {
     });
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        setView(null); setOffer(null); csrf.current = "";
+        clearReservationState();
+        if (path !== "verify") { setChallengeId(""); setRequestCoolingDown(false); }
         throw new Error(copy.expired);
       }
       if (response.status === 409) setOffer(null);
@@ -129,7 +136,7 @@ export default function ManageReservationPage() {
           <p>{view.returnOffice} — {formatDate(view.returnDateTime)}</p>
           <p className="mt-3 font-semibold">{copy.total}: {money(view.totalAmount)}</p>
           <button type="button" disabled={busy} className="mt-4 underline" onClick={() => void run(async () => {
-            await request("logout", {}); setView(null); setOffer(null); csrf.current = "";
+            await request("logout", {}); clearReservationState(); setChallengeId(""); setRequestCoolingDown(false);
           })}>{copy.logout}</button>
         </section>
         {!view.canCancel && !view.canChangeDates && <p>{copy.unavailable}</p>}

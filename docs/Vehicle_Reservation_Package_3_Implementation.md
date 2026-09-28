@@ -79,6 +79,8 @@ The first review commit exposed six stale mail fixtures in remote CI after the m
 
 Follow-up validation passed all 910 backend units in Release, nine version-2 rollout/negative scenarios and three current-draft policy scenarios against PostgreSQL/Redis. The Worker now uses the ASP.NET 10 runtime image; its real image build and isolated database/Redis startup passed. Hold compatibility accepts stored proof versions 2 and 3, retaining session and exact-vehicle checks. Only existing version-2 drafts reuse stored driver dates; expiry, policy and eligibility are revalidated without fabricating declarations. New reservations still write version 3, and the request-replay fingerprint verifier remains strict rather than accepting unverifiable legacy sensitive inputs.
 
+The subsequent review pass added challenge retirement on resend, pre-dispatch challenge usability checks, conditional cancellation of abandoned reminder jobs, and per-session consent/form reset. Validation after these changes: 910 Release unit tests, all 23 guest PostgreSQL/Redis integration cases, 20 Chromium desktop/mobile guest cases, and lint with zero errors (one existing suppression warning). New cases prove established sessions survive a resend, superseded access jobs are skipped, abandoned reminders are cancelled for both mutation types, and logout/401/403 cannot carry consent into another reservation.
+
 ## Baseline
 
 Implementation started from freshly fetched remote default `main` at `1a352c984972a3c6a705b10073563eca470b92fc`, the merged Package 2 PR #447 commit. Local `main` was synchronized at start. The active feature checkout is separate from the dirty primary checkout. These are baseline facts, not a claim that the primary working directory is now on main.

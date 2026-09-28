@@ -40,6 +40,48 @@ test("resend cooldown preserves the active challenge and allows retry after a mi
   expect(requests).toBe(2);
 });
 
+for (const ending of ["logout", "401", "403"]) {
+  test(`reservation consent and inputs reset after ${ending}`, async ({ page }) => {
+    const copy = guestCopy("en");
+    let authenticated = true;
+    let secondReservation = false;
+    await page.route("**/api/guest/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/view")) await route.fulfill({ status: authenticated ? 200 : 401,
+        json: { ...initial, publicCode: secondReservation ? "SECOND-REF" : initial.publicCode,
+          cancellationFee: secondReservation ? 99 : initial.cancellationFee } });
+      else if (path.endsWith("/logout") || path.endsWith("/cancel")) {
+        authenticated = false;
+        await route.fulfill({ status: ending === "logout" ? 200 : Number(ending), json: {} });
+      } else if (path.endsWith("/request")) await route.fulfill({ json: { challengeId: "second-challenge" } });
+      else if (path.endsWith("/verify")) {
+        authenticated = true; secondReservation = true;
+        await route.fulfill({ json: { csrfToken: "new-csrf" } });
+      } else await route.fulfill({ json: {} });
+    });
+    await page.goto("/en/manage-reservation");
+    await page.getByLabel(copy.confirmCancel).check();
+    await page.getByLabel(copy.pickup, { exact: true }).fill("2026-11-02T10:00");
+    await page.getByLabel(copy.returnDate, { exact: true }).fill("2026-11-06T10:00");
+    await page.getByLabel(copy.ageAtPickup, { exact: true }).fill("30");
+    await page.getByLabel(copy.licenseYearsAtPickup, { exact: true }).fill("8");
+    await page.getByLabel(copy.licenseValidThroughReturn).check();
+    await page.getByLabel(copy.documentsAvailableAtPickup).check();
+    await page.getByRole("button", { name: ending === "logout" ? copy.logout : copy.cancel, exact: true }).click();
+    await page.getByLabel(copy.reference, { exact: true }).fill("SECOND-REF");
+    await page.getByLabel(copy.email, { exact: true }).fill("second@example.test");
+    await page.getByRole("button", { name: copy.sendCode, exact: true }).click();
+    await page.getByLabel(copy.code, { exact: true }).fill("SECOND");
+    await page.getByRole("button", { name: copy.verify, exact: true }).click();
+    await expect(page.getByText("SECOND-REF", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: copy.cancel, exact: true })).toBeDisabled();
+    for (const field of [copy.confirmCancel, copy.licenseValidThroughReturn, copy.documentsAvailableAtPickup])
+      await expect(page.getByLabel(field)).not.toBeChecked();
+    for (const field of [copy.pickup, copy.returnDate, copy.ageAtPickup, copy.licenseYearsAtPickup])
+      await expect(page.getByLabel(field, { exact: true })).toHaveValue("");
+  });
+}
+
 for (const locale of ["tr", "en", "de", "ru", "ar"]) {
   test(`guest verification and cancellation in ${locale}`, async ({ page }) => {
     const copy = guestCopy(locale);

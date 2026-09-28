@@ -35,6 +35,9 @@ public sealed class GuestReservationService(
         await LockReservationAsync(reservation.Id, ct);
         if (await db.GuestReservationAccess.AnyAsync(g => g.ReservationId == reservation.Id &&
                 g.CreatedAt > DateTime.UtcNow.AddMinutes(-1), ct)) return id;
+        await db.GuestReservationAccess.Where(g => g.ReservationId == reservation.Id &&
+            !g.Revoked && g.VerifiedAt == null).ExecuteUpdateAsync(update => update
+                .SetProperty(g => g.Revoked, true).SetProperty(g => g.CodeHash, string.Empty), ct);
         var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
         var grant = new GuestReservationAccess
         {
@@ -48,6 +51,7 @@ public sealed class GuestReservationService(
             ToEmail = reservation.Customer.Email, Locale = grant.Locale, TemplateKey = AccessTemplate,
             Variables = new Dictionary<string, string>
             {
+                ["ChallengeId"] = id.ToString("D"),
                 ["ProtectedCode"] = protection.CreateProtector(MailPurpose).Protect(code),
                 ["ExpiresAtUtc"] = grant.CodeExpiresAt.ToString("O")
             }
@@ -251,7 +255,10 @@ public sealed class GuestReservationService(
 
     private async Task UpdateRemindersAsync(Reservation reservation, string locale, bool cancel, CancellationToken ct)
     {
-        var jobs = await db.BackgroundJobs.Where(j => j.Status == BackgroundJobStatus.Pending &&
+        var abandonedBefore = DateTime.UtcNow.AddMinutes(-5);
+        var jobs = await db.BackgroundJobs.AsNoTracking().Where(j =>
+            (j.Status == BackgroundJobStatus.Pending ||
+             (j.Status == BackgroundJobStatus.Processing && j.UpdatedAt < abandonedBefore)) &&
             j.Payload.Contains(reservation.PublicCode)).ToListAsync(ct);
         foreach (var job in jobs)
         {
@@ -260,7 +267,11 @@ public sealed class GuestReservationService(
                 key.GetString() is NotificationTemplateKeys.PickupReminder or NotificationTemplateKeys.ReturnReminder &&
                 payload.RootElement.TryGetProperty("Variables", out var variables) &&
                 variables.TryGetProperty("PublicCode", out var code) && code.GetString() == reservation.PublicCode)
-                job.Status = BackgroundJobStatus.Cancelled;
+                await db.BackgroundJobs.Where(j => j.Id == job.Id &&
+                    (j.Status == BackgroundJobStatus.Pending ||
+                     (j.Status == BackgroundJobStatus.Processing && j.UpdatedAt < abandonedBefore)))
+                    .ExecuteUpdateAsync(update => update.SetProperty(j => j.Status, BackgroundJobStatus.Cancelled)
+                        .SetProperty(j => j.UpdatedAt, DateTime.UtcNow), ct);
         }
         if (cancel) return;
         foreach (var (key, scheduled) in new[] {

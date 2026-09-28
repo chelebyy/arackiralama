@@ -68,7 +68,7 @@ public sealed class NotificationBackgroundJobProcessor(
                 if (result.Skipped)
                 {
                     job.Status = BackgroundJobStatus.Cancelled;
-                    job.LastError = "Guest access code expired before delivery.";
+                    job.LastError = "Guest access code is no longer usable.";
                     job.UpdatedAt = DateTime.UtcNow;
                     await dbContext.SaveChangesAsync(cancellationToken);
                     continue;
@@ -118,13 +118,23 @@ public sealed class NotificationBackgroundJobProcessor(
         var payload = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("Email job payload could not be deserialized.");
 
-        if (GuestReservationMail.IsExpiredAccess(payload, DateTimeOffset.UtcNow))
+        if (await IsUnusableAccessAsync(payload, cancellationToken))
             return new NotificationJobResult(true, null, null, Skipped: true);
         var message = notificationTemplateService.RenderEmail(payload);
-        if (GuestReservationMail.IsExpiredAccess(payload, DateTimeOffset.UtcNow))
+        if (await IsUnusableAccessAsync(payload, cancellationToken))
             return new NotificationJobResult(true, null, null, Skipped: true);
         var result = await emailProvider.SendAsync(message, cancellationToken);
         return new NotificationJobResult(result.Success, result.FailureCode, result.FailureMessage);
+    }
+
+    private async Task<bool> IsUnusableAccessAsync(QueuedEmailNotificationRequest payload, CancellationToken ct)
+    {
+        if (GuestReservationMail.IsExpiredAccess(payload, DateTimeOffset.UtcNow)) return true;
+        if (payload.TemplateKey != "guest-reservation-access" ||
+            !payload.Variables.TryGetValue("ChallengeId", out var challenge)) return false;
+        if (!Guid.TryParse(challenge, out var id)) return true;
+        return !await dbContext.GuestReservationAccess.AsNoTracking().AnyAsync(g => g.Id == id &&
+            !g.Revoked && g.VerifiedAt == null && g.Attempts < 5 && g.CodeExpiresAt > DateTime.UtcNow, ct);
     }
 
     private async Task<NotificationJobResult> ProcessSmsJobAsync(BackgroundJob job, CancellationToken cancellationToken)

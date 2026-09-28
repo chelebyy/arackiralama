@@ -8,6 +8,8 @@ The next Codex pass identified the Worker's missing ASP.NET shared runtime and r
 
 ## Durum ve çalışma alanı
 
+Further review corrections retire superseded unverified challenges, skip their queued mail, cancel abandoned reminders after reservation changes, and reset consent/form state on logout or access denial. Validation: 910 Release unit tests, 23 real guest integration tests, 20 desktop/mobile guest browser scenarios and lint passed (one existing lint warning). Exact-head remote checks remain the publication gate.
+
 Paket 3 yerel uygulaması ve kapsamlı yerel doğrulaması tamamlandı. [PR #457](https://github.com/chelebyy/arackiralama/pull/457) 28 Eylül 2026 tarihinde `main` hedefiyle açıldı. İlk uygulama commit'i `706b7ab`; sonraki belge/biçim düzeltmeleri aynı PR'dedir. Uzak CI sonucu bu belgede başarılı kabul edilmez; son PR commit'i üzerinden kontrol edilmelidir.
 
 - Dal: `codex/guest-reservations`.

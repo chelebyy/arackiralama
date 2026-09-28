@@ -6,6 +6,8 @@ Reservation detail now renders the stored driver name and eligibility declaratio
 
 Rollout compatibility reuses stored driver dates only to validate existing version-2 checkout holds. It does not accept new sensitive fields, fabricate a customer declaration, or expose those dates in the admin response.
 
+Guest changes also retire pending and abandoned pickup/return reminders, so recovered jobs do not retain the pre-change schedule. Public cancellation acceptance and driver declaration fields reset between authenticated reservations.
+
 Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
 
 ## Package 3 office policy extension

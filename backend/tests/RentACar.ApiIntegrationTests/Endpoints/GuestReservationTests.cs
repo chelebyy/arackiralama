@@ -119,9 +119,33 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
     }
 
     [Fact]
-    public async Task Cancellation_FailsClosedThenCommitsOnceWithAuditAndQueuedMail()
+    public async Task AccessResend_RevokesUnverifiedCodesAndSkipsTheirMailWithoutRevokingSessions()
+    {
+        var reservation = await SeedAsync();
+        var session = await SessionAsync(reservation);
+        await WithDbContextAsync(db => db.GuestReservationAccess.ExecuteUpdateAsync(update =>
+            update.SetProperty(g => g.CreatedAt, DateTime.UtcNow.AddMinutes(-2))));
+        var first = await ChallengeAsync(reservation);
+        await WithDbContextAsync(db => db.GuestReservationAccess.ExecuteUpdateAsync(update =>
+            update.SetProperty(g => g.CreatedAt, DateTime.UtcNow.AddMinutes(-2))));
+        var second = await ChallengeAsync(reservation);
+        first.Id.Should().NotBe(second.Id);
+        (await ServiceAsync(s => s.VerifyAsync(new(first.Id, first.Code), default))).Should().BeNull();
+        (await ServiceAsync(s => s.AuthenticateAsync(session.SessionToken, session.CsrfToken, true, default))).Should().NotBeNull();
+        var sink = new TestEmailSink();
+        (await ProcessMailAsync(sink)).Should().Be(1);
+        sink.Delivered.Should().Be(1);
+        (await WithDbContextAsync(db => db.BackgroundJobs.CountAsync(j => j.Status == BackgroundJobStatus.Cancelled))).Should().Be(2);
+        (await ServiceAsync(s => s.VerifyAsync(new(second.Id, second.Code), default))).Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData(BackgroundJobStatus.Pending)]
+    [InlineData(BackgroundJobStatus.Processing)]
+    public async Task Cancellation_FailsClosedThenCommitsOnceWithAuditAndQueuedMail(BackgroundJobStatus reminderStatus)
     {
         var reservation = await SeedAsync(false);
+        await SetReminderStatusAsync(reminderStatus);
         var session = await SessionAsync(reservation);
         var blocked = () => AuthorizedAsync(session, (s, a) => s.CancelAsync(a, new(reservation.Version, 0), default));
         await blocked.Should().ThrowAsync<ReservationQuoteConflictException>();
@@ -138,10 +162,13 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
         (await WithDbContextAsync(db => db.BackgroundJobs.CountAsync(j => j.Status == BackgroundJobStatus.Cancelled))).Should().Be(1);
     }
 
-    [Fact]
-    public async Task Amendment_RepricesPreservesHistoryAndReplaysAfterResponseLoss()
+    [Theory]
+    [InlineData(BackgroundJobStatus.Pending)]
+    [InlineData(BackgroundJobStatus.Processing)]
+    public async Task Amendment_RepricesPreservesHistoryAndReplaysAfterResponseLoss(BackgroundJobStatus reminderStatus)
     {
         var original = await SeedAsync();
+        await SetReminderStatusAsync(reminderStatus);
         var session = await SessionAsync(original);
         var offer = await OfferAsync(session, original.PickupDateTime.AddDays(1), original.ReturnDateTime.AddDays(2));
         var confirmation = new GuestAmendmentConfirmation(offer.GetProperty("AmendmentId").GetGuid(), offer.GetProperty("FinalTotal").GetDecimal());
@@ -370,6 +397,11 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
         accepted.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    private Task<int> SetReminderStatusAsync(BackgroundJobStatus status) => WithDbContextAsync(db =>
+        db.BackgroundJobs.Where(j => j.Payload.Contains(NotificationTemplateKeys.PickupReminder))
+            .ExecuteUpdateAsync(update => update.SetProperty(j => j.Status, status)
+                .SetProperty(j => j.UpdatedAt, DateTime.UtcNow.AddMinutes(-6))));
+
     private async Task<int> ProcessMailAsync(TestEmailSink sink)
     {
         using var scope = Services.CreateScope();
@@ -437,7 +469,7 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
     private async Task<(Guid Id, string Code)> ChallengeAsync(Reservation r)
     {
         var id = await ServiceAsync(s => s.RequestAccessAsync(new(r.PublicCode, r.Customer!.Email, "en"), default));
-        var job = await WithDbContextAsync(db => db.BackgroundJobs.SingleAsync(j => j.Payload.Contains(GuestReservationService.AccessTemplate) && j.Payload.Contains(r.Customer!.Email)));
+        var job = await WithDbContextAsync(db => db.BackgroundJobs.SingleAsync(j => j.Payload.Contains(GuestReservationService.AccessTemplate) && j.Payload.Contains(id.ToString())));
         var request = JsonSerializer.Deserialize<QueuedEmailNotificationRequest>(job.Payload)!;
         var code = Services.GetRequiredService<IDataProtectionProvider>().CreateProtector(GuestReservationService.MailPurpose).Unprotect(request.Variables["ProtectedCode"]);
         job.Payload.Should().NotContain(code);
