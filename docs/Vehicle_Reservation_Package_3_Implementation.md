@@ -69,12 +69,16 @@ Before authorized release:
 
 [PR #457](https://github.com/chelebyy/arackiralama/pull/457) publishes the implementation and handoff for review. Remote CI must be checked at the current PR head; local results above do not establish CI success. No merge, production migration, live sending, historical purge or worktree removal was performed. The primary checkout's unrelated work remains intact. A read-only old-worktree audit timed out without a report; uncertain worktrees were preserved.
 
-## Baseline
-
 ## PR 457 review validation
 
 Review corrections passed 910 backend unit tests, 20 PostgreSQL/Redis guest integration tests, the 364-test frontend suite plus the subsequently added HTTP-error regression (8 BFF tests passed), production Webpack/TypeScript build, and lint (zero errors, one existing SearchForm test warning). Chromium passed seven guest scenarios on desktop and seven on mobile, including cooldown/Enter submission and all five locales; four controlled Step 4 payment/quote scenarios also passed. Their fixtures now use declarations and the current server conflict/explicit-acceptance contract. Compose configuration and Nginx syntax checks passed; independent Data Protection providers verified persisted-key decryption across provider recreation.
 
 The broad real-catalog payment suite was attempted but did not reach checkout: the isolated local seed has 120 vehicles and zero configured `rental_terms`, so dated search correctly returns no offers. These changes do not claim full catalogue-driven E2E or full deployed HTTPS/SMTP acceptance. No production data or shared existing test database was modified. Security review covered the touched BFF signatures/partitioning, neutral challenge responses, key sharing, driver JSON minimization and expired-mail dispatch. Production ingress isolation, secret provisioning, encrypted key storage and delivery remain unverified; a focused independent security review and the release checklist above remain available before activation.
+
+The first review commit exposed six stale mail fixtures in remote CI after the message switched to an absolute expiry. The SMTP and five-locale fixtures now provide and assert the exact stored expiry instead of a new ten-minute lifetime.
+
+Follow-up validation passed all 910 backend units in Release, nine version-2 rollout/negative scenarios and three current-draft policy scenarios against PostgreSQL/Redis. The Worker now uses the ASP.NET 10 runtime image; its real image build and isolated database/Redis startup passed. Hold compatibility accepts stored proof versions 2 and 3, retaining session and exact-vehicle checks. Only existing version-2 drafts reuse stored driver dates; expiry, policy and eligibility are revalidated without fabricating declarations. New reservations still write version 3, and the request-replay fingerprint verifier remains strict rather than accepting unverifiable legacy sensitive inputs.
+
+## Baseline
 
 Implementation started from freshly fetched remote default `main` at `1a352c984972a3c6a705b10073563eca470b92fc`, the merged Package 2 PR #447 commit. Local `main` was synchronized at start. The active feature checkout is separate from the dirty primary checkout. These are baseline facts, not a claim that the primary working directory is now on main.

@@ -467,6 +467,62 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     }
 
     [Theory]
+    [InlineData("valid")]
+    [InlineData("cached")]
+    [InlineData("expired-quote")]
+    [InlineData("expired-license")]
+    [InlineData("missing-license")]
+    [InlineData("policy-changed")]
+    [InlineData("wrong-session")]
+    [InlineData("unknown-version")]
+    [InlineData("v3-missing-declaration")]
+    public async Task LegacyExactDraft_HoldKeepsStoredEligibilityAndSessionChecks(string scenario)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var draft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(quote)), session, Guid.NewGuid().ToString());
+        draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+        var id = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        await WithDbContextAsync(async db =>
+        {
+            var reservation = await db.Reservations.SingleAsync(r => r.Id == id);
+            reservation.QuoteReplayProof!.SchemaVersion.Should().Be(3);
+            reservation.QuoteReplayProof!.SchemaVersion = scenario == "unknown-version" ? 4 : scenario == "v3-missing-declaration" ? 3 : 2;
+            reservation.PricingSnapshot!.BookingConditions!.DriverDeclaration = null;
+            reservation.DriverDateOfBirth = input.PickupDateTimeUtc.AddYears(-30);
+            reservation.DriverLicenseIssueDate = scenario == "missing-license" ? null : input.PickupDateTimeUtc.AddYears(-8);
+            reservation.DriverLicenseExpiryDate = scenario == "expired-license" ? input.PickupDateTimeUtc.AddDays(-1) : input.ReturnDateTimeUtc.AddYears(1);
+            if (scenario == "expired-quote") reservation.PricingSnapshot.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            if (scenario == "policy-changed")
+            {
+                var office = await db.Offices.FindAsync(input.PickupOfficeId);
+                office!.OperatingPolicy!.PreparationMinutes = 120;
+            }
+            await db.SaveChangesAsync();
+            return true;
+        });
+        using var scope = Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IReservationService>();
+        if (scenario == "cached")
+            (await service.CreateHoldAsync(id, session)).Should().NotBeNull();
+        if (scenario is "wrong-session" or "unknown-version")
+            (await service.CreateHoldAsync(id, scenario == "wrong-session" ? "other-session" : session)).Should().BeNull();
+        else if (scenario is "valid" or "cached")
+            (await service.CreateHoldAsync(id, session)).Should().NotBeNull();
+        else
+        {
+            var hold = () => service.CreateHoldAsync(id, session);
+            await hold.Should().ThrowAsync<ReservationQuoteConflictException>();
+        }
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        saved.Status.Should().Be(scenario is "valid" or "cached" ? ReservationStatus.Hold : ReservationStatus.Draft);
+        saved.PricingSnapshot!.BookingConditions!.DriverDeclaration.Should().BeNull();
+    }
+
+    [Theory]
     [InlineData("missing", false, HttpStatusCode.BadRequest)]
     [InlineData("missing", true, HttpStatusCode.BadRequest)]
     [InlineData("absent-driver", true, HttpStatusCode.BadRequest)]

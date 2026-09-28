@@ -4,6 +4,8 @@
 
 The six Codex findings and two React Doctor warnings are addressed: shared local API/Worker keys; client resend cooldown; authenticated per-client BFF rate-limit partitions; declaration-based E2E inputs; allowlisted operator driver summaries; expired-mail cancellation; memoized formatters; and upstream status checks before body parsing. See [deployment boundaries](Vehicle_Reservation_Package_3_Data_Handling.md) for the required trusted ingress/secret configuration. Existing publication evidence below predates these corrections; use the latest PR head/checks for closure. No merge or deployment is authorized by this review task.
 
+The next Codex pass identified the Worker's missing ASP.NET shared runtime and rollout rejection of version-2 checkout holds. Both are corrected, with a real Worker container startup and nine legacy/current-version negative and positive database cases. Six outdated mail fixtures from the first CI run are updated; the full 910-test backend Release suite passed. See [review validation](Vehicle_Reservation_Package_3_Implementation.md#pr-457-review-validation) for scope and remaining deployment checks.
+
 ## Durum ve çalışma alanı
 
 Paket 3 yerel uygulaması ve kapsamlı yerel doğrulaması tamamlandı. [PR #457](https://github.com/chelebyy/arackiralama/pull/457) 28 Eylül 2026 tarihinde `main` hedefiyle açıldı. İlk uygulama commit'i `706b7ab`; sonraki belge/biçim düzeltmeleri aynı PR'dedir. Uzak CI sonucu bu belgede başarılı kabul edilmez; son PR commit'i üzerinden kontrol edilmelidir.

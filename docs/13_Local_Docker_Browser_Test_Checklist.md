@@ -6,6 +6,8 @@ Local Compose now exposes the web app through `web-edge` on port 3001. The edge 
 
 Guest request/verification limits must remain independent across clients, including the global limiter. Verify forged forwarding/signature headers cannot choose a partition, and repeat-send stays disabled for one minute without losing the current challenge. Expired queued access mail must become Cancelled without reaching SMTP. Production key encryption, edge isolation and HTTPS delivery remain separate activation checks; see [data handling](Vehicle_Reservation_Package_3_Data_Handling.md).
 
+The Worker uses the ASP.NET 10 runtime image required by its transitive shared-framework dependency. Its image build and real container startup against isolated PostgreSQL/Redis passed. Version-2 stored drafts can create/recover holds with the original session and stored driver eligibility; quote expiry and current rental policies are still enforced. New version-3 drafts require declarations. Nine rollout cases and three current-draft policy cases passed against PostgreSQL/Redis.
+
 Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
 
 ## Package 3 local acceptance

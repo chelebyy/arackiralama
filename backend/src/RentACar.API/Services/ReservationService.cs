@@ -913,7 +913,7 @@ public sealed class ReservationService : IReservationService
         var exactVehicleId = reservation.QuoteReplayProof?.VehicleId;
         if (exactVehicleId.HasValue &&
             (reservation.VehicleId != exactVehicleId.Value ||
-             reservation.QuoteReplayProof!.SchemaVersion != 3 ||
+             reservation.QuoteReplayProof!.SchemaVersion is not (2 or 3) ||
              !ReservationQuoteSecurity.SessionHashMatches(reservation.QuoteReplayProof.SessionHash, sessionId)))
         {
             return null;

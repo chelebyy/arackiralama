@@ -27,9 +27,11 @@ public sealed class GuestSmtpDeliveryTests
             ToEmail = "synthetic@example.test", Locale = "en", TemplateKey = "guest-reservation-access",
             Variables = new Dictionary<string, string>
             {
-                ["ProtectedCode"] = protection.CreateProtector("GuestReservationEmail.v1").Protect("SYNTHETICCODE")
+                ["ProtectedCode"] = protection.CreateProtector("GuestReservationEmail.v1").Protect("SYNTHETICCODE"),
+                ["ExpiresAtUtc"] = "2030-01-02T12:34:56+00:00"
             }
         }, protection);
+        message.PlainTextBody.Should().Contain("2030-01-02T12:34:56+00:00");
         var provider = new SmtpEmailProvider(Options.Create(new NotificationOptions
         {
             Email = new EmailNotificationOptions

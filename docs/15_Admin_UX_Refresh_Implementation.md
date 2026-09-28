@@ -4,6 +4,8 @@
 
 Reservation detail now renders the stored driver name and eligibility declaration without requiring a retired licence-number field. The operator sees declared age, licence tenure, licence validity through return and pickup-document availability. Historical sensitive licence/date fields remain excluded from JSON and are not reintroduced into the panel. Backend serialization and admin component regressions cover this boundary.
 
+Rollout compatibility reuses stored driver dates only to validate existing version-2 checkout holds. It does not accept new sensitive fields, fabricate a customer declaration, or expose those dates in the admin response.
+
 Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
 
 ## Package 3 office policy extension

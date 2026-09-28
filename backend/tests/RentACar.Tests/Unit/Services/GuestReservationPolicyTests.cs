@@ -91,12 +91,14 @@ public sealed class GuestReservationPolicyTests
     {
         var protection = new EphemeralDataProtectionProvider();
         const string code = "SYNTHETICCODE";
+        const string expiresAtUtc = "2030-01-02T12:34:56+00:00";
         var request = new QueuedEmailNotificationRequest { ToEmail = "guest@example.test", Locale = locale,
             TemplateKey = GuestReservationService.AccessTemplate, Variables = new Dictionary<string, string> {
-                ["ProtectedCode"] = protection.CreateProtector(GuestReservationService.MailPurpose).Protect(code) } };
+                ["ProtectedCode"] = protection.CreateProtector(GuestReservationService.MailPurpose).Protect(code),
+                ["ExpiresAtUtc"] = expiresAtUtc } };
         JsonSerializer.Serialize(request).Should().NotContain(code);
         var rendered = GuestReservationMail.Render(request, protection);
-        rendered.PlainTextBody.Should().Contain(code).And.Contain("10");
+        rendered.PlainTextBody.Should().Contain(code).And.Contain(expiresAtUtc);
         rendered.Subject.Should().NotBeNullOrWhiteSpace();
         if (locale != "en") rendered.Subject.Should().NotBe("Reservation verification code");
     }

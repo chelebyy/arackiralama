@@ -135,8 +135,12 @@ public sealed class VehicleBookingService(
         return results;
     }
 
-    public async Task ValidateQuoteAsync(ReservationQuoteV1 quote, CreateReservationRequest request,
+    public Task ValidateQuoteAsync(ReservationQuoteV1 quote, CreateReservationRequest request,
         CancellationToken cancellationToken, Guid? excludeReservationId = null)
+        => ValidateQuoteCoreAsync(quote, request, cancellationToken, excludeReservationId, false);
+
+    private async Task ValidateQuoteCoreAsync(ReservationQuoteV1 quote, CreateReservationRequest request,
+        CancellationToken cancellationToken, Guid? excludeReservationId, bool legacyStoredDriver)
     {
         if (db is DbContext context && context.Database.IsRelational())
         {
@@ -159,8 +163,28 @@ public sealed class VehicleBookingService(
         }, cancellationToken, excludeReservationId);
         if (offer.Conditions.PolicyFingerprint != quote.PricingSnapshot.BookingConditions?.PolicyFingerprint)
             throw new ReservationQuoteConflictException("Price or rental conditions changed. Request a new quote.");
-        ValidateDeclaration(request.Driver?.Declaration, quote.DriverAge, offer.Conditions);
-        quote.PricingSnapshot.BookingConditions!.DriverDeclaration = request.Driver!.Declaration;
+        if (legacyStoredDriver)
+        {
+            var birth = request.Driver?.DateOfBirth;
+            var license = request.Driver?.LicenseIssueDate;
+            var expiry = request.Driver?.LicenseExpiryDate;
+            var pickup = RentalCalendar.TurkeyDate(quote.PickupDateTimeUtc);
+            if (birth is null || license is null || expiry is null)
+                throw new ReservationQuoteConflictException("Stored driver eligibility cannot be verified. Request a new quote.");
+            var birthDate = DateOnly.FromDateTime(birth.Value);
+            var licenseDate = DateOnly.FromDateTime(license.Value);
+            var age = pickup.Year - birthDate.Year;
+            if (birthDate.AddYears(age) > pickup) age--;
+            if (age != quote.DriverAge || age < offer.Conditions.MinAge || licenseDate > pickup ||
+                licenseDate.AddYears(offer.Conditions.MinLicenseYears) > pickup ||
+                DateOnly.FromDateTime(expiry.Value) < RentalCalendar.TurkeyDate(quote.ReturnDateTimeUtc))
+                throw new ReservationQuoteConflictException("Stored driver does not meet the quoted rental conditions.");
+        }
+        else
+        {
+            ValidateDeclaration(request.Driver?.Declaration, quote.DriverAge, offer.Conditions);
+            quote.PricingSnapshot.BookingConditions!.DriverDeclaration = request.Driver!.Declaration;
+        }
     }
 
     public Task ValidateDraftForHoldAsync(Reservation reservation, CancellationToken cancellationToken)
@@ -169,13 +193,14 @@ public sealed class VehicleBookingService(
         if (snapshot.ExpiresAtUtc <= DateTime.UtcNow)
             throw new ReservationQuoteConflictException("Reservation quote has expired. Request a new quote.");
         var declaration = snapshot.BookingConditions?.DriverDeclaration;
-        if (declaration is null)
+        var legacyStoredDriver = reservation.QuoteReplayProof is { SchemaVersion: 2 };
+        if (declaration is null && !legacyStoredDriver)
             throw new ReservationQuoteConflictException("Driver declaration is required. Request a new quote.");
         var birth = reservation.DriverDateOfBirth;
         var pickup = RentalCalendar.TurkeyDate(reservation.PickupDateTime);
         var age = birth.HasValue ? pickup.Year - birth.Value.Year : (int?)null;
         if (birth.HasValue && DateOnly.FromDateTime(birth.Value).AddYears(age!.Value) > pickup) age--;
-        if (declaration is not null) age = declaration.AgeAtPickup;
+        if (!legacyStoredDriver && declaration is not null) age = declaration.AgeAtPickup;
         var quote = new ReservationQuoteV1
         {
             VehicleId = reservation.VehicleId, VehicleGroupId = reservation.Vehicle?.GroupId ?? Guid.Empty,
@@ -186,11 +211,11 @@ public sealed class VehicleBookingService(
             SelectedExtras = reservation.SelectedExtras.Select(e => new ReservationQuotedExtraV1
             { ExtraOptionId = e.ExtraOptionId, OptionVersion = e.OptionVersionSnapshot, Quantity = e.Quantity }).ToList()
         };
-        return ValidateQuoteAsync(quote, new CreateReservationRequest
+        return ValidateQuoteCoreAsync(quote, new CreateReservationRequest
         {
             Driver = new DriverInfoRequest { Declaration = declaration, DateOfBirth = reservation.DriverDateOfBirth,
                 LicenseIssueDate = reservation.DriverLicenseIssueDate, LicenseExpiryDate = reservation.DriverLicenseExpiryDate }
-        }, cancellationToken, reservation.Id);
+        }, cancellationToken, reservation.Id, legacyStoredDriver);
     }
 
     public static void ValidateDeclaration(DriverDeclaration? declaration, int? quotedAge, ReservationBookingConditions conditions)
