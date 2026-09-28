@@ -613,6 +613,69 @@ namespace RentACar.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RentACar.Core.Entities.GuestReservationAccess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CodeExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CsrfHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("EmailHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Revoked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("SessionExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SessionHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionHash")
+                        .IsUnique();
+
+                    b.HasIndex("ReservationId", "CreatedAt");
+
+                    b.ToTable("guest_reservation_access", (string)null);
+                });
+
             modelBuilder.Entity("RentACar.Core.Entities.Office", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1228,6 +1291,66 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasFilter("status IN ('Hold','UnpaidRequest','PendingPayment','Paid','Confirmed','Active')");
 
                     b.ToTable("reservations", (string)null);
+                });
+
+            modelBuilder.Entity("RentACar.Core.Entities.ReservationAmendment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccessId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Fee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PolicyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PreviousSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ReservationVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessId");
+
+                    b.HasIndex("QuoteId")
+                        .IsUnique();
+
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("reservation_amendments", (string)null);
                 });
 
             modelBuilder.Entity("RentACar.Core.Entities.ReservationExtraOption", b =>
@@ -1948,6 +2071,15 @@ namespace RentACar.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RentACar.Core.Entities.GuestReservationAccess", b =>
+                {
+                    b.HasOne("RentACar.Core.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RentACar.Core.Entities.PaymentIntent", b =>
                 {
                     b.HasOne("RentACar.Core.Entities.Reservation", "Reservation")
@@ -2003,6 +2135,21 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.Navigation("ReturnOffice");
 
                     b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("RentACar.Core.Entities.ReservationAmendment", b =>
+                {
+                    b.HasOne("RentACar.Core.Entities.GuestReservationAccess", null)
+                        .WithMany()
+                        .HasForeignKey("AccessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RentACar.Core.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("RentACar.Core.Entities.ReservationExtraOptionTranslation", b =>

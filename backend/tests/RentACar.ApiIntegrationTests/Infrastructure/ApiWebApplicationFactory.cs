@@ -37,7 +37,8 @@ public sealed class ApiWebApplicationFactory(
                 ["Jwt:Secret"] = TestJwtFactory.JwtSecret,
                 ["Database:AutoMigrateOnStartup"] = "false",
                 ["Notifications:PublicFrontendBaseUrl"] = "https://rental.example.test",
-                ["Payment:EnablePayments"] = "true"
+                ["Payment:EnablePayments"] = "true",
+                ["GuestAccess:ProxySecret"] = "test-only-guest-proxy-secret-at-least-32-characters"
             };
 
             if (additionalConfiguration is not null)

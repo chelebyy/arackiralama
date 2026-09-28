@@ -98,6 +98,38 @@ public sealed class NotificationBackgroundJobProcessorTests : IDisposable
         smsProvider.LastRequest!.Body.Should().Contain("RSV-001");
     }
 
+    [Theory]
+    [InlineData(BackgroundJobStatus.Pending, 0)]
+    [InlineData(BackgroundJobStatus.Pending, 1)]
+    [InlineData(BackgroundJobStatus.Processing, 0)]
+    public async Task ProcessPendingAsync_ExpiredAccessIsCancelledWithoutDecryptingOrSending(BackgroundJobStatus status, int retries)
+    {
+        var job = new BackgroundJob
+        {
+            Type = NotificationQueueService.SendEmailJobType, Status = status, RetryCount = retries,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-20), UpdatedAt = DateTime.UtcNow.AddMinutes(-20),
+            Payload = System.Text.Json.JsonSerializer.Serialize(new QueuedEmailNotificationRequest
+            {
+                ToEmail = "guest@example.test", TemplateKey = "guest-reservation-access",
+                Variables = new Dictionary<string, string>
+                {
+                    ["ProtectedCode"] = "cannot-be-decrypted",
+                    ["ExpiresAtUtc"] = DateTime.UtcNow.AddMinutes(-10).ToString("O")
+                }
+            })
+        };
+        _dbContext.BackgroundJobs.Add(job);
+        await _dbContext.SaveChangesAsync();
+        var email = new FakeEmailProvider(success: true);
+        var processor = new NotificationBackgroundJobProcessor(_dbContext, new NotificationTemplateService(), email,
+            new FakeSmsProvider(success: true), NullLogger<NotificationBackgroundJobProcessor>.Instance);
+        (await processor.ProcessPendingAsync()).Should().Be(0);
+        job.Status.Should().Be(BackgroundJobStatus.Cancelled);
+        job.RetryCount.Should().Be(retries);
+        email.LastRequest.Should().BeNull();
+        (await processor.ProcessPendingAsync()).Should().Be(0);
+    }
+
     [Fact]
     public async Task ProcessPendingAsync_WhenBatchSizeConfigured_ProcessesOnlyConfiguredCount()
     {

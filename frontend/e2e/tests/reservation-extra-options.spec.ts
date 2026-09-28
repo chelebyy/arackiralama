@@ -377,9 +377,10 @@ async function openStep4WithLegacyExtra(page: Page, vehicleGroupId: string) {
   await page.locator("#lastName").fill("Acceptance");
   await page.locator("#email").fill("payment-acceptance@example.test");
   await page.locator("#phone").fill("+905551234567");
-  await page.locator("#birthDate").fill("1990-05-10");
-  await page.locator("#driverLicense").fill("PAYMENT-12345");
-  await page.locator("#driverLicenseCountry").fill("TR");
+  await page.locator('[name="ageAtPickup"]').fill("30");
+  await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+  await page.locator('[name="licenseValidThroughReturn"]').check();
+  await page.locator('[name="documentsAvailableAtPickup"]').check();
   await page.getByRole("button", { name: /ödemeye devam et/i }).click();
   await expect(page).toHaveURL(/\/tr\/booking\/step4\?/);
 }
@@ -621,9 +622,10 @@ test.describe("Reservation extra options acceptance", () => {
     await page.locator("#lastName").fill("Tester");
     await page.locator("#email").fill("acceptance@example.test");
     await page.locator("#phone").fill("+905551234567");
-    await page.locator("#birthDate").fill("1990-05-10");
-    await page.locator("#driverLicense").fill("TEST-12345");
-    await page.locator("#driverLicenseCountry").fill("TR");
+    await page.locator('[name="ageAtPickup"]').fill("30");
+    await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+    await page.locator('[name="licenseValidThroughReturn"]').check();
+    await page.locator('[name="documentsAvailableAtPickup"]').check();
     await page.getByRole("button", { name: /ödemeye devam et/i }).click();
 
     await expect(page).toHaveURL(/\/tr\/booking\/step4\?/);
@@ -717,9 +719,10 @@ test.describe("Reservation extra options acceptance", () => {
       await page.locator("#lastName").fill("Evidence");
       await page.locator("#email").fill("responsive-evidence@example.test");
       await page.locator("#phone").fill("+905551234567");
-      await page.locator("#birthDate").fill("1990-05-10");
-      await page.locator("#driverLicense").fill("RESPONSIVE-12345");
-      await page.locator("#driverLicenseCountry").fill("TR");
+      await page.locator('[name="ageAtPickup"]').fill("30");
+      await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+      await page.locator('[name="licenseValidThroughReturn"]').check();
+      await page.locator('[name="documentsAvailableAtPickup"]').check();
       await page.getByRole("button", { name: /ödemeye devam et/i }).click();
 
       await expect(page).toHaveURL(/\/tr\/booking\/step4\?/);
@@ -1063,7 +1066,7 @@ test.describe("Reservation extra options acceptance", () => {
       if (reservationRequests.length === 1) {
         await route.fulfill({
           status: 409,
-          json: { statusCode: 409, code: "CONFLICT", message: "Quote availability changed" }
+          json: { statusCode: 409, code: "CONFLICT", message: "A quoted extra option is no longer available." }
         });
         return;
       }
@@ -1093,8 +1096,10 @@ test.describe("Reservation extra options acceptance", () => {
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
 
+    await expect.poll(() => reservationRequests.length).toBe(1);
+
     const conflictAlert = page.getByRole("alert").filter({
-      hasText: "Ek seçenekler değişti. Güncel teklifi inceleyip yeniden onaylayın."
+      hasText: "Fiyat veya kiralama koşulları değişti. Güncel teklifi inceleyip kabul edin."
     });
     await expect(conflictAlert).toBeVisible();
     await expect(page.getByText(step4CatalogOption.name, { exact: true })).toBeHidden();
@@ -1108,14 +1113,14 @@ test.describe("Reservation extra options acceptance", () => {
     expect(reservationRequests).toHaveLength(1);
     await expect.poll(() => quoteCalls).toBe(2);
 
-    await conflictAlert.getByRole("button", { name: "Teklifi yenile" }).click();
-    await expect.poll(() => quoteCalls).toBe(3);
+    await conflictAlert.getByRole("button", { name: "Güncel teklifi kabul et" }).click();
+    expect(quoteCalls).toBe(2);
     expect(reservationRequests).toHaveLength(1);
     await page.getByRole("button", { name: "Rezervasyonu Tamamla" }).click();
 
     await expect(page).toHaveURL(/\/tr\/booking\/confirmation\?.*code=ALN-CONFLICT-E2E/);
     expect(reservationRequests).toHaveLength(2);
-    expect(reservationRequests[1].quoteId).toBe("quote-after-availability-change-3");
+    expect(reservationRequests[1].quoteId).toBe("quote-after-availability-change-2");
     expect(reservationRequests[1].idempotencyKey).not.toBe(reservationRequests[0].idempotencyKey);
   });
 
@@ -1157,9 +1162,10 @@ test.describe("Reservation extra options acceptance", () => {
       await page.locator("#lastName").fill("Replay");
       await page.locator("#email").fill(`quote-replay-${Date.now()}@example.test`);
       await page.locator("#phone").fill("+905551234567");
-      await page.locator("#birthDate").fill("1990-05-10");
-      await page.locator("#driverLicense").fill(`QUOTE-${Date.now()}`);
-      await page.locator("#driverLicenseCountry").fill("TR");
+      await page.locator('[name="ageAtPickup"]').fill("30");
+      await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+      await page.locator('[name="licenseValidThroughReturn"]').check();
+      await page.locator('[name="documentsAvailableAtPickup"]').check();
       const initialQuoteResponsePromise = page.waitForResponse(
         (response) =>
           response.url().includes("/api/v1/pricing/quote") && response.request().method() === "POST"
@@ -1330,9 +1336,10 @@ test.describe("Reservation extra options acceptance", () => {
       await page.locator("#lastName").fill("Acceptance");
       await page.locator("#email").fill(`snapshot-${Date.now()}@example.test`);
       await page.locator("#phone").fill("+905551234567");
-      await page.locator("#birthDate").fill("1990-05-10");
-      await page.locator("#driverLicense").fill(`SNAPSHOT-${Date.now()}`);
-      await page.locator("#driverLicenseCountry").fill("TR");
+      await page.locator('[name="ageAtPickup"]').fill("30");
+      await page.locator('[name="licenseYearsAtPickup"]').fill("8");
+      await page.locator('[name="licenseValidThroughReturn"]').check();
+      await page.locator('[name="documentsAvailableAtPickup"]').check();
       await page.getByRole("button", { name: /devam|continue/i }).click();
 
       await expect(page).toHaveURL(/\/booking\/step4/);

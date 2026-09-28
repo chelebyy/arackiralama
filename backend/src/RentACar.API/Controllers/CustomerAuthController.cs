@@ -508,24 +508,9 @@ public sealed class CustomerAuthController(
             customer.Phone = request.Phone.Trim();
         }
 
-        if (!string.IsNullOrWhiteSpace(request.IdentityNumber))
-        {
-            customer.IdentityNumber = request.IdentityNumber.Trim();
-        }
-
         if (!string.IsNullOrWhiteSpace(request.Nationality))
         {
             customer.Nationality = request.Nationality.Trim();
-        }
-
-        if (request.LicenseYear.HasValue && request.LicenseYear.Value >= 1900)
-        {
-            customer.LicenseYear = request.LicenseYear.Value;
-        }
-
-        if (request.BirthDate.HasValue)
-        {
-            customer.BirthDate = request.BirthDate.Value;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

@@ -913,7 +913,7 @@ public sealed class ReservationService : IReservationService
         var exactVehicleId = reservation.QuoteReplayProof?.VehicleId;
         if (exactVehicleId.HasValue &&
             (reservation.VehicleId != exactVehicleId.Value ||
-             reservation.QuoteReplayProof!.SchemaVersion != 2 ||
+             reservation.QuoteReplayProof!.SchemaVersion is not (2 or 3) ||
              !ReservationQuoteSecurity.SessionHashMatches(reservation.QuoteReplayProof.SessionHash, sessionId)))
         {
             return null;
@@ -1956,7 +1956,7 @@ public sealed class ReservationService : IReservationService
         var canonicalRequest = BuildQuoteReplayCanonicalRequest(request, returnOfficeId, snapshot);
         return new ReservationQuoteReplayProofV1
         {
-            SchemaVersion = request.VehicleId.HasValue ? 2 : 1,
+            SchemaVersion = request.VehicleId.HasValue ? 3 : 1,
             VehicleId = request.VehicleId,
             CheckoutOperation = checkoutOperation,
             SessionHash = ReservationQuoteSecurity.HashSessionId(request.SessionId),
@@ -1972,7 +1972,7 @@ public sealed class ReservationService : IReservationService
     {
         var proof = reservation.QuoteReplayProof;
         var snapshot = reservation.PricingSnapshot;
-        if (proof is null || proof.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
+        if (proof is null || proof.SchemaVersion != (request.VehicleId.HasValue ? 3 : 1) ||
             proof.VehicleId != request.VehicleId ||
             (request.VehicleId.HasValue && reservation.VehicleId != request.VehicleId.Value) || snapshot is null ||
             reservation.QuoteId != request.QuoteId || snapshot.QuoteId != request.QuoteId)
@@ -2028,7 +2028,7 @@ public sealed class ReservationService : IReservationService
         return request.VehicleId.HasValue
             ? JsonSerializer.Serialize(new
             {
-                Version = "reservation-quote-replay-v2",
+                Version = "reservation-quote-replay-v3",
                 request.VehicleId,
                 Offer = canonicalRequest,
                 snapshot.BookingConditions?.PolicyFingerprint,
@@ -2064,7 +2064,7 @@ public sealed class ReservationService : IReservationService
             ? RentalCalendar.TurkeyDate(NormalizeUtc(request.PickupDateTimeUtc)).ToDateTime(TimeOnly.MinValue)
             : request.PickupDateTimeUtc;
         var submittedDriverAge = CalculateAgeAt(submittedDateOfBirth, pickupDate);
-        if (quote.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
+        if (quote.AmendmentReservationId.HasValue || quote.SchemaVersion != (request.VehicleId.HasValue ? 2 : 1) ||
             quote.VehicleId != request.VehicleId ||
             quote.VehicleGroupId != request.VehicleGroupId ||
             quote.PickupOfficeId != request.PickupOfficeId ||
@@ -2345,7 +2345,9 @@ public sealed class ReservationService : IReservationService
 
     private static ReservationDriverDto? BuildDriverDto(Reservation reservation)
     {
-        if (string.IsNullOrWhiteSpace(reservation.DriverLicenseNumber))
+        if (string.IsNullOrWhiteSpace(reservation.DriverFirstName) &&
+            string.IsNullOrWhiteSpace(reservation.DriverLastName) &&
+            reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration is null)
         {
             return null;
         }
@@ -2354,11 +2356,7 @@ public sealed class ReservationService : IReservationService
         {
             FirstName = reservation.DriverFirstName ?? string.Empty,
             LastName = reservation.DriverLastName ?? string.Empty,
-            DateOfBirth = reservation.DriverDateOfBirth,
-            LicenseNumber = reservation.DriverLicenseNumber,
-            LicenseCountry = reservation.DriverLicenseCountry ?? string.Empty,
-            LicenseIssueDate = reservation.DriverLicenseIssueDate,
-            LicenseExpiryDate = reservation.DriverLicenseExpiryDate
+            Declaration = reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration
         };
     }
 
@@ -2451,14 +2449,8 @@ public sealed class ReservationService : IReservationService
     {
         reservation.DriverFirstName = ValueOrNull(driver?.FirstName) ?? customer?.FirstName ?? reservation.DriverFirstName;
         reservation.DriverLastName = ValueOrNull(driver?.LastName) ?? customer?.LastName ?? reservation.DriverLastName;
-        reservation.DriverDateOfBirth = NormalizeUtc(
-            driver?.DateOfBirth ?? customer?.DateOfBirth ?? reservation.DriverDateOfBirth);
-        reservation.DriverLicenseNumber = ValueOrNull(driver?.LicenseNumber) ?? customer?.DriverLicenseNumber ?? reservation.DriverLicenseNumber;
-        reservation.DriverLicenseCountry = ValueOrNull(driver?.LicenseCountry) ?? reservation.DriverLicenseCountry;
-        reservation.DriverLicenseIssueDate = NormalizeUtc(
-            driver?.LicenseIssueDate ?? customer?.DriverLicenseIssueDate ?? reservation.DriverLicenseIssueDate);
-        reservation.DriverLicenseExpiryDate = NormalizeUtc(
-            driver?.LicenseExpiryDate ?? reservation.DriverLicenseExpiryDate);
+        if (reservation.PricingSnapshot?.BookingConditions is { } conditions && driver?.Declaration is { } declaration)
+            conditions.DriverDeclaration = declaration;
     }
 
     private static DateTime? NormalizeUtc(DateTime? value)
@@ -2503,20 +2495,7 @@ public sealed class ReservationService : IReservationService
             customer.Phone = customerRequest.Phone;
         }
 
-        if (customerRequest.DateOfBirth.HasValue)
-        {
-            customer.BirthDate = DateOnly.FromDateTime(customerRequest.DateOfBirth.Value);
-        }
 
-        if (!string.IsNullOrWhiteSpace(customerRequest.IdentityNumber))
-        {
-            customer.IdentityNumber = customerRequest.IdentityNumber;
-        }
-
-        if (customerRequest.DriverLicenseIssueDate.HasValue)
-        {
-            customer.LicenseYear = customerRequest.DriverLicenseIssueDate.Value.Year;
-        }
     }
 
     private static string? ValueOrNull(string? value)
@@ -2546,13 +2525,9 @@ public sealed class ReservationService : IReservationService
             FullName = fullName,
             Email = request.Customer.Email,
             Phone = request.Customer.Phone,
-            BirthDate = request.Customer.DateOfBirth.HasValue
-                ? DateOnly.FromDateTime(request.Customer.DateOfBirth.Value)
-                : null,
-            IdentityNumber = request.Customer.IdentityNumber ?? string.Empty,
-            LicenseYear = request.Customer.DriverLicenseIssueDate.HasValue
-                ? request.Customer.DriverLicenseIssueDate.Value.Year
-                : 0,
+            BirthDate = null,
+            IdentityNumber = string.Empty,
+            LicenseYear = 0,
             Nationality = "TR" // Default nationality, can be updated later
         };
 

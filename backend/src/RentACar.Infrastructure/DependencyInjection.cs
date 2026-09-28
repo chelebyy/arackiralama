@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,11 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddSingleton(TimeProvider.System);
+        var protection = services.AddDataProtection().SetApplicationName("RentACar.GuestReservations");
+        if (configuration["GuestAccess:KeyRingPath"] is { Length: > 0 } keyRingPath)
+            protection.PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+        if (configuration["GuestAccess:CertificateThumbprint"] is { Length: > 0 } thumbprint)
+            protection.ProtectKeysWithCertificate(thumbprint);
         services.AddOptions<AccountClaimSecurityOptions>()
             .Bind(configuration.GetSection(AccountClaimSecurityOptions.SectionName))
             .Validate(options => options.RequestCooldownMinutes is >= 1 and <= 1440)

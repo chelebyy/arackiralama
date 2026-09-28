@@ -67,6 +67,7 @@ const bookingState = {
     dateOfBirth: "1990-05-10",
   },
   driver: {
+      declaration: { ageAtPickup: 30, licenseYearsAtPickup: 8, licenseValidThroughReturn: true, documentsAvailableAtPickup: true },
     firstName: "Jane",
     lastName: "Doe",
     dateOfBirth: "1990-05-10",
@@ -272,8 +273,8 @@ describe("BookingStep4Page", () => {
     expect(screen.getByText("Full coverage waiver fee")).toBeInTheDocument();
   });
 
-  it("calculates driver age at the pickup date", async () => {
-    bookingState.driver = { ...bookingState.driver, dateOfBirth: "2001-05-11" };
+  it("uses the declared driver age at pickup", async () => {
+    bookingState.driver = { ...bookingState.driver, declaration: { ageAtPickup: 24, licenseYearsAtPickup: 4, licenseValidThroughReturn: true, documentsAvailableAtPickup: true } };
 
     render(<BookingStep4Page />);
 

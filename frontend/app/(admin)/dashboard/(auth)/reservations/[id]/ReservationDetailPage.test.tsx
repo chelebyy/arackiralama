@@ -94,6 +94,7 @@ const baseReservation: AdminReservation = {
     licenseIssueDate: "2020-01-01",
     licenseExpiryDate: "2030-01-01",
     isPrimaryDriver: true,
+    declaration: { ageAtPickup: 30, licenseYearsAtPickup: 8, licenseValidThroughReturn: true, documentsAvailableAtPickup: true },
   },
   extras: [],
   priceBreakdown: {
@@ -207,7 +208,11 @@ describe("ReservationDetailPage", () => {
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
-    expect(screen.getByText("D-123")).toBeInTheDocument();
+    expect(screen.queryByText("D-123")).not.toBeInTheDocument();
+    expect(screen.getByText("Teslim tarihindeki yaş")).toBeInTheDocument();
+    expect(screen.getByText("Ehliyet süresi (yıl)")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+    expect(screen.getByText("8")).toBeInTheDocument();
     expect(screen.getByText("Renault Clio")).toBeInTheDocument();
     expect(screen.getByText("07 ABC 123")).toBeInTheDocument();
     expect(screen.getByText("vehicle-assigned-1")).toBeInTheDocument();
