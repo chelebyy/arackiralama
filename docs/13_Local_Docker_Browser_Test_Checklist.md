@@ -1,5 +1,18 @@
 # Local Docker Browser Test Checklist
 
+Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
+
+## Package 3 local acceptance
+
+- [x] Minimal contact/declaration checkout and legacy sensitive-field binding/persistence safeguards.
+- [x] Real PostgreSQL/Redis: 70 existing exact-quote/hold cases plus 19 guest access, cancellation, amendment and mail-queue cases.
+- [x] 896 backend units, including loopback SMTP; 359 frontend tests; TypeScript and production build.
+- [x] Five-language Chromium desktop/mobile management flows, Arabic RTL, keyboard cancellation, reload and expired access (12 controlled-response browser cases).
+- [x] Admin-managed notice/fee rules, missing-setting denial, atomic stock replacement, accepted-price replay and cumulative amendment fees.
+- [ ] Full deployed HTTPS BFF/API/Worker/SMTP journey, physical devices, screen readers, protected key rotation/restore and production ingress rate-limit acceptance.
+
+See [Package 3 implementation](Vehicle_Reservation_Package_3_Implementation.md) and [data handling](Vehicle_Reservation_Package_3_Data_Handling.md). Local results are not remote CI or production activation. The following PR #447 notes are historical; Package 2 was merged before Package 3 began.
+
 Latest PR #447 follow-up: the eleventh Codex review on `05c5ac2` is addressed. Exact quote submissions calculate driver age on the Turkey pickup date. Immediate exact pay-at-pickup confirmation and reminder jobs use the normalized checkout locale. Validation: 107 focused backend unit tests and 13 real PostgreSQL/Redis API cases passed, covering birthday boundaries, wrong-age rejection, five notification locales, replay deduplication and queue-failure rollback. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md). No frontend changes; frontend/build/browser/device checks were not repeated. Starting-head CI passed all ten active checks; new-head CI and renewed review remain separate gates. No merge, production migration or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026

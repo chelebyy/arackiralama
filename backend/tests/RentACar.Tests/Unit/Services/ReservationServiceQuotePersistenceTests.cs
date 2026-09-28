@@ -157,17 +157,9 @@ public sealed class ReservationServiceQuotePersistenceTests
                 request with { Customer = request.Customer with { LastName = "Changed" } },
                 request with { Customer = request.Customer with { Email = "changed@example.test" } },
                 request with { Customer = request.Customer with { Phone = "+900000000001" } },
-                request with { Customer = request.Customer with { IdentityNumber = "SYNTHETIC-123" } },
-                request with { Customer = request.Customer with { DriverLicenseNumber = "SYNTHETIC-456" } },
-                request with { Customer = request.Customer with { DateOfBirth = pickup.AddYears(-30) } },
-                request with { Customer = request.Customer with { DriverLicenseIssueDate = pickup.AddYears(-5) } },
                 request with { Driver = driver with { FirstName = "Changed" } },
                 request with { Driver = driver with { LastName = "Changed" } },
-                request with { Driver = driver with { LicenseNumber = "SYNTHETIC-789" } },
-                request with { Driver = driver with { LicenseCountry = "DE" } },
-                request with { Driver = driver with { DateOfBirth = pickup.AddYears(-30) } },
-                request with { Driver = driver with { LicenseIssueDate = pickup.AddYears(-5) } },
-                request with { Driver = driver with { LicenseExpiryDate = pickup.AddYears(3) } },
+                request with { Driver = driver with { Declaration = new DriverDeclaration { AgeAtPickup = 40, LicenseYearsAtPickup = 10, LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true } } },
                 request with { Notes = "Changed pickup instructions" }
             ];
             foreach (var changed in changes)
@@ -236,7 +228,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         storedReservation.QuoteId.Should().Be(quote.QuoteId);
         storedReservation.PricingSnapshot!.FinalTotal.Should().Be(1548m);
         storedReservation.QuoteReplayProof.Should().NotBeNull();
-        storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 2 : 1);
+        storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 3 : 1);
         storedReservation.QuoteReplayProof.VehicleId.Should().Be(request.VehicleId);
         storedReservation.QuoteReplayProof.CheckoutOperation.Should().Be("draft");
         storedReservation.QuoteReplayProof!.SessionHash.Should().NotBe("session-123");

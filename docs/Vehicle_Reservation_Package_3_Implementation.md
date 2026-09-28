@@ -1,0 +1,74 @@
+# Package 3: short checkout and guest reservation management
+
+Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
+
+Status: implementation completed locally on `codex/guest-reservations`. Publication, remote CI, merge and deployment are separate gates.
+
+## Delivered behavior
+
+- Checkout collects contact details and an explicit age/licence-tenure declaration, with confirmation that valid documents will be presented at pickup. Full birth dates, identity numbers and licence numbers are ignored by reservation request binding and are no longer written by reservation creation/update paths.
+- The legacy customer profile update path also ignores identity, birth-date and licence-year inputs. Sensitive legacy fields are omitted from serialized driver/profile responses. Historical database values remain intact; no data purge is included.
+- Exact vehicle identity, current server pricing, Turkey date handling, minimum age/licence tenure, preparation occupancy and PostgreSQL overlap exclusion remain enforced. New exact reservation replay proofs use version 3. Version 2 attempts must restart checkout; they are not silently reinterpreted. Pricing quote schema remains version 2.
+- `/{locale}/manage-reservation` supports reference/email verification, a private allowlisted booking view, cancellation and atomic date changes. Tracking and confirmation screens link to it. All five locales and Arabic RTL are supported; protected header/hero sources are unchanged.
+- **Approved policy:** admins configure cancellation and date-change permissions, notice periods and fees on the pickup office. Missing, disabled or incomplete settings deny the corresponding operation. Only future confirmed payment-at-pickup bookings qualify.
+- A cancellation requires the current reservation version and explicit fee acceptance. It changes status once, releases stock through the existing status rules, cancels pending reminders and records one audit event and one queued confirmation.
+- A date-change quote preserves the exact vehicle, offices and extra quantities, uses current extra versions/prices and requires a fresh driver declaration. Confirmation checks reservation version, current policy, quote expiry, exact amount and availability inside the transaction.
+- Previously accepted amendment fees remain in the new total and are shown separately. The new operation fee is added once. Prior financial snapshots are retained in amendment history. Response-loss retries return the saved result without another event or fee.
+- Invalid, unavailable or expired extras/campaigns require operator resolution; no discount or replacement service is invented. The new flow does not collect online payments or issue refunds. Cancellation fees are accepted/audited for operator settlement.
+
+## Access and notification boundaries
+
+Verification uses a 128-bit random code with a 10-minute lifetime and at most five attempts. Only the digest is stored in the access table; the queue holds a Data Protection encrypted delivery copy. Valid exchange consumes the code and creates a 20-minute reservation-scoped session. Session and CSRF values are stored as digests. Changing the reservation customer's normalized email invalidates existing access.
+
+The Next.js proxy allowlists routes, requires same-origin JSON for POST, checks CSRF, sets HttpOnly/SameSite=Strict cookies, marks responses no-store and strips session secrets from JSON. Cookies are Secure in production. It does not trust caller-supplied guest/authentication/forwarded-IP headers. Direct backend mutations validate both session and CSRF. GET cannot exchange a code or mutate a reservation.
+
+Access requests use neutral responses, an existing IP rate limit and a database-enforced one-request-per-minute reservation cooldown. The IP rate limit is shared by clients behind the BFF address; production ingress/load testing must establish suitable trusted-proxy and abuse limits before activation.
+
+Reservation changes, audit entries, reminder updates and queued messages commit together. Provider failures happen after commit and do not revert the booking. The dispatcher claims work atomically, recovers abandoned Processing jobs after five minutes, retries three times and records permanent failure. SMTP calls have a 30-second cancellation deadline. Delivery is **at least once**: an ambiguous SMTP response or a crashed sender can still cause a duplicate email. The booking operation remains idempotent.
+
+API and Worker share Data Protection application name `RentACar.GuestReservations`. Configure the same durable `GuestAccess:KeyRingPath` and key protection in both hosts. `GuestAccess:CertificateThumbprint` supports certificate encryption at rest. Explicit file persistence disables automatic default key encryption; filesystem permissions and a protected certificate/private-key recovery procedure are deployment requirements. No real provider account, DNS, certificate or production volume was configured.
+
+## Validation
+
+| Check | Local result |
+|---|---|
+| Backend unit suite | 896 passed, including a loopback-only SMTP delivery test |
+| Existing exact quote/hold API cases | 70 passed against isolated PostgreSQL and Redis |
+| New guest API/service/queue cases | 19 passed against isolated PostgreSQL and Redis |
+| Frontend Vitest | 71 files, 359 tests passed |
+| TypeScript / production Webpack build | Passed; final verification recorded in the task |
+| ESLint | No errors; one pre-existing SearchForm.test.tsx suppression warning |
+| Browser acceptance | 12 Chromium desktop/mobile cases across five locales |
+| EF model/migration | Pending-model check passed; additive migration applied in isolated test fixtures |
+
+Browser tests use controlled API responses for UI acceptance. Real database/service/HTTP integration and loopback SMTP tests are separate evidence; they are not a single deployed browser-to-mail end-to-end run. Physical devices, screen readers and a production-sized restored database were not tested.
+
+Integration coverage includes wrong/expired/exhausted/replayed codes, session revocation, missing CSRF, neutral unknown lookup, disallowed policy/fees, cancellation replay, current extra repricing, accumulated change fees, immutable history, expired/policy-changed/price-changed/overlapping offers, two concurrent amendments, cancellation versus amendment, response-loss retries, mail retries/permanent failure and concurrent/recovered mail dispatch.
+
+Build warnings include existing frontend middleware/Edge/root-lockfile notices and backend package-pruning warnings from the shared ASP.NET Core framework reference. No dependency versions were upgraded.
+
+## Migration and data handling
+
+`20260927141937_GuestReservationManagement` adds guest access and amendment tables, indexes and foreign keys. It does not delete customer fields or change accepted reservation amounts. The model snapshot and migration Designer are included. Reverting this migration after use would discard new access/history tables; use a reviewed restore/forward-fix plan instead of an automatic production downgrade.
+
+See [data handling and key lifecycle](Vehicle_Reservation_Package_3_Data_Handling.md) and the [count-only inventory query](Vehicle_Reservation_Package_3_Inventory.sql). The structural inventory is complete; no production customer rows or backup contents were inspected. Contact fields are not newly field-encrypted by this change; the staged encryption design and operator retention decision are explicit activation gates.
+
+## Scoped security review and release checklist
+
+Reviewed: new guest endpoints/BFF, session/code handling, explicit amount acceptance, state/version checks, transaction and stock-conflict boundaries, sensitive request binding, notification claims and new public UI. Material findings fixed during implementation include the old hold replay-version check, legacy profile collection, API/Worker key isolation, stale extra versions and loss of previously accepted amendment fees.
+
+Not reviewed: the whole application, deployment ingress, production secrets/key storage, real email deliverability, dependency vulnerabilities or legal compliance. This is not a security certification. An independent focused security review is available before release.
+
+Before authorized release:
+1. Run remote CI and review the exact publication commit.
+2. Migrate a representative restored database; prove backup/key restore with isolated synthetic mail.
+3. Set operator rules, retention/deletion ownership and protected shared key storage.
+4. Exercise full deployed HTTPS browser -> BFF -> API -> Worker -> controlled SMTP delivery, including expiry, key rotation and failure recovery.
+5. Check trusted-proxy/rate-limit behavior, customer email changes, cookie isolation, cross-reservation denial and concurrent admin actions.
+6. Confirm agreed settlement wording and live email/legal texts. Obtain separate deployment authorization.
+
+No PR, merge, production migration, live sending, historical purge or worktree removal was performed. The primary checkout's unrelated work remains intact. A read-only old-worktree audit timed out without a report; uncertain worktrees were preserved.
+
+## Baseline
+
+Implementation started from freshly fetched remote default `main` at `1a352c984972a3c6a705b10073563eca470b92fc`, the merged Package 2 PR #447 commit. Local `main` was synchronized at start. The active feature checkout is separate from the dirty primary checkout. These are baseline facts, not a claim that the primary working directory is now on main.

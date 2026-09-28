@@ -28,10 +28,12 @@ public sealed class NotificationBackgroundJobProcessor(
     public async Task<int> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
+        var abandonedBefore = now.AddMinutes(-5);
         var jobs = await dbContext.BackgroundJobs
             .Where(x =>
                 (x.Type == BackgroundJobTypes.NotificationEmailSend || x.Type == BackgroundJobTypes.NotificationSmsSend) &&
-                x.Status == BackgroundJobStatus.Pending &&
+                (x.Status == BackgroundJobStatus.Pending ||
+                 (x.Status == BackgroundJobStatus.Processing && x.UpdatedAt < abandonedBefore)) &&
                 x.ScheduledAt <= now)
             .OrderBy(x => x.ScheduledAt)
             .Take(Math.Max(_backgroundJobProcessorOptions.BatchSize, 1))
@@ -42,6 +44,16 @@ public sealed class NotificationBackgroundJobProcessor(
         {
             try
             {
+                if (dbContext is DbContext context && context.Database.IsRelational())
+                {
+                    var claimed = await dbContext.BackgroundJobs.Where(x => x.Id == job.Id &&
+                        (x.Status == BackgroundJobStatus.Pending ||
+                         (x.Status == BackgroundJobStatus.Processing && x.UpdatedAt < abandonedBefore)) &&
+                        x.ScheduledAt <= now).ExecuteUpdateAsync(update => update
+                            .SetProperty(x => x.Status, BackgroundJobStatus.Processing)
+                            .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+                    if (claimed == 0) continue;
+                }
                 job.Status = BackgroundJobStatus.Processing;
                 job.UpdatedAt = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -68,7 +80,8 @@ public sealed class NotificationBackgroundJobProcessor(
             catch (Exception ex)
             {
                 job.RetryCount++;
-                job.LastError = ex.Message;
+                var guestMail = job.Payload.Contains("guest-reservation-", StringComparison.Ordinal);
+                job.LastError = guestMail ? "Guest notification delivery failed." : ex.Message;
                 job.UpdatedAt = DateTime.UtcNow;
 
                 if (job.RetryCount >= RetryLimit)
@@ -83,7 +96,8 @@ public sealed class NotificationBackgroundJobProcessor(
                 }
 
                 await dbContext.SaveChangesAsync(cancellationToken);
-                logger.LogError(ex, "Notification job {BackgroundJobId} failed.", job.Id);
+                if (guestMail) logger.LogError("Guest notification delivery failed; retry {RetryCount}.", job.RetryCount);
+                else logger.LogError(ex, "Notification job {BackgroundJobId} failed.", job.Id);
             }
         }
 

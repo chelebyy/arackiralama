@@ -2,6 +2,7 @@ namespace RentACar.Core.Entities;
 
 public sealed class ReservationQuoteV1
 {
+    public Guid? AmendmentReservationId { get; set; }
     public int SchemaVersion { get; set; } = 1;
     public Guid QuoteId { get; set; }
     public string SessionHash { get; set; } = string.Empty;

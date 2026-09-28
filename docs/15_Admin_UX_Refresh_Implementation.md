@@ -1,5 +1,15 @@
 # Admin Public Site & Contact UX Refresh Implementation
 
+Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
+
+## Package 3 office policy extension
+
+Office operating settings now include independent cancellation/date-change permission switches, explicit notice periods and fees. Disabled or incomplete settings keep that guest operation unavailable. Values are operator decisions; no default free cancellation or automatic refund is introduced.
+
+The public management page displays the allowed fee before acceptance. Date changes reprice the exact vehicle and current extras, preserve prior accepted change fees, and retain earlier financial snapshots. Contact-only profile/reservation updates do not collect legacy identity/licence numbers or full birth dates. Historical stored values remain intact.
+
+Validation and boundaries: [Package 3 report](Vehicle_Reservation_Package_3_Implementation.md). Local unit/integration/browser checks passed; production rules, key/retention setup, remote CI and release remain separate. Public header/hero were not edited. The following PR #447 notes describe earlier work.
+
 Latest PR #447 follow-up: the eleventh Codex review on `05c5ac2` is addressed. Exact quote submissions calculate driver age on the Turkey pickup date. Immediate exact pay-at-pickup confirmation and reminder jobs use the normalized checkout locale. Validation: 107 focused backend unit tests and 13 real PostgreSQL/Redis API cases passed, covering birthday boundaries, wrong-age rejection, five notification locales, replay deduplication and queue-failure rollback. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md). No frontend changes; frontend/build/browser/device checks were not repeated. Starting-head CI passed all ten active checks; new-head CI and renewed review remain separate gates. No merge, production migration or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026

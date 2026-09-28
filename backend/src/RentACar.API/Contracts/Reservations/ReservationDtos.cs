@@ -83,10 +83,15 @@ public record ReservationDriverDto
 {
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore]
     public DateTime? DateOfBirth { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
     public string LicenseNumber { get; init; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore]
     public string LicenseCountry { get; init; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore]
     public DateTime? LicenseIssueDate { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
     public DateTime? LicenseExpiryDate { get; init; }
 }
 

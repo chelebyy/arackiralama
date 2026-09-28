@@ -774,12 +774,10 @@ public sealed class ReservationServiceTests
                 r.Status == ReservationStatus.Draft
                 && r.TotalAmount == 1700
                 && r.VehicleId == vehicleId
-                && r.DriverDateOfBirth.HasValue
-                && r.DriverDateOfBirth.Value.Kind == DateTimeKind.Utc
-                && r.DriverLicenseIssueDate.HasValue
-                && r.DriverLicenseIssueDate.Value.Kind == DateTimeKind.Utc
-                && r.DriverLicenseExpiryDate.HasValue
-                && r.DriverLicenseExpiryDate.Value.Kind == DateTimeKind.Utc),
+                && r.DriverDateOfBirth == null
+                && r.DriverLicenseIssueDate == null
+                && r.DriverLicenseExpiryDate == null
+                && r.DriverLicenseNumber == null),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -1107,7 +1105,7 @@ public sealed class ReservationServiceTests
             Status = ReservationStatus.Draft,
             QuoteReplayProof = new ReservationQuoteReplayProofV1
             {
-                SchemaVersion = 2, VehicleId = selected.Id,
+                SchemaVersion = 3, VehicleId = selected.Id,
                 SessionHash = ReservationQuoteSecurity.HashSessionId(scenario == "wrong-session" ? "other-session" : "session")
             }
         };

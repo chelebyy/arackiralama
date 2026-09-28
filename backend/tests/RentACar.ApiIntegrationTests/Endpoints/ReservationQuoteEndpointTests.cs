@@ -95,7 +95,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             QuoteId = quoteId,
             Locale = quoteRequest.Locale,
             DriverAge = quoteRequest.DriverAge,
-            Driver = new DriverInfoRequest { LicenseExpiryDate = pickup.AddYears(2) },
+            Driver = new DriverInfoRequest { Declaration = Declaration(30) },
             Customer = new CustomerInfoRequest
             {
                 FirstName = "Quote",
@@ -123,7 +123,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
                 .Include(reservation => reservation.SelectedExtras)
                 .SingleAsync(reservation => reservation.QuoteId == quoteId));
         persisted.Id.Should().Be(reservationId);
-        persisted.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 2 : 1);
+        persisted.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 3 : 1);
         persisted.QuoteReplayProof.VehicleId.Should().Be(quoteRequest.VehicleId);
         persisted.PricingSnapshot.Should().NotBeNull();
         persisted.PricingSnapshot!.FinalTotal.Should().Be(persisted.TotalAmount);
@@ -186,7 +186,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
                 ReturnDateTimeUtc = input.ReturnDateTimeUtc,
                 QuoteId = json.RootElement.GetProperty("data").GetProperty("quoteId").GetGuid(),
                 DriverAge = 30,
-                Driver = new DriverInfoRequest { LicenseExpiryDate = pickup.AddYears(2) },
+                Driver = new DriverInfoRequest { Declaration = Declaration(30) },
                 Customer = new CustomerInfoRequest
                 {
                     FirstName = "Synthetic", LastName = "Exact",
@@ -470,9 +470,9 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     [InlineData("missing", false, HttpStatusCode.BadRequest)]
     [InlineData("missing", true, HttpStatusCode.BadRequest)]
     [InlineData("absent-driver", true, HttpStatusCode.BadRequest)]
-    [InlineData("expired", true, HttpStatusCode.Conflict)]
+    [InlineData("expired", true, HttpStatusCode.BadRequest)]
     [InlineData("return-day", true, HttpStatusCode.OK)]
-    public async Task ExactBooking_RequiresLicenseExpiryThroughTurkeyReturnDate(string expiryCase, bool unpaid, HttpStatusCode expected)
+    public async Task ExactBooking_RequiresDeclarationOfLicenceValidityThroughReturn(string expiryCase, bool unpaid, HttpStatusCode expected)
     {
         var input = ExactInput() with { ReturnDateTimeUtc = ExactInput().ReturnDateTimeUtc.Date.AddHours(22) };
         var session = Guid.NewGuid().ToString();
@@ -484,12 +484,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         {
             Driver = expiryCase == "absent-driver" ? null : request.Driver! with
             {
-                LicenseExpiryDate = expiryCase switch
-                {
-                    "missing" => null,
-                    "expired" => returnDate.AddDays(-1),
-                    _ => returnDate
-                }
+                Declaration = expiryCase == "missing" ? null : Declaration(30) with { LicenseValidThroughReturn = expiryCase != "expired" }
             }
         };
         using var response = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
@@ -498,7 +493,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         count.Should().Be(expected == HttpStatusCode.OK ? 1 : 0);
         if (expected != HttpStatusCode.OK)
         {
-            using var retry = await SendReservationAsync(request with { Driver = new DriverInfoRequest { LicenseExpiryDate = returnDate } },
+            using var retry = await SendReservationAsync(request with { Driver = new DriverInfoRequest { Declaration = Declaration(30) } },
                 session, Guid.NewGuid().ToString(), unpaid);
             retry.StatusCode.Should().Be(HttpStatusCode.OK, await retry.Content.ReadAsStringAsync());
         }
@@ -891,7 +886,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         CreateReservationRequest[] changes =
         [
             request with { Customer = request.Customer with { Email = "changed@example.test" } },
-            request with { Driver = request.Driver! with { LicenseExpiryDate = input.ReturnDateTimeUtc.AddYears(3) } }
+            request with { Driver = request.Driver! with { Declaration = request.Driver!.Declaration! with { LicenseYearsAtPickup = 6 } } }
         ];
         foreach (var changed in changes)
         {
@@ -902,7 +897,9 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
         var saved = await WithDbContextAsync(db => db.Reservations.Include(r => r.Customer).SingleAsync());
         saved.Customer!.FullName.Should().Be($"{request.Customer.FirstName} {request.Customer.LastName}");
-        saved.DriverLicenseExpiryDate.Should().Be(request.Driver!.LicenseExpiryDate);
+        saved.DriverLicenseExpiryDate.Should().BeNull();
+        saved.DriverDateOfBirth.Should().BeNull();
+        saved.DriverLicenseNumber.Should().BeNull();
         saved.Notes.Should().Be(request.Notes);
     }
 
@@ -1138,7 +1135,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     [InlineData(23, 30, false)]
     [InlineData(21, 30, true)]
     [InlineData(21, 29, false)]
-    public async Task ExactBirthdayBooking_ValidatesAgeOnTurkeyPickupDate(int utcHour, int quotedAge, bool unpaid)
+    public async Task ExactBooking_ValidatesReconfirmedAgeAcrossTurkeyPickupBoundary(int utcHour, int quotedAge, bool unpaid)
     {
         var birthday = DateTime.UtcNow.Date.AddDays(11);
         var pickup = birthday.AddDays(-1).AddHours(utcHour);
@@ -1147,7 +1144,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         using var quote = await SendExactQuoteAsync(input, session);
         quote.StatusCode.Should().Be(HttpStatusCode.OK, await quote.Content.ReadAsStringAsync());
         var original = ExactReservation(input, await QuoteIdAsync(quote));
-        var request = original with { Customer = original.Customer with { DateOfBirth = birthday.AddYears(-30) } };
+        var request = original with { Driver = new DriverInfoRequest { Declaration = Declaration(utcHour >= 21 ? 30 : 29) } };
         var accepted = quotedAge == (utcHour >= 21 ? 30 : 29);
         using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
         created.StatusCode.Should().Be(accepted ? HttpStatusCode.OK : HttpStatusCode.Conflict, await created.Content.ReadAsStringAsync());
@@ -1170,13 +1167,19 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(1);
     }
 
+    private static DriverDeclaration Declaration(int age) => new()
+    {
+        AgeAtPickup = age, LicenseYearsAtPickup = 5,
+        LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+    };
+
     private static CreateReservationRequest ExactReservation(CreateReservationQuoteRequest input, Guid quoteId) => new()
     {
         VehicleId = input.VehicleId, VehicleGroupId = input.VehicleGroupId,
         PickupOfficeId = input.PickupOfficeId, ReturnOfficeId = input.ReturnOfficeId,
         PickupDateTimeUtc = input.PickupDateTimeUtc, ReturnDateTimeUtc = input.ReturnDateTimeUtc,
         QuoteId = quoteId, DriverAge = input.DriverAge, Locale = input.Locale,
-        Driver = new DriverInfoRequest { LicenseExpiryDate = input.ReturnDateTimeUtc.AddYears(2) },
+        Driver = new DriverInfoRequest { Declaration = Declaration(input.DriverAge ?? 30) },
         Customer = new CustomerInfoRequest
         {
             FirstName = "Synthetic", LastName = "Policy", Phone = "+900000000000",

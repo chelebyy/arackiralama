@@ -51,6 +51,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<VehicleBookingService>();
         services.AddScoped<IReservationExtraPricingService, ReservationExtraPricingService>();
         services.AddScoped<IReservationQuoteService, ReservationQuoteService>();
+        services.AddScoped<ReservationQuoteService>();
+        services.AddScoped<GuestReservationService>();
         services.AddSingleton<AvailabilityCacheInvalidationSignal>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();
