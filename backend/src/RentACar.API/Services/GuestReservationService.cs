@@ -282,6 +282,9 @@ public sealed class GuestReservationService(
             var variables = new Dictionary<string, string> { ["PublicCode"] = reservation.PublicCode };
             await notifications.EnqueueEmailAsync(new() { ToEmail = reservation.Customer!.Email,
                 Locale = locale, TemplateKey = key, Variables = variables }, scheduled, ct);
+            if (!string.IsNullOrWhiteSpace(reservation.Customer.Phone))
+                await notifications.EnqueueSmsAsync(new() { ToPhoneNumber = reservation.Customer.Phone,
+                    Locale = locale, TemplateKey = key, Variables = variables }, scheduled, ct);
         }
     }
 

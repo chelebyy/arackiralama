@@ -190,6 +190,55 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
     }
 
     [Theory]
+    [InlineData(true, true, BackgroundJobStatus.Pending)]
+    [InlineData(true, true, BackgroundJobStatus.Processing)]
+    [InlineData(false, true, BackgroundJobStatus.Pending)]
+    [InlineData(true, false, BackgroundJobStatus.Pending)]
+    public async Task Amendment_RequeuesBothReminderChannelsOnceAndHonorsSmsSettings(
+        bool smsEnabled, bool hasPhone, BackgroundJobStatus oldStatus)
+    {
+        var original = await SeedAsync();
+        await WithDbContextAsync(async db =>
+        {
+            db.FeatureFlags.Add(new FeatureFlag { Name = NotificationConstants.EnableSmsNotificationsFlag, Enabled = smsEnabled });
+            if (!hasPhone)
+                (await db.Customers.SingleAsync(c => c.Id == original.CustomerId)).Phone = string.Empty;
+            foreach (var key in new[] { NotificationTemplateKeys.PickupReminder, NotificationTemplateKeys.ReturnReminder })
+                db.BackgroundJobs.Add(new BackgroundJob { Type = NotificationQueueService.SendSmsJobType,
+                    Status = oldStatus, UpdatedAt = DateTime.UtcNow.AddMinutes(-6),
+                    ScheduledAt = original.PickupDateTime.AddHours(-24),
+                    Payload = JsonSerializer.Serialize(new QueuedSmsNotificationRequest {
+                        ToPhoneNumber = original.Customer!.Phone!, TemplateKey = key,
+                        Variables = new Dictionary<string, string> { ["PublicCode"] = original.PublicCode } }) });
+            return await db.SaveChangesAsync();
+        });
+        var session = await SessionAsync(original);
+        var pickup = original.PickupDateTime.AddDays(1);
+        var end = original.ReturnDateTime.AddDays(2);
+        var offer = await OfferAsync(session, pickup, end);
+        var confirmation = new GuestAmendmentConfirmation(offer.GetProperty("AmendmentId").GetGuid(), offer.GetProperty("FinalTotal").GetDecimal());
+        await AuthorizedAsync(session, (s, a) => s.ConfirmAmendmentAsync(a, confirmation, default));
+        await AuthorizedAsync(session, (s, a) => s.ConfirmAmendmentAsync(a, confirmation, default));
+        var jobs = await WithDbContextAsync(db => db.BackgroundJobs.AsNoTracking().Where(j =>
+            j.Payload.Contains(NotificationTemplateKeys.PickupReminder) ||
+            j.Payload.Contains(NotificationTemplateKeys.ReturnReminder)).ToListAsync());
+        jobs.Count(j => j.Status == BackgroundJobStatus.Cancelled).Should().Be(3);
+        var pending = jobs.Where(j => j.Status == BackgroundJobStatus.Pending).ToList();
+        pending.Count(j => j.Type == NotificationQueueService.SendEmailJobType).Should().Be(2);
+        pending.Count(j => j.Type == NotificationQueueService.SendSmsJobType).Should().Be(smsEnabled && hasPhone ? 2 : 0);
+        foreach (var job in pending)
+        {
+            using var payload = JsonDocument.Parse(job.Payload);
+            payload.RootElement.GetProperty("Locale").GetString().Should().Be("en");
+            payload.RootElement.GetProperty("Variables").GetProperty("PublicCode").GetString().Should().Be(original.PublicCode);
+            var key = payload.RootElement.GetProperty("TemplateKey").GetString();
+            job.ScheduledAt.Should().Be((key == NotificationTemplateKeys.PickupReminder ? pickup : end).AddHours(-24));
+            if (job.Type == NotificationQueueService.SendSmsJobType)
+                payload.RootElement.GetProperty("ToPhoneNumber").GetString().Should().Be(original.Customer!.Phone);
+        }
+    }
+
+    [Theory]
     [InlineData("policy")]
     [InlineData("expired")]
     [InlineData("price")]

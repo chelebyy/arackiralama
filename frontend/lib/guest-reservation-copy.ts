@@ -3,6 +3,8 @@ const copy = {
     "title": "Rezervasyon yönetimi",
     "previousFees": "Önceden kabul edilen değişiklik ücretleri",
     "status": "Durum", "Confirmed": "Onaylandı", "Cancelled": "İptal edildi", "Active": "Aktif", "Completed": "Tamamlandı",
+    "Draft": "Taslak", "Hold": "Geçici olarak ayrıldı", "PendingPayment": "Ödeme bekleniyor",
+    "Paid": "Ödendi", "Expired": "Süresi doldu", "UnpaidRequest": "Ödemesiz rezervasyon talebi", "unknownStatus": "Durum bilgisi alınamadı",
     "reference": "Rezervasyon kodu",
     "email": "E-posta",
     "sendCode": "Doğrulama kodu gönder",
@@ -38,6 +40,8 @@ const copy = {
     "title": "Manage reservation",
     "previousFees": "Previously accepted change fees",
     "status": "Status", "Confirmed": "Confirmed", "Cancelled": "Cancelled", "Active": "Active", "Completed": "Completed",
+    "Draft": "Draft", "Hold": "Temporarily held", "PendingPayment": "Awaiting payment",
+    "Paid": "Paid", "Expired": "Expired", "UnpaidRequest": "Unpaid reservation request", "unknownStatus": "Status unavailable",
     "reference": "Reservation code",
     "email": "Email",
     "sendCode": "Send verification code",
@@ -73,6 +77,8 @@ const copy = {
     "title": "Reservierung verwalten",
     "previousFees": "Zuvor akzeptierte Änderungsgebühren",
     "status": "Status", "Confirmed": "Bestätigt", "Cancelled": "Storniert", "Active": "Aktiv", "Completed": "Abgeschlossen",
+    "Draft": "Entwurf", "Hold": "Vorübergehend reserviert", "PendingPayment": "Zahlung ausstehend",
+    "Paid": "Bezahlt", "Expired": "Abgelaufen", "UnpaidRequest": "Unbezahlte Reservierungsanfrage", "unknownStatus": "Status nicht verfügbar",
     "reference": "Reservierungscode",
     "email": "E-Mail",
     "sendCode": "Bestätigungscode senden",
@@ -108,6 +114,8 @@ const copy = {
     "title": "Управление бронированием",
     "previousFees": "Ранее принятые сборы за изменения",
     "status": "Статус", "Confirmed": "Подтверждено", "Cancelled": "Отменено", "Active": "Активно", "Completed": "Завершено",
+    "Draft": "Черновик", "Hold": "Временно зарезервировано", "PendingPayment": "Ожидается оплата",
+    "Paid": "Оплачено", "Expired": "Срок истёк", "UnpaidRequest": "Неоплаченная заявка на бронирование", "unknownStatus": "Статус недоступен",
     "reference": "Код бронирования",
     "email": "Электронная почта",
     "sendCode": "Отправить код",
@@ -143,6 +151,8 @@ const copy = {
     "title": "إدارة الحجز",
     "previousFees": "رسوم التغيير المقبولة سابقًا",
     "status": "الحالة", "Confirmed": "مؤكد", "Cancelled": "ملغى", "Active": "نشط", "Completed": "مكتمل",
+    "Draft": "مسودة", "Hold": "محجوز مؤقتًا", "PendingPayment": "بانتظار الدفع",
+    "Paid": "مدفوع", "Expired": "منتهي الصلاحية", "UnpaidRequest": "طلب حجز غير مدفوع", "unknownStatus": "الحالة غير متاحة",
     "reference": "رمز الحجز",
     "email": "البريد الإلكتروني",
     "sendCode": "إرسال رمز التحقق",
@@ -177,3 +187,11 @@ const copy = {
 };
 
 export function guestCopy(locale: string) { return copy[locale as keyof typeof copy] ?? copy.en; }
+
+const guestStatuses = ["Draft", "Hold", "PendingPayment", "Paid", "Active", "Completed", "Cancelled", "Expired", "UnpaidRequest", "Confirmed"] as const;
+
+export function guestStatusLabel(locale: string, status: string): string {
+  const messages = guestCopy(locale);
+  const known = guestStatuses.find(value => value === status);
+  return known ? messages[known] : messages.unknownStatus;
+}

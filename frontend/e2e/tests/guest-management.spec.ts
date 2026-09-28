@@ -9,6 +9,74 @@ const initial = {
   cancellationFee: 25, changeFee: 10, csrfToken: "synthetic-csrf",
 };
 
+test("pending verification survives reload with its original cooldown and clears after exchange", async ({ page }) => {
+  await page.clock.install();
+  const copy = guestCopy("en");
+  let requests = 0;
+  let authenticated = false;
+  await page.route("**/api/guest/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/request")) {
+      requests++;
+      await route.fulfill({ json: { challengeId: "pending-challenge" } });
+    } else if (path.endsWith("/verify")) {
+      expect(route.request().postDataJSON()).toEqual({ challengeId: "pending-challenge", code: "ORIGINAL-CODE" });
+      authenticated = true;
+      await route.fulfill({ json: { csrfToken: initial.csrfToken } });
+    } else await route.fulfill({ status: authenticated ? 200 : 401, json: authenticated ? initial : {} });
+  });
+  await page.goto("/en/manage-reservation");
+  await page.getByLabel(copy.reference, { exact: true }).fill("REF");
+  await page.getByLabel(copy.email, { exact: true }).fill("guest@example.test");
+  const send = page.getByRole("button", { name: copy.sendCode, exact: true });
+  await send.click();
+  await expect(page.getByLabel(copy.code, { exact: true })).toBeVisible();
+  await page.clock.fastForward(30000);
+  await page.reload();
+  await expect(page.getByLabel(copy.code, { exact: true })).toBeVisible();
+  await expect(send).toBeDisabled();
+  await page.clock.fastForward(31000);
+  await expect(send).toBeEnabled();
+  await page.reload();
+  await expect(send).toBeEnabled();
+  await page.getByLabel(copy.code, { exact: true }).fill("ORIGINAL-CODE");
+  await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await expect(page.getByText(initial.publicCode, { exact: true })).toBeVisible();
+  expect(requests).toBe(1);
+  expect(await page.evaluate(() => sessionStorage.getItem("guest-access-challenge"))).toBeNull();
+  expect(await page.evaluate(() => JSON.stringify(sessionStorage))).not.toContain("guest@example.test");
+});
+
+test("expired pending verification is removed on reload", async ({ page }) => {
+  await page.clock.install();
+  const copy = guestCopy("en");
+  await page.route("**/api/guest/**", route => route.fulfill({ status: 401, json: {} }));
+  await page.goto("/en/manage-reservation");
+  await page.evaluate(() => sessionStorage.setItem("guest-access-challenge", JSON.stringify({
+    challengeId: "expired-challenge", requestedAt: Date.now() - 601000,
+  })));
+  await page.reload();
+  await expect(page.getByRole("button", { name: copy.sendCode, exact: true })).toBeEnabled();
+  await expect(page.getByLabel(copy.code, { exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => sessionStorage.getItem("guest-access-challenge"))).toBeNull();
+});
+
+for (const locale of ["tr", "en", "de", "ru", "ar"]) {
+  test(`all guest-visible reservation statuses are translated in ${locale}`, async ({ page }) => {
+    const copy = guestCopy(locale);
+    const statuses = ["Draft", "Hold", "PendingPayment", "Paid", "Active", "Completed", "Cancelled", "Expired", "UnpaidRequest", "Confirmed"] as const;
+    let status: typeof statuses[number] = "UnpaidRequest";
+    await page.route("**/api/guest/view", route => route.fulfill({ json: {
+      ...initial, status, canCancel: false, canChangeDates: false,
+    } }));
+    for (const next of statuses) {
+      status = next;
+      await page.goto(`/${locale}/manage-reservation`);
+      await expect(page.getByText(`${copy.status}: ${copy[status]}`, { exact: true })).toBeVisible();
+    }
+  });
+}
+
 test("resend cooldown preserves the active challenge and allows retry after a minute", async ({ page }) => {
   await page.clock.install();
   let requests = 0;

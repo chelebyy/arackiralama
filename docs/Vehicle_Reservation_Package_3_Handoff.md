@@ -2,6 +2,8 @@
 
 ## PR 457 review follow-up
 
+The latest three findings are corrected: pending verification survives same-tab reload with the original cooldown; amendments recreate eligible SMS reminders; and all ten backend statuses are localized. Validation: 910 backend unit tests, 27 PostgreSQL/Redis guest integration cases, 372 frontend tests, 34 desktop/mobile browser cases, production build and lint passed (one existing lint warning). Browser API responses are controlled; production provider delivery is not covered. Remote checks must be read from the final commit; no merge or deployment is part of this review.
+
 The six Codex findings and two React Doctor warnings are addressed: shared local API/Worker keys; client resend cooldown; authenticated per-client BFF rate-limit partitions; declaration-based E2E inputs; allowlisted operator driver summaries; expired-mail cancellation; memoized formatters; and upstream status checks before body parsing. See [deployment boundaries](Vehicle_Reservation_Package_3_Data_Handling.md) for the required trusted ingress/secret configuration. Existing publication evidence below predates these corrections; use the latest PR head/checks for closure. No merge or deployment is authorized by this review task.
 
 The next Codex pass identified the Worker's missing ASP.NET shared runtime and rollout rejection of version-2 checkout holds. Both are corrected, with a real Worker container startup and nine legacy/current-version negative and positive database cases. Six outdated mail fixtures from the first CI run are updated; the full 910-test backend Release suite passed. See [review validation](Vehicle_Reservation_Package_3_Implementation.md#pr-457-review-validation) for scope and remaining deployment checks.
@@ -39,7 +41,7 @@ Kısa rezervasyon formu iletişim bilgisi ve sürücü beyanı toplar. Kimlik/eh
 
 Tarih değişikliği güncel araç/ek hizmet fiyatlarıyla hesaplanır; önceki kabul edilmiş değişiklik ücretleri korunur. Yeni ücret ve toplam açıkça kabul edilir. Sürüm, politika, teklif süresi ve stok kontrolleri transaction içinde tekrar yapılır. Tekrar gönderimde aynı sonuç döner; ücret ve bildirim işi tekrar oluşturulmaz.
 
-Yeni kesin rezervasyon tekrar kanıtı sürümü **3**, fiyat teklifi şeması **2** olarak kalır. Hold doğrulaması da kanıt sürümü 3 bekler. Eski sürüm girişimleri yeni checkout başlatmalıdır.
+New exact-reservation replay proofs use version **3**; pricing quote schema remains **2**. Existing version-2 drafts may create or recover holds only with their original session and stored eligibility, while current expiry and rental-policy checks still apply.
 
 ## Ölçülmüş yerel kanıt
 

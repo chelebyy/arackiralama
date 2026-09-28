@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
-import { guestCopy } from "@/lib/guest-reservation-copy";
+import { guestCopy, guestStatusLabel } from "@/lib/guest-reservation-copy";
+import { challengeCooldownMs, challengeLifetimeMs, readGuestChallenge, storeGuestChallenge,
+  type GuestAccessChallenge } from "@/lib/guest-access-challenge";
 import type { DriverDeclaration } from "@/lib/api/types";
 
 type View = {
@@ -24,7 +26,8 @@ export default function ManageReservationPage() {
   const { locale } = useParams<{ locale: string }>();
   const copy = guestCopy(locale);
   const [view, setView] = useState<View | null>(null);
-  const [challengeId, setChallengeId] = useState("");
+  const [challenge, setChallenge] = useState<GuestAccessChallenge | null>(null);
+  const [accessReady, setAccessReady] = useState(false);
   const [requestCoolingDown, setRequestCoolingDown] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,10 +39,18 @@ export default function ManageReservationPage() {
   const [dates, setDates] = useState({ pickup: "", returnDate: "" });
 
   useEffect(() => {
-    if (!requestCoolingDown) return;
-    const timer = setTimeout(() => setRequestCoolingDown(false), 60000);
-    return () => clearTimeout(timer);
-  }, [requestCoolingDown]);
+    if (!challenge) return;
+    const cooldown = setTimeout(() => setRequestCoolingDown(false),
+      Math.max(0, challenge.requestedAt + challengeCooldownMs - Date.now()));
+    const expiry = setTimeout(() => {
+      setChallenge(null); setRequestCoolingDown(false); storeGuestChallenge(null);
+    }, Math.max(0, challenge.requestedAt + challengeLifetimeMs - Date.now()));
+    return () => { clearTimeout(cooldown); clearTimeout(expiry); };
+  }, [challenge]);
+
+  function clearChallenge() {
+    setChallenge(null); setRequestCoolingDown(false); storeGuestChallenge(null);
+  }
 
   function clearReservationState() {
     setView(null); setOffer(null); csrf.current = "";
@@ -56,7 +67,7 @@ export default function ManageReservationPage() {
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         clearReservationState();
-        if (path !== "verify") { setChallengeId(""); setRequestCoolingDown(false); }
+        if (path !== "verify") clearChallenge();
         throw new Error(copy.expired);
       }
       if (response.status === 409) setOffer(null);
@@ -71,11 +82,17 @@ export default function ManageReservationPage() {
   }
   useEffect(() => {
     let cancelled = false;
+    function restoreChallenge() {
+      if (cancelled) return;
+      const pending = readGuestChallenge();
+      setChallenge(pending);
+      setRequestCoolingDown(!!pending && pending.requestedAt + challengeCooldownMs > Date.now());
+    }
     fetch("/api/guest/view", { cache: "no-store" }).then(async response => {
-      if (!response.ok) return;
+      if (!response.ok) { restoreChallenge(); return; }
       const next: View = await response.json();
-      if (!cancelled) { csrf.current = next.csrfToken; setView(next); }
-    }).catch(() => {});
+      if (!cancelled) { csrf.current = next.csrfToken; setView(next); clearChallenge(); }
+    }).catch(restoreChallenge).finally(() => { if (!cancelled) setAccessReady(true); });
     return () => { cancelled = true; };
   }, []);
   async function run(action: () => Promise<void>) {
@@ -86,20 +103,21 @@ export default function ManageReservationPage() {
   }
   function access(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (requestCoolingDown) return;
+    if (!accessReady || requestCoolingDown) return;
     const form = new FormData(event.currentTarget);
     void run(async () => {
       const result = await request<{ challengeId: string }>("request",
         { publicCode: form.get("reference"), email: form.get("email"), locale });
-      setChallengeId(result.challengeId); setRequestCoolingDown(true); setMessage(copy.sent);
+      const pending = { challengeId: result.challengeId, requestedAt: Date.now() };
+      storeGuestChallenge(pending); setChallenge(pending); setRequestCoolingDown(true); setMessage(copy.sent);
     });
   }
   function verify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = new FormData(event.currentTarget).get("code");
     void run(async () => {
-      const result = await request<{ csrfToken: string }>("verify", { challengeId, code });
-      csrf.current = result.csrfToken; await refresh(); setChallengeId("");
+      const result = await request<{ csrfToken: string }>("verify", { challengeId: challenge?.challengeId, code });
+      csrf.current = result.csrfToken; clearChallenge(); await refresh();
     });
   }
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale, {
@@ -121,9 +139,9 @@ export default function ManageReservationPage() {
         <form onSubmit={access} className="space-y-4">
           <label className="block">{copy.reference}<input name="reference" required maxLength={24} autoComplete="off" className={inputStyle} /></label>
           <label className="block">{copy.email}<input name="email" type="email" required maxLength={254} autoComplete="email" className={inputStyle} /></label>
-          <button disabled={busy || requestCoolingDown} className={buttonStyle}>{busy ? copy.loading : copy.sendCode}</button>
+          <button disabled={busy || !accessReady || requestCoolingDown} className={buttonStyle}>{busy ? copy.loading : copy.sendCode}</button>
         </form>
-        {challengeId && <form onSubmit={verify} className="space-y-4">
+        {challenge && <form onSubmit={verify} className="space-y-4">
           <label className="block">{copy.code}<input name="code" required maxLength={64} autoComplete="one-time-code" className={inputStyle} /></label>
           <button disabled={busy} className={buttonStyle}>{copy.verify}</button>
         </form>}
@@ -131,12 +149,12 @@ export default function ManageReservationPage() {
         <section className="rounded-xl border border-slate-200 p-6">
           <h2 className="text-xl font-semibold">{view.vehicle}</h2>
           <p>{view.publicCode}</p>
-          <p>{copy.status}: {view.status === "Confirmed" || view.status === "Cancelled" || view.status === "Active" || view.status === "Completed" ? copy[view.status] : copy.unavailable}</p>
+          <p>{copy.status}: {guestStatusLabel(locale, view.status)}</p>
           <p>{view.pickupOffice} — {formatDate(view.pickupDateTime)}</p>
           <p>{view.returnOffice} — {formatDate(view.returnDateTime)}</p>
           <p className="mt-3 font-semibold">{copy.total}: {money(view.totalAmount)}</p>
           <button type="button" disabled={busy} className="mt-4 underline" onClick={() => void run(async () => {
-            await request("logout", {}); clearReservationState(); setChallengeId(""); setRequestCoolingDown(false);
+            await request("logout", {}); clearReservationState(); clearChallenge();
           })}>{copy.logout}</button>
         </section>
         {!view.canCancel && !view.canChangeDates && <p>{copy.unavailable}</p>}

@@ -2,6 +2,8 @@
 
 ## PR 457 driver summary correction
 
+The public guest view now names all ten backend reservation statuses in all five locales, including unpaid requests. Reloading preserves a pending verification challenge within the same tab. Date amendments recreate pickup/return SMS reminders alongside email, preserving the SMS feature flag, customer phone and idempotent retry rules.
+
 Reservation detail now renders the stored driver name and eligibility declaration without requiring a retired licence-number field. The operator sees declared age, licence tenure, licence validity through return and pickup-document availability. Historical sensitive licence/date fields remain excluded from JSON and are not reintroduced into the panel. Backend serialization and admin component regressions cover this boundary.
 
 Rollout compatibility reuses stored driver dates only to validate existing version-2 checkout holds. It does not accept new sensitive fields, fabricate a customer declaration, or expose those dates in the admin response.

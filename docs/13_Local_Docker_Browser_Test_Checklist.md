@@ -2,6 +2,8 @@
 
 ## PR 457 review corrections
 
+Pending guest verification now survives same-tab reload/navigation with its original resend deadline. Only the challenge ID and request timestamp enter session storage; codes, contact data and session credentials do not. Check expiry and successful-exchange cleanup, all ten localized reservation states, and replacement email/SMS reminders after date changes with SMS disabled and phone-less customers included.
+
 Local Compose now exposes the web app through `web-edge` on port 3001. The edge overwrites `X-Guest-Client-IP`; the internal web container is not published. API and Worker mount the same `guest_keys` volume at `/keys`, owned by UID 10000. Check these dependencies when starting the full stack, including `api-upload-permissions` and `web-edge`.
 
 Guest request/verification limits must remain independent across clients, including the global limiter. Verify forged forwarding/signature headers cannot choose a partition, and repeat-send stays disabled for one minute without losing the current challenge. Expired queued access mail must become Cancelled without reaching SMTP. Production key encryption, edge isolation and HTTPS delivery remain separate activation checks; see [data handling](Vehicle_Reservation_Package_3_Data_Handling.md).

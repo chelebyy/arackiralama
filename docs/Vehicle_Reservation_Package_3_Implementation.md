@@ -18,11 +18,13 @@ Status: implementation completed locally on `codex/guest-reservations`. Publicat
 
 ## Access and notification boundaries
 
+Pending verification stores only its challenge ID and request timestamp in session storage for same-tab reload recovery. Its original cooldown is preserved and stale entries are discarded after ten minutes; exchange, logout and authenticated-session recovery remove it. Storage-denied browsers retain the in-memory flow. The server remains authoritative for code validity. All ten backend statuses have translations in each supported locale. Date amendments requeue both future reminder channels; SMS still honors the feature flag and non-empty phone requirement.
+
 Verification uses a 128-bit random code with a 10-minute lifetime and at most five attempts. Only the digest is stored in the access table; the queue holds a Data Protection encrypted delivery copy. Valid exchange consumes the code and creates a 20-minute reservation-scoped session. Session and CSRF values are stored as digests. Changing the reservation customer's normalized email invalidates existing access.
 
 The Next.js proxy allowlists routes, requires same-origin JSON for POST, checks CSRF, sets HttpOnly/SameSite=Strict cookies, marks responses no-store and strips session secrets from JSON. Cookies are Secure in production. It does not trust caller-supplied guest/authentication/forwarded-IP headers. Direct backend mutations validate both session and CSRF. GET cannot exchange a code or mutate a reservation.
 
-Access requests use neutral responses, an existing IP rate limit and a database-enforced one-request-per-minute reservation cooldown. The IP rate limit is shared by clients behind the BFF address; production ingress/load testing must establish suitable trusted-proxy and abuse limits before activation.
+Access requests use neutral responses, signed per-client BFF rate-limit partitions and a database-enforced one-request-per-minute reservation cooldown. Unsigned or invalid identities use the connection-address partition. Production ingress isolation, shared-secret configuration and load testing remain activation checks.
 
 Reservation changes, audit entries, reminder updates and queued messages commit together. Provider failures happen after commit and do not revert the booking. The dispatcher claims work atomically, recovers abandoned Processing jobs after five minutes, retries three times and records permanent failure. SMTP calls have a 30-second cancellation deadline. Delivery is **at least once**: an ambiguous SMTP response or a crashed sender can still cause a duplicate email. The booking operation remains idempotent.
 
