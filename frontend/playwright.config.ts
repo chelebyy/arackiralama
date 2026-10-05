@@ -44,13 +44,6 @@ const config: Config = {
       use: { ...devices["Pixel 5"] },
     },
   ],
-  ...(process.env.CI
-    ? {
-        /* CI-only: shard into 2 workers */
-        workers: 2,
-        shard: { current: Number(process.env.SHARD || 1), total: 2 },
-      }
-    : {}),
 };
 
 export default config;
