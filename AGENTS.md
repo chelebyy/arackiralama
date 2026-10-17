@@ -71,6 +71,8 @@ corepack pnpm -C frontend dev      # local dev server
 corepack pnpm -C frontend build
 corepack pnpm -C frontend test     # vitest unit tests
 corepack pnpm -C frontend lint     # eslint
+corepack pnpm -C frontend exec playwright install --with-deps chromium # first E2E setup
+# Start the local web/API stack separately; E2E_BASE_URL defaults to http://localhost:3000.
 corepack pnpm -C frontend exec playwright test # see frontend/playwright.config.ts
 
 # Docker (full local stack: Postgres, Redis, API, Worker, Web, upload-permissions init)
