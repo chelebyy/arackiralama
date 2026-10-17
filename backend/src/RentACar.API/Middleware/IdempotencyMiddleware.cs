@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Primitives;
 using StackExchange.Redis;
@@ -16,7 +19,7 @@ public sealed class IdempotencyMiddleware
     private readonly ILogger<IdempotencyMiddleware> _logger;
     private const string IdempotencyKeyHeader = "Idempotency-Key";
     private const string IdempotencyStatusHeader = "X-Idempotency-Status";
-    private const string RedisKeyPrefix = "idempotent:";
+    private const string RedisKeyPrefix = "idempotent:v2:";
 
     public IdempotencyMiddleware(RequestDelegate next, ILogger<IdempotencyMiddleware> logger)
     {
@@ -84,7 +87,8 @@ public sealed class IdempotencyMiddleware
             return;
         }
 
-        var redisKey = $"{RedisKeyPrefix}{idempotencyKey}";
+        var redisKey = CreateRedisKey(context, idempotencyKey);
+        var requestFingerprint = await GetRequestFingerprintAsync(context.Request);
 
         // Try to get cached response from Redis
         CachedResponse? cached = null;
@@ -107,9 +111,16 @@ public sealed class IdempotencyMiddleware
 
         if (cached != null)
         {
+            if (!string.Equals(cached.RequestFingerprint, requestFingerprint, StringComparison.Ordinal))
+            {
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"success\":false,\"message\":\"Idempotency-Key was already used with a different request.\"}");
+                return;
+            }
+
             _logger.LogInformation(
-                "Returning cached response for idempotency key {Key}",
-                idempotencyKey);
+                "Returning cached idempotent response");
 
             context.Response.StatusCode = cached.StatusCode;
             context.Response.ContentType = cached.ContentType ?? "application/json";
@@ -138,7 +149,8 @@ public sealed class IdempotencyMiddleware
                 {
                     StatusCode = context.Response.StatusCode,
                     ContentType = context.Response.ContentType,
-                    Body = responseBody
+                    Body = responseBody,
+                    RequestFingerprint = requestFingerprint
                 };
 
                 var expiration = TimeSpan.FromHours(idempotentAttribute.ExpirationHours);
@@ -151,8 +163,7 @@ public sealed class IdempotencyMiddleware
                         expiration);
 
                     _logger.LogInformation(
-                        "Cached response for idempotency key {Key}, expires in {Hours}h",
-                        idempotencyKey,
+                        "Cached idempotent response, expires in {Hours}h",
                         idempotentAttribute.ExpirationHours);
                 }
                 catch (RedisConnectionException ex)
@@ -169,6 +180,39 @@ public sealed class IdempotencyMiddleware
         {
             context.Response.Body = originalBodyStream;
             await memoryStream.DisposeAsync();
+        }
+    }
+
+    private static string CreateRedisKey(HttpContext context, string idempotencyKey)
+    {
+        var principalId = context.User.Identity?.IsAuthenticated == true
+            ? context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub")
+            : null;
+        var scope = JsonSerializer.Serialize(new
+        {
+            context.Request.Method,
+            Path = context.Request.PathBase.Add(context.Request.Path).Value,
+            Query = context.Request.QueryString.Value,
+            context.Request.ContentType,
+            PrincipalId = principalId,
+            PrincipalType = principalId is null ? null : context.User.FindFirstValue("principal_type"),
+            SessionId = context.Request.Headers["X-Session-Id"].ToString().Trim(),
+            IdempotencyKey = idempotencyKey
+        });
+        return RedisKeyPrefix + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(scope)));
+    }
+
+    private static async Task<string> GetRequestFingerprintAsync(HttpRequest request)
+    {
+        request.EnableBuffering();
+        try
+        {
+            var hash = await SHA256.HashDataAsync(request.Body, request.HttpContext.RequestAborted);
+            return Convert.ToHexString(hash);
+        }
+        finally
+        {
+            request.Body.Position = 0;
         }
     }
 
@@ -199,5 +243,6 @@ public sealed class IdempotencyMiddleware
         public int StatusCode { get; set; }
         public string? ContentType { get; set; }
         public string Body { get; set; } = string.Empty;
+        public string RequestFingerprint { get; set; } = string.Empty;
     }
 }
