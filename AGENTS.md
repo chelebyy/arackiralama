@@ -41,7 +41,7 @@ This file is the single source of project instructions for all coding agents; `C
 | Update translations | `frontend/i18n/messages/` | ar, de, en, ru, tr |
 
 ## Backend Conventions
-- `RentACar.Core` has no external dependencies; `RentACar.Infrastructure` holds EF Core (Npgsql), repositories, external services, Redis, and migrations under `Data/Migrations/`.
+- `RentACar.Core` currently references EF Core for `IApplicationDbContext` (`DbSet<T>` and `ChangeTracker`); `RentACar.Infrastructure` holds the database implementation (Npgsql), repositories, external services, Redis, and migrations under `Data/Migrations/`.
 - **Non-standard placement**: Application services live in `RentACar.API/Services/` (20 files) instead of a separate Application layer or Infrastructure.
 - `Contracts/` folders hold request/response DTOs per domain (Fleet, Auth, Pricing, Reservations).
 - `Specifications/` exists in both Core and Infrastructure for CQRS-style queries.
@@ -71,9 +71,9 @@ corepack pnpm -C frontend dev      # local dev server
 corepack pnpm -C frontend build
 corepack pnpm -C frontend test     # vitest unit tests
 corepack pnpm -C frontend lint     # eslint
-corepack pnpm -C frontend e2e      # playwright (see frontend/playwright.config.ts)
+corepack pnpm -C frontend exec playwright test # see frontend/playwright.config.ts
 
-# Docker (local dev: Postgres + Redis + API)
+# Docker (full local stack: Postgres, Redis, API, Worker, Web, upload-permissions init)
 cd backend && docker compose up --build
 ```
 
@@ -87,8 +87,7 @@ corepack pnpm -C frontend test -- path/to/file.test.tsx
 ```
 
 ## CI Pipeline
-- `.github/workflows/ci.yml`: backend build/test → frontend lint/test/build → docker build → docker push to GHCR (main only)
-- `.github/workflows/dependabot-auto-merge.yml`: auto-merges patch/minor Dependabot PRs
+- `.github/workflows/ci.yml`: backend unit/integration tests, frontend typecheck/lint/test/build, and API/Worker Docker builds run in parallel; successful pushes to `main` then publish images to GHCR.
 - `.github/workflows/codeql.yml`: security scanning for C# and JS/TS
 
 ## Coding Style & Naming Conventions
