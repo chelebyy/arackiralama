@@ -98,6 +98,11 @@ public sealed class MockPaymentProvider(
             "MOCK_3DS_VERIFICATION_FAILED",
             "Mock 3DS callback verification failed.");
 
+        if (!verification.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("3DS callback authentication failed.");
+        }
+
         if (!verification.IsSucceeded)
         {
             return Task.FromResult(new PaymentVerificationProviderResult

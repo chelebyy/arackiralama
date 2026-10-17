@@ -56,10 +56,10 @@ internal static class PaymentThreeDsCallbackVerifier
             if (string.Equals(status, "success", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase))
             {
-                return new PaymentThreeDsVerificationResult(true, transactionId, null, null);
+                return new PaymentThreeDsVerificationResult(true, true, transactionId, null, null);
             }
 
-            return Failed(failureCode, failureMessage);
+            return new PaymentThreeDsVerificationResult(true, false, null, failureCode, failureMessage);
         }
         catch (JsonException)
         {
@@ -112,10 +112,11 @@ internal static class PaymentThreeDsCallbackVerifier
     }
 
     private static PaymentThreeDsVerificationResult Failed(string failureCode, string failureMessage) =>
-        new(false, null, failureCode, failureMessage);
+        new(false, false, null, failureCode, failureMessage);
 }
 
 internal sealed record PaymentThreeDsVerificationResult(
+    bool IsAuthenticated,
     bool IsSucceeded,
     string? TransactionId,
     string? FailureCode,

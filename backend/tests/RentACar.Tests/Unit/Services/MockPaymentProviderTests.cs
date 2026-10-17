@@ -57,19 +57,15 @@ public sealed class MockPaymentProviderTests
     [Theory]
     [InlineData("bank-fail-response")]
     [InlineData("approved-by-attacker")]
-    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_ReturnsFailedResult(string bankResponse)
+    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_RejectsCallback(string bankResponse)
     {
         var sut = CreateSut();
 
-        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
         {
             ProviderIntentId = "mock-intent",
             BankResponse = bankResponse
-        });
-
-        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
-        Assert.Equal("MOCK_3DS_VERIFICATION_FAILED", result.FailureCode);
-        Assert.Equal("Mock 3DS callback verification failed.", result.FailureMessage);
+        }));
     }
 
     [Fact]
@@ -152,17 +148,15 @@ public sealed class MockPaymentProviderTests
     }
 
     [Fact]
-    public async Task VerifyPaymentAsync_WhenBankResponseContainsTimeoutButIsUnsigned_ReturnsFailedResult()
+    public async Task VerifyPaymentAsync_WhenBankResponseContainsTimeoutButIsUnsigned_RejectsCallback()
     {
         var sut = CreateSut();
 
-        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
         {
             ProviderIntentId = "mock-intent",
             BankResponse = "timeout-response"
-        });
-
-        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
+        }));
     }
 
     [Theory]

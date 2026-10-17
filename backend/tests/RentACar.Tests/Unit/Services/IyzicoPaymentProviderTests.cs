@@ -77,19 +77,16 @@ public sealed class IyzicoPaymentProviderTests
     [Theory]
     [InlineData("timeout")]
     [InlineData("approved-by-attacker")]
-    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_ReturnsFailedResult(string bankResponse)
+    public async Task VerifyPaymentAsync_WhenBankResponseIsUnsigned_RejectsCallback(string bankResponse)
     {
         var sut = CreateSut();
 
-        var result = await sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.VerifyPaymentAsync(new PaymentCallbackProviderRequest
         {
             ProviderIntentId = "intent-1",
             BankResponse = bankResponse,
             RawPayload = "{}"
-        });
-
-        Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
-        Assert.Equal("IYZICO_3DS_VERIFICATION_FAILED", result.FailureCode);
+        }));
     }
 
     [Fact]

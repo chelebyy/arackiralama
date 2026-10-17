@@ -200,16 +200,53 @@ public sealed class PaymentProviderIntegrationTests(RedisFixture redisFixture) :
     }
 
     [Fact]
-    public async Task CompleteThreeDsAsync_ReturnsFailed_WhenBankResponseFail()
+    public async Task CompleteThreeDsAsync_RejectsUnsignedCallbackWithoutBlockingSignedSuccess()
     {
         var reservation = await SeedReservationAsync();
         var intent = await CreatePaymentIntentAsync(reservation.Id);
         intent.Should().NotBeNull();
 
-        var result = await CompleteThreeDsAsync(intent!.PaymentIntentId, "fail");
+        var rejectedCallback = () => CompleteThreeDsAsync(intent!.PaymentIntentId, "fail");
+        await rejectedCallback.Should().ThrowAsync<UnauthorizedAccessException>();
+
+        using (var scope = Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+            var unchangedIntent = await dbContext.PaymentIntents.AsNoTracking()
+                .SingleAsync(payment => payment.Id == intent!.PaymentIntentId);
+            var unchangedReservation = await dbContext.Reservations.AsNoTracking()
+                .SingleAsync(existing => existing.Id == reservation.Id);
+            unchangedIntent.Status.Should().Be(PaymentStatus.Pending);
+            unchangedReservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        }
+
+        var result = await CompleteThreeDsAsync(intent!.PaymentIntentId);
+
+        result!.Status.Should().Be("Succeeded");
+    }
+
+    [Fact]
+    public async Task CompleteThreeDsAsync_PersistsSignedProviderFailure()
+    {
+        var reservation = await SeedReservationAsync();
+        var intent = await CreatePaymentIntentAsync(reservation.Id);
+        intent.Should().NotBeNull();
+        using var scope = Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<RentACarDbContext>();
+        var providerIntentId = await dbContext.PaymentIntents
+            .Where(payment => payment.Id == intent!.PaymentIntentId)
+            .Select(payment => payment.ProviderIntentId)
+            .SingleAsync();
+        var signedFailure = CreateSignedThreeDsPayload(
+            providerIntentId!, "failed", "mock-declined-transaction", "mock-webhook-secret");
+
+        var result = await CompleteThreeDsAsync(intent!.PaymentIntentId, signedFailure);
 
         result.Should().NotBeNull();
         result!.Status.Should().Be("Failed");
+        var storedIntent = await dbContext.PaymentIntents.AsNoTracking()
+            .SingleAsync(payment => payment.Id == intent.PaymentIntentId);
+        storedIntent.Status.Should().Be(PaymentStatus.Failed);
     }
 
     #endregion

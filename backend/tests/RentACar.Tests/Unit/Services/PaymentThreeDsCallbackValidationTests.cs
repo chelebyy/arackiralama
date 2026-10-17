@@ -18,17 +18,15 @@ public sealed class PaymentThreeDsCallbackValidationTests
     [InlineData("123")]
     [InlineData("true")]
     [InlineData("\"text\"")]
-    public async Task NonObjectPayload_ReturnsFailureForBothProviders(string bankResponse)
+    public async Task NonObjectPayload_RejectsCallbackForBothProviders(string bankResponse)
     {
         foreach (var provider in CreateProviders())
         {
-            var result = await provider.VerifyPaymentAsync(new PaymentCallbackProviderRequest
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => provider.VerifyPaymentAsync(new PaymentCallbackProviderRequest
             {
                 ProviderIntentId = "intent",
                 BankResponse = bankResponse
-            });
-
-            Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
+            }));
         }
     }
 
@@ -57,13 +55,49 @@ public sealed class PaymentThreeDsCallbackValidationTests
 
         foreach (var provider in CreateProviders())
         {
+            var request = new PaymentCallbackProviderRequest
+            {
+                ProviderIntentId = "intent",
+                BankResponse = bankResponse
+            };
+
+            if (accepted)
+            {
+                var result = await provider.VerifyPaymentAsync(request);
+                Assert.Equal(PaymentProviderIntentStatus.Succeeded, result.Status);
+            }
+            else
+            {
+                await Assert.ThrowsAsync<UnauthorizedAccessException>(() => provider.VerifyPaymentAsync(request));
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SignedFailure_ReturnsAuthenticatedFailureForBothProviders()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var signature = Convert.ToHexString(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes("test-callback-secret"),
+            Encoding.UTF8.GetBytes($"intent.failed.transaction.{timestamp}")));
+        var bankResponse = JsonSerializer.Serialize(new
+        {
+            providerIntentId = "intent",
+            status = "failed",
+            transactionId = "transaction",
+            timestamp,
+            signature
+        });
+
+        foreach (var provider in CreateProviders())
+        {
             var result = await provider.VerifyPaymentAsync(new PaymentCallbackProviderRequest
             {
                 ProviderIntentId = "intent",
                 BankResponse = bankResponse
             });
 
-            Assert.Equal(accepted ? PaymentProviderIntentStatus.Succeeded : PaymentProviderIntentStatus.Failed, result.Status);
+            Assert.Equal(PaymentProviderIntentStatus.Failed, result.Status);
         }
     }
 
