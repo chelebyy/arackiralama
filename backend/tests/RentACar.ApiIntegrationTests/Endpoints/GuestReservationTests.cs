@@ -180,6 +180,7 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
         saved.OccupiedUntilUtc.Should().Be(saved.ReturnDateTime.AddMinutes(60));
         saved.TotalAmount.Should().Be(confirmation.AcceptedTotal);
         saved.VehicleId.Should().Be(original.VehicleId);
+        saved.DriverDeclaration.Should().BeEquivalentTo(Declaration);
         saved.PricingSnapshot!.BookingConditions!.DriverDeclaration.Should().BeEquivalentTo(Declaration);
         var history = await WithDbContextAsync(db => db.ReservationAmendments.SingleAsync());
         history.AppliedAt.Should().NotBeNull();

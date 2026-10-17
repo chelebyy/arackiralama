@@ -192,7 +192,7 @@ public sealed class VehicleBookingService(
         var snapshot = reservation.PricingSnapshot!;
         if (snapshot.ExpiresAtUtc <= DateTime.UtcNow)
             throw new ReservationQuoteConflictException("Reservation quote has expired. Request a new quote.");
-        var declaration = snapshot.BookingConditions?.DriverDeclaration;
+        var declaration = reservation.DriverDeclaration ?? snapshot.BookingConditions?.DriverDeclaration;
         var legacyStoredDriver = reservation.QuoteReplayProof is { SchemaVersion: 2 };
         if (declaration is null && !legacyStoredDriver)
             throw new ReservationQuoteConflictException("Driver declaration is required. Request a new quote.");

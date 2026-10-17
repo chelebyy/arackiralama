@@ -1164,6 +1164,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("driver_date_of_birth");
 
+                    b.Property<string>("DriverDeclaration")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("driver_declaration");
+
                     b.Property<string>("DriverFirstName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")

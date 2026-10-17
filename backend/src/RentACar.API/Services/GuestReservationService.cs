@@ -213,12 +213,13 @@ public sealed class GuestReservationService(
         }, ct, r.Id);
         amendment.PreviousSnapshot = JsonSerializer.Serialize(new
         {
-            r.PickupDateTime, r.ReturnDateTime, r.OccupiedUntilUtc, r.TotalAmount, r.PricingSnapshot
+            r.PickupDateTime, r.ReturnDateTime, r.OccupiedUntilUtc, r.TotalAmount, r.PricingSnapshot, r.DriverDeclaration
         });
         r.PickupDateTime = quote.PickupDateTimeUtc;
         r.ReturnDateTime = quote.ReturnDateTimeUtc;
         r.OccupiedUntilUtc = quote.ReturnDateTimeUtc.AddMinutes(quote.PricingSnapshot.BookingConditions!.PreparationMinutes);
         r.PricingSnapshot = quote.PricingSnapshot;
+        r.DriverDeclaration = saved.Declaration;
         r.PricingSnapshot.OtherFees += previousFees + amendment.Fee;
         r.PricingSnapshot.FinalTotal += previousFees + amendment.Fee;
         r.TotalAmount = request.AcceptedTotal;

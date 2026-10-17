@@ -313,8 +313,10 @@ public sealed class ReservationServiceTests
         result.PriceBreakdown!.RentalDays.Should().Be(expectedDays);
     }
 
-    [Fact]
-    public async Task GetReservationByIdAsync_ReturnsAllowlistedDriverWithoutLegacyLicense()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetReservationByIdAsync_ReturnsAllowlistedDriverWithoutLegacyLicense(bool standalone)
     {
         var declaration = new DriverDeclaration
         {
@@ -325,9 +327,10 @@ public sealed class ReservationServiceTests
         {
             Id = Guid.NewGuid(), PublicCode = "DECLARATION", DriverFirstName = "Test", DriverLastName = "Driver",
             PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(8),
+            DriverDeclaration = standalone ? declaration : null,
             PricingSnapshot = new ReservationPricingSnapshotV1
             {
-                RentalDays = 3, BookingConditions = new ReservationBookingConditions { DriverDeclaration = declaration }
+                RentalDays = 3, BookingConditions = standalone ? null : new ReservationBookingConditions { DriverDeclaration = declaration }
             }
         };
         _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
@@ -703,6 +706,11 @@ public sealed class ReservationServiceTests
         // Arrange
         var groupId = Guid.NewGuid();
         var vehicleId = Guid.NewGuid();
+        var declaration = new DriverDeclaration
+        {
+            AgeAtPickup = 30, LicenseYearsAtPickup = 8,
+            LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+        };
         var request = CreateValidReservationRequest() with
         {
             VehicleGroupId = groupId,
@@ -710,6 +718,7 @@ public sealed class ReservationServiceTests
             {
                 FirstName = "Ahmet",
                 LastName = "Yilmaz",
+                Declaration = declaration,
                 DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
                 LicenseNumber = "TR12345678",
                 LicenseCountry = "Turkey",
@@ -794,6 +803,7 @@ public sealed class ReservationServiceTests
         result.Status.Should().Be("Draft");
         result.TotalAmount.Should().Be(1700);
         result.CustomerEmail.Should().Be(request.Customer.Email);
+        result.Driver!.Declaration.Should().BeEquivalentTo(declaration);
 
         _reservationRepositoryMock.Verify(x => x.AddAsync(
             It.Is<Reservation>(r =>
@@ -806,6 +816,49 @@ public sealed class ReservationServiceTests
                 && r.DriverLicenseNumber == null),
             It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CreateManualReservationAsync_PreservesDeclarationWithoutBookingConditions(bool hasRentalTerms)
+    {
+        var office = new Office { Name = "Test office", Code = "TEST" };
+        var vehicle = new Vehicle
+        {
+            GroupId = Guid.NewGuid(), OfficeId = office.Id, Brand = "Test", Model = "Car", Plate = "07 TEST 07",
+            RentalTerms = hasRentalTerms
+                ? new VehicleRentalTerms { DepositAmount = 1000, MinAge = 21, MinLicenseYears = 2 }
+                : null
+        };
+        var declaration = new DriverDeclaration
+        {
+            AgeAtPickup = 30, LicenseYearsAtPickup = 8,
+            LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+        };
+        var request = new AdminManualReservationRequest
+        {
+            VehicleId = vehicle.Id, PickupOfficeId = office.Id, ReturnOfficeId = office.Id,
+            PickupDateTimeUtc = DateTime.UtcNow.AddDays(5), ReturnDateTimeUtc = DateTime.UtcNow.AddDays(8),
+            CustomerFirstName = "Test", CustomerLastName = "Guest", CustomerEmail = "manual@example.test",
+            CustomerPhone = "+900000000000", TotalAmount = 1500,
+            Driver = new DriverInfoRequest { FirstName = "Test", LastName = "Driver", Declaration = declaration }
+        };
+        Reservation? saved = null;
+        _vehicleRepositoryMock.Setup(x => x.GetQueryable()).Returns(new[] { vehicle }.BuildMockDbSet().Object);
+        _officeRepositoryMock.Setup(x => x.GetByIdAsync(office.Id, It.IsAny<CancellationToken>())).ReturnsAsync(office);
+        _customerRepositoryMock.Setup(x => x.GetQueryable()).Returns(new List<Customer>().BuildMockDbSet().Object);
+        _reservationRepositoryMock.Setup(x => x.AddAsync(It.IsAny<Reservation>(), It.IsAny<CancellationToken>()))
+            .Callback<Reservation, CancellationToken>((reservation, _) => saved = reservation);
+
+        var result = await _sut.CreateManualReservationAsync(request);
+
+        result.Driver!.Declaration.Should().BeEquivalentTo(declaration);
+        result.TotalAmount.Should().Be(1500);
+        saved.Should().NotBeNull();
+        saved!.DriverDeclaration.Should().BeEquivalentTo(declaration);
+        saved!.PricingSnapshot?.BookingConditions.Should().BeNull();
+        if (!hasRentalTerms) saved.PricingSnapshot.Should().BeNull();
     }
 
     [Fact]

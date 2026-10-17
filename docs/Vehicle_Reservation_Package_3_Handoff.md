@@ -1,5 +1,15 @@
 # Paket 3 — oturum devir belgesi
 
+## 2026-10-17 — Independent declaration persistence
+
+The remaining declaration-loss finding is corrected. Group-based checkout and manual reservations can have no booking conditions or pricing snapshot, so storing driver declarations only inside booking conditions discarded their input. `Reservation.DriverDeclaration` now persists the four declaration fields independently in a nullable `driver_declaration` JSONB column. Creation and admin updates write it; guest date changes replace it with the accepted declaration and retain the previous value in amendment history. Exact-vehicle holds and operator responses retain a fallback to declarations already stored inside booking conditions. Pricing snapshots, assignment rules and historical sensitive fields are not repurposed.
+
+The initial regression run reproduced five failures returning a null declaration. After the correction, the targeted reservation/guest-policy suite passed 118 tests and the full backend Release test project passed 913 tests with zero failures or skips. The full API integration suite passed 184 tests against isolated PostgreSQL 16.15 and Redis 7 instances, including the amendment declaration round trip. An older missing-declaration fixture was updated to clear both stores; all 11 focused legacy/independent declaration hold cases passed, including two new compatibility cases.
+
+The EF pending-model check passed, and the generated SQL for `20261017171429_PersistReservationDriverDeclaration` contains only the nullable column addition and migration-history entry. Integration fixtures applied migrations only to their isolated test databases. Exact-head remote CI remains a separate gate and uses PostgreSQL 17. NuGet restore still reports existing `System.Security.Cryptography.Xml` and transitive `Pkcs` advisories on this branch; their patch is tracked in the existing [backend dependency PR #461](https://github.com/chelebyy/arackiralama/pull/461).
+
+The migration is additive and has not been applied to production. Existing rows retain their original data and use the read fallback where applicable. No merge, automatic merge or deployment is included.
+
 ## PR 457 review follow-up
 
 The latest three findings are corrected: pending verification survives same-tab reload with the original cooldown; amendments recreate eligible SMS reminders; and all ten backend statuses are localized. Validation: 910 backend unit tests, 27 PostgreSQL/Redis guest integration cases, 372 frontend tests, 34 desktop/mobile browser cases, production build and lint passed (one existing lint warning). Browser API responses are controlled; production provider delivery is not covered. Remote checks must be read from the final commit; no merge or deployment is part of this review.

@@ -467,6 +467,38 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExactDraft_HoldAcceptsIndependentOrLegacyDeclaration(bool legacySnapshot)
+    {
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var draft = await SendReservationAsync(ExactReservation(input, await QuoteIdAsync(quote)), session, Guid.NewGuid().ToString());
+        draft.StatusCode.Should().Be(HttpStatusCode.OK, await draft.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await draft.Content.ReadAsStringAsync());
+        var id = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        await WithDbContextAsync(async db =>
+        {
+            var reservation = await db.Reservations.SingleAsync(r => r.Id == id);
+            reservation.DriverDeclaration.Should().NotBeNull();
+            reservation.PricingSnapshot!.BookingConditions!.DriverDeclaration.Should().NotBeNull();
+            if (legacySnapshot)
+                reservation.DriverDeclaration = null;
+            else
+                reservation.PricingSnapshot.BookingConditions.DriverDeclaration = null;
+            await db.SaveChangesAsync();
+            return true;
+        });
+        using var scope = Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IReservationService>();
+        (await service.CreateHoldAsync(id, session)).Should().NotBeNull();
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        saved.Status.Should().Be(ReservationStatus.Hold);
+    }
+
+    [Theory]
     [InlineData("valid")]
     [InlineData("cached")]
     [InlineData("expired-quote")]
@@ -491,6 +523,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
             var reservation = await db.Reservations.SingleAsync(r => r.Id == id);
             reservation.QuoteReplayProof!.SchemaVersion.Should().Be(3);
             reservation.QuoteReplayProof!.SchemaVersion = scenario == "unknown-version" ? 4 : scenario == "v3-missing-declaration" ? 3 : 2;
+            reservation.DriverDeclaration = null;
             reservation.PricingSnapshot!.BookingConditions!.DriverDeclaration = null;
             reservation.DriverDateOfBirth = input.PickupDateTimeUtc.AddYears(-30);
             reservation.DriverLicenseIssueDate = scenario == "missing-license" ? null : input.PickupDateTimeUtc.AddYears(-8);
@@ -519,6 +552,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         }
         var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
         saved.Status.Should().Be(scenario is "valid" or "cached" ? ReservationStatus.Hold : ReservationStatus.Draft);
+        saved.DriverDeclaration.Should().BeNull();
         saved.PricingSnapshot!.BookingConditions!.DriverDeclaration.Should().BeNull();
     }
 

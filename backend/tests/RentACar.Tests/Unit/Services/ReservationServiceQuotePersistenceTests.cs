@@ -129,6 +129,15 @@ public sealed class ReservationServiceQuotePersistenceTests
             Locale = "tr",
             SessionId = "session-123",
             IdempotencyKey = "idempotency-123",
+            Driver = new DriverInfoRequest
+            {
+                FirstName = "Test", LastName = "Driver",
+                Declaration = new DriverDeclaration
+                {
+                    AgeAtPickup = 30, LicenseYearsAtPickup = 8,
+                    LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+                }
+            },
             Customer = new CustomerInfoRequest
             {
                 FirstName = "Test",
@@ -218,6 +227,8 @@ public sealed class ReservationServiceQuotePersistenceTests
         await changedInputReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
             .WithMessage("*inputs*");
         created.TotalAmount.Should().Be(1548m);
+        created.Driver!.Declaration.Should().BeEquivalentTo(request.Driver.Declaration);
+        replayed.Driver!.Declaration.Should().BeEquivalentTo(request.Driver.Declaration);
         created.BreakdownSource.Should().Be("SNAPSHOT");
         created.SelectedExtras.Should().ContainSingle(item => item.Code == "gps" && item.Total == 48m);
         created.PriceBreakdown!.BaseTotal.Should().Be(1500m);
@@ -225,6 +236,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         created.PriceBreakdown.FinalTotal.Should().Be(1548m);
 
         var storedReservation = context.Reservations.Single();
+        storedReservation.DriverDeclaration.Should().BeEquivalentTo(request.Driver.Declaration);
         storedReservation.QuoteId.Should().Be(quote.QuoteId);
         storedReservation.PricingSnapshot!.FinalTotal.Should().Be(1548m);
         storedReservation.QuoteReplayProof.Should().NotBeNull();

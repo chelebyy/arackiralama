@@ -2345,9 +2345,10 @@ public sealed class ReservationService : IReservationService
 
     private static ReservationDriverDto? BuildDriverDto(Reservation reservation)
     {
+        var declaration = reservation.DriverDeclaration ?? reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration;
         if (string.IsNullOrWhiteSpace(reservation.DriverFirstName) &&
             string.IsNullOrWhiteSpace(reservation.DriverLastName) &&
-            reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration is null)
+            declaration is null)
         {
             return null;
         }
@@ -2356,7 +2357,7 @@ public sealed class ReservationService : IReservationService
         {
             FirstName = reservation.DriverFirstName ?? string.Empty,
             LastName = reservation.DriverLastName ?? string.Empty,
-            Declaration = reservation.PricingSnapshot?.BookingConditions?.DriverDeclaration
+            Declaration = declaration
         };
     }
 
@@ -2449,8 +2450,12 @@ public sealed class ReservationService : IReservationService
     {
         reservation.DriverFirstName = ValueOrNull(driver?.FirstName) ?? customer?.FirstName ?? reservation.DriverFirstName;
         reservation.DriverLastName = ValueOrNull(driver?.LastName) ?? customer?.LastName ?? reservation.DriverLastName;
-        if (reservation.PricingSnapshot?.BookingConditions is { } conditions && driver?.Declaration is { } declaration)
-            conditions.DriverDeclaration = declaration;
+        if (driver?.Declaration is { } declaration)
+        {
+            reservation.DriverDeclaration = declaration;
+            if (reservation.PricingSnapshot?.BookingConditions is { } conditions)
+                conditions.DriverDeclaration = declaration;
+        }
     }
 
     private static DateTime? NormalizeUtc(DateTime? value)
