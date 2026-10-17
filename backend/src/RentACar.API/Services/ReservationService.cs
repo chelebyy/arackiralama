@@ -1727,10 +1727,23 @@ public sealed class ReservationService : IReservationService
                 if (quote.VehicleId.HasValue && _vehicleBookingService is not null)
                     await _vehicleBookingService.ValidateQuoteAsync(quote, request, cancellationToken);
                 else
+                {
+                    if (!quote.VehicleId.HasValue)
+                    {
+                        var group = await _applicationDbContext.VehicleGroups.AsNoTracking()
+                            .SingleOrDefaultAsync(group => group.Id == quote.VehicleGroupId, cancellationToken)
+                            ?? throw new ReservationQuoteConflictException("Vehicle group is unavailable for this quote.");
+                        VehicleBookingService.ValidateDeclaration(request.Driver?.Declaration, quote.DriverAge,
+                            new ReservationBookingConditions
+                            {
+                                MinAge = group.MinAge, MinLicenseYears = group.MinLicenseYears
+                            });
+                    }
                     await _extraPricingService.ValidateCurrentAvailabilityAsync(
-                    quote.VehicleGroupId,
-                    quote.SelectedExtras,
-                    cancellationToken);
+                        quote.VehicleGroupId,
+                        quote.SelectedExtras,
+                        cancellationToken);
+                }
             }
             catch
             {

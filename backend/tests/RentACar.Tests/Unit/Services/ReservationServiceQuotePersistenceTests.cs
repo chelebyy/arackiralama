@@ -60,7 +60,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         await context.SaveChangesAsync();
 
         var pickup = new DateTime(2026, 8, 1, 10, 0, 0, DateTimeKind.Utc);
-        var quote = CreateQuote(group.Id, office.Id, pickup);
+        var quote = CreateQuote(group.Id, office.Id, pickup, 30);
         quote.VehicleId = exact ? vehicle.Id : null;
         quote.SchemaVersion = exact ? 2 : 1;
         if (unavailable)
@@ -126,6 +126,7 @@ public sealed class ReservationServiceQuotePersistenceTests
             PickupDateTimeUtc = pickup,
             ReturnDateTimeUtc = pickup.AddDays(3),
             QuoteId = quote.QuoteId,
+            DriverAge = 30,
             Locale = "tr",
             SessionId = "session-123",
             IdempotencyKey = "idempotency-123",
@@ -548,7 +549,12 @@ public sealed class ReservationServiceQuotePersistenceTests
             {
                 FirstName = "Test",
                 LastName = "Driver",
-                DateOfBirth = driverDateOfBirth
+                DateOfBirth = driverDateOfBirth,
+                Declaration = new DriverDeclaration
+                {
+                    AgeAtPickup = quoteAge, LicenseYearsAtPickup = 5,
+                    LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+                }
             }
         });
     }

@@ -1,5 +1,33 @@
 # Paket 3 — oturum devir belgesi
 
+## 2026-10-17 — Combined PR 457 validation
+
+Combined backend code commit `277aaa8e494a47baa5fd4c458fd00a07fdcfd286`, based on published `7ccc51206e13ac6bae799d114d838b9d99231a13`, includes the reminder recovery correction and group quote declaration validation. Both corrections were independently reviewed, combined without conflicts, and validated together before this documentation-only evidence update.
+
+New group quote creates now require a declaration that matches the quoted driver age and the current vehicle group's minimum age and licence tenure, with both validity/document confirmations accepted. The existing declaration validator runs inside the quote claim's release-on-error scope, so a rejected request can be corrected and retried. Exact-vehicle validation, persisted group replays and legacy unquoted creation retain their existing contracts; group booking conditions remain absent. Before correction, the group regressions reproduced 14 invalid unit cases and 12 invalid API cases being accepted. The final suite covers rejection, corrected retry, minimum eligibility, persisted replay and legacy controls for both public create endpoints.
+
+| Validation | Exact scope | Result |
+|---|---|---|
+| Backend Release solution build | Combined code `277aaa8` | Zero errors; 13 existing package/Redis warnings |
+| Full backend test project | Combined code `277aaa8` | 943 passed, zero failed or skipped |
+| Full API integration project | Combined code `277aaa8`; isolated PostgreSQL 16.15 and Redis 7 | 202 passed, zero failed or skipped |
+| Frontend CI | Published `7ccc512`; frontend files unchanged by the combined corrections | 372 tests in 73 files passed; lint zero errors and one existing warning; production build generated 146 pages |
+| Guest-management browser suite | Published `7ccc512`; controlled API responses; Chromium 149.0.7827.55 | 34 passed: 17 desktop and 17 Pixel 5 cases; zero failures, skips or retries |
+
+These are completed runs with distinct provenance. The browser run covers guest challenge cooldown/reload, session/consent reset, localized statuses, cancellation and amendment interaction. It does not execute the payment-flow, reservation-extra-options or full E2E suites; those booking selector updates were checked against the current form controls. Exact-head remote CI on the published combined result remains a separate gate and uses PostgreSQL 17.
+
+The combined follow-ups introduce no schema or dependency changes. The earlier declaration migration was applied only by isolated test fixtures; production migrations and deployment were not performed. Existing Crypto.Xml/Pkcs package advisories remain tracked in [PR #461](https://github.com/chelebyy/arackiralama/pull/461). Reminder dispatch retains the documented final-check-to-provider-send race below; already active provider calls are not interrupted. All PRs remain subject to human review, with no merge or automatic merge performed.
+
+## 2026-10-17 — Reminder recovery after reservation changes
+
+A further regression reproduced the remaining reminder recovery window: a worker could claim a reminder and crash less than five minutes before a guest cancellation or date change. The fresh `Processing` job survived the reservation transaction and later sent the old email and SMS when recovered. Both real-database cancellation and amendment cases failed before the correction, delivering two obsolete reminders each.
+
+The notification processor now checks the current reservation before rendering and immediately before sending pickup and return reminders in either channel. Missing or cancelled reservations and reminders created before a later applied guest amendment are skipped without consuming retries. The check uses immutable `CreatedAt`, because provider retries change `ScheduledAt`. Amendment application records `AppliedAt` before constructing its replacement jobs in the same transaction, so replacements remain eligible; unapplied quotes do not invalidate reminders. Access and transaction notice templates retain their existing behavior.
+
+Validation: the Release solution build completed with zero errors, all 927 backend tests passed, and all 29 real-database guest integration cases passed against isolated PostgreSQL 16.15 and Redis 7. The new coverage includes both reminder templates and channels, valid provider retries, unapplied quotes, cancellation during rendering, the fresh-claim recovery window, and successful delivery of all four replacement jobs after amendment. The integration reminder fixture now uses the production job-type constant so the worker exercises the email path. The 184-case full API integration result below predates this additional correction; exact-head remote CI remains a separate gate using PostgreSQL 17.
+
+This correction adds no migration and does not interrupt an already active provider call. A reservation commit after the final database check can still race an external send; the database transaction and provider delivery are not atomic. No merge or deployment is included.
+
 ## 2026-10-17 — Independent declaration persistence
 
 The remaining declaration-loss finding is corrected. Group-based checkout and manual reservations can have no booking conditions or pricing snapshot, so storing driver declarations only inside booking conditions discarded their input. `Reservation.DriverDeclaration` now persists the four declaration fields independently in a nullable `driver_declaration` JSONB column. Creation and admin updates write it; guest date changes replace it with the accepted declaration and retain the previous value in amendment history. Exact-vehicle holds and operator responses retain a fallback to declarations already stored inside booking conditions. Pricing snapshots, assignment rules and historical sensitive fields are not repurposed.

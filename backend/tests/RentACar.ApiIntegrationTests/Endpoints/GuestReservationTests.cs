@@ -240,6 +240,81 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GuestChange_PreventsRecoveryOfRemindersClaimedJustBeforeCommit(bool amend)
+    {
+        var original = await SeedAsync(pickupDateTimeUtc: DateTime.UtcNow.AddHours(12));
+        var reminderIds = await WithDbContextAsync(async db =>
+        {
+            var email = await db.BackgroundJobs.SingleAsync(j => j.Payload.Contains(NotificationTemplateKeys.PickupReminder));
+            email.Status = BackgroundJobStatus.Processing;
+            email.UpdatedAt = DateTime.UtcNow;
+            var sms = new BackgroundJob
+            {
+                Type = NotificationQueueService.SendSmsJobType,
+                Status = BackgroundJobStatus.Processing,
+                ScheduledAt = email.ScheduledAt,
+                Payload = JsonSerializer.Serialize(new QueuedSmsNotificationRequest
+                {
+                    ToPhoneNumber = original.Customer!.Phone!, TemplateKey = NotificationTemplateKeys.PickupReminder,
+                    Variables = new Dictionary<string, string> { ["PublicCode"] = original.PublicCode }
+                })
+            };
+            db.BackgroundJobs.Add(sms);
+            await db.SaveChangesAsync();
+            return new[] { email.Id, sms.Id };
+        });
+        var session = await SessionAsync(original);
+        if (amend)
+        {
+            var offer = await OfferAsync(session, original.PickupDateTime.AddDays(1), original.ReturnDateTime.AddDays(1));
+            await AuthorizedAsync(session, (s, a) => s.ConfirmAmendmentAsync(a,
+                new(offer.GetProperty("AmendmentId").GetGuid(), offer.GetProperty("FinalTotal").GetDecimal()), default));
+        }
+        else
+        {
+            await AuthorizedAsync(session, (s, a) => s.CancelAsync(a, new(original.Version, 25), default));
+        }
+        await WithDbContextAsync(async db =>
+        {
+            var reminders = await db.BackgroundJobs.Where(j => reminderIds.Contains(j.Id)).ToListAsync();
+            reminders.Should().OnlyContain(j => j.Status == BackgroundJobStatus.Processing);
+            reminders.Should().OnlyContain(j => j.ScheduledAt <= DateTime.UtcNow);
+            foreach (var reminder in reminders) reminder.UpdatedAt = DateTime.UtcNow.AddMinutes(-6);
+            await db.BackgroundJobs.Where(j => !reminderIds.Contains(j.Id) && j.ScheduledAt <= DateTime.UtcNow)
+                .ExecuteUpdateAsync(update => update.SetProperty(j => j.Status, BackgroundJobStatus.Completed));
+            return await db.SaveChangesAsync();
+        });
+        var emailSink = new TestEmailSink();
+        var smsSink = new TestSmsSink();
+        (await ProcessMailAsync(emailSink, smsSink)).Should().Be(0);
+        emailSink.Delivered.Should().Be(0);
+        smsSink.Delivered.Should().Be(0);
+        var recovered = await WithDbContextAsync(db => db.BackgroundJobs.AsNoTracking()
+            .Where(j => reminderIds.Contains(j.Id)).ToListAsync());
+        recovered.Should().OnlyContain(j => j.Status == BackgroundJobStatus.Cancelled && j.RetryCount == 0);
+        (await ProcessMailAsync(emailSink, smsSink)).Should().Be(0);
+        if (amend)
+        {
+            await WithDbContextAsync(async db =>
+            {
+                var appliedAt = (await db.ReservationAmendments.SingleAsync()).AppliedAt!.Value;
+                var replacements = await db.BackgroundJobs.Where(j => j.Status == BackgroundJobStatus.Pending &&
+                    (j.Payload.Contains(NotificationTemplateKeys.PickupReminder) ||
+                     j.Payload.Contains(NotificationTemplateKeys.ReturnReminder))).ToListAsync();
+                replacements.Should().HaveCount(4);
+                replacements.Should().OnlyContain(j => j.CreatedAt >= appliedAt);
+                foreach (var job in replacements) job.ScheduledAt = DateTime.UtcNow.AddSeconds(-1);
+                return await db.SaveChangesAsync();
+            });
+            (await ProcessMailAsync(emailSink, smsSink)).Should().Be(4);
+            emailSink.Delivered.Should().Be(2);
+            smsSink.Delivered.Should().Be(2);
+        }
+    }
+
+    [Theory]
     [InlineData("policy")]
     [InlineData("expired")]
     [InlineData("price")]
@@ -452,13 +527,13 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
             .ExecuteUpdateAsync(update => update.SetProperty(j => j.Status, status)
                 .SetProperty(j => j.UpdatedAt, DateTime.UtcNow.AddMinutes(-6))));
 
-    private async Task<int> ProcessMailAsync(TestEmailSink sink)
+    private async Task<int> ProcessMailAsync(TestEmailSink sink, ISmsProvider? smsProvider = null)
     {
         using var scope = Services.CreateScope();
         var provider = scope.ServiceProvider;
         return await new NotificationBackgroundJobProcessor(provider.GetRequiredService<RentACarDbContext>(),
             provider.GetRequiredService<INotificationTemplateService>(), sink,
-            provider.GetRequiredService<ISmsProvider>(), NullLogger<NotificationBackgroundJobProcessor>.Instance)
+            smsProvider ?? provider.GetRequiredService<ISmsProvider>(), NullLogger<NotificationBackgroundJobProcessor>.Instance)
             .ProcessPendingAsync();
     }
 
@@ -476,12 +551,22 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
         }
     }
 
-    private async Task<Reservation> SeedAsync(bool configure = true, int offset = 10)
+    private sealed class TestSmsSink : ISmsProvider
+    {
+        public int Delivered { get; private set; }
+        public Task<SmsSendResult> SendAsync(SmsMessageRequest request, CancellationToken cancellationToken = default)
+        {
+            Delivered++;
+            return Task.FromResult(new SmsSendResult { Success = true, Provider = "LocalTestSink" });
+        }
+    }
+
+    private async Task<Reservation> SeedAsync(bool configure = true, int offset = 10, DateTime? pickupDateTimeUtc = null)
     {
         if (configure) await ConfigurePolicyAsync(Policy);
         using var scope = Services.CreateScope();
         var provider = scope.ServiceProvider;
-        var pickup = DateTime.UtcNow.Date.AddDays(offset).AddHours(10);
+        var pickup = pickupDateTimeUtc ?? DateTime.UtcNow.Date.AddDays(offset).AddHours(10);
         var offer = await provider.GetRequiredService<ReservationQuoteService>().CreateAsync(new CreateReservationQuoteRequest
         {
             VehicleId = TestDataSeeder.GroupOneId, VehicleGroupId = TestDataSeeder.GroupOneId,
@@ -501,7 +586,7 @@ public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegr
             PricingSnapshot = quote.PricingSnapshot, QuoteId = quote.QuoteId, TotalAmount = offer.FinalTotal
         };
         db.Reservations.Add(r);
-        db.BackgroundJobs.Add(new BackgroundJob { Type = "notification.email.send", ScheduledAt = pickup.AddHours(-24),
+        db.BackgroundJobs.Add(new BackgroundJob { Type = NotificationQueueService.SendEmailJobType, ScheduledAt = pickup.AddHours(-24),
             Payload = JsonSerializer.Serialize(new QueuedEmailNotificationRequest { ToEmail = customer.Email,
                 TemplateKey = NotificationTemplateKeys.PickupReminder, Variables = new Dictionary<string, string> { ["PublicCode"] = r.PublicCode } }) });
         await db.SaveChangesAsync();

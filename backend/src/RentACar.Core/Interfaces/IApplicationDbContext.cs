@@ -13,6 +13,7 @@ public interface IApplicationDbContext
     DbSet<Customer> Customers { get; }
     DbSet<Reservation> Reservations { get; }
     DbSet<GuestReservationAccess> GuestReservationAccess { get; }
+    DbSet<ReservationAmendment> ReservationAmendments { get; }
     DbSet<ReservationExtraOption> ReservationExtraOptions { get; }
     DbSet<ReservationExtraOptionTranslation> ReservationExtraOptionTranslations { get; }
     DbSet<ReservationExtraOptionVehicleGroup> ReservationExtraOptionVehicleGroups { get; }

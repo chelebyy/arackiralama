@@ -19,6 +19,7 @@ public sealed class NotificationBackgroundJobProcessor(
     IOptions<BackgroundJobProcessorOptions>? backgroundJobProcessorOptions = null) : INotificationBackgroundJobProcessor
 {
     private const int RetryLimit = 3;
+    private const string ObsoleteReminderReason = "Reservation reminder is no longer current.";
     private readonly BackgroundJobProcessorOptions _backgroundJobProcessorOptions = backgroundJobProcessorOptions?.Value ?? new();
     private static readonly JsonSerializerOptions JobPayloadSerializerOptions = new()
     {
@@ -68,7 +69,7 @@ public sealed class NotificationBackgroundJobProcessor(
                 if (result.Skipped)
                 {
                     job.Status = BackgroundJobStatus.Cancelled;
-                    job.LastError = "Guest access code is no longer usable.";
+                    job.LastError = result.FailureMessage;
                     job.UpdatedAt = DateTime.UtcNow;
                     await dbContext.SaveChangesAsync(cancellationToken);
                     continue;
@@ -119,10 +120,14 @@ public sealed class NotificationBackgroundJobProcessor(
             ?? throw new InvalidOperationException("Email job payload could not be deserialized.");
 
         if (await IsUnusableAccessAsync(payload, cancellationToken))
-            return new NotificationJobResult(true, null, null, Skipped: true);
+            return new NotificationJobResult(true, null, "Guest access code is no longer usable.", Skipped: true);
+        if (await IsObsoleteReminderAsync(job, payload.TemplateKey, payload.Variables, cancellationToken))
+            return new NotificationJobResult(true, null, ObsoleteReminderReason, Skipped: true);
         var message = notificationTemplateService.RenderEmail(payload);
         if (await IsUnusableAccessAsync(payload, cancellationToken))
-            return new NotificationJobResult(true, null, null, Skipped: true);
+            return new NotificationJobResult(true, null, "Guest access code is no longer usable.", Skipped: true);
+        if (await IsObsoleteReminderAsync(job, payload.TemplateKey, payload.Variables, cancellationToken))
+            return new NotificationJobResult(true, null, ObsoleteReminderReason, Skipped: true);
         var result = await emailProvider.SendAsync(message, cancellationToken);
         return new NotificationJobResult(result.Success, result.FailureCode, result.FailureMessage);
     }
@@ -142,9 +147,25 @@ public sealed class NotificationBackgroundJobProcessor(
         var payload = JsonSerializer.Deserialize<QueuedSmsNotificationRequest>(job.Payload, JobPayloadSerializerOptions)
             ?? throw new InvalidOperationException("SMS job payload could not be deserialized.");
 
+        if (await IsObsoleteReminderAsync(job, payload.TemplateKey, payload.Variables, cancellationToken))
+            return new NotificationJobResult(true, null, ObsoleteReminderReason, Skipped: true);
         var message = notificationTemplateService.RenderSms(payload);
+        if (await IsObsoleteReminderAsync(job, payload.TemplateKey, payload.Variables, cancellationToken))
+            return new NotificationJobResult(true, null, ObsoleteReminderReason, Skipped: true);
         var result = await smsProvider.SendAsync(message, cancellationToken);
         return new NotificationJobResult(result.Success, result.FailureCode, result.FailureMessage);
+    }
+
+    private async Task<bool> IsObsoleteReminderAsync(BackgroundJob job, string templateKey,
+        IReadOnlyDictionary<string, string> variables, CancellationToken ct)
+    {
+        if (templateKey is not (NotificationTemplateKeys.PickupReminder or NotificationTemplateKeys.ReturnReminder))
+            return false;
+        if (!variables.TryGetValue("PublicCode", out var publicCode) || string.IsNullOrWhiteSpace(publicCode))
+            return true;
+        return !await dbContext.Reservations.AsNoTracking().AnyAsync(r => r.PublicCode == publicCode &&
+            r.Status != ReservationStatus.Cancelled && !dbContext.ReservationAmendments.Any(a =>
+                a.ReservationId == r.Id && a.AppliedAt > job.CreatedAt), ct);
     }
 
     private sealed record NotificationJobResult(bool Success, string? FailureCode, string? FailureMessage, bool Skipped = false);
