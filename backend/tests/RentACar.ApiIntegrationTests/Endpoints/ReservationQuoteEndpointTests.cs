@@ -776,7 +776,9 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
         replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
         using var replayJson = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
-        replayJson.RootElement.GetProperty("data").GetProperty("vehicleId").GetGuid().Should().Be(input.VehicleId.Value);
+        replayJson.RootElement.GetProperty("data").GetProperty("id").GetGuid().Should().Be(original.Id);
+        (await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == original.Id)))
+            .VehicleId.Should().Be(input.VehicleId.Value);
     }
 
     private sealed class QueryCounter : DbCommandInterceptor

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,48 @@ namespace RentACar.Tests.Unit.Controllers;
 
 public sealed class ReservationsControllerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Create_ReturnsOnlyCheckoutIdentifiers(bool unpaid)
+    {
+        var reservation = new ReservationDto
+        {
+            Id = Guid.NewGuid(),
+            PublicCode = "PUBLIC-CREATE",
+            Status = "Draft",
+            CustomerId = Guid.NewGuid(),
+            CustomerName = "Existing private profile",
+            CustomerEmail = "existing@example.test",
+            CustomerPhone = "+905550000001",
+            CustomerReservationCount = 12,
+            CustomerTotalSpent = 25000m,
+            VehiclePlate = "PRIVATE-PLATE",
+            Notes = "Private operator notes",
+            Driver = new ReservationDriverDto { LicenseNumber = "PRIVATE-LICENSE" },
+            ActiveHold = new ReservationHoldDto { SessionId = "private-session" }
+        };
+        var service = new Mock<IReservationService>();
+        service.Setup(item => item.CreateDraftReservationAsync(It.IsAny<CreateReservationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        service.Setup(item => item.CreateUnpaidRequestAsync(It.IsAny<CreateReservationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var controller = new ReservationsController(service.Object);
+
+        var result = unpaid
+            ? await controller.CreateUnpaidRequest(CreateValidRequest(), CancellationToken.None)
+            : await controller.Create(CreateValidRequest(), CancellationToken.None);
+
+        var response = result.Should().BeOfType<OkObjectResult>().Subject;
+        var json = JsonSerializer.SerializeToElement(response.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var data = json.GetProperty("data");
+        data.EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo(["id", "publicCode", "status"]);
+        data.GetProperty("id").GetGuid().Should().Be(reservation.Id);
+        data.GetProperty("publicCode").GetString().Should().Be(reservation.PublicCode);
+        data.GetProperty("status").GetString().Should().Be(reservation.Status);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
