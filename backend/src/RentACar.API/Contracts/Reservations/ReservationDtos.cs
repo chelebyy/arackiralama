@@ -22,6 +22,13 @@ public record PublicReservationSummaryDto
     public string Currency { get; init; } = "TRY";
 }
 
+public record PublicReservationCreatedDto
+{
+    public Guid Id { get; init; }
+    public string PublicCode { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+}
+
 public record ReservationDto
 {
     public Guid Id { get; init; }

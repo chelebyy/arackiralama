@@ -78,6 +78,11 @@ public sealed class IdempotencyMiddleware
             return;
         }
 
+        if (!string.IsNullOrEmpty(idempotentAttribute.ResponseVersion))
+        {
+            idempotencyKey = $"{idempotentAttribute.ResponseVersion}:{idempotencyKey}";
+        }
+
         if (idempotentAttribute.UseQuoteReplay && await HasQuoteRequestAsync(context.Request))
         {
             await _next(context);
@@ -95,6 +100,10 @@ public sealed class IdempotencyMiddleware
             if (cachedResponse.HasValue)
             {
                 cached = JsonSerializer.Deserialize<CachedResponse>(cachedResponse.ToString());
+                if (cached != null && !string.Equals(cached.ResponseVersion, idempotentAttribute.ResponseVersion, StringComparison.Ordinal))
+                {
+                    cached = null;
+                }
             }
         }
         catch (RedisConnectionException ex)
@@ -136,6 +145,7 @@ public sealed class IdempotencyMiddleware
             {
                 var cacheEntry = new CachedResponse
                 {
+                    ResponseVersion = idempotentAttribute.ResponseVersion,
                     StatusCode = context.Response.StatusCode,
                     ContentType = context.Response.ContentType,
                     Body = responseBody
@@ -196,6 +206,7 @@ public sealed class IdempotencyMiddleware
 
     private sealed class CachedResponse
     {
+        public string ResponseVersion { get; set; } = string.Empty;
         public int StatusCode { get; set; }
         public string? ContentType { get; set; }
         public string Body { get; set; } = string.Empty;
