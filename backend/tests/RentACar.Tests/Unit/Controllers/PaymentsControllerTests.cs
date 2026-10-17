@@ -48,6 +48,26 @@ public sealed class PaymentsControllerTests
     }
 
     [Fact]
+    public async Task CompleteThreeDs_WhenCallbackAuthenticationFails_ReturnsUnauthorized()
+    {
+        var serviceMock = new Mock<IPaymentService>();
+        serviceMock.Setup(service => service.CompleteThreeDsAsync(
+                It.IsAny<Guid>(), It.IsAny<ThreeDsReturnApiRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("3DS callback authentication failed."));
+        var controller = CreateController(serviceMock.Object, enablePayments: true);
+
+        var result = await controller.CompleteThreeDs(
+            Guid.NewGuid(),
+            new ThreeDsReturnApiRequest { BankResponse = "forged-success" },
+            CancellationToken.None);
+
+        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        var response = unauthorized.Value.Should().BeOfType<ApiResponse<object>>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("3D Secure dönüş verisi doğrulanamadı.");
+    }
+
+    [Fact]
     public async Task HandleWebhook_WhenPaymentsDisabled_ReturnsServiceUnavailableWithoutCallingService()
     {
         var serviceMock = new Mock<IPaymentService>(MockBehavior.Strict);
