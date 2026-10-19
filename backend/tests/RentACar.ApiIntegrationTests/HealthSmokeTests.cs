@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using RentACar.ApiIntegrationTests.Infrastructure;
 using Xunit;
@@ -78,6 +80,27 @@ public sealed class HealthSmokeTests(RedisFixture redisFixture) : IAsyncLifetime
 
         openApiResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         swaggerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task OpenApiDocument_InDevelopment_DescribesReservationOperations()
+    {
+        await using var factory = _factory!.WithWebHostBuilder(builder =>
+            builder.UseEnvironment("Development"));
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/openapi/v1.json");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/json");
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        document.RootElement.GetProperty("openapi").GetString().Should().StartWith("3.");
+        document.RootElement.GetProperty("paths")
+            .GetProperty("/api/v1/reservations").GetProperty("post")
+            .GetProperty("requestBody").GetProperty("content")
+            .GetProperty("application/json").GetProperty("schema")
+            .ValueKind.Should().Be(JsonValueKind.Object);
     }
 
     [Fact]
