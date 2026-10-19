@@ -59,7 +59,7 @@ This file is the single source of project instructions for all coding agents; `C
 
 ## Commands
 
-Frontend commands explicitly select pnpm 9.15.9 to match CI's pnpm 9 line.
+Frontend commands explicitly select pnpm 10.34.7.
 ```bash
 # Backend (from repo root)
 dotnet restore backend/RentACar.sln --configfile backend/NuGet.Config
@@ -68,14 +68,14 @@ dotnet test backend/RentACar.sln --no-build
 dotnet run --project backend/src/RentACar.API
 
 # Frontend
-corepack pnpm@9.15.9 -C frontend install
-corepack pnpm@9.15.9 -C frontend dev      # local dev server
-corepack pnpm@9.15.9 -C frontend build
-corepack pnpm@9.15.9 -C frontend test     # vitest unit tests
-corepack pnpm@9.15.9 -C frontend lint     # eslint
-corepack pnpm@9.15.9 -C frontend exec playwright install --with-deps chromium # first E2E setup
+corepack pnpm@10.34.7 -C frontend install
+corepack pnpm@10.34.7 -C frontend dev      # local dev server
+corepack pnpm@10.34.7 -C frontend build
+corepack pnpm@10.34.7 -C frontend test     # vitest unit tests
+corepack pnpm@10.34.7 -C frontend lint     # eslint
+corepack pnpm@10.34.7 -C frontend exec playwright install --with-deps chromium # first E2E setup
 # Start the local web/API stack separately; E2E_BASE_URL defaults to http://localhost:3000.
-corepack pnpm@9.15.9 -C frontend exec playwright test # see frontend/playwright.config.ts
+corepack pnpm@10.34.7 -C frontend exec playwright test # see frontend/playwright.config.ts
 
 # Docker (full local stack: Postgres, Redis, API, Worker, Web, upload-permissions init)
 cd backend && docker compose up --build
@@ -87,7 +87,7 @@ cd backend && docker compose up --build
 dotnet test backend/RentACar.sln --no-build --filter "FullyQualifiedName~RentACar.Tests.Unit.SomeNamespace"
 
 # frontend: pass a path pattern
-corepack pnpm@9.15.9 -C frontend test -- path/to/file.test.tsx
+corepack pnpm@10.34.7 -C frontend test -- path/to/file.test.tsx
 ```
 
 ## CI Pipeline
@@ -99,7 +99,7 @@ corepack pnpm@9.15.9 -C frontend test -- path/to/file.test.tsx
 - TypeScript/React: 2-space indent, PascalCase components, camelCase variables/functions.
 - Keep services explicit and small; avoid unnecessary abstractions.
 - Prefer existing patterns in `Configuration/`, `Services/`, and `Contracts/` folders.
-- Run lint/format before PR (`corepack pnpm@9.15.9 -C frontend lint`).
+- Run lint/format before PR (`corepack pnpm@10.34.7 -C frontend lint`).
 
 ## Testing Guidelines
 - Backend: xUnit; place tests under `backend/tests/RentACar.Tests/Unit/...`.
