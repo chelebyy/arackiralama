@@ -1,5 +1,6 @@
 "use client";
 
+import { guestCopy } from "@/lib/guest-reservation-copy";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
@@ -88,6 +89,7 @@ export default function BookingConfirmationPage() {
               ? t("booking.confirmation.unpaidRequestTitle")
               : t("booking.confirmation.title")}
           </h1>
+        <Link href="/manage-reservation" className="inline-block my-4 text-sky-700 underline">{guestCopy(locale).manage}</Link>
           <p className="mt-4 text-lg text-slate-600">
             {exactDetailsPending ? t(detailsError ? "booking.confirmation.verificationFailed" : "common.labels.loading") : reservation?.status === "Confirmed" ? t("booking.payAtPickup.confirmedMessage") : isUnpaidRequest
               ? t("booking.confirmation.unpaidRequestMessage")

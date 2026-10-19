@@ -60,7 +60,7 @@ public sealed class ReservationServiceQuotePersistenceTests
         await context.SaveChangesAsync();
 
         var pickup = new DateTime(2026, 8, 1, 10, 0, 0, DateTimeKind.Utc);
-        var quote = CreateQuote(group.Id, office.Id, pickup);
+        var quote = CreateQuote(group.Id, office.Id, pickup, 30);
         quote.VehicleId = exact ? vehicle.Id : null;
         quote.SchemaVersion = exact ? 2 : 1;
         if (unavailable)
@@ -126,9 +126,19 @@ public sealed class ReservationServiceQuotePersistenceTests
             PickupDateTimeUtc = pickup,
             ReturnDateTimeUtc = pickup.AddDays(3),
             QuoteId = quote.QuoteId,
+            DriverAge = 30,
             Locale = "tr",
             SessionId = "session-123",
             IdempotencyKey = "idempotency-123",
+            Driver = new DriverInfoRequest
+            {
+                FirstName = "Test", LastName = "Driver",
+                Declaration = new DriverDeclaration
+                {
+                    AgeAtPickup = 30, LicenseYearsAtPickup = 8,
+                    LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+                }
+            },
             Customer = new CustomerInfoRequest
             {
                 FirstName = "Test",
@@ -157,17 +167,9 @@ public sealed class ReservationServiceQuotePersistenceTests
                 request with { Customer = request.Customer with { LastName = "Changed" } },
                 request with { Customer = request.Customer with { Email = "changed@example.test" } },
                 request with { Customer = request.Customer with { Phone = "+900000000001" } },
-                request with { Customer = request.Customer with { IdentityNumber = "SYNTHETIC-123" } },
-                request with { Customer = request.Customer with { DriverLicenseNumber = "SYNTHETIC-456" } },
-                request with { Customer = request.Customer with { DateOfBirth = pickup.AddYears(-30) } },
-                request with { Customer = request.Customer with { DriverLicenseIssueDate = pickup.AddYears(-5) } },
                 request with { Driver = driver with { FirstName = "Changed" } },
                 request with { Driver = driver with { LastName = "Changed" } },
-                request with { Driver = driver with { LicenseNumber = "SYNTHETIC-789" } },
-                request with { Driver = driver with { LicenseCountry = "DE" } },
-                request with { Driver = driver with { DateOfBirth = pickup.AddYears(-30) } },
-                request with { Driver = driver with { LicenseIssueDate = pickup.AddYears(-5) } },
-                request with { Driver = driver with { LicenseExpiryDate = pickup.AddYears(3) } },
+                request with { Driver = driver with { Declaration = new DriverDeclaration { AgeAtPickup = 40, LicenseYearsAtPickup = 10, LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true } } },
                 request with { Notes = "Changed pickup instructions" }
             ];
             foreach (var changed in changes)
@@ -226,6 +228,8 @@ public sealed class ReservationServiceQuotePersistenceTests
         await changedInputReplay.Should().ThrowAsync<ReservationQuoteConflictException>()
             .WithMessage("*inputs*");
         created.TotalAmount.Should().Be(1548m);
+        created.Driver!.Declaration.Should().BeEquivalentTo(request.Driver.Declaration);
+        replayed.Driver!.Declaration.Should().BeEquivalentTo(request.Driver.Declaration);
         created.BreakdownSource.Should().Be("SNAPSHOT");
         created.SelectedExtras.Should().ContainSingle(item => item.Code == "gps" && item.Total == 48m);
         created.PriceBreakdown!.BaseTotal.Should().Be(1500m);
@@ -233,10 +237,11 @@ public sealed class ReservationServiceQuotePersistenceTests
         created.PriceBreakdown.FinalTotal.Should().Be(1548m);
 
         var storedReservation = context.Reservations.Single();
+        storedReservation.DriverDeclaration.Should().BeEquivalentTo(request.Driver.Declaration);
         storedReservation.QuoteId.Should().Be(quote.QuoteId);
         storedReservation.PricingSnapshot!.FinalTotal.Should().Be(1548m);
         storedReservation.QuoteReplayProof.Should().NotBeNull();
-        storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 2 : 1);
+        storedReservation.QuoteReplayProof!.SchemaVersion.Should().Be(exact ? 3 : 1);
         storedReservation.QuoteReplayProof.VehicleId.Should().Be(request.VehicleId);
         storedReservation.QuoteReplayProof.CheckoutOperation.Should().Be("draft");
         storedReservation.QuoteReplayProof!.SessionHash.Should().NotBe("session-123");
@@ -544,7 +549,12 @@ public sealed class ReservationServiceQuotePersistenceTests
             {
                 FirstName = "Test",
                 LastName = "Driver",
-                DateOfBirth = driverDateOfBirth
+                DateOfBirth = driverDateOfBirth,
+                Declaration = new DriverDeclaration
+                {
+                    AgeAtPickup = quoteAge, LicenseYearsAtPickup = 5,
+                    LicenseValidThroughReturn = true, DocumentsAvailableAtPickup = true
+                }
             }
         });
     }

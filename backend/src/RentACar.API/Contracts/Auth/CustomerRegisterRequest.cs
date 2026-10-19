@@ -9,17 +9,17 @@ public sealed record CustomerRegisterRequest(
 public sealed record UpdateProfileRequest(
     string? FullName,
     string? Phone,
-    string? IdentityNumber,
+    [property: System.Text.Json.Serialization.JsonIgnore] string? IdentityNumber,
     string? Nationality,
-    int? LicenseYear,
-    DateOnly? BirthDate);
+    [property: System.Text.Json.Serialization.JsonIgnore] int? LicenseYear,
+    [property: System.Text.Json.Serialization.JsonIgnore] DateOnly? BirthDate);
 
 public sealed record CustomerProfileResponse(
     Guid Id,
     string Email,
     string FullName,
     string Phone,
-    string? IdentityNumber,
+    [property: System.Text.Json.Serialization.JsonIgnore] string? IdentityNumber,
     string Nationality,
-    int LicenseYear,
-    DateOnly? BirthDate);
+    [property: System.Text.Json.Serialization.JsonIgnore] int LicenseYear,
+    [property: System.Text.Json.Serialization.JsonIgnore] DateOnly? BirthDate);

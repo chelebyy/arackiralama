@@ -123,12 +123,14 @@ describe("BookingStep3Page", () => {
   it("restores submitted driver details when returning from checkout", async () => {
     storedDetails = {
       customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.test", phone: "+905550000099" },
-      driver: { dateOfBirth: "1990-01-01", licenseNumber: "TEST-LICENCE", licenseCountry: "TR", licenseIssueDate: "2018-06-01", licenseExpiryDate: "2032-06-01" },
+      driver: { declaration: { ageAtPickup: 30, licenseYearsAtPickup: 8, licenseValidThroughReturn: true, documentsAvailableAtPickup: true } },
     };
     render(<BookingStep3Page />);
     expect(screen.getByLabelText("First Name")).toHaveValue("Jane");
-    expect(screen.getByLabelText("License issue date")).toHaveValue("2018-06-01");
-    expect(screen.getByLabelText("License expiry date")).toHaveValue("2032-06-01");
+    expect(screen.getByLabelText("Age on pickup date")).toHaveValue(30);
+    expect(screen.getByLabelText("Completed licence years at pickup")).toHaveValue(8);
+    expect(screen.queryByLabelText("Date of Birth")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("License Number")).not.toBeInTheDocument();
   });
 
   it("stores server catalog selections with bounded quantities", async () => {
@@ -140,8 +142,8 @@ describe("BookingStep3Page", () => {
     await user.type(screen.getByLabelText("Last Name"), "Doe");
     await user.type(screen.getByLabelText("Email"), "jane@example.com");
     await user.type(screen.getByLabelText("Phone"), "+905551234567");
-    await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
-    await user.type(screen.getByLabelText("License Number"), "TR-12345");
+    await user.type(screen.getByLabelText("Age on pickup date"), "30");
+    await user.type(screen.getByLabelText("Completed licence years at pickup"), "8");
     const increaseChildSeat = await screen.findByRole("button", { name: /increase quantity child seat/i });
     const increaseGps = screen.getByRole("button", { name: /increase quantity gps navigation/i });
 
@@ -219,11 +221,10 @@ describe("BookingStep3Page", () => {
     await user.type(screen.getByLabelText("Last Name"), "Doe");
     await user.type(screen.getByLabelText("Email"), "jane@example.com");
     await user.type(screen.getByLabelText("Phone"), "+905551234567");
-    await user.type(screen.getByLabelText("Date of Birth"), "1990-05-10");
-    await user.type(screen.getByLabelText("License Number"), "TR-12345");
-    await user.type(screen.getByLabelText("License Country"), "TR");
-    await user.type(screen.getByLabelText("License issue date"), "2018-06-01");
-    await user.type(screen.getByLabelText("License expiry date"), "2032-06-01");
+    await user.type(screen.getByLabelText("Age on pickup date"), "30");
+    await user.type(screen.getByLabelText("Completed licence years at pickup"), "8");
+    await user.click(screen.getByLabelText(/licence will remain valid/i));
+    await user.click(screen.getByLabelText(/documents at pickup/i));
     await user.click(screen.getByRole("button", { name: /continue to payment/i }));
 
     await waitFor(() => {
@@ -241,7 +242,7 @@ describe("BookingStep3Page", () => {
       returnDate: "2026-06-14",
       returnTime: "09:00",
     });
-    expect(updateCustomerDetailsMock).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ licenseIssueDate: "2018-06-01", licenseExpiryDate: "2032-06-01" }));
+    expect(updateCustomerDetailsMock).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ declaration: { ageAtPickup: 30, licenseYearsAtPickup: 8, licenseValidThroughReturn: true, documentsAvailableAtPickup: true } }));
   });
 
   it("does not continue while direct office slugs have not resolved to backend IDs", async () => {

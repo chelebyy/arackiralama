@@ -23,6 +23,7 @@ export const routing = defineRouting({
       de: "/"
     },
     "/vehicles": "/vehicles",
+    "/manage-reservation": "/manage-reservation",
     "/about": {
       tr: "/hakkimizda",
       en: "/about",

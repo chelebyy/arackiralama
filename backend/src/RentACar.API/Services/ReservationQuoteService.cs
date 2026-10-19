@@ -16,16 +16,24 @@ public sealed class ReservationQuoteService(
 {
     private static readonly TimeSpan QuoteLifetime = TimeSpan.FromMinutes(15);
 
-    public async Task<ReservationQuoteDto> CreateAsync(
+    public Task<ReservationQuoteDto> CreateAsync(
         CreateReservationQuoteRequest request,
         string sessionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        CreateCoreAsync(request, sessionId, null, cancellationToken);
+
+    public Task<ReservationQuoteDto> CreateAmendmentAsync(CreateReservationQuoteRequest request,
+        string sessionId, Guid reservationId, CancellationToken cancellationToken) =>
+        CreateCoreAsync(request, sessionId, reservationId, cancellationToken);
+
+    private async Task<ReservationQuoteDto> CreateCoreAsync(CreateReservationQuoteRequest request,
+        string sessionId, Guid? excludeReservationId, CancellationToken cancellationToken)
     {
         request = request with { PickupDateTimeUtc = NormalizeUtc(request.PickupDateTimeUtc), ReturnDateTimeUtc = NormalizeUtc(request.ReturnDateTimeUtc) };
         ValidateRequest(request, sessionId);
 
         var vehicleOffer = request.VehicleId.HasValue && vehicleBookingService is not null
-            ? await vehicleBookingService.CalculateAsync(request, cancellationToken) : null;
+            ? await vehicleBookingService.CalculateAsync(request, cancellationToken, excludeReservationId) : null;
         if (request.VehicleId.HasValue && vehicleOffer is null)
         {
             var vehicle = await vehicleRepository.GetByIdAsync(request.VehicleId.Value, cancellationToken);
@@ -108,6 +116,7 @@ public sealed class ReservationQuoteService(
 
         var quote = new ReservationQuoteV1
         {
+            AmendmentReservationId = excludeReservationId,
             SchemaVersion = request.VehicleId.HasValue ? 2 : 1,
             VehicleId = request.VehicleId,
             QuoteId = quoteId,

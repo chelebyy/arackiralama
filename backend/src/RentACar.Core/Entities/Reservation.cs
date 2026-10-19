@@ -20,6 +20,7 @@ public class Reservation : BaseEntity
     public DateTime? UnpaidRequestExpiresAtUtc { get; set; }
     public string? DriverFirstName { get; set; }
     public string? DriverLastName { get; set; }
+    public DriverDeclaration? DriverDeclaration { get; set; }
     public DateTime? DriverDateOfBirth { get; set; }
     public string? DriverLicenseNumber { get; set; }
     public string? DriverLicenseCountry { get; set; }
