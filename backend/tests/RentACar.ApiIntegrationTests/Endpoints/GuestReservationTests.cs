@@ -20,7 +20,7 @@ using Xunit;
 
 namespace RentACar.ApiIntegrationTests.Endpoints;
 
-public sealed class GuestReservationTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
+public sealed partial class GuestReservationTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
     [Fact]
     public async Task AccessLimits_SeparateSignedBffClientsAndRejectSpoofedPartitions()

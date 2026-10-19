@@ -1,5 +1,27 @@
 # Paket 3 — oturum devir belgesi
 
+## 2026-10-17 — Repeated amendments and unchanged itinerary corrections
+
+Local backend code and tests at `7ddf17a4a05c5265661e49279f44966eea9c5fcb`, based on published `3406164206678e2a9478997fa482fafc2509e5e7`, address the two subsequent review findings. The regressions were first run against unchanged published product code. The product correction changes only `GuestReservationService` and passed an independent review before full validation. This documentation update contains no further product change.
+
+Each applied amendment now includes its persisted `AmendmentId` in both email and SMS pickup/return reminder payloads and in the date-change confirmation email. Previously, a newly claimed reminder from the preceding amendment could remain `Processing` and collide with a replacement's identical payload in the unique active-job index, rolling back confirmation with HTTP 409. A zero-fee return to an earlier amendment itinerary could also collide with its still-pending confirmation email. The stable amendment identity keeps all these notifications distinct across repeated itineraries, while the existing `AppliedAt` result replay prevents another enqueue or fee on a repeated confirmation. Fresh processing claims remain intact; the existing dispatch checks suppress reminders superseded by later applied amendments when recovered.
+
+Requests that leave both itinerary boundaries unchanged now fail before pricing or quote persistence. Equality uses the same UTC normalization as the quote service: UTC values are unchanged, local values convert to UTC, and unspecified values are interpreted as UTC. Real time-of-day changes to either boundary remain valid. Confirmation also checks the canonical stored quote before mutation, fee application, audit or notification creation, rejecting pending unchanged quotes issued before this correction with the existing HTTP 400 `invalid_request` contract. Already-applied confirmations replay their saved result before this new validation, preserving recovery after a lost response.
+
+| Validation | Exact scope | Result |
+|---|---|---|
+| Before-correction unit regressions | Published `3406164`; all nine UTC/local/unspecified boundary combinations; `TZ=Europe/Istanbul` | Nine unchanged itineraries incorrectly persisted quotes and amendments; six valid one-boundary controls passed |
+| Before-correction API regressions | Published `3406164`; real PostgreSQL/Redis and HTTP pipeline | Six expected failures: three unchanged quote representations, one pending unchanged confirmation and both independent queue collisions; three valid controls passed |
+| Corrected focused unit regressions | Code `7ddf17a`; `TZ=Europe/Istanbul` | 15 passed, zero failed or skipped; unchanged requests make no pricing or quote-store calls |
+| Corrected focused API regressions | Code `7ddf17a`; isolated PostgreSQL 16.15 and Redis 7 | Nine passed, zero failed or skipped |
+| Backend Release solution build | Code `7ddf17a` | Zero errors; 13 existing package/Redis warnings |
+| Full backend test project | Code `7ddf17a` | 958 passed, zero failed or skipped |
+| Full API integration project | Code `7ddf17a`; isolated PostgreSQL 16.15 and Redis 7 | 211 passed, zero failed or skipped |
+
+The API regressions compare the complete reservation, amendment, audit and job state before and after rejected unchanged requests and successful confirmation replays. Repeated-date coverage includes both normal and zero change fees, leaves older fresh claims processing during confirmation, suppresses all eight older reminders after abandoned-claim recovery without delivery or retry growth, and delivers the four latest replacements once. Both pickup-only and return-only time changes complete normally and apply their accepted fee once.
+
+Exact-head remote CI remains a separate publication gate and uses PostgreSQL 17. Frontend files are unchanged; the earlier frontend and browser evidence below retains its original scope and provenance. This follow-up adds no schema or dependency change, and existing Crypto.Xml/Pkcs advisories remain tracked in [PR #461](https://github.com/chelebyy/arackiralama/pull/461). The final database check and an external provider send remain non-atomic: a reservation commit after that check can race an already active send. Local test providers do not establish production delivery. No merge, automatic merge, production migration or deployment was performed.
+
 ## 2026-10-17 — Combined PR 457 validation
 
 Combined backend code commit `277aaa8e494a47baa5fd4c458fd00a07fdcfd286`, based on published `7ccc51206e13ac6bae799d114d838b9d99231a13`, includes the reminder recovery correction and group quote declaration validation. Both corrections were independently reviewed, combined without conflicts, and validated together before this documentation-only evidence update.

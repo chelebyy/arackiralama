@@ -131,7 +131,7 @@ public sealed class GuestReservationService(
         var policy = r.PickupOffice?.OperatingPolicy?.GuestManagement;
         if (!CanManage(r, policy, false) || r.Version != request.Version || policy!.CancellationFee != request.AcceptedFee)
             throw new ReservationQuoteConflictException("Cancellation conditions changed or cancellation is unavailable.");
-        await UpdateRemindersAsync(r, access.Locale, true, ct);
+        await UpdateRemindersAsync(r, access.Locale, null, ct);
         r.Status = ReservationStatus.Cancelled;
         r.UpdatedAt = DateTime.UtcNow;
         db.AuditLogs.Add(new AuditLog { Action = "GuestReservationCancelled", EntityType = "Reservation",
@@ -148,6 +148,7 @@ public sealed class GuestReservationService(
         var r = await LoadAsync(access.ReservationId, ct);
         var policy = r.PickupOffice?.OperatingPolicy?.GuestManagement;
         if (!CanManage(r, policy, true)) throw new ReservationQuoteConflictException("Date changes are unavailable.");
+        RequireChangedDates(r, request.PickupDateTimeUtc, request.ReturnDateTimeUtc);
         var optionIds = r.SelectedExtras.Select(e => e.ExtraOptionId).ToArray();
         var currentOptions = await db.ReservationExtraOptions.AsNoTracking().Where(e => optionIds.Contains(e.Id))
             .ToDictionaryAsync(e => e.Id, ct);
@@ -202,6 +203,7 @@ public sealed class GuestReservationService(
         var saved = JsonSerializer.Deserialize<GuestAmendmentRequest>(amendment.RequestJson)!;
         var quote = await quoteStore.GetAsync(amendment.QuoteId, ct)
             ?? throw new ReservationQuoteConflictException("Amendment quote expired.");
+        RequireChangedDates(r, quote.PickupDateTimeUtc, quote.ReturnDateTimeUtc);
         var previousFees = await PreviousAmendmentFeesAsync(r.Id, ct);
         if (quote.AmendmentReservationId != r.Id || !ReservationQuoteSecurity.SessionHashMatches(quote.SessionHash, access.Id.ToString("N")) ||
             quote.VehicleId != r.VehicleId || quote.ExpiresAtUtc <= DateTime.UtcNow ||
@@ -243,8 +245,9 @@ public sealed class GuestReservationService(
         amendment.ResultJson = JsonSerializer.Serialize(response);
         db.AuditLogs.Add(new AuditLog { Action = "GuestReservationAmended", EntityType = "Reservation",
             EntityId = r.Id.ToString(), Details = JsonSerializer.Serialize(new { AmendmentId = amendment.Id, amendment.Fee }) });
-        await UpdateRemindersAsync(r, access.Locale, false, ct);
-        await notifications.EnqueueEmailAsync(Message(r, access.Locale, ChangedTemplate), cancellationToken: ct);
+        await UpdateRemindersAsync(r, access.Locale, amendment.Id, ct);
+        await notifications.EnqueueEmailAsync(Message(r, access.Locale, ChangedTemplate,
+            new Dictionary<string, string> { ["AmendmentId"] = amendment.Id.ToString("D") }), cancellationToken: ct);
         await tx.CommitAsync(ct);
         invalidation.Invalidate();
         return response;
@@ -254,7 +257,7 @@ public sealed class GuestReservationService(
         await db.ReservationAmendments.Where(a => a.ReservationId == id && a.AppliedAt != null)
             .Select(a => (decimal?)a.Fee).SumAsync(ct) ?? 0;
 
-    private async Task UpdateRemindersAsync(Reservation reservation, string locale, bool cancel, CancellationToken ct)
+    private async Task UpdateRemindersAsync(Reservation reservation, string locale, Guid? amendmentId, CancellationToken ct)
     {
         var abandonedBefore = DateTime.UtcNow.AddMinutes(-5);
         var jobs = await db.BackgroundJobs.AsNoTracking().Where(j =>
@@ -274,13 +277,16 @@ public sealed class GuestReservationService(
                     .ExecuteUpdateAsync(update => update.SetProperty(j => j.Status, BackgroundJobStatus.Cancelled)
                         .SetProperty(j => j.UpdatedAt, DateTime.UtcNow), ct);
         }
-        if (cancel) return;
+        if (amendmentId is null) return;
         foreach (var (key, scheduled) in new[] {
             (NotificationTemplateKeys.PickupReminder, reservation.PickupDateTime.AddHours(-24)),
             (NotificationTemplateKeys.ReturnReminder, reservation.ReturnDateTime.AddHours(-24)) })
         {
             if (scheduled <= DateTime.UtcNow) continue;
-            var variables = new Dictionary<string, string> { ["PublicCode"] = reservation.PublicCode };
+            var variables = new Dictionary<string, string>
+            {
+                ["PublicCode"] = reservation.PublicCode, ["AmendmentId"] = amendmentId.Value.ToString("D")
+            };
             await notifications.EnqueueEmailAsync(new() { ToEmail = reservation.Customer!.Email,
                 Locale = locale, TemplateKey = key, Variables = variables }, scheduled, ct);
             if (!string.IsNullOrWhiteSpace(reservation.Customer.Phone))
@@ -288,6 +294,20 @@ public sealed class GuestReservationService(
                     Locale = locale, TemplateKey = key, Variables = variables }, scheduled, ct);
         }
     }
+
+    private static void RequireChangedDates(Reservation reservation, DateTime pickup, DateTime end)
+    {
+        if (NormalizeUtc(pickup) == NormalizeUtc(reservation.PickupDateTime) &&
+            NormalizeUtc(end) == NormalizeUtc(reservation.ReturnDateTime))
+            throw new ArgumentException("At least one reservation date must change.");
+    }
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 
     private Task<Reservation> LoadAsync(Guid id, CancellationToken ct) => db.Reservations
         .Include(r => r.Customer).Include(r => r.Vehicle).Include(r => r.PickupOffice).Include(r => r.ReturnOffice)
