@@ -147,7 +147,7 @@
     "overrides": {
       "@tiptap/extension-bubble-menu": "3.30.5",
       "@tiptap/extension-floating-menu": "3.30.5",
-      "svgo": "3.3.3",
+      "svgo": "3.3.5",
       "markdown-it": "14.1.1",
       "lodash": "^4.18.0",
       "flatted": "3.4.2",

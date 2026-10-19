@@ -7,7 +7,7 @@ settings:
 overrides:
   '@tiptap/extension-bubble-menu': 3.30.5
   '@tiptap/extension-floating-menu': 3.30.5
-  svgo: 3.3.3
+  svgo: 3.3.5
   markdown-it: 14.1.1
   lodash: ^4.18.0
   flatted: 3.4.2
@@ -5474,8 +5474,8 @@ packages:
   svg-country-flags@1.2.10:
     resolution: {integrity: sha512-xrqwo0TYf/h2cfPvGpjdSuSguUbri4vNNizBnwzoZnX0xGo3O5nGJMlbYEp7NOYcnPGBm6LE2axqDWSB847bLw==}
 
-  svgo@3.3.3:
-    resolution: {integrity: sha512-+wn7I4p7YgJhHs38k2TNjy1vCfPIfLIJWR5MnCStsN8WuuTcBnRKcMHQLMM2ijxGZmDoZwNv8ipl5aTTen62ng==}
+  svgo@3.3.5:
+    resolution: {integrity: sha512-8SQMzdrvWaD8deUmrnYB+ASyxBVgWUOilg+A75nE/76WdLpj6LopCwiAVvkzkcqy/9b7t2Mg7faFLjg0ZRcZ3w==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -10843,7 +10843,7 @@ snapshots:
     dependencies:
       react: 19.2.7
       svg-country-flags: 1.2.10
-      svgo: 3.3.3
+      svgo: 3.3.5
       world-countries: 5.1.0
 
   react@19.2.7: {}
@@ -11248,7 +11248,7 @@ snapshots:
 
   svg-country-flags@1.2.10: {}
 
-  svgo@3.3.3:
+  svgo@3.3.5:
     dependencies:
       commander: 7.2.0
       css-select: 5.2.2
