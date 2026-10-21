@@ -38,7 +38,7 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
             IsActive = true
         });
 
-        dbContext.AuthSessions.Add(CreateSession(AuthPrincipalType.Admin, adminId, sessionId, DateTime.UtcNow.AddDays(1)));
+        dbContext.AuthSessions.Add(CreateSession(AuthPrincipalType.Admin, adminId, sessionId, DateTime.UtcNow.AddDays(1), tokenVersion: 3));
         await dbContext.SaveChangesAsync();
 
         var validator = CreateValidator(dbContext);
@@ -154,7 +154,7 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
             TokenVersion = 8
         });
 
-        dbContext.AuthSessions.Add(CreateSession(AuthPrincipalType.Customer, customerId, sessionId, DateTime.UtcNow.AddDays(1)));
+        dbContext.AuthSessions.Add(CreateSession(AuthPrincipalType.Customer, customerId, sessionId, DateTime.UtcNow.AddDays(1), tokenVersion: 7));
         await dbContext.SaveChangesAsync();
 
         var validator = CreateValidator(dbContext);
@@ -206,6 +206,25 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
         result.Should().Be(AccessTokenSessionValidationFailure.SessionNotFound);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(6)]
+    public async Task ValidateAsync_WhenSessionVersionDiffersFromCurrentJwt_RejectsAccess(int? sessionVersion)
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer { Email = "session-version@test.com", TokenVersion = 7 };
+        dbContext.Customers.Add(customer);
+        var sessionId = Guid.NewGuid();
+        dbContext.AuthSessions.Add(CreateSession(AuthPrincipalType.Customer, customer.Id, sessionId,
+            DateTime.UtcNow.AddDays(1), tokenVersion: sessionVersion));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateValidator(dbContext).ValidateAsync(
+            CreatePrincipal(AuthPrincipalType.Customer, customer.Id, sessionId, 7));
+
+        result.Should().Be(AccessTokenSessionValidationFailure.TokenVersionMismatch);
+    }
+
     private static AccessTokenSessionValidator CreateValidator(RentACarDbContext dbContext) =>
         new(dbContext, NullLogger<AccessTokenSessionValidator>.Instance);
 
@@ -232,12 +251,14 @@ public class AccessTokenSessionValidatorTests : IClassFixture<TestDbContextFacto
         Guid sessionId,
         DateTime refreshTokenExpiresAtUtc,
         DateTime? revokedAtUtc = null,
-        Guid? replacedBySessionId = null)
+        Guid? replacedBySessionId = null,
+        int? tokenVersion = null)
     {
         return new AuthSession
         {
             Id = sessionId,
             PrincipalType = principalType,
+            TokenVersion = tokenVersion,
             PrincipalId = principalId,
             RefreshTokenHash = $"sha256:{Guid.NewGuid():N}",
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,

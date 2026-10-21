@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { tryRefreshWithBackend } from "@/lib/auth/backend";
 import {
   appendBackendSetCookie,
-  clearAccessCookie,
-  clearRefreshCookies,
   setAccessCookie,
   toBackendCookieHeader
 } from "@/lib/auth/http";
@@ -30,8 +28,6 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
 
-    clearAccessCookie(response, request);
-    clearRefreshCookies(response, request);
     return response;
   }
 
@@ -45,8 +41,6 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
 
-    clearAccessCookie(response, request);
-    clearRefreshCookies(response, request);
     return response;
   }
 

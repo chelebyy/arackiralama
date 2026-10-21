@@ -19,6 +19,7 @@ public sealed class AuthSessionConfiguration : IEntityTypeConfiguration<AuthSess
             .HasMaxLength(24)
             .IsRequired();
         builder.Property(x => x.PrincipalId).HasColumnName("principal_id");
+        builder.Property(x => x.TokenVersion).HasColumnName("token_version");
         builder.Property(x => x.RefreshTokenHash).HasColumnName("refresh_token_hash").HasMaxLength(256).IsRequired();
         builder.Property(x => x.RefreshTokenExpiresAtUtc).HasColumnName("refresh_token_expires_at_utc");
         builder.Property(x => x.LastSeenAtUtc).HasColumnName("last_seen_at_utc");

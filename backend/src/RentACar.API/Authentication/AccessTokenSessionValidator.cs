@@ -56,7 +56,7 @@ public sealed class AccessTokenSessionValidator(
             return AccessTokenSessionValidationFailure.PrincipalNotFound;
         }
 
-        if (currentTokenVersion.Value != claims.TokenVersion)
+        if (currentTokenVersion.Value != claims.TokenVersion || authSession.TokenVersion != claims.TokenVersion)
         {
             LogFailure(AccessTokenSessionValidationFailure.TokenVersionMismatch, claims);
             return AccessTokenSessionValidationFailure.TokenVersionMismatch;
