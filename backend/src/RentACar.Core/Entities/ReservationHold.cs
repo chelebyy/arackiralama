@@ -2,6 +2,8 @@ namespace RentACar.Core.Entities;
 
 public class ReservationHold : BaseEntity
 {
+    public const int SessionIdMaxLength = 120;
+
     public Guid ReservationId { get; set; }
     public Guid VehicleId { get; set; }
     public DateTime ExpiresAt { get; set; }

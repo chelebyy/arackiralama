@@ -2435,101 +2435,34 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
-    public async Task ProcessExpiredReservationsAsync_WhenExpiredHoldsExist_ProcessesEachReservation()
+    public async Task ProcessExpiredReservationsAsync_UsesConditionalExpiryForEveryCandidate()
     {
-        // Arrange
-        var firstReservationId = Guid.NewGuid();
-        var secondReservationId = Guid.NewGuid();
-        var firstReservation = new Reservation
-        {
-            Id = firstReservationId,
-            Status = ReservationStatus.Hold,
-            CustomerId = Guid.NewGuid(),
-            VehicleId = Guid.NewGuid(),
-            PickupDateTime = DateTime.UtcNow.AddDays(1),
-            ReturnDateTime = DateTime.UtcNow.AddDays(2)
-        };
-        var secondReservation = new Reservation
-        {
-            Id = secondReservationId,
-            Status = ReservationStatus.Hold,
-            CustomerId = Guid.NewGuid(),
-            VehicleId = Guid.NewGuid(),
-            PickupDateTime = DateTime.UtcNow.AddDays(3),
-            ReturnDateTime = DateTime.UtcNow.AddDays(4)
-        };
+        var ids = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        _holdServiceMock.Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ids);
+        _holdServiceMock.Setup(x => x.ExpireHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        _holdServiceMock
-            .Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Guid> { firstReservationId, secondReservationId });
-
-        _reservationRepositoryMock
-            .Setup(x => x.GetByIdAsync(firstReservationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(firstReservation);
-
-        _reservationRepositoryMock
-            .Setup(x => x.GetByIdAsync(secondReservationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(secondReservation);
-
-        _holdServiceMock
-            .Setup(x => x.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        // Act
         await _sut.ProcessExpiredReservationsAsync(CancellationToken.None);
 
-        // Assert
-        firstReservation.Status.Should().Be(ReservationStatus.Expired);
-        secondReservation.Status.Should().Be(ReservationStatus.Expired);
-        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
-        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Once);
+        foreach (var id in ids)
+            _holdServiceMock.Verify(x => x.ExpireHoldAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task ProcessExpiredReservationsAsync_WhenExpiringOneReservationThrows_LogsErrorAndContinues()
     {
-        var firstReservationId = Guid.NewGuid();
-        var secondReservationId = Guid.NewGuid();
-        var secondReservation = new Reservation
-        {
-            Id = secondReservationId,
-            Status = ReservationStatus.Hold,
-            CustomerId = Guid.NewGuid(),
-            VehicleId = Guid.NewGuid(),
-            PickupDateTime = DateTime.UtcNow.AddDays(3),
-            ReturnDateTime = DateTime.UtcNow.AddDays(4)
-        };
-
-        _holdServiceMock
-            .Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Guid> { firstReservationId, secondReservationId });
-
-        _reservationRepositoryMock
-            .Setup(x => x.GetByIdAsync(firstReservationId, It.IsAny<CancellationToken>()))
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+        _holdServiceMock.Setup(x => x.GetExpiredHoldsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid> { first, second });
+        _holdServiceMock.Setup(x => x.ExpireHoldAsync(first, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
-
-        _reservationRepositoryMock
-            .Setup(x => x.GetByIdAsync(secondReservationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(secondReservation);
-
-        _holdServiceMock
-            .Setup(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _holdServiceMock.Setup(x => x.ExpireHoldAsync(second, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         await _sut.ProcessExpiredReservationsAsync(CancellationToken.None);
 
-        secondReservation.Status.Should().Be(ReservationStatus.Expired);
-        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Once);
-        _loggerMock.Verify(
-            x => x.Log(
-                It.Is<LogLevel>(level => level == LogLevel.Error),
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) =>
-                    state.ToString()!.Contains("Failed to process expired reservation", StringComparison.Ordinal) &&
-                    state.ToString()!.Contains(firstReservationId.ToString(), StringComparison.Ordinal)),
-                It.Is<Exception>(ex => ex is InvalidOperationException && ex.Message == "boom"),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _holdServiceMock.Verify(x => x.ExpireHoldAsync(second, It.IsAny<CancellationToken>()), Times.Once);
+        _holdServiceMock.Verify(x => x.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

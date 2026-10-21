@@ -155,9 +155,9 @@ public sealed class ReservationsController(IReservationService reservationServic
         [FromHeader(Name = "X-Session-Id")] string sessionId,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(sessionId))
+        if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > ReservationHold.SessionIdMaxLength)
         {
-            return BadRequestResponse("Oturum kimliği gereklidir (X-Session-Id header).");
+            return BadRequestResponse("Oturum kimliği gereklidir ve en fazla 120 karakter olabilir (X-Session-Id header).");
         }
 
         try
