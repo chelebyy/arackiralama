@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPasswordResetEmailDispatcher, PasswordResetEmailDispatcher>();
         services.AddScoped<ICustomerAccountClaimEmailDispatcher, CustomerAccountClaimEmailDispatcher>();
         services.AddScoped<IAccessTokenSessionValidator, AccessTokenSessionValidator>();
+        services.AddScoped<IAuthSessionRotationService, AuthSessionRotationService>();
         services.AddScoped<IVehiclePhotoStorage, LocalVehiclePhotoStorage>();
         services.AddScoped<IFleetService, FleetService>();
         services.AddScoped<IPricingService, PricingService>();

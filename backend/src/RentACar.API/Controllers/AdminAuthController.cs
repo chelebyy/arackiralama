@@ -20,6 +20,7 @@ public sealed class AdminAuthController(
     IApplicationDbContext dbContext,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
+    IAuthSessionRotationService sessionRotationService,
     IRefreshTokenCookieService refreshTokenCookieService,
     IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings) : BaseApiController
 {
@@ -87,6 +88,7 @@ public sealed class AdminAuthController(
             Id = sessionId,
             PrincipalType = AuthPrincipalType.Admin,
             PrincipalId = adminUser.Id,
+            TokenVersion = adminUser.TokenVersion,
             RefreshTokenHash = refreshTokenHash,
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             LastSeenAtUtc = utcNow,
@@ -122,6 +124,7 @@ public sealed class AdminAuthController(
         var utcNow = DateTime.UtcNow;
 
         var currentSession = await dbContext.AuthSessions
+            .AsNoTracking()
             .FirstOrDefaultAsync(session =>
                 session.PrincipalType == AuthPrincipalType.Admin &&
                 session.RefreshTokenHash == refreshTokenHash,
@@ -138,7 +141,7 @@ public sealed class AdminAuthController(
         var adminUser = await dbContext.AdminUsers
             .FirstOrDefaultAsync(user => user.Id == currentSession.PrincipalId, cancellationToken);
 
-        if (adminUser is null || !adminUser.IsActive)
+        if (adminUser is null || !adminUser.IsActive || currentSession.TokenVersion != adminUser.TokenVersion)
         {
             return UnauthorizedResponse();
         }
@@ -148,23 +151,23 @@ public sealed class AdminAuthController(
         var newRefreshToken = jwtTokenService.CreateRefreshToken(out var refreshTokenExpiresAtUtc);
         var newRefreshTokenHash = jwtTokenService.HashRefreshToken(newRefreshToken);
 
-        currentSession.RevokedAtUtc = utcNow;
-        currentSession.ReplacedBySessionId = newSessionId;
-        currentSession.LastSeenAtUtc = utcNow;
-
-        dbContext.AuthSessions.Add(new AuthSession
+        var replacement = new AuthSession
         {
             Id = newSessionId,
             PrincipalType = AuthPrincipalType.Admin,
             PrincipalId = adminUser.Id,
+            TokenVersion = currentSession.TokenVersion,
             RefreshTokenHash = newRefreshTokenHash,
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             LastSeenAtUtc = utcNow,
             CreatedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
             UserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
-        });
+        };
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (!await sessionRotationService.TryRotateAsync(currentSession.Id, replacement, cancellationToken))
+        {
+            return UnauthorizedResponse();
+        }
         refreshTokenCookieService.AppendRefreshTokenCookie(HttpContext, newRefreshToken, refreshTokenExpiresAtUtc);
 
         var response = new AdminRefreshResponse(

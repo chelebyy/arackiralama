@@ -4,14 +4,12 @@ import { tryRefreshWithBackend } from "@/lib/auth/backend";
 import { ACCESS_COOKIE_NAME } from "@/lib/auth/constants";
 import {
   appendBackendSetCookie,
-  clearAccessCookie,
-  clearRefreshCookies,
   setAccessCookie,
   toBackendCookieHeader
 } from "@/lib/auth/http";
 import { isExpired, normalizePrincipalScope, parseAccessTokenClaims } from "@/lib/auth/jwt";
 
-function unauthorizedResponse(request: NextRequest) {
+function unauthorizedResponse() {
   const response = NextResponse.json(
     {
       success: false,
@@ -20,8 +18,6 @@ function unauthorizedResponse(request: NextRequest) {
     { status: 401 }
   );
 
-  clearAccessCookie(response, request);
-  clearRefreshCookies(response, request);
   return response;
 }
 
@@ -30,7 +26,7 @@ export async function GET(request: NextRequest) {
   let claims = parseAccessTokenClaims(accessToken);
 
   if (!accessToken || !claims) {
-    return unauthorizedResponse(request);
+    return unauthorizedResponse();
   }
 
   if (isExpired(claims)) {
@@ -40,14 +36,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!refreshResult?.envelope.data?.accessToken) {
-      return unauthorizedResponse(request);
+      return unauthorizedResponse();
     }
 
     accessToken = refreshResult.envelope.data.accessToken;
     claims = parseAccessTokenClaims(accessToken);
 
     if (!claims) {
-      return unauthorizedResponse(request);
+      return unauthorizedResponse();
     }
 
     const response = NextResponse.json({

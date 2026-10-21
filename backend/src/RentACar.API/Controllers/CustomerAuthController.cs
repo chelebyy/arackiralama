@@ -26,6 +26,7 @@ public sealed class CustomerAuthController(
     IApplicationDbContext dbContext,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
+    IAuthSessionRotationService sessionRotationService,
     IRefreshTokenCookieService refreshTokenCookieService,
     IAuditLogService auditLogService,
     IOptions<RefreshTokenCookieSettings> refreshTokenCookieSettings,
@@ -329,6 +330,7 @@ public sealed class CustomerAuthController(
             Id = sessionId,
             PrincipalType = AuthPrincipalType.Customer,
             PrincipalId = customer.Id,
+            TokenVersion = customer.TokenVersion,
             RefreshTokenHash = refreshTokenHash,
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             LastSeenAtUtc = utcNow,
@@ -364,6 +366,7 @@ public sealed class CustomerAuthController(
         var utcNow = DateTime.UtcNow;
 
         var currentSession = await dbContext.AuthSessions
+            .AsNoTracking()
             .FirstOrDefaultAsync(session =>
                 session.PrincipalType == AuthPrincipalType.Customer &&
                 session.RefreshTokenHash == refreshTokenHash,
@@ -380,7 +383,7 @@ public sealed class CustomerAuthController(
         var customer = await dbContext.Customers
             .FirstOrDefaultAsync(existingCustomer => existingCustomer.Id == currentSession.PrincipalId, cancellationToken);
 
-        if (customer is null || !customer.HasPassword)
+        if (customer is null || !customer.HasPassword || currentSession.TokenVersion != customer.TokenVersion)
         {
             return UnauthorizedResponse();
         }
@@ -390,23 +393,23 @@ public sealed class CustomerAuthController(
         var newRefreshToken = jwtTokenService.CreateRefreshToken(out var refreshTokenExpiresAtUtc);
         var newRefreshTokenHash = jwtTokenService.HashRefreshToken(newRefreshToken);
 
-        currentSession.RevokedAtUtc = utcNow;
-        currentSession.ReplacedBySessionId = newSessionId;
-        currentSession.LastSeenAtUtc = utcNow;
-
-        dbContext.AuthSessions.Add(new AuthSession
+        var replacement = new AuthSession
         {
             Id = newSessionId,
             PrincipalType = AuthPrincipalType.Customer,
             PrincipalId = customer.Id,
+            TokenVersion = currentSession.TokenVersion,
             RefreshTokenHash = newRefreshTokenHash,
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             LastSeenAtUtc = utcNow,
             CreatedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString(),
             UserAgent = ControllerContext.HttpContext?.Request.Headers.UserAgent.ToString()
-        });
+        };
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (!await sessionRotationService.TryRotateAsync(currentSession.Id, replacement, cancellationToken))
+        {
+            return UnauthorizedResponse();
+        }
         refreshTokenCookieService.AppendRefreshTokenCookie(HttpContext, newRefreshToken, refreshTokenExpiresAtUtc);
 
         var response = new CustomerRefreshResponse(

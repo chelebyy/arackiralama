@@ -180,8 +180,51 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
-    [Fact]
-    public async Task Refresh_WithActiveSession_RotatesSessionAndIssuesNewTokens()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(2)]
+    [InlineData(4)]
+    public async Task Refresh_WithUnboundOrDifferentCredentialVersion_ReturnsUnauthorized(int? sessionVersion)
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var adminUser = new AdminUser
+        {
+            Email = "version@test.com",
+            PasswordHash = "hash",
+            TokenVersion = 3,
+            IsActive = true,
+        };
+        dbContext.AdminUsers.Add(adminUser);
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            PrincipalType = AuthPrincipalType.Admin,
+            PrincipalId = adminUser.Id,
+            TokenVersion = sessionVersion,
+            RefreshTokenHash = "incoming-hash",
+            RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(1)
+        });
+        await dbContext.SaveChangesAsync();
+        var jwt = new Mock<IJwtTokenService>();
+        jwt.Setup(service => service.HashRefreshToken("incoming-token")).Returns("incoming-hash");
+        var rotation = new Mock<IAuthSessionRotationService>();
+        var cookies = new Mock<IRefreshTokenCookieService>();
+        var controller = CreateController(dbContext, jwtTokenService: jwt.Object,
+            sessionRotationService: rotation.Object, refreshTokenCookieService: cookies.Object);
+        SetRefreshCookie(controller.HttpContext, "__Host-rac_refresh", "incoming-token");
+
+        var result = await controller.Refresh(CancellationToken.None);
+
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+        rotation.Verify(service => service.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<AuthSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        cookies.Verify(service => service.AppendRefreshTokenCookie(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+        jwt.Verify(service => service.CreateRefreshToken(out It.Ref<DateTime>.IsAny), Times.Never);
+        dbContext.AuthSessions.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Refresh_WithActiveSession_OnlyIssuesTokensWhenRotationSucceeds(bool rotationSucceeds)
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var passwordHasher = new BcryptPasswordHasher();
@@ -189,12 +232,14 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
         dbContext.AdminUsers.Add(adminUser);
         await dbContext.SaveChangesAsync();
 
+        adminUser.TokenVersion = 7;
         var currentSessionId = Guid.NewGuid();
         dbContext.AuthSessions.Add(new AuthSession
         {
             Id = currentSessionId,
             PrincipalType = AuthPrincipalType.Admin,
             PrincipalId = adminUser.Id,
+            TokenVersion = adminUser.TokenVersion,
             RefreshTokenHash = "sha256:incoming-refresh-hash",
             RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(2),
             LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-3)
@@ -217,15 +262,36 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
             .Setup(service => service.HashRefreshToken("rotated-admin-refresh-token"))
             .Returns("sha256:rotated-admin-refresh-hash");
 
+        AuthSession? replacementSession = null;
+        var rotationService = new Mock<IAuthSessionRotationService>();
+        rotationService.Setup(service => service.TryRotateAsync(currentSessionId, It.IsAny<AuthSession>(), CancellationToken.None))
+            .Callback<Guid, AuthSession, CancellationToken>((_, session, _) => replacementSession = session)
+            .ReturnsAsync(rotationSucceeds);
         var refreshTokenCookieService = new Mock<IRefreshTokenCookieService>();
         var controller = CreateController(
             dbContext,
             jwtTokenService: jwtTokenService.Object,
+            sessionRotationService: rotationService.Object,
             refreshTokenCookieService: refreshTokenCookieService.Object);
 
         SetRefreshCookie(controller.HttpContext, "__Host-rac_refresh", "incoming-refresh-token");
 
         var result = await controller.Refresh(CancellationToken.None);
+
+        rotationService.Verify(service => service.TryRotateAsync(currentSessionId, It.IsAny<AuthSession>(), CancellationToken.None), Times.Once);
+        replacementSession.Should().NotBeNull();
+        replacementSession!.TokenVersion.Should().Be(7);
+        dbContext.AuthSessions.Should().ContainSingle();
+        dbContext.AuthSessions.Single().RevokedAtUtc.Should().BeNull();
+
+        if (!rotationSucceeds)
+        {
+            result.Should().BeOfType<UnauthorizedObjectResult>().Which.Value
+                .Should().BeOfType<ApiResponse<object>>().Which.Message.Should().Be("Yetkisiz erişim");
+            refreshTokenCookieService.Verify(service => service.AppendRefreshTokenCookie(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+            refreshTokenCookieService.Verify(service => service.ClearRefreshTokenCookie(It.IsAny<HttpContext>()), Times.Never);
+            return;
+        }
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var response = okResult.Value.Should().BeOfType<ApiResponse<AdminRefreshResponse>>().Subject;
@@ -233,12 +299,6 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
         response.Data.Should().NotBeNull();
         response.Data!.AccessToken.Should().Be("rotated-admin-access-token");
 
-        dbContext.AuthSessions.Should().HaveCount(2);
-        var revokedSession = dbContext.AuthSessions.Single(session => session.Id == currentSessionId);
-        revokedSession.RevokedAtUtc.Should().NotBeNull();
-        revokedSession.ReplacedBySessionId.Should().NotBeNull();
-
-        var replacementSession = dbContext.AuthSessions.Single(session => session.Id == revokedSession.ReplacedBySessionId);
         replacementSession.PrincipalType.Should().Be(AuthPrincipalType.Admin);
         replacementSession.PrincipalId.Should().Be(adminUser.Id);
         replacementSession.RefreshTokenHash.Should().Be("sha256:rotated-admin-refresh-hash");
@@ -562,6 +622,7 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
         IApplicationDbContext dbContext,
         IPasswordHasher? passwordHasher = null,
         IJwtTokenService? jwtTokenService = null,
+        IAuthSessionRotationService? sessionRotationService = null,
         IRefreshTokenCookieService? refreshTokenCookieService = null,
         RefreshTokenCookieSettings? refreshTokenCookieSettings = null)
     {
@@ -574,6 +635,7 @@ public class AdminAuthControllerTests : IClassFixture<TestDbContextFactory>
             dbContext,
             passwordHasher,
             jwtTokenService,
+            sessionRotationService ?? Mock.Of<IAuthSessionRotationService>(),
             refreshTokenCookieService,
             Options.Create(refreshTokenCookieSettings))
         {
