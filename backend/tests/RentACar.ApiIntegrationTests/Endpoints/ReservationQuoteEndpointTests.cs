@@ -957,7 +957,9 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
         replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
         var saved = await WithDbContextAsync(db => db.Reservations.Include(r => r.Customer).SingleAsync());
-        saved.Customer!.FullName.Should().Be($"{request.Customer.FirstName} {request.Customer.LastName}");
+        saved.GuestFullName.Should().Be($"{request.Customer.FirstName} {request.Customer.LastName}");
+        saved.CustomerId.Should().BeNull();
+        saved.Customer.Should().BeNull();
         saved.DriverLicenseExpiryDate.Should().Be(request.Driver!.LicenseExpiryDate);
         saved.Notes.Should().Be(request.Notes);
     }

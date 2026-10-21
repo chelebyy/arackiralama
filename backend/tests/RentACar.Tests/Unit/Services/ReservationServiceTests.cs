@@ -1017,7 +1017,7 @@ public sealed class ReservationServiceTests
         var reservation = new Reservation
         {
             PublicCode = "GUEST-UPDATE", GuestFullName = "Original Guest", GuestEmail = "guest@example.test",
-            GuestPhone = "original-phone", Status = ReservationStatus.Draft,
+            GuestPhone = "original-phone", Status = ReservationStatus.Confirmed,
             PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(7)
         };
         _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))

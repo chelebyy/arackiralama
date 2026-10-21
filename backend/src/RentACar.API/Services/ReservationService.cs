@@ -324,7 +324,6 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
