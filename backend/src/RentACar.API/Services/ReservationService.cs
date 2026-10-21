@@ -324,8 +324,6 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-        // Get or create customer
-        var customer = await GetOrCreateCustomerAsync(request, cancellationToken);
 
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
@@ -355,8 +353,11 @@ public sealed class ReservationService : IReservationService
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
-            CustomerId = customer.Id,
-            Customer = customer, // Set navigation property for mapping
+            GuestFullName = $"{request.Customer.FirstName} {request.Customer.LastName}".Trim(),
+            GuestEmail = request.Customer.Email.Trim(),
+            GuestPhone = request.Customer.Phone.Trim(),
+            GuestIdentityNumber = ValueOrNull(request.Customer.IdentityNumber),
+            GuestLocale = NormalizeLocale(request.Locale),
             VehicleId = vehicle.Id,
             Vehicle = vehicle,
             PickupOfficeId = request.PickupOfficeId,
@@ -400,8 +401,8 @@ public sealed class ReservationService : IReservationService
         await FinalizeQuoteAsync(pricingContext, reservation.Id, cancellationToken);
 
         _logger.LogInformation(
-            "Created draft reservation {PublicCode} for customer {CustomerId}",
-            reservation.PublicCode, customer.Id);
+            "Created guest draft reservation {PublicCode}",
+            reservation.PublicCode);
 
         return MapToDto(reservation);
     }
@@ -440,7 +441,6 @@ public sealed class ReservationService : IReservationService
             throw new InvalidOperationException("Vehicle group is not available for the selected dates");
         }
 
-        var customer = await GetOrCreateCustomerAsync(request, cancellationToken);
         var returnOfficeId = request.ReturnOfficeId == Guid.Empty
             ? request.PickupOfficeId
             : request.ReturnOfficeId;
@@ -470,8 +470,11 @@ public sealed class ReservationService : IReservationService
         var reservation = new Reservation
         {
             PublicCode = GeneratePublicCode(),
-            CustomerId = customer.Id,
-            Customer = customer,
+            GuestFullName = $"{request.Customer.FirstName} {request.Customer.LastName}".Trim(),
+            GuestEmail = request.Customer.Email.Trim(),
+            GuestPhone = request.Customer.Phone.Trim(),
+            GuestIdentityNumber = ValueOrNull(request.Customer.IdentityNumber),
+            GuestLocale = NormalizeLocale(request.Locale),
             VehicleId = vehicle.Id,
             Vehicle = vehicle,
             PickupOfficeId = request.PickupOfficeId,
@@ -541,9 +544,8 @@ public sealed class ReservationService : IReservationService
         await FinalizeQuoteAsync(pricingContext, reservation.Id, cancellationToken);
 
         _logger.LogInformation(
-            "Created unpaid reservation request {PublicCode} for customer {CustomerId}",
-            reservation.PublicCode,
-            customer.Id);
+            "Created guest unpaid reservation request {PublicCode}",
+            reservation.PublicCode);
 
         return MapToDto(reservation);
     }
@@ -2290,9 +2292,9 @@ public sealed class ReservationService : IReservationService
             Id = reservation.Id,
             PublicCode = reservation.PublicCode,
             CustomerId = reservation.CustomerId,
-            CustomerName = reservation.Customer?.FullName ?? string.Empty,
-            CustomerEmail = IsInternalManualEmail(reservation.Customer?.Email) ? string.Empty : reservation.Customer?.Email ?? string.Empty,
-            CustomerPhone = reservation.Customer?.Phone ?? string.Empty,
+            CustomerName = reservation.GuestFullName ?? reservation.Customer?.FullName ?? string.Empty,
+            CustomerEmail = reservation.GuestEmail ?? (IsInternalManualEmail(reservation.Customer?.Email) ? string.Empty : reservation.Customer?.Email ?? string.Empty),
+            CustomerPhone = reservation.GuestPhone ?? reservation.Customer?.Phone ?? string.Empty,
             VehicleId = vehicleId,
             VehiclePlate = reservation.Vehicle?.Plate,
             VehicleBrand = reservation.Vehicle?.Brand ?? string.Empty,
@@ -2324,8 +2326,10 @@ public sealed class ReservationService : IReservationService
         };
     }
 
-    private (int ReservationCount, decimal TotalSpent) GetCustomerStats(Guid customerId)
+    private (int ReservationCount, decimal TotalSpent) GetCustomerStats(Guid? customerId)
     {
+        if (!customerId.HasValue) return (0, 0m);
+
         var query = _applicationDbContext.Reservations
             .AsNoTracking()
             .Where(r => r.CustomerId == customerId);
@@ -2481,7 +2485,17 @@ public sealed class ReservationService : IReservationService
         CustomerInfoRequest customerRequest,
         CancellationToken cancellationToken)
     {
-        var customer = reservation.Customer ?? await _customerRepository.GetByIdAsync(reservation.CustomerId, cancellationToken);
+        if (!reservation.CustomerId.HasValue)
+        {
+            var name = $"{customerRequest.FirstName} {customerRequest.LastName}".Trim();
+            if (!string.IsNullOrWhiteSpace(name)) reservation.GuestFullName = name;
+            if (!string.IsNullOrWhiteSpace(customerRequest.Email)) reservation.GuestEmail = customerRequest.Email.Trim();
+            if (!string.IsNullOrWhiteSpace(customerRequest.Phone)) reservation.GuestPhone = customerRequest.Phone.Trim();
+            if (!string.IsNullOrWhiteSpace(customerRequest.IdentityNumber)) reservation.GuestIdentityNumber = customerRequest.IdentityNumber.Trim();
+            return;
+        }
+
+        var customer = reservation.Customer ?? await _customerRepository.GetByIdAsync(reservation.CustomerId.Value, cancellationToken);
         if (customer == null)
         {
             return;
@@ -2522,43 +2536,6 @@ public sealed class ReservationService : IReservationService
     private static string? ValueOrNull(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private async Task<Customer> GetOrCreateCustomerAsync(
-        CreateReservationRequest request,
-        CancellationToken cancellationToken)
-    {
-        // Try to find an existing customer using normalized email to avoid case-drift duplicates
-        var normalizedEmail = Customer.NormalizeEmail(request.Customer.Email);
-        var existingCustomer = await _customerRepository
-            .GetQueryable()
-            .FirstOrDefaultAsync(c => c.NormalizedEmail == normalizedEmail, cancellationToken);
-
-        if (existingCustomer != null)
-        {
-            return existingCustomer;
-        }
-
-        // Create new customer with combined full name
-        var fullName = $"{request.Customer.FirstName} {request.Customer.LastName}".Trim();
-        var customer = new Customer
-        {
-            FullName = fullName,
-            Email = request.Customer.Email,
-            Phone = request.Customer.Phone,
-            BirthDate = request.Customer.DateOfBirth.HasValue
-                ? DateOnly.FromDateTime(request.Customer.DateOfBirth.Value)
-                : null,
-            IdentityNumber = request.Customer.IdentityNumber ?? string.Empty,
-            LicenseYear = request.Customer.DriverLicenseIssueDate.HasValue
-                ? request.Customer.DriverLicenseIssueDate.Value.Year
-                : 0,
-            Nationality = "TR" // Default nationality, can be updated later
-        };
-
-        await _customerRepository.AddAsync(customer, cancellationToken);
-
-        return customer;
     }
 
     private async Task<Customer> GetOrCreateManualCustomerAsync(
@@ -2762,9 +2739,7 @@ public sealed class ReservationService : IReservationService
         Reservation reservation,
         CancellationToken cancellationToken)
     {
-        var customer = reservation.Customer ?? await _customerRepository
-            .GetQueryable()
-            .FirstOrDefaultAsync(x => x.Id == reservation.CustomerId, cancellationToken);
+        var customer = await ResolveCustomerAsync(reservation, cancellationToken);
 
         if (customer == null)
         {
@@ -2883,7 +2858,7 @@ public sealed class ReservationService : IReservationService
     }
 
     private async Task QueueReminderIfFutureAsync(
-        Customer customer,
+        ReservationNotificationContact customer,
         string templateKey,
         DateTime scheduledAtUtc,
         string locale,
@@ -2944,11 +2919,15 @@ public sealed class ReservationService : IReservationService
         };
     }
 
-    private async Task<Customer?> ResolveCustomerAsync(Reservation reservation, CancellationToken cancellationToken)
+    private async Task<ReservationNotificationContact?> ResolveCustomerAsync(Reservation reservation, CancellationToken cancellationToken)
     {
-        return reservation.Customer ?? await _customerRepository
+        if (reservation.GuestEmail is not null)
+            return ReservationNotificationContact.FromGuest(reservation);
+        if (!reservation.CustomerId.HasValue) return null;
+        var customer = reservation.Customer ?? await _customerRepository
             .GetQueryable()
             .FirstOrDefaultAsync(x => x.Id == reservation.CustomerId, cancellationToken);
+        return customer is null ? null : ReservationNotificationContact.FromCustomer(customer);
     }
 
     private static ReservationStatus[] GetValidTransitions(ReservationStatus currentStatus)

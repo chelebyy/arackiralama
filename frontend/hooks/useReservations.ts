@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/reservations';
 import type {
   CreateReservationData,
+  GuestReservationCreated,
   ExtendHoldData,
   HoldReservationData,
   PublicReservationSummary,
@@ -47,7 +48,7 @@ export function useCreateReservation() {
   const { mutate } = useSWRConfig();
 
   const create = useCallback(
-    async (data: CreateReservationData): Promise<Reservation | null> => {
+    async (data: CreateReservationData): Promise<GuestReservationCreated | null> => {
       setIsCreating(true);
       setError(null);
       try {

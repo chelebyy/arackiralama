@@ -22,11 +22,25 @@ public record PublicReservationSummaryDto
     public string Currency { get; init; } = "TRY";
 }
 
+public record GuestReservationCreatedDto
+{
+    public Guid Id { get; init; }
+    public string PublicCode { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+
+    public static GuestReservationCreatedDto FromReservation(ReservationDto reservation) => new()
+    {
+        Id = reservation.Id,
+        PublicCode = reservation.PublicCode,
+        Status = reservation.Status
+    };
+}
+
 public record ReservationDto
 {
     public Guid Id { get; init; }
     public string PublicCode { get; init; } = string.Empty;
-    public Guid CustomerId { get; init; }
+    public Guid? CustomerId { get; init; }
     public string CustomerName { get; init; } = string.Empty;
     public string CustomerEmail { get; init; } = string.Empty;
     public string CustomerPhone { get; init; } = string.Empty;

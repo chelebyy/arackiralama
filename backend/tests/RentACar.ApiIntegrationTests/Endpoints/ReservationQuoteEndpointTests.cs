@@ -23,6 +23,62 @@ namespace RentACar.ApiIntegrationTests.Endpoints;
 public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : ApiIntegrationTestBase(redisFixture)
 {
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task GuestBooking_WithExistingEmail_IsIsolatedAndReplaysSafeReceipt(bool unpaid, bool registered)
+    {
+        var victim = new Customer
+        {
+            Email = $"existing-{Guid.NewGuid():N}@example.test", FullName = "Private Account Name",
+            Phone = "private-account-phone", IdentityNumber = "private-identity",
+            PasswordHash = registered ? "existing-password-hash" : null, Nationality = "DE"
+        };
+        await WithDbContextAsync(async db => { db.Customers.Add(victim); return await db.SaveChangesAsync(); });
+        var input = ExactInput();
+        var session = Guid.NewGuid().ToString();
+        using var quote = await SendExactQuoteAsync(input, session);
+        quote.StatusCode.Should().Be(HttpStatusCode.OK, await quote.Content.ReadAsStringAsync());
+        var original = ExactReservation(input, await QuoteIdAsync(quote));
+        var request = original with
+        {
+            Customer = original.Customer with { Email = $"  {victim.Email.ToUpperInvariant()}  " }
+        };
+        using var created = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+        using var first = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var receipt = first.RootElement.GetProperty("data");
+        receipt.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("id", "publicCode", "status");
+        var id = receipt.GetProperty("id").GetGuid();
+        var saved = await WithDbContextAsync(db => db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id));
+        saved.CustomerId.Should().BeNull();
+        saved.GuestEmail.Should().Be(request.Customer.Email.Trim());
+        saved.GuestFullName.Should().Be("Synthetic Policy");
+        saved.GuestPhone.Should().Be(request.Customer.Phone);
+        (await WithDbContextAsync(db => db.Reservations.CountAsync(r => r.CustomerId == victim.Id))).Should().Be(0);
+        var unchanged = await WithDbContextAsync(db => db.Customers.AsNoTracking().SingleAsync(c => c.Id == victim.Id));
+        unchanged.FullName.Should().Be(victim.FullName);
+        unchanged.Phone.Should().Be(victim.Phone);
+        unchanged.PasswordHash.Should().Be(victim.PasswordHash);
+        (await WithDbContextAsync(db => db.Customers.CountAsync(c => c.NormalizedEmail == victim.NormalizedEmail))).Should().Be(1);
+
+        using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
+        using var again = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
+        again.RootElement.GetProperty("data").GetRawText().Should().Be(receipt.GetRawText());
+        (await WithDbContextAsync(db => db.Reservations.CountAsync())).Should().Be(1);
+        if (unpaid)
+        {
+            var jobs = await WithDbContextAsync(db => db.BackgroundJobs.AsNoTracking()
+                .Where(j => j.Type == BackgroundJobTypes.NotificationSmsSend).ToListAsync());
+            jobs.Should().NotBeEmpty();
+            jobs.Select(j => JsonDocument.Parse(j.Payload).RootElement.GetProperty("ToPhoneNumber").GetString())
+                .Should().OnlyContain(phone => phone == request.Customer.Phone);
+        }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task QuoteAndReservationCreate_PersistSnapshotAndReplayByQuoteId(bool exact)
@@ -776,7 +832,7 @@ public sealed class ReservationQuoteEndpointTests(RedisFixture redisFixture) : A
         using var replay = await SendReservationAsync(request, session, Guid.NewGuid().ToString(), unpaid);
         replay.StatusCode.Should().Be(HttpStatusCode.OK, await replay.Content.ReadAsStringAsync());
         using var replayJson = JsonDocument.Parse(await replay.Content.ReadAsStringAsync());
-        replayJson.RootElement.GetProperty("data").GetProperty("vehicleId").GetGuid().Should().Be(input.VehicleId.Value);
+        replayJson.RootElement.GetProperty("data").GetProperty("id").GetGuid().Should().Be(original.Id);
     }
 
     private sealed class QueryCounter : DbCommandInterceptor
