@@ -16,7 +16,7 @@ public sealed class IdempotencyMiddleware
     private readonly ILogger<IdempotencyMiddleware> _logger;
     private const string IdempotencyKeyHeader = "Idempotency-Key";
     private const string IdempotencyStatusHeader = "X-Idempotency-Status";
-    private const string RedisKeyPrefix = "idempotent:";
+    private const string RedisKeyPrefix = "idempotent:v2:";
 
     public IdempotencyMiddleware(RequestDelegate next, ILogger<IdempotencyMiddleware> logger)
     {
@@ -84,7 +84,9 @@ public sealed class IdempotencyMiddleware
             return;
         }
 
-        var redisKey = $"{RedisKeyPrefix}{idempotencyKey}";
+        var redisKey = idempotentAttribute.UseQuoteReplay
+            ? $"{RedisKeyPrefix}guest-v2:{context.Request.Path}:{idempotencyKey}"
+            : $"{RedisKeyPrefix}{idempotencyKey}";
 
         // Try to get cached response from Redis
         CachedResponse? cached = null;

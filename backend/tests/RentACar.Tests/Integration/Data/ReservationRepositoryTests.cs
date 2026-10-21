@@ -18,6 +18,36 @@ public sealed class ReservationRepositoryTests : IClassFixture<TestDbContextFact
         _dbContextFactory = dbContextFactory;
     }
 
+    [Theory]
+    [InlineData("Guest Search")]
+    [InlineData("guest-search@example.test")]
+    [InlineData("5559876543")]
+    public async Task SearchReservationsAsync_FindsGuestContactWithoutAccountOwnership(string query)
+    {
+        using var db = _dbContextFactory.CreateContext();
+        var customer = new Customer { Email = "guest-search@example.test", FullName = "Account Owner" };
+        var office = new Office { Name = "Guest Office", Code = "guest-office", Address = "Address", Phone = "555" };
+        var group = new VehicleGroup { NameTr = "Guest Group", NameEn = "Guest Group" };
+        var vehicle = new Vehicle { Plate = "GUEST-SEARCH", Brand = "Brand", Model = "Model", Group = group, Office = office };
+        var guest = new Reservation
+        {
+            PublicCode = "GUEST-SEARCH", GuestFullName = "Guest Search", GuestEmail = customer.Email,
+            GuestPhone = "5559876543", Vehicle = vehicle, VehicleId = vehicle.Id,
+            PickupOffice = office, PickupOfficeId = office.Id, ReturnOffice = office, ReturnOfficeId = office.Id,
+            PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(7)
+        };
+        db.Customers.Add(customer);
+        db.Reservations.Add(guest);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        var repository = new ReservationRepository(db);
+        var results = await repository.SearchReservationsAsync(searchTerm: query);
+        results.Should().ContainSingle(r => r.Id == guest.Id && r.CustomerId == null);
+        (await repository.GetByCustomerIdAsync(customer.Id)).Should().BeEmpty();
+        var owner = db.Model.FindEntityType(typeof(Reservation))!.FindProperty(nameof(Reservation.CustomerId))!;
+        owner.IsNullable.Should().BeTrue();
+    }
+
     [Fact]
     public async Task GetByPublicCodeAsync_WhenReservationExists_ReturnsReservationWithDetails()
     {

@@ -15,6 +15,38 @@ public sealed class ReservationsControllerTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Create_ReturnsOnlyBookingReceiptEvenForLegacyLinkedReservation(bool unpaid)
+    {
+        var reservation = new ReservationDto
+        {
+            Id = Guid.NewGuid(), PublicCode = "SAFE-RECEIPT", Status = "Draft",
+            CustomerId = Guid.NewGuid(), CustomerName = "Private Name",
+            CustomerEmail = "private@example.test", CustomerPhone = "private-phone",
+            CustomerReservationCount = 17, CustomerTotalSpent = 90000m,
+            Notes = "private-notes", VehiclePlate = "private-plate",
+            Driver = new ReservationDriverDto { LicenseNumber = "private-license" }
+        };
+        var service = new Mock<IReservationService>();
+        service.Setup(x => x.CreateDraftReservationAsync(It.IsAny<CreateReservationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        service.Setup(x => x.CreateUnpaidRequestAsync(It.IsAny<CreateReservationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var controller = new ReservationsController(service.Object);
+        var result = unpaid
+            ? await controller.CreateUnpaidRequest(CreateValidRequest(), CancellationToken.None)
+            : await controller.Create(CreateValidRequest(), CancellationToken.None);
+        var value = result.Should().BeOfType<OkObjectResult>().Subject.Value;
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(value,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
+        var data = json.RootElement.GetProperty("data");
+        data.EnumerateObject().Select(x => x.Name).Should().BeEquivalentTo("id", "publicCode", "status");
+        data.GetProperty("id").GetGuid().Should().Be(reservation.Id);
+        data.GetProperty("publicCode").GetString().Should().Be(reservation.PublicCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Create_WhenLegacyExtraQuantityIsInvalid_ReturnsBadRequest(bool unpaid)
     {
         var service = new Mock<IReservationService>();

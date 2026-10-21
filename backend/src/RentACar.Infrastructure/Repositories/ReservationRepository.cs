@@ -160,6 +160,9 @@ public sealed class ReservationRepository(IApplicationDbContext dbContext)
             var normalizedSearchTerm = searchTerm.Trim().ToLower();
             query = query.Where(r =>
                 r.PublicCode.ToLower().Contains(normalizedSearchTerm) ||
+                (r.GuestFullName != null && r.GuestFullName.ToLower().Contains(normalizedSearchTerm)) ||
+                (r.GuestEmail != null && r.GuestEmail.ToLower().Contains(normalizedSearchTerm)) ||
+                (r.GuestPhone != null && r.GuestPhone.ToLower().Contains(normalizedSearchTerm)) ||
                 (r.Customer != null && (
                     r.Customer.FullName.ToLower().Contains(normalizedSearchTerm) ||
                     r.Customer.Email.ToLower().Contains(normalizedSearchTerm) ||
