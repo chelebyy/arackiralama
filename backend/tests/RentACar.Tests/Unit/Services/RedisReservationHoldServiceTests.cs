@@ -1,402 +1,201 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using MockQueryable.Moq;
 using Moq;
 using RentACar.Core.Entities;
-using RentACar.Core.Interfaces;
+using RentACar.Core.Enums;
+using RentACar.Infrastructure.Data;
 using RentACar.Infrastructure.Services;
 using StackExchange.Redis;
-using System.Text.Json;
 using Xunit;
 
 namespace RentACar.Tests.Unit.Services;
 
-public sealed class RedisReservationHoldServiceTests
+public sealed class RedisReservationHoldServiceTests : IDisposable
 {
-    private readonly Mock<IConnectionMultiplexer> _redisMock = new();
-    private readonly Mock<IDatabase> _databaseMock = new();
-    private readonly Mock<IApplicationDbContext> _dbContextMock = new();
+    private readonly RentACarDbContext _context = new(new DbContextOptionsBuilder<RentACarDbContext>()
+        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+    private readonly Mock<IConnectionMultiplexer> _redis = new();
+    private readonly Mock<IDatabase> _database = new();
+    private readonly RedisReservationHoldService _service;
 
     public RedisReservationHoldServiceTests()
     {
-        _redisMock
-            .Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>()))
-            .Returns(_databaseMock.Object);
+        _redis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(_database.Object);
+        _service = new RedisReservationHoldService(_redis.Object, _context, NullLogger<RedisReservationHoldService>.Instance);
     }
 
     [Fact]
-    public async Task GetExpiredHoldsAsync_ReturnsOnlyExpiredReservationIdsFromDatabase()
+    public async Task Expiry_AfterRedisLossAndServiceRestart_ReleasesStockBlockingStatus()
     {
-        var expiredReservationId = Guid.NewGuid();
-        var activeReservationId = Guid.NewGuid();
-        var holds = new List<ReservationHold>
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(15));
+        var hold = await _context.ReservationHolds.SingleAsync();
+        hold.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
+        _redis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Throws(new RedisTimeoutException("offline", CommandStatus.Unknown));
+        var restarted = new RedisReservationHoldService(_redis.Object, _context, NullLogger<RedisReservationHoldService>.Instance);
+
+        (await restarted.GetExpiredHoldsAsync()).Should().ContainSingle().Which.Should().Be(reservation.Id);
+        (await restarted.ExpireHoldAsync(reservation.Id)).Should().BeTrue();
+
+        reservation.Status.Should().Be(ReservationStatus.Expired);
+        (await _context.ReservationHolds.AnyAsync()).Should().BeFalse();
+        (await restarted.IsVehicleHeldAsync(reservation.VehicleId)).Should().BeFalse();
+        (await restarted.ExpireHoldAsync(reservation.Id)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(ReservationStatus.PendingPayment)]
+    [InlineData(ReservationStatus.Paid)]
+    [InlineData(ReservationStatus.Confirmed)]
+    [InlineData(ReservationStatus.Active)]
+    [InlineData(ReservationStatus.Cancelled)]
+    [InlineData(ReservationStatus.Expired)]
+    public async Task Expiry_PreservesProgressedReservationStatus(ReservationStatus status)
         {
-            new()
-            {
-                ReservationId = expiredReservationId,
-                VehicleId = Guid.NewGuid(),
-                SessionId = "expired",
-                ExpiresAt = DateTime.UtcNow.AddMinutes(-10)
-            },
-            new()
-            {
-                ReservationId = activeReservationId,
-                VehicleId = Guid.NewGuid(),
-                SessionId = "active",
-                ExpiresAt = DateTime.UtcNow.AddMinutes(10)
-            }
-        };
+        var reservation = await SeedAsync(status);
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(1));
+        var hold = await _context.ReservationHolds.SingleAsync();
+        hold.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
 
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(holds.BuildMockDbSet().Object);
+        await _service.ExpireHoldAsync(reservation.Id);
 
-        var sut = CreateSut();
-
-        var result = await sut.GetExpiredHoldsAsync(CancellationToken.None);
-
-        result.Should().ContainSingle().Which.Should().Be(expiredReservationId);
+        reservation.Status.Should().Be(status);
+        (await _context.ReservationHolds.AnyAsync()).Should().BeFalse();
     }
 
     [Fact]
-    public async Task IsHoldValidAsync_WhenRedisKeyExists_ReturnsTrue()
+    public async Task StaleExpiry_AfterRecreation_DoesNotRemoveCurrentHold()
     {
-        var reservationId = Guid.NewGuid();
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "old", TimeSpan.FromMinutes(1));
+        var old = await _context.ReservationHolds.SingleAsync();
+        old.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
+        var ids = await _service.GetExpiredHoldsAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "new", TimeSpan.FromMinutes(15));
+        var current = await _context.ReservationHolds.SingleAsync();
+        current.Id.Should().NotBe(old.Id);
 
-        _databaseMock
-            .Setup(x => x.KeyExistsAsync(It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
+        await _service.ExpireHoldAsync(ids.Single());
 
-        var sut = CreateSut();
-
-        var result = await sut.IsHoldValidAsync(reservationId, CancellationToken.None);
-
-        result.Should().BeTrue();
+        reservation.Status.Should().Be(ReservationStatus.Hold);
+        (await _service.GetHoldAsync(reservation.Id))!.SessionId.Should().Be("new");
+        (await _context.ReservationHolds.CountAsync()).Should().Be(1);
     }
 
     [Fact]
-    public async Task IsVehicleHeldAsync_WhenExcludedSessionOwnsHold_ReturnsFalse()
+    public async Task Extension_UpdatesDurableExpiryAndStaleJobDoesNotExpireIt()
     {
-        var reservationId = Guid.NewGuid();
-        var vehicleId = Guid.NewGuid();
-        var sessionId = "session-123";
-        var payload = JsonSerializer.Serialize(new
-        {
-            ReservationId = reservationId,
-            VehicleId = vehicleId,
-            SessionId = sessionId,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
-        });
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(5));
+        var original = (await _service.GetHoldAsync(reservation.Id))!;
+        _redis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Throws(new RedisTimeoutException("offline", CommandStatus.Unknown));
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(It.Is<RedisKey>(k => k.ToString() == $"vehicle_hold:{vehicleId}"), It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)reservationId.ToString());
-        _databaseMock
-            .Setup(x => x.StringGetAsync(It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"), It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)payload);
+        (await _service.ExtendHoldAsync(reservation.Id, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15))).Should().BeTrue();
+        await _service.ExpireHoldAsync(reservation.Id);
 
-        var sut = CreateSut();
-
-        var result = await sut.IsVehicleHeldAsync(vehicleId, sessionId, CancellationToken.None);
-
-        result.Should().BeFalse();
+        (await _service.GetHoldAsync(reservation.Id))!.ExpiresAt.Should().BeAfter(original.ExpiresAt);
+        reservation.Status.Should().Be(ReservationStatus.Hold);
     }
 
     [Fact]
-    public async Task GetHoldAsync_WhenRedisPayloadExists_ReturnsSnapshot()
+    public async Task ExpiredHold_CannotBeRevivedByExtension()
     {
-        var reservationId = Guid.NewGuid();
-        var vehicleId = Guid.NewGuid();
-        var expiresAt = DateTime.UtcNow.AddMinutes(8);
-        var payload = JsonSerializer.Serialize(new
-        {
-            ReservationId = reservationId,
-            VehicleId = vehicleId,
-            SessionId = "session-456",
-            ExpiresAt = expiresAt
-        });
+        var reservation = await SeedAsync();
+        _context.ReservationHolds.Add(new ReservationHold { ReservationId = reservation.Id, ExpiresAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _context.SaveChangesAsync();
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"), It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)payload);
-
-        var sut = CreateSut();
-
-        var result = await sut.GetHoldAsync(reservationId, CancellationToken.None);
-
-        result.Should().NotBeNull();
-        result!.ReservationId.Should().Be(reservationId);
-        result.VehicleId.Should().Be(vehicleId);
-        result.SessionId.Should().Be("session-456");
-        result.ExpiresAt.Should().Be(expiresAt);
+        (await _service.ExtendHoldAsync(reservation.Id, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15))).Should().BeFalse();
     }
 
     [Fact]
-    public async Task GetHoldAsync_WhenRedisPayloadMissing_FallsBackToDatabaseHold()
+    public async Task DuplicateExpiredRow_DoesNotExpireActiveHold()
     {
-        var reservationId = Guid.NewGuid();
-        var vehicleId = Guid.NewGuid();
-        var expiresAt = DateTime.UtcNow.AddMinutes(12);
-        var holds = new List<ReservationHold>
-        {
-            new()
-            {
-                ReservationId = reservationId,
-                VehicleId = vehicleId,
-                SessionId = "db-session",
-                ExpiresAt = expiresAt
-            }
-        };
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(5));
+        _context.ReservationHolds.Add(new ReservationHold { ReservationId = reservation.Id, ExpiresAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _context.SaveChangesAsync();
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(RedisValue.Null);
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(holds.BuildMockDbSet().Object);
-
-        var sut = CreateSut();
-
-        var result = await sut.GetHoldAsync(reservationId, CancellationToken.None);
-
-        result.Should().NotBeNull();
-        result!.ReservationId.Should().Be(reservationId);
-        result.VehicleId.Should().Be(vehicleId);
-        result.SessionId.Should().Be("db-session");
-        result.ExpiresAt.Should().Be(expiresAt);
+        (await _service.GetExpiredHoldsAsync()).Should().BeEmpty();
+        await _service.ExpireHoldAsync(reservation.Id);
+        reservation.Status.Should().Be(ReservationStatus.Hold);
+        (await _service.IsHoldValidAsync(reservation.Id)).Should().BeTrue();
     }
 
     [Fact]
-    public async Task CreateHoldAsync_WhenRedisUnavailable_CreatesDatabaseFallbackHold()
+    public async Task Release_RemovesAllMetadataAndReturnsHoldToDraft()
     {
-        var reservationId = Guid.NewGuid();
-        var vehicleId = Guid.NewGuid();
-        var holds = new List<ReservationHold>();
-        var holdSetMock = CreateReservationHoldSetMock(holds);
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(5));
+        _context.ReservationHolds.Add(new ReservationHold { ReservationId = reservation.Id, VehicleId = reservation.VehicleId });
+        await _context.SaveChangesAsync();
 
-        _databaseMock
-            .Setup(x => x.StringSetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<RedisValue>(),
-                It.IsAny<Expiration>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToResolvePhysicalConnection, "redis unavailable"));
+        await _service.ReleaseHoldAsync(reservation.Id);
 
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(holdSetMock.Object);
-        _dbContextMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        var sut = CreateSut();
-
-        var result = await sut.CreateHoldAsync(
-            reservationId,
-            vehicleId,
-            "fallback-session",
-            TimeSpan.FromMinutes(10),
-            CancellationToken.None);
-
-        result.Should().BeTrue();
-        holdSetMock.Verify(
-            x => x.AddAsync(
-                It.Is<ReservationHold>(hold =>
-                    hold.ReservationId == reservationId &&
-                    hold.VehicleId == vehicleId &&
-                    hold.SessionId == "fallback-session" &&
-                    hold.ExpiresAt > DateTime.UtcNow.AddMinutes(9)),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-        _dbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        reservation.Status.Should().Be(ReservationStatus.Draft);
+        (await _context.ReservationHolds.AnyAsync()).Should().BeFalse();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(5));
+        (await _service.IsHoldValidAsync(reservation.Id)).Should().BeTrue();
     }
 
     [Fact]
-    public async Task ExtendHoldAsync_WhenRedisUnavailable_ClampsDatabaseFallbackHoldToMaxDuration()
+    public async Task Release_PreservesPendingCancellationChanges()
     {
-        var reservationId = Guid.NewGuid();
-        var initialExpiry = DateTime.UtcNow.AddMinutes(5);
-        var holds = new List<ReservationHold>
-        {
-            new()
-            {
-                ReservationId = reservationId,
-                VehicleId = Guid.NewGuid(),
-                SessionId = "fallback-session",
-                ExpiresAt = initialExpiry
-            }
-        };
-        var holdSetMock = CreateReservationHoldSetMock(holds);
+        var reservation = await SeedAsync();
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromMinutes(5));
+        reservation.Status = ReservationStatus.Cancelled;
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToResolvePhysicalConnection, "redis unavailable"));
+        await _service.ReleaseHoldAsync(reservation.Id);
 
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(holdSetMock.Object);
-        _dbContextMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        var sut = CreateSut();
-
-        var result = await sut.ExtendHoldAsync(
-            reservationId,
-            TimeSpan.FromMinutes(20),
-            TimeSpan.FromMinutes(10),
-            CancellationToken.None);
-
-        result.Should().BeTrue();
-        holds.Should().ContainSingle();
-        holds[0].ExpiresAt.Should().BeAfter(initialExpiry);
-        holds[0].ExpiresAt.Should().BeOnOrBefore(DateTime.UtcNow.AddMinutes(10).AddSeconds(1));
+        reservation.Status.Should().Be(ReservationStatus.Cancelled);
+        (await _context.ReservationHolds.AnyAsync()).Should().BeFalse();
     }
 
     [Fact]
-    public async Task ReleaseHoldAsync_WhenRedisUnavailable_RemovesDatabaseFallbackHold()
+    public async Task RedisOnlyOrStaleKeys_DoNotAuthorizeHoldOrBlockVehicle()
     {
-        var reservationId = Guid.NewGuid();
-        var hold = new ReservationHold
-        {
-            ReservationId = reservationId,
-            VehicleId = Guid.NewGuid(),
-            SessionId = "fallback-session",
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
-        };
-        var holds = new List<ReservationHold> { hold };
-        var holdSetMock = CreateReservationHoldSetMock(holds);
+        _database.Setup(x => x.KeyExistsAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+        var id = Guid.NewGuid();
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToResolvePhysicalConnection, "redis unavailable"));
-
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(holdSetMock.Object);
-        _dbContextMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        var sut = CreateSut();
-
-        var result = await sut.ReleaseHoldAsync(reservationId, CancellationToken.None);
-
-        result.Should().BeTrue();
-        holdSetMock.Verify(x => x.Remove(It.Is<ReservationHold>(existing => existing == hold)), Times.Once);
-        _dbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        (await _service.IsHoldValidAsync(id)).Should().BeFalse();
+        (await _service.GetHoldAsync(id)).Should().BeNull();
+        (await _service.IsVehicleHeldAsync(id)).Should().BeFalse();
     }
 
     [Fact]
-    public async Task ExtendHoldAsync_WhenRedisHoldMissing_ReturnsFalse()
+    public async Task DatabaseHold_PreservesGuestSessionExclusionAndMaximumDuration()
     {
-        var reservationId = Guid.NewGuid();
+        var reservation = await SeedAsync();
+        _redis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Throws(new RedisTimeoutException("offline", CommandStatus.Unknown));
+        await _service.CreateHoldAsync(reservation.Id, reservation.VehicleId, "guest", TimeSpan.FromHours(1));
 
-        _databaseMock
-            .Setup(x => x.StringGetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync(RedisValue.Null);
-
-        var sut = CreateSut();
-
-        var result = await sut.ExtendHoldAsync(
-            reservationId,
-            TimeSpan.FromMinutes(5),
-            TimeSpan.FromMinutes(10),
-            CancellationToken.None);
-
-        result.Should().BeFalse();
+        (await _service.IsVehicleHeldAsync(reservation.VehicleId)).Should().BeTrue();
+        (await _service.IsVehicleHeldAsync(reservation.VehicleId, "guest")).Should().BeFalse();
+        (await _service.GetHoldAsync(reservation.Id))!.ExpiresAt.Should().BeBefore(DateTime.UtcNow.AddMinutes(15));
+        await _service.ExtendHoldAsync(reservation.Id, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(15));
+        (await _service.GetHoldAsync(reservation.Id))!.ExpiresAt.Should().BeBefore(DateTime.UtcNow.AddMinutes(15));
     }
 
-    [Fact]
-    public async Task ExtendHoldAsync_WhenRedisPayloadDeserializesToNull_ReturnsFalse()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(121)]
+    public async Task Create_RejectsInvalidSessionBeforePersistence(int length)
     {
-        var reservationId = Guid.NewGuid();
-
-        _databaseMock
-            .Setup(x => x.StringGetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)"null");
-
-        var sut = CreateSut();
-
-        var result = await sut.ExtendHoldAsync(
-            reservationId,
-            TimeSpan.FromMinutes(5),
-            TimeSpan.FromMinutes(10),
-            CancellationToken.None);
-
-        result.Should().BeFalse();
+        var action = () => _service.CreateHoldAsync(Guid.NewGuid(), Guid.NewGuid(), new string('s', length), TimeSpan.FromMinutes(15));
+        await action.Should().ThrowAsync<InvalidOperationException>();
+        (await _context.ReservationHolds.AnyAsync()).Should().BeFalse();
     }
 
-    [Fact]
-    public async Task ReleaseHoldAsync_WhenRedisPayloadExists_DeletesVehicleAndHoldKeys()
+    private async Task<Reservation> SeedAsync(ReservationStatus status = ReservationStatus.Hold)
     {
-        var reservationId = Guid.NewGuid();
-        var vehicleId = Guid.NewGuid();
-        var payload = JsonSerializer.Serialize(new
-        {
-            ReservationId = reservationId,
-            VehicleId = vehicleId,
-            SessionId = "session-789",
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
-        });
-
-        _databaseMock
-            .Setup(x => x.StringGetAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)payload);
-        _databaseMock
-            .Setup(x => x.KeyDeleteAsync(
-                It.IsAny<RedisKey>(),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
-        _dbContextMock
-            .Setup(x => x.ReservationHolds)
-            .Returns(new List<ReservationHold>().BuildMockDbSet().Object);
-
-        var sut = CreateSut();
-
-        var result = await sut.ReleaseHoldAsync(reservationId, CancellationToken.None);
-
-        result.Should().BeTrue();
-        _databaseMock.Verify(
-            x => x.KeyDeleteAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"vehicle_hold:{vehicleId}"),
-                It.IsAny<CommandFlags>()),
-            Times.Once);
-        _databaseMock.Verify(
-            x => x.KeyDeleteAsync(
-                It.Is<RedisKey>(k => k.ToString() == $"hold:{reservationId}"),
-                It.IsAny<CommandFlags>()),
-            Times.Once);
+        var reservation = new Reservation { Status = status, VehicleId = Guid.NewGuid() };
+        _context.Reservations.Add(reservation);
+        await _context.SaveChangesAsync();
+        return reservation;
     }
 
-    private static Mock<Microsoft.EntityFrameworkCore.DbSet<ReservationHold>> CreateReservationHoldSetMock(List<ReservationHold> holds)
-    {
-        var holdSetMock = holds.BuildMockDbSet();
-
-        holdSetMock
-            .Setup(x => x.AddAsync(It.IsAny<ReservationHold>(), It.IsAny<CancellationToken>()))
-            .Callback<ReservationHold, CancellationToken>((hold, _) => holds.Add(hold))
-            .ReturnsAsync((ReservationHold hold, CancellationToken _) => null!);
-
-        holdSetMock
-            .Setup(x => x.Remove(It.IsAny<ReservationHold>()))
-            .Callback<ReservationHold>(hold => holds.Remove(hold))
-            .Returns((ReservationHold _) => null!);
-
-        return holdSetMock;
+    public void Dispose() => _context.Dispose();
     }
-
-    private RedisReservationHoldService CreateSut() => new(
-        _redisMock.Object,
-        _dbContextMock.Object,
-        NullLogger<RedisReservationHoldService>.Instance);
-}

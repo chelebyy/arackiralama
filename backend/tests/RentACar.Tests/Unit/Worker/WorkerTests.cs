@@ -145,7 +145,8 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .Callback(() => reservation.Status = ReservationStatus.Expired)
             .ReturnsAsync(true);
         var reservationRepoMock = new Mock<IReservationRepository>();
         reservationRepoMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
@@ -159,7 +160,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
 
         job.Status.Should().Be(BackgroundJobStatus.Completed);
         reservation.Status.Should().Be(ReservationStatus.Expired);
-        holdServiceMock.Verify(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()), Times.Once);
+        holdServiceMock.Verify(h => h.ExpireHoldAsync(reservation.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -185,7 +186,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         var reservationRepoMock = new Mock<IReservationRepository>();
         reservationRepoMock.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
@@ -199,7 +200,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
 
         job.Status.Should().Be(BackgroundJobStatus.Completed);
         reservation.Status.Should().Be(ReservationStatus.Active);
-        holdServiceMock.Verify(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()), Times.Once);
+        holdServiceMock.Verify(h => h.ExpireHoldAsync(reservation.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Redis error"));
 
         var reservationRepoMock = new Mock<IReservationRepository>();
@@ -243,7 +244,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         job.Status.Should().Be(BackgroundJobStatus.Failed);
         job.RetryCount.Should().Be(3);
         job.LastError.Should().Contain("Redis error");
-        holdServiceMock.Verify(h => h.ReleaseHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Exactly(4));
+        holdServiceMock.Verify(h => h.ExpireHoldAsync(reservationId, It.IsAny<CancellationToken>()), Times.Exactly(4));
     }
 
     [Fact]
@@ -269,7 +270,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(reservation.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var reservationRepoMock = new Mock<IReservationRepository>();
@@ -285,7 +286,36 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         reservation.Status.Should().Be(ReservationStatus.Hold);
         job.Status.Should().Be(BackgroundJobStatus.Pending);
         job.RetryCount.Should().Be(1);
-        job.LastError.Should().Contain($"Failed to release hold for reservation {reservation.Id}");
+        job.LastError.Should().Contain($"Failed to expire hold for reservation {reservation.Id}");
+    }
+
+    [Theory]
+    [InlineData(-6, true)]
+    [InlineData(0, false)]
+    public async Task ProcessExpiredHoldJobsAsync_ReclaimsAbandonedButNotLiveProcessingJobs(int ageMinutes, bool reclaimed)
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var reservationId = Guid.NewGuid();
+        var job = new BackgroundJob
+        {
+            Type = BackgroundJobTypes.ReservationHoldReleaseExpired,
+            Status = BackgroundJobStatus.Processing,
+            Payload = JsonSerializer.Serialize(new { ReservationId = reservationId }),
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-10),
+            UpdatedAt = DateTime.UtcNow.AddMinutes(ageMinutes)
+        };
+        dbContext.BackgroundJobs.Add(job);
+        await dbContext.SaveChangesAsync();
+        var holds = new Mock<IReservationHoldService>();
+        holds.Setup(x => x.ExpireHoldAsync(reservationId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var provider = CreateServiceProvider(dbContext, holdServiceMock: holds.Object);
+        var worker = new RentACar.Worker.Worker(provider, Options.Create(new DailyBackupOptions { Enabled = false }),
+            new Mock<ILogger<RentACar.Worker.Worker>>().Object);
+
+        await InvokePrivateAsync(worker, "ProcessExpiredHoldJobsAsync", CancellationToken.None);
+
+        job.Status.Should().Be(reclaimed ? BackgroundJobStatus.Completed : BackgroundJobStatus.Processing);
+        holds.Verify(x => x.ExpireHoldAsync(reservationId, It.IsAny<CancellationToken>()), reclaimed ? Times.Once() : Times.Never());
     }
 
     [Fact]
@@ -429,10 +459,10 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
 
         using var cts = new CancellationTokenSource();
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(firstReservationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .Callback(cts.Cancel);
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()))
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(secondReservationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var reservationRepoMock = new Mock<IReservationRepository>();
@@ -449,8 +479,8 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
 
         await InvokePrivateAsync(worker, "ProcessExpiredHoldJobsAsync", cts.Token);
 
-        holdServiceMock.Verify(h => h.ReleaseHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
-        holdServiceMock.Verify(h => h.ReleaseHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Never);
+        holdServiceMock.Verify(h => h.ExpireHoldAsync(firstReservationId, It.IsAny<CancellationToken>()), Times.Once);
+        holdServiceMock.Verify(h => h.ExpireHoldAsync(secondReservationId, It.IsAny<CancellationToken>()), Times.Never);
         dbContext.BackgroundJobs.OrderBy(x => x.ScheduledAt).First().Status.Should().Be(BackgroundJobStatus.Completed);
         dbContext.BackgroundJobs.OrderBy(x => x.ScheduledAt).Last().Status.Should().Be(BackgroundJobStatus.Pending);
     }
@@ -476,7 +506,7 @@ public sealed class WorkerTests : IClassFixture<TestDbContextFactory>
         await dbContext.SaveChangesAsync();
 
         var holdServiceMock = new Mock<IReservationHoldService>();
-        holdServiceMock.Setup(h => h.ReleaseHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        holdServiceMock.Setup(h => h.ExpireHoldAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var reservationRepoMock = new Mock<IReservationRepository>();
         reservationRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Reservation?)null);

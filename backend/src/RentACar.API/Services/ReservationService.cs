@@ -1078,7 +1078,8 @@ public sealed class ReservationService : IReservationService
                         await transaction.CommitAsync(cancellationToken);
                     }
 
-                    var expiresAt = DateTime.UtcNow.Add(_defaultHoldDuration);
+                    var createdHold = await _holdService.GetHoldAsync(reservationId, cancellationToken);
+                    var expiresAt = createdHold?.ExpiresAt ?? DateTime.UtcNow.Add(_defaultHoldDuration);
 
                     _logger.LogInformation(
                         "Created hold for reservation {ReservationId}, vehicle {VehicleId}, expires {ExpiresAt}",
@@ -1169,7 +1170,8 @@ public sealed class ReservationService : IReservationService
         }
 
         var reservation = await _reservationRepository.GetByIdAsync(holdId, cancellationToken);
-        var newExpiry = DateTime.UtcNow.Add(TimeSpan.FromMinutes(5));
+        var snapshot = await _holdService.GetHoldAsync(holdId, cancellationToken);
+        var newExpiry = snapshot?.ExpiresAt ?? DateTime.UtcNow.Add(TimeSpan.FromMinutes(5));
 
         return new ReservationHoldDto
         {
@@ -1177,7 +1179,7 @@ public sealed class ReservationService : IReservationService
             ReservationId = holdId,
             ExpiresAt = newExpiry,
             SessionId = string.Empty,
-            RemainingMinutes = 5,
+            RemainingMinutes = Math.Max(0, (int)Math.Ceiling((newExpiry - DateTime.UtcNow).TotalMinutes)),
             IsExpired = false
         };
     }
@@ -1431,7 +1433,7 @@ public sealed class ReservationService : IReservationService
         {
             try
             {
-                await ExpireReservationAsync(reservationId, cancellationToken);
+                await _holdService.ExpireHoldAsync(reservationId, cancellationToken);
             }
             catch (Exception ex)
             {

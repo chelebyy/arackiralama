@@ -26,6 +26,7 @@ public sealed class Worker(
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
     private const int HoldReleaseRetryLimit = 3;
+    private static readonly TimeSpan HoldProcessingLease = TimeSpan.FromMinutes(5);
     private readonly BackgroundJobProcessorOptions _backgroundJobProcessorOptions = backgroundJobProcessorOptions?.Value ?? new();
     private readonly AccountClaimSecurityOptions _accountClaimSecurityOptions = accountClaimSecurityOptions?.Value ?? new();
     private DateTime _nextAccountClaimTokenCleanupUtc = DateTime.MinValue;
@@ -152,14 +153,15 @@ public sealed class Worker(
     {
         using var scope = serviceProvider.CreateScope();
         var holdService = scope.ServiceProvider.GetRequiredService<IReservationHoldService>();
-        var reservationRepository = scope.ServiceProvider.GetRequiredService<IReservationRepository>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 
+        var now = DateTime.UtcNow;
+        var staleBefore = now.Subtract(HoldProcessingLease);
         var jobIds = await dbContext.BackgroundJobs
             .Where(x =>
                 x.Type == BackgroundJobTypes.ReservationHoldReleaseExpired
-                && x.Status == BackgroundJobStatus.Pending
-                && x.ScheduledAt <= DateTime.UtcNow)
+                && ((x.Status == BackgroundJobStatus.Pending && x.ScheduledAt <= now)
+                    || (x.Status == BackgroundJobStatus.Processing && x.UpdatedAt <= staleBefore)))
             .OrderBy(x => x.ScheduledAt)
             .Select(x => x.Id)
             .Take(Math.Max(_backgroundJobProcessorOptions.BatchSize, 1))
@@ -194,34 +196,8 @@ public sealed class Worker(
                 payload = JsonSerializer.Deserialize<ReleaseExpiredHoldPayload>(job.Payload)
                     ?? throw new InvalidOperationException("ReleaseExpiredHold payload çözümlenemedi.");
 
-                var released = await holdService.ReleaseHoldAsync(payload.ReservationId, iterationCancellationToken);
-
-                // If Redis hold already gone (TTL expired mid-flight or concurrent release),
-                // the reservation may already be Expired in DB — check before treating as failure.
-                if (!released)
-                {
-                    var existingReservation = await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken);
-                    if (existingReservation?.Status is ReservationStatus.Expired)
-                    {
-                        // Redis hold TTL expired naturally; DB already reflects correct state.
-                        // Mark job completed so no further retries.
-                        released = true;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Failed to release hold for reservation {payload.ReservationId}");
-                    }
-                }
-
-                var reservation = released
-                    ? await reservationRepository.GetByIdAsync(payload.ReservationId, iterationCancellationToken)
-                    : null;
-                if (reservation != null && reservation.Status is ReservationStatus.Hold or ReservationStatus.Draft)
-                {
-                    reservation.Status = ReservationStatus.Expired;
-                    reservation.UpdatedAt = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync(iterationCancellationToken);
-                }
+                if (!await holdService.ExpireHoldAsync(payload.ReservationId, iterationCancellationToken))
+                    throw new InvalidOperationException($"Failed to expire hold for reservation {payload.ReservationId}");
 
                 job.Status = BackgroundJobStatus.Completed;
                 job.LastError = null;
@@ -485,12 +461,14 @@ public sealed class Worker(
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
+        var staleBefore = now.Subtract(HoldProcessingLease);
         var efDbContext = GetDbContext(dbContext);
 
         if (!efDbContext.Database.IsRelational())
         {
             var job = await dbContext.BackgroundJobs.SingleOrDefaultAsync(
-                x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending,
+                x => x.Id == jobId && (x.Status == BackgroundJobStatus.Pending
+                    || (x.Status == BackgroundJobStatus.Processing && x.UpdatedAt <= staleBefore)),
                 cancellationToken);
             if (job is null)
             {
@@ -504,7 +482,8 @@ public sealed class Worker(
         }
 
         var affectedRows = await dbContext.BackgroundJobs
-            .Where(x => x.Id == jobId && x.Status == BackgroundJobStatus.Pending)
+            .Where(x => x.Id == jobId && (x.Status == BackgroundJobStatus.Pending
+                    || (x.Status == BackgroundJobStatus.Processing && x.UpdatedAt <= staleBefore)))
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(x => x.Status, BackgroundJobStatus.Processing)
@@ -530,7 +509,7 @@ public sealed class Worker(
 
         try
         {
-            var cleanupReleased = await holdService.ReleaseHoldAsync(payload.ReservationId, cancellationToken);
+            var cleanupReleased = await holdService.ExpireHoldAsync(payload.ReservationId, cancellationToken);
             if (!cleanupReleased)
             {
                 logger.LogWarning(

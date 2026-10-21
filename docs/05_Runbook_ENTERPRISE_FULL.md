@@ -368,6 +368,8 @@ docker logs worker --tail=100 | grep -E "(webhook|payment)" | grep -i success
 
 # 3. Reservation Conflict Spike
 
+For durable hold authority, conditional expiry, and the required upgrade drain/reconciliation procedure, see [Durable reservation holds](Durable_Reservation_Holds.md). Redis key deletion alone does not release a PostgreSQL reservation.
+
 ## 3.1 Symptoms
 
 - Multiple `RESERVATION_CONFLICT` errors (409)
