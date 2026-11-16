@@ -11,7 +11,7 @@ ARG DEPLOY_CACHE_BUST=1
 COPY . .
 RUN dotnet publish "src/RentACar.API/RentACar.API.csproj" -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 WORKDIR /app
 
 RUN apt-get update && \
