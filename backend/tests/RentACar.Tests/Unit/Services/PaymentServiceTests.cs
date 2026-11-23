@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -295,6 +299,70 @@ public sealed class PaymentServiceTests : IDisposable
         reservation.Status.Should().Be(ReservationStatus.Paid);
     }
 
+    [Theory]
+    [InlineData("Mock", "ok")]
+    [InlineData("Iyzico", "ok")]
+    [InlineData("Mock", "{\"status\":\"success\"}")]
+    [InlineData("Iyzico", "{\"status\":\"success\"}")]
+    public async Task CompleteThreeDsAsync_WhenCallbackIsUnauthenticated_PreservesPendingIntentForValidCallback(
+        string providerName,
+        string bankResponse)
+    {
+        const string callbackSecret = "callback-regression-test-secret";
+        var options = Options.Create(new PaymentOptions
+        {
+            Mock = new MockProviderOptions { WebhookSecret = callbackSecret },
+            Iyzico = new IyzicoProviderOptions { SecretKey = callbackSecret }
+        });
+        IPaymentProvider provider = providerName == "Mock"
+            ? new MockPaymentProvider(options, NullLogger<MockPaymentProvider>.Instance)
+            : new IyzicoPaymentProvider(options, NullLogger<IyzicoPaymentProvider>.Instance);
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync(ReservationStatus.PendingPayment);
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id,
+            "unauthenticated-callback",
+            PaymentStatus.Pending,
+            providerIntentId: "pending-provider-intent");
+        var intentUpdatedAt = intent.UpdatedAt;
+        var reservationUpdatedAt = reservation.UpdatedAt;
+
+        var rejectedCallback = () => sut.CompleteThreeDsAsync(
+            intent.Id,
+            new ThreeDsReturnApiRequest { BankResponse = bankResponse },
+            CancellationToken.None);
+
+        await rejectedCallback.Should().ThrowAsync<UnauthorizedAccessException>();
+        intent.Status.Should().Be(PaymentStatus.Pending);
+        intent.UpdatedAt.Should().Be(intentUpdatedAt);
+        intent.ProviderTransactionId.Should().BeNull();
+        reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+        reservation.UpdatedAt.Should().Be(reservationUpdatedAt);
+
+        var timestamp = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        var signature = Convert.ToHexString(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(callbackSecret),
+            Encoding.UTF8.GetBytes($"pending-provider-intent.success.verified-transaction.{timestamp}")));
+        var validCallback = JsonSerializer.Serialize(new
+        {
+            providerIntentId = "pending-provider-intent",
+            status = "success",
+            transactionId = "verified-transaction",
+            timestamp,
+            signature
+        });
+
+        var result = await sut.CompleteThreeDsAsync(
+            intent.Id,
+            new ThreeDsReturnApiRequest { BankResponse = validCallback },
+            CancellationToken.None);
+
+        result!.Status.Should().Be(PaymentProviderIntentStatus.Succeeded.ToString());
+        intent.Status.Should().Be(PaymentStatus.Succeeded);
+        intent.ProviderTransactionId.Should().Be("verified-transaction");
+        reservation.Status.Should().Be(ReservationStatus.Paid);
+    }
+
     [Fact]
     public async Task CompleteThreeDsAsync_WhenVerificationFails_MarksIntentFailedWithoutPayingReservation()
     {
@@ -320,6 +388,39 @@ public sealed class PaymentServiceTests : IDisposable
         result!.Status.Should().Be(PaymentProviderIntentStatus.Failed.ToString());
         intent.Status.Should().Be(PaymentStatus.Failed);
         reservation.Status.Should().Be(ReservationStatus.PendingPayment);
+    }
+
+    [Theory]
+    [InlineData(PaymentStatus.Succeeded)]
+    [InlineData(PaymentStatus.Refunded)]
+    [InlineData(PaymentStatus.Cancelled)]
+    [InlineData(PaymentStatus.Failed)]
+    public async Task CompleteThreeDsAsync_WhenIntentIsTerminal_PreservesStoredOutcome(PaymentStatus status)
+    {
+        var provider = new FakePaymentProvider
+        {
+            VerifyPaymentResult = new PaymentVerificationProviderResult
+            {
+                Status = PaymentProviderIntentStatus.Failed,
+                TransactionId = "replacement"
+            }
+        };
+        var sut = CreateSut(provider);
+        var reservation = await SeedReservationAsync(status: ReservationStatus.Paid);
+        var intent = await SeedPaymentIntentAsync(
+            reservation.Id, "terminal-retry", status,
+            providerIntentId: "provider-intent",
+            providerTransactionId: "original-transaction");
+        var updatedAt = intent.UpdatedAt;
+
+        var result = await sut.CompleteThreeDsAsync(
+            intent.Id, new ThreeDsReturnApiRequest { BankResponse = "invalid" }, CancellationToken.None);
+
+        result!.Status.Should().Be(status.ToString());
+        intent.Status.Should().Be(status);
+        intent.ProviderTransactionId.Should().Be("original-transaction");
+        intent.UpdatedAt.Should().Be(updatedAt);
+        reservation.Status.Should().Be(ReservationStatus.Paid);
     }
 
     [Fact]
@@ -1177,7 +1278,7 @@ public sealed class PaymentServiceTests : IDisposable
     }
 
     private PaymentService CreateSut(
-        FakePaymentProvider? paymentProvider = null,
+        IPaymentProvider? paymentProvider = null,
         bool enablePayments = true)
     {
         return new PaymentService(

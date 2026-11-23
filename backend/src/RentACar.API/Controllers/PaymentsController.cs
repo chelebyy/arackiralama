@@ -79,13 +79,20 @@ public sealed class PaymentsController(
             return BadRequestResponse("Banka dönüş verisi boş olamaz.");
         }
 
-        var result = await paymentService.CompleteThreeDsAsync(intentId, request, cancellationToken);
-        if (result == null)
+        try
         {
-            return NotFound("Payment intent bulunamadı.");
-        }
+            var result = await paymentService.CompleteThreeDsAsync(intentId, request, cancellationToken);
+            if (result == null)
+            {
+                return NotFound("Payment intent bulunamadı.");
+            }
 
-        return OkResponse(result, "3D Secure doğrulaması işlendi.");
+            return OkResponse(result, "3D Secure doğrulaması işlendi.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return UnauthorizedResponse("3D Secure dönüş verisi doğrulanamadı.");
+        }
     }
 
     [HttpPost("webhook/{provider}")]
