@@ -1093,9 +1093,34 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid>("CustomerId")
+                    b.Property<Guid?>("CustomerId")
                         .HasColumnType("uuid")
                         .HasColumnName("customer_id");
+
+                    b.Property<string>("GuestEmail")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("guest_email");
+
+                    b.Property<string>("GuestFullName")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)")
+                        .HasColumnName("guest_full_name");
+
+                    b.Property<string>("GuestIdentityNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("guest_identity_number");
+
+                    b.Property<string>("GuestLocale")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("guest_locale");
+
+                    b.Property<string>("GuestPhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("guest_phone");
 
                     b.Property<DateTime?>("DriverDateOfBirth")
                         .HasColumnType("timestamp with time zone")
@@ -1975,8 +2000,7 @@ namespace RentACar.Infrastructure.Data.Migrations
                     b.HasOne("RentACar.Core.Entities.Customer", "Customer")
                         .WithMany("Reservations")
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("RentACar.Core.Entities.Office", "PickupOffice")
                         .WithMany()

@@ -676,7 +676,7 @@ public sealed class PaymentServiceTests : IDisposable
         };
         _dbContext.Customers.Add(new Customer
         {
-            Id = reservation.CustomerId,
+            Id = reservation.CustomerId!.Value,
             FullName = "Test Customer",
             Email = "customer@example.com",
             Phone = "+905551112233"
@@ -797,8 +797,10 @@ public sealed class PaymentServiceTests : IDisposable
             Times.Once);
     }
 
-    [Fact]
-    public async Task ProcessPendingWebhookJobsAsync_WhenPaymentSucceeds_QueuesReminderNotifications()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProcessPendingWebhookJobsAsync_WhenPaymentSucceeds_QueuesReminderNotifications(bool guest)
     {
         var reservation = new Reservation
         {
@@ -812,11 +814,18 @@ public sealed class PaymentServiceTests : IDisposable
         };
         _dbContext.Customers.Add(new Customer
         {
-            Id = reservation.CustomerId,
+            Id = reservation.CustomerId!.Value,
             FullName = "Reminder Customer",
             Email = "reminder@example.com",
             Phone = "+905551110000"
         });
+        if (guest)
+        {
+            reservation.CustomerId = null;
+            reservation.GuestEmail = "guest-reminder@example.test";
+            reservation.GuestPhone = "+905559998877";
+            reservation.GuestLocale = "de";
+        }
         var paymentIntent = new PaymentIntent
         {
             ReservationId = reservation.Id,
@@ -846,6 +855,16 @@ public sealed class PaymentServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         await _sut.ProcessPendingWebhookJobsAsync();
+
+        if (guest)
+        {
+            _notificationQueueServiceMock.Verify(x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.ToEmail == reservation.GuestEmail && r.Locale == "de-DE"),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            _notificationQueueServiceMock.Verify(x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.ToPhoneNumber == reservation.GuestPhone && r.Locale == "de-DE"),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        }
 
         _notificationQueueServiceMock.Verify(
             x => x.EnqueueEmailAsync(
@@ -904,7 +923,7 @@ public sealed class PaymentServiceTests : IDisposable
 
         _dbContext.Customers.Add(new Customer
         {
-            Id = reservation.CustomerId,
+            Id = reservation.CustomerId!.Value,
             FullName = "Rollback Customer",
             Email = "rollback@example.com",
             Phone = "+905551110001"

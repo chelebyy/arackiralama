@@ -50,7 +50,7 @@ public sealed class ReservationsController(IReservationService reservationServic
                 IdempotencyKey = idempotencyKey?.Trim()
             };
             var reservation = await reservationService.CreateDraftReservationAsync(request, cancellationToken);
-            return OkResponse(reservation, "Rezervasyon başarıyla oluşturuldu.");
+            return OkResponse(GuestReservationCreatedDto.FromReservation(reservation), "Rezervasyon başarıyla oluşturuldu.");
         }
         catch (ReservationQuoteConflictException ex)
         {
@@ -98,7 +98,7 @@ public sealed class ReservationsController(IReservationService reservationServic
                 IdempotencyKey = idempotencyKey?.Trim()
             };
             var reservation = await reservationService.CreateUnpaidRequestAsync(request, cancellationToken);
-            return OkResponse(reservation, reservation.Status == "Confirmed"
+            return OkResponse(GuestReservationCreatedDto.FromReservation(reservation), reservation.Status == "Confirmed"
                 ? "Rezervasyon kesinleşti. Ödeme araç tesliminde alınacaktır."
                 : "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
         }

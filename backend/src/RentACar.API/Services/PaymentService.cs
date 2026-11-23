@@ -1032,7 +1032,7 @@ public sealed class PaymentService(
     }
 
     private async Task QueueReminderIfFutureAsync(
-        Customer customer,
+        ReservationNotificationContact customer,
         string templateKey,
         DateTime scheduledAtUtc,
         string locale,
@@ -1093,11 +1093,15 @@ public sealed class PaymentService(
         };
     }
 
-    private async Task<Customer?> ResolveCustomerAsync(Reservation reservation, CancellationToken cancellationToken)
+    private async Task<ReservationNotificationContact?> ResolveCustomerAsync(Reservation reservation, CancellationToken cancellationToken)
     {
-        return await _dbContext.Customers
+        if (reservation.GuestEmail is not null)
+            return ReservationNotificationContact.FromGuest(reservation);
+        if (!reservation.CustomerId.HasValue) return null;
+        var customer = await _dbContext.Customers
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == reservation.CustomerId, cancellationToken);
+        return customer is null ? null : ReservationNotificationContact.FromCustomer(customer);
     }
 
     private async Task<decimal> GetReservationDepositAmountAsync(Guid reservationId, CancellationToken cancellationToken)

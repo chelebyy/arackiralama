@@ -2,6 +2,7 @@ import { get, post, patch } from './client';
 import { API_ENDPOINTS } from './config';
 import type {
   CreateReservationData,
+  GuestReservationCreated,
   ExtendHoldData,
   HoldReservationData,
   PublicReservationSummary,
@@ -21,19 +22,19 @@ function requestHeaders(options?: ReservationRequestOptions) {
 export async function createReservation(
   data: CreateReservationData,
   options?: ReservationRequestOptions
-): Promise<Reservation> {
+): Promise<GuestReservationCreated> {
   return options
-    ? post<Reservation>(API_ENDPOINTS.reservations.create, data, { headers: requestHeaders(options) })
-    : post<Reservation>(API_ENDPOINTS.reservations.create, data);
+    ? post<GuestReservationCreated>(API_ENDPOINTS.reservations.create, data, { headers: requestHeaders(options) })
+    : post<GuestReservationCreated>(API_ENDPOINTS.reservations.create, data);
 }
 
 export async function createUnpaidReservationRequest(
   data: CreateReservationData,
   options?: ReservationRequestOptions
-): Promise<Reservation> {
+): Promise<GuestReservationCreated> {
   return options
-    ? post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data, { headers: requestHeaders(options) })
-    : post<Reservation>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
+    ? post<GuestReservationCreated>(API_ENDPOINTS.reservations.createUnpaidRequest, data, { headers: requestHeaders(options) })
+    : post<GuestReservationCreated>(API_ENDPOINTS.reservations.createUnpaidRequest, data);
 }
 
 export async function getReservationByPublicCode(code: string): Promise<PublicReservationSummary> {

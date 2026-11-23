@@ -495,3 +495,9 @@ export interface HoldReservationData {
 export interface ExtendHoldData {
   additionalMinutes: number;
 }
+
+export interface GuestReservationCreated {
+  id: string;
+  publicCode: string;
+  status: string;
+}

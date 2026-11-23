@@ -7,7 +7,12 @@ public class Reservation : BaseEntity
     public const int PublicCodeMaxLength = 24;
 
     public string PublicCode { get; set; } = string.Empty;
-    public Guid CustomerId { get; set; }
+    public Guid? CustomerId { get; set; }
+    public string? GuestFullName { get; set; }
+    public string? GuestEmail { get; set; }
+    public string? GuestPhone { get; set; }
+    public string? GuestIdentityNumber { get; set; }
+    public string? GuestLocale { get; set; }
     public Guid VehicleId { get; set; }
     public Guid PickupOfficeId { get; set; }
     public Guid ReturnOfficeId { get; set; }

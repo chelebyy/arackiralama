@@ -16,7 +16,7 @@ import {
   getReservationByPublicCode,
   placeHold,
 } from "@/lib/api/reservations";
-import type { CreateReservationData, PublicReservationSummary, Reservation } from "@/lib/api/types";
+import type { CreateReservationData, GuestReservationCreated, PublicReservationSummary, Reservation } from "@/lib/api/types";
 
 vi.mock("@/lib/api/reservations", () => ({
   createReservation: vi.fn(),
@@ -117,17 +117,22 @@ describe("useReservations", () => {
   });
 
   it("creates reservations through the mutation hook", async () => {
-    mockedCreateReservation.mockResolvedValue(reservation);
+    const receipt: GuestReservationCreated = {
+      id: reservation.id,
+      publicCode: reservation.publicCode,
+      status: reservation.status,
+    };
+    mockedCreateReservation.mockResolvedValue(receipt);
 
     const { result } = renderHook(() => useCreateReservation(), { wrapper });
 
-    let created: Reservation | null = null;
+    let created: GuestReservationCreated | null = null;
     await act(async () => {
       created = await result.current.create(createData);
     });
 
     expect(mockedCreateReservation).toHaveBeenCalledWith(createData);
-    expect(created).toEqual(reservation);
+    expect(created).toEqual(receipt);
     expect(result.current.error).toBeNull();
   });
 

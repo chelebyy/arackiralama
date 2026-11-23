@@ -86,7 +86,7 @@ function normalizeReservation(reservation: AdminReservation): AdminReservation {
     totalAmount?: number;
     pickupDateTime?: string;
     returnDateTime?: string;
-    customerId?: string;
+    customerId?: string | null;
     customerEmail?: string;
     customerPhone?: string;
     vehicleBrand?: string;

@@ -29,6 +29,32 @@ public class IdempotencyMiddlewareTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task InvokeAsync_DoesNotReadPreIsolationCachedResponses(bool reservationEndpoint)
+    {
+        var key = Guid.NewGuid().ToString();
+        var context = CreateHttpContext("POST", key);
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("{}"));
+        context.SetEndpoint(CreateEndpointWithAttribute(new IdempotentAttribute { UseQuoteReplay = reservationEndpoint }));
+        var legacy = JsonSerializer.Serialize(new { StatusCode = 200, Body = "private-customer-profile" });
+        _databaseMock.Setup(x => x.StringGetAsync((RedisKey)$"idempotent:{key}", It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisValue)legacy);
+        var reachedHandler = false;
+        var middleware = new IdempotencyMiddleware(current =>
+        {
+            reachedHandler = true;
+            current.Response.StatusCode = 409;
+            return Task.CompletedTask;
+        }, _loggerMock.Object);
+
+        await middleware.InvokeAsync(context, _redisMock.Object);
+
+        reachedHandler.Should().BeTrue();
+        _databaseMock.Verify(x => x.StringGetAsync((RedisKey)$"idempotent:{key}", It.IsAny<CommandFlags>()), Times.Never);
+    }
+
+    [Theory]
     [InlineData("{\"quoteId\":\"quote\"}")]
     [InlineData("{\"QuoteId\":\"quote\"}")]
     [InlineData("{\"quoteId\":null,\"vehicleId\":\"vehicle\"}")]

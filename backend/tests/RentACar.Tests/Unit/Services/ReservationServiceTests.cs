@@ -895,7 +895,7 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
-    public async Task CreateDraftReservationAsync_WhenExistingCustomerEmailDiffersByCase_ReusesExistingCustomerByNormalizedEmail()
+    public async Task CreateDraftReservationAsync_WhenExistingCustomerEmailDiffersByCase_KeepsGuestUnlinked()
     {
         // Arrange
         var groupId = Guid.NewGuid();
@@ -996,17 +996,50 @@ public sealed class ReservationServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result.CustomerId.Should().Be(existingCustomerId);
-        result.CustomerEmail.Should().Be(existingCustomer.Email);
+        result.CustomerId.Should().BeNull();
+        result.CustomerReservationCount.Should().Be(0);
+        result.CustomerTotalSpent.Should().Be(0m);
+        result.CustomerEmail.Should().Be(request.Customer.Email.Trim());
 
         _customerRepositoryMock.Verify(
             x => x.AddAsync(It.IsAny<Customer>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         _reservationRepositoryMock.Verify(x => x.AddAsync(
-            It.Is<Reservation>(r => r.CustomerId == existingCustomerId),
+            It.Is<Reservation>(r => r.CustomerId == null && r.Customer == null && r.GuestEmail == request.Customer.Email.Trim()),
             It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateReservationAsync_GuestContactRemainsLocalAndHasNoAccountStatistics()
+    {
+        var reservation = new Reservation
+        {
+            PublicCode = "GUEST-UPDATE", GuestFullName = "Original Guest", GuestEmail = "guest@example.test",
+            GuestPhone = "original-phone", Status = ReservationStatus.Confirmed,
+            PickupDateTime = DateTime.UtcNow.AddDays(5), ReturnDateTime = DateTime.UtcNow.AddDays(7)
+        };
+        _reservationRepositoryMock.Setup(x => x.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        _applicationDbContextMock.Setup(x => x.Reservations).Returns(new List<Reservation>
+        {
+            new() { CustomerId = null, TotalAmount = 99999m, Status = ReservationStatus.Completed }
+        }.BuildMockDbSet().Object);
+        var result = await _sut.UpdateReservationAsync(reservation.Id, new UpdateReservationRequest
+        {
+            Customer = new CustomerInfoRequest { FirstName = "Changed", LastName = "Guest", Email = "other@example.test", Phone = "new-phone" }
+        }, CancellationToken.None);
+        result.Should().NotBeNull();
+        result!.CustomerId.Should().BeNull();
+        result.CustomerName.Should().Be("Changed Guest");
+        result.CustomerEmail.Should().Be("other@example.test");
+        result.CustomerPhone.Should().Be("new-phone");
+        result.CustomerReservationCount.Should().Be(0);
+        result.CustomerTotalSpent.Should().Be(0m);
+        reservation.Customer.Should().BeNull();
+        _customerRepositoryMock.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _customerRepositoryMock.Verify(x => x.GetQueryable(), Times.Never);
     }
 
     [Fact]
@@ -1898,8 +1931,10 @@ public sealed class ReservationServiceTests
         _applicationDbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task ConfirmPaymentAsync_WhenPaymentConfirmed_QueuesConfirmationAndReminderNotifications()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConfirmPaymentAsync_WhenPaymentConfirmed_QueuesConfirmationAndReminderNotifications(bool guest)
     {
         var reservationId = Guid.NewGuid();
         var pickupDateTimeUtc = DateTime.UtcNow.AddDays(3);
@@ -1924,6 +1959,15 @@ public sealed class ReservationServiceTests
             TotalAmount = 1000m
         };
 
+        if (guest)
+        {
+            reservation.CustomerId = null;
+            reservation.Customer = null;
+            reservation.GuestEmail = "guest-confirm@example.test";
+            reservation.GuestPhone = "+905559998877";
+            reservation.GuestLocale = "de";
+        }
+
         var paymentIntent = new PaymentIntent
         {
             ReservationId = reservationId,
@@ -1946,6 +1990,15 @@ public sealed class ReservationServiceTests
         var result = await _sut.ConfirmPaymentAsync(reservationId, "provider-tx-confirm", CancellationToken.None);
 
         result.Should().NotBeNull();
+        if (guest)
+        {
+            _notificationQueueServiceMock.Verify(x => x.EnqueueEmailAsync(
+                It.Is<QueuedEmailNotificationRequest>(r => r.ToEmail == reservation.GuestEmail && r.Locale == "de-DE"),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+            _notificationQueueServiceMock.Verify(x => x.EnqueueSmsAsync(
+                It.Is<QueuedSmsNotificationRequest>(r => r.ToPhoneNumber == reservation.GuestPhone && r.Locale == "de-DE"),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        }
         _notificationQueueServiceMock.Verify(
             x => x.EnqueueEmailAsync(
                 It.Is<QueuedEmailNotificationRequest>(r => r.TemplateKey == NotificationTemplateKeys.ReservationConfirmed),
