@@ -134,7 +134,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -191,6 +191,14 @@ jobs:
           file: backend/src/RentACar.Worker/Dockerfile
           push: false
           tags: rentacar-worker:ci
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: false
+          tags: rentacar-web:ci
 
   docker-push:
     name: Docker Push to GHCR
