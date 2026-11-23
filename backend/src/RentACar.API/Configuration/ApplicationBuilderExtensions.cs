@@ -55,7 +55,6 @@ public static class ApplicationBuilderExtensions
         app.UseMiddleware<CultureMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseMiddleware<PublicCustomerAccountSurfaceMiddleware>();
-        app.UseMiddleware<IdempotencyMiddleware>();
         var webRoot = string.IsNullOrWhiteSpace(app.Environment.WebRootPath)
             ? Path.Combine(app.Environment.ContentRootPath, "wwwroot")
             : app.Environment.WebRootPath;
@@ -72,6 +71,7 @@ public static class ApplicationBuilderExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseRateLimiter();
+        app.UseMiddleware<IdempotencyMiddleware>();
 
         app.MapHealthChecks("/health", new HealthCheckOptions());
         app.MapControllers();

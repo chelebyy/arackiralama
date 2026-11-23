@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
@@ -26,6 +28,141 @@ public class IdempotencyMiddlewareTests
         _databaseMock = new Mock<IDatabase>();
         _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
             .Returns(_databaseMock.Object);
+    }
+
+    [Theory]
+    [InlineData("path")]
+    [InlineData("method")]
+    [InlineData("session")]
+    [InlineData("principal")]
+    [InlineData("query")]
+    public async Task InvokeAsync_LegacyCache_DoesNotReplayAcrossRequestScopes(string changedScope)
+    {
+        UseInMemoryRedis();
+        var first = CreateLegacyRequest("{\"customer\":{\"email\":\"first@example.test\"}}");
+        var second = CreateLegacyRequest("{\"customer\":{\"email\":\"first@example.test\"}}");
+        switch (changedScope)
+        {
+            case "path": second.Request.Path = "/api/v1/reservations/unpaid-requests"; break;
+            case "method": second.Request.Method = "PUT"; break;
+            case "session": second.Request.Headers["X-Session-Id"] = "another-session"; break;
+            case "principal":
+                second.User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, "another-principal")], "test"));
+                break;
+            case "query": second.Request.QueryString = new QueryString("?variant=another"); break;
+        }
+        var executions = 0;
+        var middleware = new IdempotencyMiddleware(async current =>
+        {
+            executions++;
+            await current.Response.WriteAsync($"{{\"execution\":{executions}}}");
+        }, _loggerMock.Object);
+
+        await middleware.InvokeAsync(first, _redisMock.Object);
+        await middleware.InvokeAsync(second, _redisMock.Object);
+
+        executions.Should().Be(2);
+        second.Response.Headers["X-Idempotency-Status"].Should().Contain("MISS");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LegacyCache_ChangedPayloadRejectsReplay()
+    {
+        UseInMemoryRedis();
+        var first = CreateLegacyRequest("{\"customer\":{\"email\":\"first@example.test\"}}");
+        var second = CreateLegacyRequest("{\"customer\":{\"email\":\"second@example.test\"}}");
+        var executions = 0;
+        var middleware = new IdempotencyMiddleware(async current =>
+        {
+            executions++;
+            await current.Response.WriteAsync("{\"data\":\"private-first-response\"}");
+        }, _loggerMock.Object);
+
+        await middleware.InvokeAsync(first, _redisMock.Object);
+        await middleware.InvokeAsync(second, _redisMock.Object);
+
+        executions.Should().Be(1);
+        second.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        second.Response.Body.Position = 0;
+        var response = await new StreamReader(second.Response.Body).ReadToEndAsync();
+        response.Should().NotContain("private-first-response");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LegacyCache_IdenticalRetryReplaysAfterRestoringRequestBody()
+    {
+        UseInMemoryRedis();
+        const string body = "{\"customer\":{\"email\":\"first@example.test\"}}";
+        var executions = 0;
+        var middleware = new IdempotencyMiddleware(async current =>
+        {
+            executions++;
+            using var reader = new StreamReader(current.Request.Body, leaveOpen: true);
+            (await reader.ReadToEndAsync()).Should().Be(body);
+            await current.Response.WriteAsync("{\"data\":\"original-result\"}");
+        }, _loggerMock.Object);
+        var first = CreateLegacyRequest(body);
+        var retry = CreateLegacyRequest(body);
+
+        await middleware.InvokeAsync(first, _redisMock.Object);
+        await middleware.InvokeAsync(retry, _redisMock.Object);
+
+        executions.Should().Be(1);
+        retry.Response.Headers["X-Idempotency-Status"].Should().Contain("HIT");
+        retry.Response.Body.Position = 0;
+        (await new StreamReader(retry.Response.Body).ReadToEndAsync()).Should().Contain("original-result");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LegacyCache_IgnoresOldUnscopedEntries()
+    {
+        var cache = UseInMemoryRedis();
+        cache["idempotent:shared-regression-key"] = JsonSerializer.Serialize(new
+        {
+            StatusCode = 200,
+            ContentType = "application/json",
+            Body = "old-private-response"
+        });
+        var request = CreateLegacyRequest("{}");
+        var reachedHandler = false;
+        var middleware = new IdempotencyMiddleware(current =>
+        {
+            reachedHandler = true;
+            return current.Response.WriteAsync("new-response");
+        }, _loggerMock.Object);
+
+        await middleware.InvokeAsync(request, _redisMock.Object);
+
+        reachedHandler.Should().BeTrue();
+        request.Response.Headers["X-Idempotency-Status"].Should().Contain("MISS");
+    }
+
+    private Dictionary<string, RedisValue> UseInMemoryRedis()
+    {
+        var cache = new Dictionary<string, RedisValue>();
+        _databaseMock.Setup(database => database.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) => cache.GetValueOrDefault(key.ToString(), RedisValue.Null));
+        _databaseMock.Setup(database => database.StringSetAsync(
+                It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<Expiration>(),
+                It.IsAny<ValueCondition>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, RedisValue value, Expiration _, ValueCondition _, CommandFlags _) =>
+            {
+                cache[key.ToString()] = value;
+                return true;
+            });
+        return cache;
+    }
+
+    private static DefaultHttpContext CreateLegacyRequest(string body)
+    {
+        var context = CreateHttpContext("POST", "shared-regression-key");
+        context.Request.Path = "/api/v1/reservations";
+        context.Request.Headers["X-Session-Id"] = "original-session";
+        context.Request.ContentType = "application/json";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        context.SetEndpoint(CreateEndpointWithAttribute(new IdempotentAttribute { UseQuoteReplay = true }));
+        return context;
     }
 
     [Theory]
@@ -121,7 +258,8 @@ public class IdempotencyMiddlewareTests
         {
             StatusCode = 200,
             ContentType = "application/json",
-            Body = "{\"success\":true,\"data\":\"cached\"}"
+            Body = "{\"success\":true,\"data\":\"cached\"}",
+            RequestFingerprint = Convert.ToHexString(SHA256.HashData([]))
         });
         _databaseMock.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync((RedisValue)cachedData);
