@@ -174,6 +174,12 @@ export interface PublicReservationSummary {
   currency: string;
 }
 
+export interface PublicReservationCreated {
+  id: string;
+  publicCode: string;
+  status: string;
+}
+
 export interface Reservation {
   id: string;
   publicCode: string;

@@ -7,6 +7,7 @@ vi.mock("./client", () => ({
 }));
 
 import { get, patch, post } from "./client";
+import type { PublicReservationCreated } from "./types";
 import {
   createReservation,
   createUnpaidReservationRequest,
@@ -39,9 +40,13 @@ describe("reservations API", () => {
       customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.com", phone: "+905551234567" },
     };
 
-    await createReservation(payload);
+    const created: PublicReservationCreated = { id: "reservation-1", publicCode: "ALN-123", status: "Draft" };
+    mockedPost.mockResolvedValue(created);
+
+    const result = await createReservation(payload);
 
     expect(mockedPost).toHaveBeenCalledWith("/reservations", payload);
+    expect(result).toEqual(created);
   });
 
   it("passes the quote session and idempotency headers when supplied", async () => {
@@ -73,9 +78,13 @@ describe("reservations API", () => {
       customer: { firstName: "Jane", lastName: "Doe", email: "jane@example.com", phone: "+905551234567" },
     };
 
-    await createUnpaidReservationRequest(payload);
+    const created: PublicReservationCreated = { id: "reservation-2", publicCode: "ALN-124", status: "Confirmed" };
+    mockedPost.mockResolvedValue(created);
+
+    const result = await createUnpaidReservationRequest(payload);
 
     expect(mockedPost).toHaveBeenCalledWith("/reservations/unpaid-requests", payload);
+    expect(result).toEqual(created);
   });
 
   it("gets reservations by public code", async () => {

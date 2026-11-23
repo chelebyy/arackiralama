@@ -20,4 +20,6 @@ public sealed class IdempotentAttribute : Attribute
     public bool RequireKey { get; set; } = false;
 
     public bool UseQuoteReplay { get; set; }
+
+    public string ResponseVersion { get; set; } = string.Empty;
 }

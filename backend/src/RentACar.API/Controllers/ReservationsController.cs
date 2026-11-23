@@ -15,7 +15,7 @@ public sealed class ReservationsController(IReservationService reservationServic
 {
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
-    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true)]
+    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true, ResponseVersion = "public-create-v1")]
     public async Task<IActionResult> Create(
         [FromBody] CreateReservationRequest request,
         CancellationToken cancellationToken,
@@ -50,7 +50,7 @@ public sealed class ReservationsController(IReservationService reservationServic
                 IdempotencyKey = idempotencyKey?.Trim()
             };
             var reservation = await reservationService.CreateDraftReservationAsync(request, cancellationToken);
-            return OkResponse(reservation, "Rezervasyon başarıyla oluşturuldu.");
+            return OkResponse(ToPublicCreatedDto(reservation), "Rezervasyon başarıyla oluşturuldu.");
         }
         catch (ReservationQuoteConflictException ex)
         {
@@ -68,7 +68,7 @@ public sealed class ReservationsController(IReservationService reservationServic
 
     [HttpPost("unpaid-requests")]
     [EnableRateLimiting(RateLimitPolicyNames.Strict)]
-    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true)]
+    [Idempotent(ExpirationHours = 24, UseQuoteReplay = true, ResponseVersion = "public-create-v1")]
     public async Task<IActionResult> CreateUnpaidRequest(
         [FromBody] CreateReservationRequest request,
         CancellationToken cancellationToken,
@@ -98,7 +98,7 @@ public sealed class ReservationsController(IReservationService reservationServic
                 IdempotencyKey = idempotencyKey?.Trim()
             };
             var reservation = await reservationService.CreateUnpaidRequestAsync(request, cancellationToken);
-            return OkResponse(reservation, reservation.Status == "Confirmed"
+            return OkResponse(ToPublicCreatedDto(reservation), reservation.Status == "Confirmed"
                 ? "Rezervasyon kesinleşti. Ödeme araç tesliminde alınacaktır."
                 : "Talebiniz alındı. Araç 24 saat süreyle bloke edildi.");
         }
@@ -211,4 +211,11 @@ public sealed class ReservationsController(IReservationService reservationServic
 
         return OkResponse<object?>(null, "Rezervasyon tutması serbest bırakıldı.");
     }
+
+    private static PublicReservationCreatedDto ToPublicCreatedDto(ReservationDto reservation) => new()
+    {
+        Id = reservation.Id,
+        PublicCode = reservation.PublicCode,
+        Status = reservation.Status
+    };
 }

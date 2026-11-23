@@ -11,6 +11,7 @@ import type {
   CreateReservationData,
   ExtendHoldData,
   HoldReservationData,
+  PublicReservationCreated,
   PublicReservationSummary,
   Reservation,
 } from '@/lib/api/types';
@@ -47,7 +48,7 @@ export function useCreateReservation() {
   const { mutate } = useSWRConfig();
 
   const create = useCallback(
-    async (data: CreateReservationData): Promise<Reservation | null> => {
+    async (data: CreateReservationData): Promise<PublicReservationCreated | null> => {
       setIsCreating(true);
       setError(null);
       try {
