@@ -36,6 +36,12 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.Property(x => x.UnpaidRequestExpiresAtUtc).HasColumnName("unpaid_request_expires_at_utc");
         builder.Property(x => x.DriverFirstName).HasColumnName("driver_first_name").HasMaxLength(100);
         builder.Property(x => x.DriverLastName).HasColumnName("driver_last_name").HasMaxLength(100);
+        builder.Property(x => x.DriverDeclaration)
+            .HasColumnName("driver_declaration")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                declaration => declaration == null ? null : JsonSerializer.Serialize(declaration, SnapshotSerializerOptions),
+                json => string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<DriverDeclaration>(json, SnapshotSerializerOptions));
         builder.Property(x => x.DriverDateOfBirth).HasColumnName("driver_date_of_birth");
         builder.Property(x => x.DriverLicenseNumber).HasColumnName("driver_license_number").HasMaxLength(100);
         builder.Property(x => x.DriverLicenseCountry).HasColumnName("driver_license_country").HasMaxLength(100);

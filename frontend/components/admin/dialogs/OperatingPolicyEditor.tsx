@@ -51,6 +51,22 @@ export function OperatingPolicyEditor({ value, onChange }: { value?: OperatingPo
   </section>;
   return <section className="rounded border p-4 space-y-4">
     <h3 className="font-semibold">Otomatik rezervasyon ayarları</h3>
+    <fieldset className="space-y-3 border p-3">
+      <legend>Misafir iptal ve tarih değişikliği</legend>
+      <p className="text-sm">Eksik ayarda işlemler kapalıdır. Ücret ve teslimden önceki süreyi açıkça tanımlayın. Ücretler rezervasyon para birimindedir.</p>
+      {(["cancel", "change"] as const).map(action => {
+        const guest = value.guestManagement ?? { allowCancellation: false, cancellationNoticeMinutes: null, cancellationFee: null, allowDateChange: false, changeNoticeMinutes: null, changeFee: null };
+        const enabledKey = action === "cancel" ? "allowCancellation" : "allowDateChange";
+        const noticeKey = action === "cancel" ? "cancellationNoticeMinutes" : "changeNoticeMinutes";
+        const feeKey = action === "cancel" ? "cancellationFee" : "changeFee";
+        const label = action === "cancel" ? "İptal" : "Tarih değişikliği";
+        return <div key={action} className="space-y-2">
+          <label className="flex gap-2"><input type="checkbox" checked={guest[enabledKey]} onChange={e => onChange({ ...value, guestManagement: { ...guest, [enabledKey]: e.target.checked } })} />{label} açık</label>
+          <label className="block">{label} ön süre (dakika)<Input type="number" min={0} max={525600} required={guest[enabledKey]} value={guest[noticeKey] ?? ""} onChange={e => onChange({ ...value, guestManagement: { ...guest, [noticeKey]: e.target.value === "" ? null : Number(e.target.value) } })} /></label>
+          <label className="block">{label} ücreti<Input type="number" min={0} max={1000000} step="0.01" required={guest[enabledKey]} value={guest[feeKey] ?? ""} onChange={e => onChange({ ...value, guestManagement: { ...guest, [feeKey]: e.target.value === "" ? null : Number(e.target.value) } })} /></label>
+        </div>;
+      })}
+    </fieldset>
     <p className="text-sm">Her iki işlem için en az bir saat aralığı ve süreler zorunludur. Bitiş saati aralığa dahil değildir; 00:00 gün sonudur.</p>
     <label className="block">En erken rezervasyon (dakika)<Input type="number" min={0} max={525600} required value={value.minimumNoticeMinutes ?? ""} onChange={e => onChange({ ...value, minimumNoticeMinutes: e.target.value === "" ? null : Number(e.target.value) })} /></label>
     <label className="block">İade sonrası hazırlık (dakika)<Input type="number" min={0} max={10080} required value={value.preparationMinutes ?? ""} onChange={e => onChange({ ...value, preparationMinutes: e.target.value === "" ? null : Number(e.target.value) })} /></label>

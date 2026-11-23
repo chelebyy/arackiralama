@@ -55,7 +55,9 @@ public sealed class SmtpEmailProvider(
 
         try
         {
-            await client.SendMailAsync(message, cancellationToken);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            await client.SendMailAsync(message, timeout.Token);
 
             _logger.LogInformation("SMTP email sent");
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RentACar.Core.Entities;
 
 namespace RentACar.API.Contracts.Reservations;
 
@@ -31,20 +32,30 @@ public record CustomerInfoRequest
     public string LastName { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
+    [JsonIgnore]
     public string? IdentityNumber { get; init; }
+    [JsonIgnore]
     public string? DriverLicenseNumber { get; init; }
+    [JsonIgnore]
     public DateTime? DriverLicenseIssueDate { get; init; }
+    [JsonIgnore]
     public DateTime? DateOfBirth { get; init; }
 }
 
 public record DriverInfoRequest
 {
+    public DriverDeclaration? Declaration { get; init; }
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
+    [JsonIgnore]
     public DateTime? DateOfBirth { get; init; }
+    [JsonIgnore]
     public string LicenseNumber { get; init; } = string.Empty;
+    [JsonIgnore]
     public string LicenseCountry { get; init; } = string.Empty;
+    [JsonIgnore]
     public DateTime? LicenseIssueDate { get; init; }
+    [JsonIgnore]
     public DateTime? LicenseExpiryDate { get; init; }
 }
 

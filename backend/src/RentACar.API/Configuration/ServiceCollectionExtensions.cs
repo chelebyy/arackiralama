@@ -51,6 +51,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<VehicleBookingService>();
         services.AddScoped<IReservationExtraPricingService, ReservationExtraPricingService>();
         services.AddScoped<IReservationQuoteService, ReservationQuoteService>();
+        services.AddScoped<ReservationQuoteService>();
+        services.AddScoped<GuestReservationService>();
         services.AddSingleton<AvailabilityCacheInvalidationSignal>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<PaymentService>();
@@ -345,6 +347,9 @@ public static class ServiceCollectionExtensions
         string loadTestSessionHeaderName,
         bool allowLoadTestSessionPartition)
     {
+        var guestClient = GuestProxyIdentity.Partition(context,
+            context.RequestServices.GetRequiredService<IConfiguration>()["GuestAccess:ProxySecret"]);
+        if (guestClient is not null) return guestClient;
         if (allowLoadTestSessionPartition)
         {
             var loadTestSessionId = context.Request.Headers[loadTestSessionHeaderName].ToString();

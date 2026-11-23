@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { guestCopy } from "@/lib/guest-reservation-copy";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import {
@@ -142,6 +144,7 @@ export default function TrackReservationPage() {
             <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">
               {t("pageTitle")}
             </h1>
+        <Link href={`/${locale}/manage-reservation`} className="inline-block my-4 text-sky-700 underline">{guestCopy(locale).manage}</Link>
             <p className="text-lg text-[#64748B]">
               {t("pageSubtitle")}
             </p>

@@ -1,5 +1,14 @@
 export interface OperatingWindow { day: number; startMinute: number; endMinute: number }
+export interface GuestManagementPolicy {
+  allowCancellation: boolean;
+  cancellationNoticeMinutes: number | null;
+  cancellationFee: number | null;
+  allowDateChange: boolean;
+  changeNoticeMinutes: number | null;
+  changeFee: number | null;
+}
 export interface OperatingPolicy {
+  guestManagement?: GuestManagementPolicy | null;
   minimumNoticeMinutes: number | null;
   preparationMinutes: number | null;
   pickupWindows: OperatingWindow[];

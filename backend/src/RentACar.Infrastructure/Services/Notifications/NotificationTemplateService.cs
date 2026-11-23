@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 using RentACar.Core.Interfaces.Notifications;
 
 namespace RentACar.Infrastructure.Services.Notifications;
 
-public sealed class NotificationTemplateService(IOptions<NotificationOptions>? notificationOptions = null) : INotificationTemplateService
+public sealed class NotificationTemplateService(IOptions<NotificationOptions>? notificationOptions = null, IDataProtectionProvider? protection = null) : INotificationTemplateService
 {
     private const string BuiltInDefaultLocale = "tr-TR";
     private readonly string _defaultLocale = NormalizeLocale(notificationOptions?.Value.DefaultLocale, BuiltInDefaultLocale);
@@ -230,6 +231,8 @@ public sealed class NotificationTemplateService(IOptions<NotificationOptions>? n
     public EmailMessageRequest RenderEmail(QueuedEmailNotificationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.TemplateKey.StartsWith("guest-reservation-", StringComparison.Ordinal))
+            return GuestReservationMail.Render(request, protection);
         var template = ResolveEmailTemplate(request.TemplateKey, request.Locale);
 
         return new EmailMessageRequest

@@ -32,9 +32,10 @@ services:
   api-upload-permissions:
     image: mcr.microsoft.com/dotnet/aspnet:10.0
     container_name: rentacar-api-upload-permissions
-    command: sh -c "mkdir -p /uploads/vehicles && chown -R 10000:10000 /uploads"
+    command: sh -c "mkdir -p /uploads/vehicles /keys && chown -R 10000:10000 /uploads /keys && chmod 700 /keys"
     volumes:
       - api_uploads:/uploads
+      - guest_keys:/keys
 
   api:
     build:
@@ -62,10 +63,13 @@ services:
       LocalAdminSeed__Password: IntegrationTestPassword123!
       RateLimiting__LoadTestSessionPartition: "true"
       LoadTesting__ConcurrentBookingInventorySeedEnabled: "true"
+      GuestAccess__KeyRingPath: /keys
+      GuestAccess__ProxySecret: local-development-guest-proxy-secret-change-before-deploy
     ports:
       - "5000:8080"
     volumes:
       - api_uploads:/app/wwwroot/uploads
+      - guest_keys:/keys
 
   worker:
     build:
@@ -77,9 +81,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api-upload-permissions:
+        condition: service_completed_successfully
     environment:
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=rentacar;Username=postgres;Password=postgres
       Redis__ConnectionString: redis:6379
+      GuestAccess__KeyRingPath: /keys
+    volumes:
+      - guest_keys:/keys
 
   web:
     build:
@@ -99,10 +108,23 @@ services:
       NEXT_PUBLIC_API_BASE_URL: http://api:8080
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       AUTH_BACKEND_URL: http://api:8080
+      GUEST_PROXY_SECRET: local-development-guest-proxy-secret-change-before-deploy
+      GUEST_CLIENT_IP_HEADER: X-Guest-Client-IP
+    expose:
+      - "3000"
+
+  web-edge:
+    image: nginx:stable-alpine
+    depends_on:
+      web:
+        condition: service_started
+    volumes:
+      - ./nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "3001:3000"
+      - "3001:80"
 
 volumes:
   postgres_data:
   redis_data:
   api_uploads:
+  guest_keys:

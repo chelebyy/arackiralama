@@ -239,14 +239,22 @@ export interface Customer {
   address?: Address;
 }
 
+export interface DriverDeclaration {
+  ageAtPickup: number;
+  licenseYearsAtPickup: number;
+  licenseValidThroughReturn: boolean;
+  documentsAvailableAtPickup: boolean;
+}
+
 export interface Driver {
+  declaration?: DriverDeclaration;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  licenseNumber: string;
-  licenseCountry: string;
-  licenseIssueDate: string;
-  licenseExpiryDate: string;
+  dateOfBirth?: string;
+  licenseNumber?: string;
+  licenseCountry?: string;
+  licenseIssueDate?: string;
+  licenseExpiryDate?: string;
   isPrimaryDriver: boolean;
 }
 

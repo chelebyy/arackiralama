@@ -1,7 +1,8 @@
 "use client";
 
+import { guestCopy } from "@/lib/guest-reservation-copy";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,7 +10,6 @@ import {
   User,
   Mail,
   Phone,
-  CreditCard,
   Baby,
   Users,
   Shield,
@@ -33,9 +33,6 @@ import type { PublicReservationExtraOption, SelectedBookingExtra } from "@/lib/a
 import { useTranslations } from "next-intl";
 import { differenceInCalendarDays } from "date-fns";
 
-function openDatePicker(event: MouseEvent<HTMLInputElement>) {
-  event.currentTarget.showPicker?.();
-}
 
 const officeSlugPatterns: Record<string, string> = {
   ala: "alanya",
@@ -159,16 +156,16 @@ export default function BookingStep3Page() {
     [booking.selectedExtras]
   );
 
+  const copy = guestCopy(locale);
   const step3Schema = z.object({
     firstName: z.string().min(2, t("validation.requiredFirstName")),
     lastName: z.string().min(2, t("validation.requiredLastName")),
     email: z.string().email(t("validation.invalidEmail")),
     phone: z.string().min(10, t("validation.requiredPhone")),
-    driverLicense: z.string().min(5, t("validation.requiredLicense")),
-    driverLicenseCountry: z.string().min(1, t("validation.requiredLicenseCountry")),
-    birthDate: z.string().min(1, t("validation.requiredBirthDate")),
-    licenseIssueDate: z.string().min(1, t("driverInfo.licenseIssueDate")),
-    licenseExpiryDate: z.string().min(1, t("driverInfo.licenseExpiryDate")),
+    ageAtPickup: z.number().int().min(18).max(100),
+    licenseYearsAtPickup: z.number().int().min(0).max(82),
+    licenseValidThroughReturn: z.boolean().refine(Boolean, copy.required),
+    documentsAvailableAtPickup: z.boolean().refine(Boolean, copy.required),
     specialRequests: z.string().optional(),
   });
   type Step3FormData = z.infer<typeof step3Schema>;
@@ -226,11 +223,10 @@ export default function BookingStep3Page() {
       lastName: booking.customer?.lastName ?? "",
       email: booking.customer?.email ?? "",
       phone: booking.customer?.phone ?? "",
-      birthDate: booking.driver?.dateOfBirth ?? "",
-      driverLicense: booking.driver?.licenseNumber ?? "",
-      driverLicenseCountry: booking.driver?.licenseCountry ?? "",
-      licenseIssueDate: booking.driver?.licenseIssueDate ?? "",
-      licenseExpiryDate: booking.driver?.licenseExpiryDate ?? "",
+      ageAtPickup: booking.driver?.declaration?.ageAtPickup,
+      licenseYearsAtPickup: booking.driver?.declaration?.licenseYearsAtPickup,
+      licenseValidThroughReturn: booking.driver?.declaration?.licenseValidThroughReturn ?? false,
+      documentsAvailableAtPickup: booking.driver?.declaration?.documentsAvailableAtPickup ?? false,
     },
   });
 
@@ -262,16 +258,15 @@ export default function BookingStep3Page() {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        dateOfBirth: data.birthDate,
       },
       {
         firstName: data.firstName,
         lastName: data.lastName,
-        dateOfBirth: data.birthDate,
-        licenseNumber: data.driverLicense,
-        licenseCountry: data.driverLicenseCountry,
-        licenseIssueDate: data.licenseIssueDate,
-        licenseExpiryDate: data.licenseExpiryDate,
+        declaration: {
+          ageAtPickup: data.ageAtPickup, licenseYearsAtPickup: data.licenseYearsAtPickup,
+          licenseValidThroughReturn: data.licenseValidThroughReturn,
+          documentsAvailableAtPickup: data.documentsAvailableAtPickup,
+        },
         isPrimaryDriver: true,
       }
     );
@@ -378,65 +373,18 @@ export default function BookingStep3Page() {
               )}
             </div>
 
-            <div>
-              <label htmlFor="birthDate" className="block text-sm font-medium text-slate-700 mb-2">
-                {t("driverInfo.birthDate")}
+            {(["ageAtPickup", "licenseYearsAtPickup"] as const).map(field => (
+              <label key={field} className="block text-sm font-medium text-slate-700">{copy[field]}
+                <input type="number" min={field === "ageAtPickup" ? 18 : 0} max={field === "ageAtPickup" ? 100 : 82}
+                  {...register(field, { valueAsNumber: true })} className="mt-2 w-full border border-slate-300 rounded-lg p-3" />
+                {errors[field] && <span role="alert" className="text-red-700">{copy.required}</span>}
               </label>
-              <input
-                type="date"
-                id="birthDate"
-                {...register("birthDate")}
-                onClick={openDatePicker}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              />
-              {errors.birthDate && (
-                <p className="mt-1 text-sm text-red-600">{errors.birthDate.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="driverLicense" className="block text-sm font-medium text-slate-700 mb-2">
-                {t("driverInfo.licenseNumber")}
+            ))}
+            {(["licenseValidThroughReturn", "documentsAvailableAtPickup"] as const).map(field => (
+              <label key={field} className="flex gap-3 items-start text-sm text-slate-700">
+                <input type="checkbox" {...register(field)} className="mt-1" />{copy[field]}
+                {errors[field] && <span role="alert" className="text-red-700">{copy.required}</span>}
               </label>
-              <div className="relative">
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  id="driverLicense"
-                  {...register("driverLicense")}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  placeholder={t("driverInfo.licenseNumber")}
-                />
-              </div>
-              {errors.driverLicense && (
-                <p className="mt-1 text-sm text-red-600">{errors.driverLicense.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="driverLicenseCountry" className="block text-sm font-medium text-slate-700 mb-2">
-                {t("driverInfo.licenseCountry")}
-              </label>
-              <div className="relative">
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  id="driverLicenseCountry"
-                  {...register("driverLicenseCountry")}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  placeholder={t("driverInfo.licenseCountry")}
-                />
-              </div>
-              {errors.driverLicenseCountry && (
-                <p className="mt-1 text-sm text-red-600">{errors.driverLicenseCountry.message}</p>
-              )}
-            </div>
-            {(["licenseIssueDate", "licenseExpiryDate"] as const).map((field) => (
-              <div key={field}>
-                <label htmlFor={field} className="block text-sm font-medium text-slate-700 mb-2">{t(`driverInfo.${field}`)}</label>
-                <input type="date" id={field} {...register(field)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" />
-                {errors[field] && <p className="mt-1 text-sm text-red-600">{errors[field]?.message}</p>}
-              </div>
             ))}
           </div>
         </div>

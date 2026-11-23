@@ -10,7 +10,7 @@ RUN dotnet restore "src/RentACar.Worker/RentACar.Worker.csproj"
 COPY . .
 RUN dotnet publish "src/RentACar.Worker/RentACar.Worker.csproj" -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Create non-root user for security (Debian-based image)

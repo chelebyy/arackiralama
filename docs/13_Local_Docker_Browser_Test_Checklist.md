@@ -1,5 +1,30 @@
 # Local Docker Browser Test Checklist
 
+## PR 457 review corrections
+
+Pending guest verification now survives same-tab reload/navigation with its original resend deadline. Only the challenge ID and request timestamp enter session storage; codes, contact data and session credentials do not. Check expiry and successful-exchange cleanup, all ten localized reservation states, and replacement email/SMS reminders after date changes with SMS disabled and phone-less customers included.
+
+Local Compose now exposes the web app through `web-edge` on port 3001. The edge overwrites `X-Guest-Client-IP`; the internal web container is not published. API and Worker mount the same `guest_keys` volume at `/keys`, owned by UID 10000. Check these dependencies when starting the full stack, including `api-upload-permissions` and `web-edge`.
+
+Guest request/verification limits must remain independent across clients, including the global limiter. Verify forged forwarding/signature headers cannot choose a partition, and repeat-send stays disabled for one minute without losing the current challenge. Expired queued access mail must become Cancelled without reaching SMTP. Production key encryption, edge isolation and HTTPS delivery remain separate activation checks; see [data handling](Vehicle_Reservation_Package_3_Data_Handling.md).
+
+After cooldown, a resend revokes earlier unverified challenges while keeping established sessions. The Worker skips unusable challenge mail before rendering and dispatch. Reservation cancellation/amendment cancels pending and abandoned reminder jobs with a conditional database update. Logout and access-denied responses reset reservation-specific consent and amendment inputs; desktop/mobile browser cases cover logout, 401 and 403.
+
+The Worker uses the ASP.NET 10 runtime image required by its transitive shared-framework dependency. Its image build and real container startup against isolated PostgreSQL/Redis passed. Version-2 stored drafts can create/recover holds with the original session and stored driver eligibility; quote expiry and current rental policies are still enforced. New version-3 drafts require declarations. Nine rollout cases and three current-draft policy cases passed against PostgreSQL/Redis.
+
+Publication handoff and next-session checklist: [Package 3 handoff](Vehicle_Reservation_Package_3_Handoff.md).
+
+## Package 3 local acceptance
+
+- [x] Minimal contact/declaration checkout and legacy sensitive-field binding/persistence safeguards.
+- [x] Real PostgreSQL/Redis: 70 existing exact-quote/hold cases plus 19 guest access, cancellation, amendment and mail-queue cases.
+- [x] 896 backend units, including loopback SMTP; 359 frontend tests; TypeScript and production build.
+- [x] Five-language Chromium desktop/mobile management flows, Arabic RTL, keyboard cancellation, reload and expired access (12 controlled-response browser cases).
+- [x] Admin-managed notice/fee rules, missing-setting denial, atomic stock replacement, accepted-price replay and cumulative amendment fees.
+- [ ] Full deployed HTTPS BFF/API/Worker/SMTP journey, physical devices, screen readers, protected key rotation/restore and production ingress rate-limit acceptance.
+
+See [Package 3 implementation](Vehicle_Reservation_Package_3_Implementation.md) and [data handling](Vehicle_Reservation_Package_3_Data_Handling.md). Local results are not remote CI or production activation. The following PR #447 notes are historical; Package 2 was merged before Package 3 began.
+
 Latest PR #447 follow-up: the eleventh Codex review on `05c5ac2` is addressed. Exact quote submissions calculate driver age on the Turkey pickup date. Immediate exact pay-at-pickup confirmation and reminder jobs use the normalized checkout locale. Validation: 107 focused backend unit tests and 13 real PostgreSQL/Redis API cases passed, covering birthday boundaries, wrong-age rejection, five notification locales, replay deduplication and queue-failure rollback. See [review corrections](Vehicle_Reservation_Package_2_PR447_Review.md). No frontend changes; frontend/build/browser/device checks were not repeated. Starting-head CI passed all ten active checks; new-head CI and renewed review remain separate gates. No merge, production migration or deployment occurred.
 
 ## Current Package 2 local acceptance — September 26, 2026

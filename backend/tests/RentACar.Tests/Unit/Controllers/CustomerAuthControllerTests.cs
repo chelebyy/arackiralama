@@ -1138,7 +1138,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     #region UpdateProfile Tests
 
     [Fact]
-    public async Task UpdateProfile_WithValidData_UpdatesCustomerAndReturnsSuccess()
+    public async Task UpdateProfile_UpdatesContactAndPreservesHistoricalSensitiveFields()
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var customer = new Customer
@@ -1179,10 +1179,10 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         var persistedCustomer = dbContext.Customers.Should().ContainSingle().Subject;
         persistedCustomer.FullName.Should().Be("Updated Name");
         persistedCustomer.Phone.Should().Be("05009998877");
-        persistedCustomer.IdentityNumber.Should().Be("98765432109");
+        persistedCustomer.IdentityNumber.Should().Be("12345678901");
         persistedCustomer.Nationality.Should().Be("US");
-        persistedCustomer.LicenseYear.Should().Be(2018);
-        persistedCustomer.BirthDate.Should().Be(new DateOnly(1992, 8, 20));
+        persistedCustomer.LicenseYear.Should().Be(2015);
+        persistedCustomer.BirthDate.Should().Be(new DateOnly(1990, 5, 15));
     }
 
     [Fact]
@@ -1279,7 +1279,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
     }
 
     [Fact]
-    public async Task UpdateProfile_WithLicenseYearAtBoundary1900_UpdatesLicenseYear()
+    public async Task UpdateProfile_WithLegacyLicenseYear_DoesNotCollectIt()
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var customer = new Customer
@@ -1315,7 +1315,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         var result = await controller.UpdateProfile(request, CancellationToken.None);
 
         result.Should().BeOfType<OkObjectResult>();
-        dbContext.Customers.Should().ContainSingle().Which.LicenseYear.Should().Be(1900);
+        dbContext.Customers.Should().ContainSingle().Which.LicenseYear.Should().Be(2015);
     }
 
     [Fact]

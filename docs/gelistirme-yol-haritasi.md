@@ -1,5 +1,21 @@
 # Müşteri deneyimi: kod karşılaştırması ve geliştirme sırası
 
+PR hazırlığı ve sonraki oturum için [Paket 3 devir belgesi](Vehicle_Reservation_Package_3_Handoff.md).
+
+## Güncel durum — Paket 3
+
+Paket 2, PR #447 ile `1a352c984972a3c6a705b10073563eca470b92fc` commit'inde birleştirildi. Paket 3'ün yerel uygulaması `codex/guest-reservations` çalışma ağacında tamamlandı: kısa sürücü beyanı, e-posta ile rezervasyona özel erişim, iptal, atomik tarih değişikliği ve tekrar denenebilir bildirimler hazır.
+
+**Onaylanan kural:** İptal/değişiklik izni, ön süre ve ücretleri admin tanımlar; eksik ayarda ilgili işlem kapalıdır. Web formu ve eski profil API'si kimlik/ehliyet numarası veya tam doğum tarihi toplamaz. Tarihsel veriler silinmedi.
+
+Yerel kanıt: 896 backend birim testi, 70 mevcut kesin araç/teklif API testi, 19 yeni misafir yönetimi/posta API testi, 359 frontend testi ve üretim derlemesi geçti. Beş dilde 12 masaüstü/mobil tarayıcı senaryosu kontrollü API yanıtlarıyla doğrulandı; gerçek PostgreSQL/Redis ve localhost SMTP kontrolleri ayrı testlerdir. Lint hatasızdır, mevcut tek uyarı sürer.
+
+[Paket 3 uygulama ve sınırlar](Vehicle_Reservation_Package_3_Implementation.md), [veri/anahtar yaşam döngüsü](Vehicle_Reservation_Package_3_Data_Handling.md), [plan](Vehicle_Reservation_Package_3_Plan.md). [PR #457](https://github.com/chelebyy/arackiralama/pull/457) açıldı; uzak CI sonucu son PR commit'i için ayrıca kontrol edilmelidir. Merge, canlı dağıtım, gerçek e-posta gönderimi ve tarihsel veri temizliği yapılmadı.
+
+**Sıradaki geliştirme:** Paket 4 — korunan header/hero dışındaki sayfaları sadeleştirme ve gerçek işletme metinleri. Canlı açılıştan önce Paket 3'ün işletme kuralları, saklama süreleri, ortak korumalı anahtar deposu ve tam dağıtım zinciri kabulü ayrıca tamamlanmalıdır.
+
+Aşağıdaki Paket 1–2 durum notları tarihsel kabul kayıtlarıdır; güncel durum için bu bölüm önceliklidir.
+
 **PR #447 altıncı inceleme düzeltmesi:** `4487d98` üzerindeki üç Codex bulgusu giderildi. Fiyat kaydı olmayan aktif rezervasyonlarda araç grubu korunuyor; 3. adım araç kimliğini URL'den kurtarıyor; fiyat önceliği yalnızca tam sayı adımı kabul ediyor. CI testleri geçmişti, hata Turbopack'in Roboto font derlemesindeydi; standart üretim derlemesi desteklenen Webpack seçeneğine geçirildi. 875 backend birim testi, 56 frontend testi, 3 gerçek PostgreSQL/Redis araç kataloğu API testi, üretim derlemesi ve TypeScript kontrolü geçti. Lint'te mevcut tek uyarı sürüyor. [Düzeltme kanıtı](Vehicle_Reservation_Package_2_PR447_Review.md); yeni commit'in CI sonucu gönderimden sonra ayrıca kontrol edilmelidir. Tarayıcı/cihaz kontrolü tekrarlanmadı; merge veya dağıtım yapılmadı.
 
 ## Güncel durum — 26 Eylül 2026
@@ -102,6 +118,8 @@ Uygulama, test kanıtları ve sınırlar: [Paket 1 raporu](Vehicle_Catalogue_Pac
 **Kabul ölçütleri:** Aynı grup içindeki farklı iki araç karışmaz; değiştirilmiş teklif reddedilir; çift tıklama/yeniden deneme ikinci rezervasyon üretmez; gerçek PostgreSQL eşzamanlı çakışma testinde tek rezervasyon kabul edilir; bakım/kapalı saat/hazırlık aralığı ihlal edilemez; otomatik onaylı rezervasyon ödeme yapılmadı diye talep süresi dolunca kaybolmaz.
 
 ## Paket 3 — Kısa form, üyelik olmadan güvenli yönetim ve e-posta
+
+**Yerel uygulama tamamlandı.** Aşağıdaki maddeler ilk kapsam tanımıdır; uygulanan kararlar ve ölçülmüş kabul sonuçları [Paket 3 raporunda](Vehicle_Reservation_Package_3_Implementation.md) yer alır.
 
 - Önerilen akış: **iletişim ve gerekiyorsa teslim bilgisi → tüm tutar ve koşulların özeti → kesinleşme sonucu**. Bu iki form adımı uygulama sırasında netleştirilecek çalışma önerisidir.
 - Tam ad, e-posta, telefon; teslim türüne göre gerekli adres/uçuş bilgisi. TC kimlik, ehliyet numarası ve tam doğum tarihi toplama yollarını form ve sunucudan kaldırmak; gereksiz veriyi hata kayıtlarına veya e-postaya da taşımamak.

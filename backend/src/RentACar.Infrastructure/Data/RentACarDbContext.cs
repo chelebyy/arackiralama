@@ -7,6 +7,8 @@ namespace RentACar.Infrastructure.Data;
 public class RentACarDbContext(DbContextOptions<RentACarDbContext> options)
     : DbContext(options), IApplicationDbContext
 {
+    public DbSet<GuestReservationAccess> GuestReservationAccess => Set<GuestReservationAccess>();
+    public DbSet<ReservationAmendment> ReservationAmendments => Set<ReservationAmendment>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<VehicleGroup> VehicleGroups => Set<VehicleGroup>();
     public DbSet<Office> Offices => Set<Office>();
