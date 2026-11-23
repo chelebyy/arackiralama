@@ -995,12 +995,12 @@ docker compose down --volumes
 - API and worker used `Payment__Provider=Disabled`, `Payment__EnablePayments=false`, and disabled email. Public settings confirmed online payments disabled and unpaid requests enabled.
 - Fresh load-test inventory did not include pricing rules. Through the local admin API, two synthetic fixed-price rules (1500 per day, multipliers 1, priority 0) were created for the seeded vehicle groups, covering today through 45 days ahead. This is test setup, not a production tariff change.
 - Desktop: admin login and three booking-search smoke tests passed; the corrected tracking suite and full unpaid-request flow passed (5/5). Mobile Chromium: all nine selected booking, tracking, admin-login, and unpaid-request checks passed.
-- The new opt-in test creates a synthetic unpaid request, checks its confirmation and public tracking, then verifies its admin detail. It asserts that no payment-intent or hold request is sent. Run against an isolated local stack with seeded admin/inventory and pricing covering the fixture dates:
+- The new opt-in test creates a synthetic unpaid request, checks its confirmation and public tracking, then verifies its admin detail. It asserts that no payment-intent or hold request is sent. For new runs, use the patched pnpm version below against an isolated local stack with seeded admin/inventory and pricing covering the fixture dates:
 
 ```powershell
 $env:E2E_BASE_URL = 'http://localhost:3001'
 $env:E2E_UNPAID_ACCEPTANCE = 'true'
-corepack pnpm@9.15.9 -C frontend exec playwright test e2e/tests/tracking.spec.ts e2e/tests/unpaid-reservation-flow.spec.ts --project=chromium --workers=1
+corepack pnpm@10.34.7 -C frontend exec playwright test e2e/tests/tracking.spec.ts e2e/tests/unpaid-reservation-flow.spec.ts --project=chromium --workers=1
 ```
 
 - Synthetic requests and isolated volumes were retained for local inspection. The stack remains running. Prior June cleanup evidence below describes a separate historical run.

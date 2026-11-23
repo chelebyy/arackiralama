@@ -4,6 +4,10 @@
 **Stack:** .NET 10 + PostgreSQL + Redis | Next.js 16 + React 19 + TypeScript
 **Pattern:** Clean Architecture (API/Core/Infrastructure/Worker)
 
+Araç Kiralama is a Turkish car-rental platform for tourists (primary) and locals (secondary) in Alanya. Phase plans and the execution log live in `docs/09_Implementation_Plan.md` and `docs/10_Execution_Tracking.md`.
+
+This file is the single source of project instructions for all coding agents; `CLAUDE.md` imports it.
+
 ## Project Structure & Module Organization
 ```
 .
@@ -33,10 +37,11 @@
 | Add background job | `backend/src/RentACar.Worker/Worker.cs` | Polls every 30s |
 | Add public page | `frontend/app/(public)/[locale]/` | i18n-aware |
 | Add admin page | `frontend/app/(admin)/dashboard/(auth)/` | Requires auth |
-| Add UI component | `frontend/components/ui/` | shadcn/ui + custom |
+| Add UI component | `frontend/components/ui/` | shadcn/ui (admin only) + custom in `frontend/components/` |
 | Update translations | `frontend/i18n/messages/` | ar, de, en, ru, tr |
 
 ## Backend Conventions
+- `RentACar.Core` currently references EF Core for `IApplicationDbContext` (`DbSet<T>` and `ChangeTracker`); `RentACar.Infrastructure` holds the database implementation (Npgsql), repositories, external services, Redis, and migrations under `Data/Migrations/`.
 - **Non-standard placement**: Application services live in `RentACar.API/Services/` (20 files) instead of a separate Application layer or Infrastructure.
 - `Contracts/` folders hold request/response DTOs per domain (Fleet, Auth, Pricing, Reservations).
 - `Specifications/` exists in both Core and Infrastructure for CQRS-style queries.
@@ -53,33 +58,48 @@
 - Admin/dashboard CAN use shadcn/ui components.
 
 ## Commands
+
+Frontend commands explicitly select pnpm 10.34.7.
 ```bash
-# Backend
+# Backend (from repo root)
 dotnet restore backend/RentACar.sln --configfile backend/NuGet.Config
 dotnet build backend/RentACar.sln --no-restore
 dotnet test backend/RentACar.sln --no-build
 dotnet run --project backend/src/RentACar.API
 
 # Frontend
-corepack pnpm -C frontend install
-corepack pnpm -C frontend dev
-corepack pnpm -C frontend build
-corepack pnpm -C frontend test
+corepack pnpm@10.34.7 -C frontend install
+corepack pnpm@10.34.7 -C frontend dev      # local dev server
+corepack pnpm@10.34.7 -C frontend build
+corepack pnpm@10.34.7 -C frontend test     # vitest unit tests
+corepack pnpm@10.34.7 -C frontend lint     # eslint
+corepack pnpm@10.34.7 -C frontend exec playwright install --with-deps chromium # first E2E setup
+# Start the local web/API stack separately; E2E_BASE_URL defaults to http://localhost:3000.
+corepack pnpm@10.34.7 -C frontend exec playwright test # see frontend/playwright.config.ts
 
-# Docker (local dev)
+# Docker (full local stack: Postgres, Redis, API, Worker, Web, upload-permissions init)
 cd backend && docker compose up --build
 ```
 
+### Run a single test
+```bash
+# backend: filter by fully qualified name
+dotnet test backend/RentACar.sln --no-build --filter "FullyQualifiedName~RentACar.Tests.Unit.SomeNamespace"
+
+# frontend: pass a path pattern
+corepack pnpm@10.34.7 -C frontend test -- path/to/file.test.tsx
+```
+
 ## CI Pipeline
-- `.github/workflows/ci.yml`: backend build/test → frontend lint/test/build → docker build → docker push to GHCR (main only)
-- `.github/workflows/dependabot-auto-merge.yml`: auto-merges patch/minor Dependabot PRs
+- `.github/workflows/ci.yml`: backend unit/integration tests, frontend typecheck/lint/test/build, and API/Worker Docker builds run in parallel; successful pushes to `main` then publish images to GHCR.
 - `.github/workflows/codeql.yml`: security scanning for C# and JS/TS
 
 ## Coding Style & Naming Conventions
 - C#: 4-space indent, PascalCase types/methods, camelCase locals/parameters.
 - TypeScript/React: 2-space indent, PascalCase components, camelCase variables/functions.
 - Keep services explicit and small; avoid unnecessary abstractions.
-- Run lint/format before PR (`corepack pnpm -C frontend lint`).
+- Prefer existing patterns in `Configuration/`, `Services/`, and `Contracts/` folders.
+- Run lint/format before PR (`corepack pnpm@10.34.7 -C frontend lint`).
 
 ## Testing Guidelines
 - Backend: xUnit; place tests under `backend/tests/RentACar.Tests/Unit/...`.
@@ -89,7 +109,7 @@ cd backend && docker compose up --build
 
 ## Commit & Pull Request Guidelines
 - Follow Conventional Commit style: `feat(phase7): ...`, `fix(frontend): ...`, `fix(security): ...`
-- PRs should include: clear summary, linked issue/PR number, test evidence, screenshots for UI changes.
+- PRs should include: clear summary and scope, linked issue/PR number, test evidence (build/test output), screenshots for UI changes.
 - Do not mix unrelated changes in one PR.
 
 ## Security & Configuration Tips
@@ -109,12 +129,14 @@ cd backend && docker compose up --build
 
 ### Aesthetic Direction
 - Public frontend: corporate-minimal, light-only, desktop-first.
+- Tablet and mobile should still look polished and complete.
 - Public frontend must not use shadcn components or shadcn design language.
 - Public design must not feel like an admin dashboard or generic template.
 
 ### Design Principles
 - Trust, pricing clarity, and process clarity should be visible immediately.
 - Reservation flow should sit at the center of the information hierarchy.
+- Desktop-first should guide layout, without sacrificing tablet/mobile quality.
 - Public and admin design languages must stay separate.
 - Simplicity should reduce friction without removing key information.
 
@@ -140,71 +162,3 @@ This repository uses Codex-Sentinel as a stage-aware cybersecurity guidance suit
 - Keep repository-facing skill files, metadata, docs, examples, and validation artifacts in English unless a localized deliverable is explicitly requested.
 - Keep user-facing assistant responses in the user's configured Codex language when that signal is available. If it is unavailable, follow the active conversation language and fall back to English.
 - Do not add inline or block comments in source code unless the user explicitly asks for them.
-## Build, Test, and Development Commands
-- Backend restore/build/test:
-  - `dotnet restore backend/RentACar.sln --configfile backend/NuGet.Config`
-  - `dotnet build backend/RentACar.sln --no-restore`
-  - `dotnet test backend/RentACar.sln --no-build`
-- Frontend install/build/test:
-  - `corepack pnpm -C frontend install`
-  - `corepack pnpm -C frontend build`
-  - `corepack pnpm -C frontend test`
-- Frontend local development:
-  - `corepack pnpm -C frontend dev`
-
-## Coding Style & Naming Conventions
-- C# uses 4-space indentation, PascalCase for types/methods, camelCase for locals/parameters.
-- TypeScript/React uses 2-space indentation, PascalCase for components, camelCase for variables/functions.
-- Keep services explicit and small; avoid unnecessary abstractions.
-- Prefer existing patterns in `Configuration/`, `Services/`, and `Contracts/` folders.
-- Run lint/format before PR (`corepack pnpm -C frontend lint`).
-
-## Testing Guidelines
-- Backend: xUnit; place tests under `backend/tests/RentACar.Tests/Unit/...`.
-- Frontend: Vitest + Testing Library; test files use `*.test.ts` / `*.test.tsx`.
-- Add or update tests for any behavior change, especially auth, payments, reservations, and notifications.
-- Keep tests deterministic (no real external network dependencies).
-
-## Commit & Pull Request Guidelines
-- Follow Conventional Commit style seen in history:
-  - `feat(phase7): ...`
-  - `fix(frontend): ...`
-  - `fix(security): ...`
-- PRs should include:
-  - clear summary and scope,
-  - linked issue/PR number,
-  - test evidence (build/test output),
-  - screenshots for UI changes.
-- Do not mix unrelated changes in one PR.
-
-## Security & Configuration Tips
-- Never commit secrets; use environment-based config.
-- Treat logs as non-sensitive by default; avoid writing tokens, IDs, or PII.
-- Validate dependency bumps with full build + tests before merge.
-
-## Design Context
-
-### Users
-- Primary audience is tourists visiting Alanya.
-- Secondary audience includes local and repeat customers.
-- Users want to find vehicles quickly, understand delivery options clearly, and reserve with confidence.
-
-### Brand Personality
-- Corporate
-- Trustworthy
-- Clean
-
-### Aesthetic Direction
-- Public frontend should be corporate-minimal.
-- Default theme should be light only.
-- Layout decisions should be desktop-first.
-- Tablet and mobile should still look polished and complete.
-- Public frontend must not use shadcn components or shadcn design language.
-- Public design must not feel like an admin dashboard or generic template.
-
-### Design Principles
-- Trust, pricing clarity, and process clarity should be visible immediately.
-- Reservation flow should sit at the center of the information hierarchy.
-- Desktop-first should guide layout, without sacrificing tablet/mobile quality.
-- Public and admin design languages must stay separate.
-- Simplicity should reduce friction without removing key information.
