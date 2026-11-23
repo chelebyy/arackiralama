@@ -216,6 +216,10 @@ namespace RentACar.Infrastructure.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at_utc");
 
+                    b.Property<int?>("TokenVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("token_version");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");

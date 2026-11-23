@@ -720,8 +720,51 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             Times.Once);
     }
 
-    [Fact]
-    public async Task Refresh_WithActiveSession_RotatesSessionAndIssuesNewTokens()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(2)]
+    [InlineData(4)]
+    public async Task Refresh_WithUnboundOrDifferentCredentialVersion_ReturnsUnauthorized(int? sessionVersion)
+    {
+        using var dbContext = _dbContextFactory.CreateContext();
+        var customer = new Customer
+        {
+            Email = "version@test.com",
+            PasswordHash = "hash",
+            TokenVersion = 3,
+
+        };
+        dbContext.Customers.Add(customer);
+        dbContext.AuthSessions.Add(new AuthSession
+        {
+            PrincipalType = AuthPrincipalType.Customer,
+            PrincipalId = customer.Id,
+            TokenVersion = sessionVersion,
+            RefreshTokenHash = "incoming-hash",
+            RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(1)
+        });
+        await dbContext.SaveChangesAsync();
+        var jwt = new Mock<IJwtTokenService>();
+        jwt.Setup(service => service.HashRefreshToken("incoming-token")).Returns("incoming-hash");
+        var rotation = new Mock<IAuthSessionRotationService>();
+        var cookies = new Mock<IRefreshTokenCookieService>();
+        var controller = CreateController(dbContext, jwtTokenService: jwt.Object,
+            sessionRotationService: rotation.Object, refreshTokenCookieService: cookies.Object);
+        SetRefreshCookie(controller.HttpContext, "__Host-rac_refresh", "incoming-token");
+
+        var result = await controller.Refresh(CancellationToken.None);
+
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+        rotation.Verify(service => service.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<AuthSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        cookies.Verify(service => service.AppendRefreshTokenCookie(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+        jwt.Verify(service => service.CreateRefreshToken(out It.Ref<DateTime>.IsAny), Times.Never);
+        dbContext.AuthSessions.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Refresh_WithActiveSession_OnlyIssuesTokensWhenRotationSucceeds(bool rotationSucceeds)
     {
         using var dbContext = _dbContextFactory.CreateContext();
         var customer = new Customer
@@ -737,12 +780,14 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         dbContext.Customers.Add(customer);
         await dbContext.SaveChangesAsync();
 
+        customer.TokenVersion = 7;
         var currentSessionId = Guid.NewGuid();
         dbContext.AuthSessions.Add(new AuthSession
         {
             Id = currentSessionId,
             PrincipalType = AuthPrincipalType.Customer,
             PrincipalId = customer.Id,
+            TokenVersion = customer.TokenVersion,
             RefreshTokenHash = "sha256:incoming-refresh-hash",
             RefreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(2),
             LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-5)
@@ -765,15 +810,36 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             .Setup(service => service.HashRefreshToken("rotated-refresh-token"))
             .Returns("sha256:rotated-refresh-hash");
 
+        AuthSession? replacementSession = null;
+        var rotationService = new Mock<IAuthSessionRotationService>();
+        rotationService.Setup(service => service.TryRotateAsync(currentSessionId, It.IsAny<AuthSession>(), CancellationToken.None))
+            .Callback<Guid, AuthSession, CancellationToken>((_, session, _) => replacementSession = session)
+            .ReturnsAsync(rotationSucceeds);
         var refreshTokenCookieService = new Mock<IRefreshTokenCookieService>();
         var controller = CreateController(
             dbContext,
             jwtTokenService: jwtTokenService.Object,
+            sessionRotationService: rotationService.Object,
             refreshTokenCookieService: refreshTokenCookieService.Object);
 
         SetRefreshCookie(controller.HttpContext, "__Host-rac_refresh", "incoming-refresh-token");
 
         var result = await controller.Refresh(CancellationToken.None);
+
+        rotationService.Verify(service => service.TryRotateAsync(currentSessionId, It.IsAny<AuthSession>(), CancellationToken.None), Times.Once);
+        replacementSession.Should().NotBeNull();
+        replacementSession!.TokenVersion.Should().Be(7);
+        dbContext.AuthSessions.Should().ContainSingle();
+        dbContext.AuthSessions.Single().RevokedAtUtc.Should().BeNull();
+
+        if (!rotationSucceeds)
+        {
+            result.Should().BeOfType<UnauthorizedObjectResult>().Which.Value
+                .Should().BeOfType<ApiResponse<object>>().Which.Message.Should().Be("Yetkisiz erişim");
+            refreshTokenCookieService.Verify(service => service.AppendRefreshTokenCookie(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+            refreshTokenCookieService.Verify(service => service.ClearRefreshTokenCookie(It.IsAny<HttpContext>()), Times.Never);
+            return;
+        }
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var response = okResult.Value.Should().BeOfType<ApiResponse<CustomerRefreshResponse>>().Subject;
@@ -781,12 +847,6 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         response.Data.Should().NotBeNull();
         response.Data!.AccessToken.Should().Be("rotated-access-token");
 
-        dbContext.AuthSessions.Should().HaveCount(2);
-        var revokedSession = dbContext.AuthSessions.Single(session => session.Id == currentSessionId);
-        revokedSession.RevokedAtUtc.Should().NotBeNull();
-        revokedSession.ReplacedBySessionId.Should().NotBeNull();
-
-        var replacementSession = dbContext.AuthSessions.Single(session => session.Id == revokedSession.ReplacedBySessionId);
         replacementSession.PrincipalType.Should().Be(AuthPrincipalType.Customer);
         replacementSession.PrincipalId.Should().Be(customer.Id);
         replacementSession.RefreshTokenHash.Should().Be("sha256:rotated-refresh-hash");
@@ -1088,6 +1148,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
         IApplicationDbContext dbContext,
         IPasswordHasher? passwordHasher = null,
         IJwtTokenService? jwtTokenService = null,
+        IAuthSessionRotationService? sessionRotationService = null,
         IRefreshTokenCookieService? refreshTokenCookieService = null,
         IAuditLogService? auditLogService = null,
         RefreshTokenCookieSettings? refreshTokenCookieSettings = null,
@@ -1117,6 +1178,7 @@ public class CustomerAuthControllerTests : IClassFixture<TestDbContextFactory>
             dbContext,
             passwordHasher,
             jwtTokenService,
+            sessionRotationService ?? Mock.Of<IAuthSessionRotationService>(),
             refreshTokenCookieService,
             auditLogService,
             Options.Create(refreshTokenCookieSettings),
