@@ -16,7 +16,7 @@ public sealed class ReservationHoldConfiguration : IEntityTypeConfiguration<Rese
         builder.Property(x => x.ReservationId).HasColumnName("reservation_id");
         builder.Property(x => x.VehicleId).HasColumnName("vehicle_id");
         builder.Property(x => x.ExpiresAt).HasColumnName("expires_at");
-        builder.Property(x => x.SessionId).HasColumnName("session_id").HasMaxLength(120).IsRequired();
+        builder.Property(x => x.SessionId).HasColumnName("session_id").HasMaxLength(ReservationHold.SessionIdMaxLength).IsRequired();
 
         builder.HasIndex(x => x.ExpiresAt).HasDatabaseName("idx_holds_expires");
         builder.HasIndex(x => x.SessionId).HasDatabaseName("idx_holds_session");

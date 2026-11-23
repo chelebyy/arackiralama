@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RentACar.Core.Entities;
+using RentACar.Core.Enums;
 using RentACar.Core.Interfaces;
 using StackExchange.Redis;
 
@@ -12,9 +13,13 @@ public sealed class RedisReservationHoldService : IReservationHoldService
     private readonly IConnectionMultiplexer _redis;
     private readonly IApplicationDbContext _dbContext;
     private readonly ILogger<RedisReservationHoldService> _logger;
-    private readonly TimeSpan _defaultTtl = TimeSpan.FromMinutes(15);
-    private readonly string _keyPrefix = "hold:";
-    private readonly string _vehiclePrefix = "vehicle_hold:";
+    private static readonly TimeSpan DefaultTtl = TimeSpan.FromMinutes(15);
+    private const string ReleaseVehicleScript = """
+        if redis.call('GET', KEYS[1]) == ARGV[1] then
+            return redis.call('DEL', KEYS[1])
+        end
+        return 0
+        """;
 
     public RedisReservationHoldService(
         IConnectionMultiplexer redis,
@@ -26,388 +31,211 @@ public sealed class RedisReservationHoldService : IReservationHoldService
         _logger = logger;
     }
 
-    public async Task<bool> CreateHoldAsync(
+    public Task<bool> CreateHoldAsync(
         Guid reservationId,
         Guid vehicleId,
         string sessionId,
         TimeSpan duration,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var holdKey = $"{_keyPrefix}{reservationId}";
-            var vehicleKey = $"{_vehiclePrefix}{vehicleId}";
+        if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > ReservationHold.SessionIdMaxLength)
+            throw new InvalidOperationException("Session ID must contain between 1 and 120 characters.");
+        if (duration <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(duration));
 
-            var holdData = new ReservationHoldData
+        return WithReservationLockAsync(reservationId, async () =>
+        {
+            var previous = await LoadHoldsAsync(reservationId, cancellationToken);
+            _dbContext.ReservationHolds.RemoveRange(previous);
+            var hold = new ReservationHold
             {
                 ReservationId = reservationId,
                 VehicleId = vehicleId,
                 SessionId = sessionId,
-                ExpiresAt = DateTime.UtcNow.Add(duration)
+                ExpiresAt = DateTime.UtcNow.Add(duration > DefaultTtl ? DefaultTtl : duration)
             };
-
-            var json = JsonSerializer.Serialize(holdData);
-            var ttl = duration > _defaultTtl ? _defaultTtl : duration;
-
-            // Store hold data
-            await db.StringSetAsync(holdKey, json, ttl);
-
-            // Track vehicle hold for quick lookup
-            await db.StringSetAsync(vehicleKey, reservationId.ToString(), ttl);
-
-            _logger.LogInformation(
-                "Created Redis hold for reservation {ReservationId}, vehicle {VehicleId}, TTL {TtlMinutes}m",
-                reservationId, vehicleId, ttl.TotalMinutes);
-
+            await _dbContext.ReservationHolds.AddAsync(hold, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await ClearCacheAsync(reservationId, previous.Select(h => h.VehicleId));
+            await CacheHoldAsync(hold);
             return true;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for hold creation");
-            return await CreateDatabaseHoldAsync(reservationId, vehicleId, sessionId, duration, cancellationToken);
-        }
+        }, cancellationToken);
     }
 
-    public async Task<bool> ExtendHoldAsync(
+    public Task<bool> ExtendHoldAsync(
         Guid reservationId,
         TimeSpan extension,
         TimeSpan maxDuration,
         CancellationToken cancellationToken = default)
     {
-        try
+        if (extension <= TimeSpan.Zero || maxDuration <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(extension));
+
+        return WithReservationLockAsync(reservationId, async () =>
         {
-            var db = _redis.GetDatabase();
-            var holdKey = $"{_keyPrefix}{reservationId}";
+            var holds = await LoadHoldsAsync(reservationId, cancellationToken);
+            var now = DateTime.UtcNow;
+            var hold = holds.Where(h => h.ExpiresAt > now).MaxBy(h => h.ExpiresAt);
+            if (hold is null) return false;
 
-            var existingData = await db.StringGetAsync(holdKey);
-            if (!existingData.HasValue)
-            {
-                _logger.LogWarning("Cannot extend hold for {ReservationId}: not found in Redis", reservationId);
-                return false;
-            }
-
-            var holdData = JsonSerializer.Deserialize<ReservationHoldData>(existingData.ToString());
-            if (holdData == null)
-            {
-                return false;
-            }
-
-            var currentDuration = holdData.ExpiresAt - DateTime.UtcNow;
-            var newDuration = currentDuration + extension;
-
-            if (newDuration > maxDuration)
-            {
-                newDuration = maxDuration;
-            }
-
-            holdData.ExpiresAt = DateTime.UtcNow.Add(newDuration);
-            var json = JsonSerializer.Serialize(holdData);
-
-            await db.StringSetAsync(holdKey, json, newDuration);
-
-            // Update vehicle hold TTL
-            var vehicleKey = $"{_vehiclePrefix}{holdData.VehicleId}";
-            await db.KeyExpireAsync(vehicleKey, newDuration);
-
-            _logger.LogInformation(
-                "Extended hold for reservation {ReservationId}, new TTL {TtlMinutes}m",
-                reservationId, newDuration.TotalMinutes);
-
+            var duration = hold.ExpiresAt - now + extension;
+            hold.ExpiresAt = now.Add(duration > maxDuration ? maxDuration : duration);
+            hold.UpdatedAt = now;
+            _dbContext.ReservationHolds.RemoveRange(holds.Where(h => h.Id != hold.Id));
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await CacheHoldAsync(hold);
             return true;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for hold extension");
-            return await ExtendDatabaseHoldAsync(reservationId, extension, maxDuration, cancellationToken);
-        }
-    }
-
-    public async Task<bool> ReleaseHoldAsync(Guid reservationId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var holdKey = $"{_keyPrefix}{reservationId}";
-
-            var existingData = await db.StringGetAsync(holdKey);
-            if (existingData.HasValue)
-            {
-                var holdData = JsonSerializer.Deserialize<ReservationHoldData>(existingData.ToString());
-                if (holdData != null)
-                {
-                    var vehicleKey = $"{_vehiclePrefix}{holdData.VehicleId}";
-                    await db.KeyDeleteAsync(vehicleKey);
-                }
+        }, cancellationToken);
             }
 
-            await db.KeyDeleteAsync(holdKey);
-
-            // Also clean up database hold if exists
-            await ReleaseDatabaseHoldAsync(reservationId, cancellationToken);
-
-            _logger.LogInformation("Released hold for reservation {ReservationId}", reservationId);
+    public Task<bool> ReleaseHoldAsync(Guid reservationId, CancellationToken cancellationToken = default) =>
+        WithReservationLockAsync(reservationId, async () =>
+            {
+            var reservation = await LoadReservationAsync(reservationId, preserveChanges: true, cancellationToken);
+            var holds = await LoadHoldsAsync(reservationId, cancellationToken);
+            if (reservation?.Status == ReservationStatus.Hold)
+            {
+                reservation.Status = ReservationStatus.Draft;
+                reservation.UpdatedAt = DateTime.UtcNow;
+            }
+            _dbContext.ReservationHolds.RemoveRange(holds);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await ClearCacheAsync(reservationId, holds.Select(h => h.VehicleId)
+                .Concat(reservation is null ? [] : new[] { reservation.VehicleId }));
             return true;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for hold release");
-            return await ReleaseDatabaseHoldAsync(reservationId, cancellationToken);
-        }
-    }
+        }, cancellationToken);
 
-    public async Task<bool> IsHoldValidAsync(Guid reservationId, CancellationToken cancellationToken = default)
-    {
-        try
+    public Task<bool> ExpireHoldAsync(Guid reservationId, CancellationToken cancellationToken = default) =>
+        WithReservationLockAsync(reservationId, async () =>
         {
-            var db = _redis.GetDatabase();
-            var holdKey = $"{_keyPrefix}{reservationId}";
+            var holds = await LoadHoldsAsync(reservationId, cancellationToken);
+            var now = DateTime.UtcNow;
+            if (holds.Count == 0 || holds.Any(h => h.ExpiresAt > now)) return true;
 
-            var exists = await db.KeyExistsAsync(holdKey);
-            return exists;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for hold validation");
-            return await IsDatabaseHoldValidAsync(reservationId, cancellationToken);
-        }
-    }
+            var reservation = await LoadReservationAsync(reservationId, preserveChanges: false, cancellationToken);
+            if (reservation?.Status is ReservationStatus.Hold or ReservationStatus.Draft)
+            {
+                reservation.Status = ReservationStatus.Expired;
+                reservation.UpdatedAt = now;
+            }
+            _dbContext.ReservationHolds.RemoveRange(holds);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await ClearCacheAsync(reservationId, holds.Select(h => h.VehicleId));
+            return true;
+        }, cancellationToken);
+
+    public Task<bool> IsHoldValidAsync(Guid reservationId, CancellationToken cancellationToken = default) =>
+        _dbContext.ReservationHolds.AsNoTracking()
+            .AnyAsync(h => h.ReservationId == reservationId && h.ExpiresAt > DateTime.UtcNow, cancellationToken);
 
     public async Task<IReadOnlyList<Guid>> GetExpiredHoldsAsync(CancellationToken cancellationToken = default)
     {
-        // Redis handles expiration automatically via TTL
-        // This method is primarily for database fallback cleanup
-        var expiredHolds = await _dbContext.ReservationHolds
-            .AsNoTracking()
-            .Where(h => h.ExpiresAt < DateTime.UtcNow)
-            .Select(h => h.ReservationId)
-            .ToListAsync(cancellationToken);
-
-        return expiredHolds;
+        var now = DateTime.UtcNow;
+        return await _dbContext.ReservationHolds.AsNoTracking()
+            .Where(h => h.ExpiresAt <= now && !_dbContext.ReservationHolds
+                .Any(active => active.ReservationId == h.ReservationId && active.ExpiresAt > now))
+            .Select(h => h.ReservationId).Distinct().ToListAsync(cancellationToken);
     }
 
-    public async Task<bool> IsVehicleHeldAsync(
+    public Task<bool> IsVehicleHeldAsync(
         Guid vehicleId,
         string? excludeSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var db = _redis.GetDatabase();
-            var vehicleKey = $"{_vehiclePrefix}{vehicleId}";
-
-            var holdReservationId = await db.StringGetAsync(vehicleKey);
-            if (!holdReservationId.HasValue)
-            {
-                return false;
-            }
-
-            // Check if session exclusion applies
+        var query = _dbContext.ReservationHolds.AsNoTracking()
+            .Where(h => h.VehicleId == vehicleId && h.ExpiresAt > DateTime.UtcNow);
             if (!string.IsNullOrEmpty(excludeSessionId))
-            {
-                var holdKey = $"{_keyPrefix}{holdReservationId}";
-                var holdData = await db.StringGetAsync(holdKey);
-                if (holdData.HasValue)
-                {
-                    var hold = JsonSerializer.Deserialize<ReservationHoldData>(holdData.ToString());
-                    if (hold?.SessionId == excludeSessionId)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for vehicle hold check");
-            return await IsVehicleHeldInDatabaseAsync(vehicleId, excludeSessionId, cancellationToken);
-        }
+            query = query.Where(h => h.SessionId != excludeSessionId);
+        return query.AnyAsync(cancellationToken);
     }
 
     public async Task<ReservationHoldSnapshot?> GetHoldAsync(
         Guid reservationId,
         CancellationToken cancellationToken = default)
     {
+        var hold = await _dbContext.ReservationHolds.AsNoTracking()
+            .Where(h => h.ReservationId == reservationId && h.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(h => h.ExpiresAt).FirstOrDefaultAsync(cancellationToken);
+        return hold is null ? null : new ReservationHoldSnapshot(
+            hold.ReservationId, hold.VehicleId, hold.SessionId, hold.ExpiresAt);
+    }
+
+    private async Task<T> WithReservationLockAsync<T>(
+        Guid reservationId, Func<Task<T>> action, CancellationToken cancellationToken)
+    {
+        var context = _dbContext as DbContext;
+        var relational = context?.Database.IsRelational() == true;
+        await using var transaction = relational && context!.Database.CurrentTransaction is null
+            ? await context.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        if (relational)
+            await context!.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT id FROM reservations WHERE id = {reservationId} FOR UPDATE", cancellationToken);
+
+        var result = await action();
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
+        return result;
+    }
+
+    private async Task<List<ReservationHold>> LoadHoldsAsync(Guid reservationId, CancellationToken cancellationToken)
+    {
+        foreach (var entry in _dbContext.ChangeTracker.Entries<ReservationHold>()
+            .Where(e => e.Entity.ReservationId == reservationId).ToList())
+        {
+            if (entry.State != EntityState.Unchanged)
+                throw new InvalidOperationException("Cannot mutate a hold with unsaved changes.");
+            entry.State = EntityState.Detached;
+        }
+        return await _dbContext.ReservationHolds.Where(h => h.ReservationId == reservationId)
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<Reservation?> LoadReservationAsync(
+        Guid reservationId, bool preserveChanges, CancellationToken cancellationToken)
+    {
+        var reservation = await _dbContext.Reservations.FirstOrDefaultAsync(r => r.Id == reservationId, cancellationToken);
+        if (reservation is not null && _dbContext is DbContext context && context.Database.IsRelational())
+        {
+            var entry = context.Entry(reservation);
+            if (entry.State == EntityState.Unchanged)
+                await entry.ReloadAsync(cancellationToken);
+            else if (!preserveChanges)
+                throw new InvalidOperationException("Cannot expire a reservation with unsaved changes.");
+        }
+        return reservation;
+    }
+
+    private async Task CacheHoldAsync(ReservationHold hold)
+    {
+        try
+        {
+            var ttl = hold.ExpiresAt - DateTime.UtcNow;
+            if (ttl <= TimeSpan.Zero) return;
+            var db = _redis.GetDatabase();
+            var payload = JsonSerializer.Serialize(new ReservationHoldSnapshot(
+                hold.ReservationId, hold.VehicleId, hold.SessionId, hold.ExpiresAt));
+            await db.StringSetAsync($"hold:{hold.ReservationId}", payload, ttl);
+            await db.StringSetAsync($"vehicle_hold:{hold.VehicleId}", hold.ReservationId.ToString(), ttl);
+        }
+        catch (Exception ex) when (ex is RedisException or RedisTimeoutException)
+        {
+            _logger.LogWarning(ex, "Redis hold cache update failed; durable hold remains authoritative");
+        }
+    }
+
+    private async Task ClearCacheAsync(Guid reservationId, IEnumerable<Guid> vehicleIds)
+    {
         try
         {
             var db = _redis.GetDatabase();
-            var holdKey = $"{_keyPrefix}{reservationId}";
-            var holdData = await db.StringGetAsync(holdKey);
-
-            if (!holdData.HasValue)
+            await db.KeyDeleteAsync($"hold:{reservationId}");
+            foreach (var vehicleId in vehicleIds.Distinct())
+                await db.ScriptEvaluateAsync(ReleaseVehicleScript,
+                    [(RedisKey)$"vehicle_hold:{vehicleId}"], [(RedisValue)reservationId.ToString()]);
+        }
+        catch (Exception ex) when (ex is RedisException or RedisTimeoutException)
             {
-                return await GetDatabaseHoldAsync(reservationId, cancellationToken);
-            }
-
-            var payload = JsonSerializer.Deserialize<ReservationHoldData>(holdData.ToString());
-            if (payload == null)
-            {
-                return await GetDatabaseHoldAsync(reservationId, cancellationToken);
-            }
-
-            return new ReservationHoldSnapshot(
-                payload.ReservationId,
-                payload.VehicleId,
-                payload.SessionId,
-                payload.ExpiresAt);
-        }
-        catch (RedisConnectionException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable, falling back to database for hold retrieval");
-            return await GetDatabaseHoldAsync(reservationId, cancellationToken);
+            _logger.LogWarning(ex, "Redis hold cache cleanup failed; durable hold remains authoritative");
         }
     }
-
-    #region Database Fallback Methods
-
-    private async Task<bool> CreateDatabaseHoldAsync(
-        Guid reservationId,
-        Guid vehicleId,
-        string sessionId,
-        TimeSpan duration,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var hold = new ReservationHold
-            {
-                ReservationId = reservationId,
-                VehicleId = vehicleId,
-                SessionId = sessionId,
-                ExpiresAt = DateTime.UtcNow.Add(duration)
-            };
-
-            await _dbContext.ReservationHolds.AddAsync(hold, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation(
-                "Created database fallback hold for reservation {ReservationId}",
-                reservationId);
-
-            return true;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create database fallback hold");
-            return false;
-        }
-    }
-
-    private async Task<bool> ExtendDatabaseHoldAsync(
-        Guid reservationId,
-        TimeSpan extension,
-        TimeSpan maxDuration,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var hold = await _dbContext.ReservationHolds
-                .FirstOrDefaultAsync(h => h.ReservationId == reservationId, cancellationToken);
-
-            if (hold == null)
-            {
-                return false;
-            }
-
-            var currentDuration = hold.ExpiresAt - DateTime.UtcNow;
-            var newDuration = currentDuration + extension;
-
-            if (newDuration > maxDuration)
-            {
-                newDuration = maxDuration;
-            }
-
-            hold.ExpiresAt = DateTime.UtcNow.Add(newDuration);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to extend database fallback hold");
-            return false;
-        }
-    }
-
-    private async Task<bool> ReleaseDatabaseHoldAsync(Guid reservationId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var hold = await _dbContext.ReservationHolds
-                .FirstOrDefaultAsync(h => h.ReservationId == reservationId, cancellationToken);
-
-            if (hold != null)
-            {
-                _dbContext.ReservationHolds.Remove(hold);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to release database fallback hold");
-            return false;
-        }
-    }
-
-    private async Task<bool> IsDatabaseHoldValidAsync(Guid reservationId, CancellationToken cancellationToken)
-    {
-        var hold = await _dbContext.ReservationHolds
-            .AsNoTracking()
-            .FirstOrDefaultAsync(h => h.ReservationId == reservationId, cancellationToken);
-
-        return hold != null && hold.ExpiresAt > DateTime.UtcNow;
-    }
-
-    private async Task<bool> IsVehicleHeldInDatabaseAsync(
-        Guid vehicleId,
-        string? excludeSessionId,
-        CancellationToken cancellationToken)
-    {
-        var query = _dbContext.ReservationHolds
-            .AsNoTracking()
-            .Where(h => h.VehicleId == vehicleId && h.ExpiresAt > DateTime.UtcNow);
-
-        if (!string.IsNullOrEmpty(excludeSessionId))
-        {
-            query = query.Where(h => h.SessionId != excludeSessionId);
-        }
-
-        return await query.AnyAsync(cancellationToken);
-    }
-
-    private async Task<ReservationHoldSnapshot?> GetDatabaseHoldAsync(
-        Guid reservationId,
-        CancellationToken cancellationToken)
-    {
-        var hold = await _dbContext.ReservationHolds
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                h => h.ReservationId == reservationId && h.ExpiresAt > DateTime.UtcNow,
-                cancellationToken);
-
-        if (hold == null)
-        {
-            return null;
-        }
-
-        return new ReservationHoldSnapshot(
-            hold.ReservationId,
-            hold.VehicleId,
-            hold.SessionId,
-            hold.ExpiresAt);
-    }
-
-    #endregion
-
-    private sealed class ReservationHoldData
-    {
-        public Guid ReservationId { get; set; }
-        public Guid VehicleId { get; set; }
-        public string SessionId { get; set; } = string.Empty;
-        public DateTime ExpiresAt { get; set; }
-    }
-}

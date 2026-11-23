@@ -19,6 +19,10 @@ public interface IReservationHoldService
         Guid reservationId,
         CancellationToken cancellationToken = default);
 
+    Task<bool> ExpireHoldAsync(
+        Guid reservationId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> IsHoldValidAsync(
         Guid reservationId,
         CancellationToken cancellationToken = default);

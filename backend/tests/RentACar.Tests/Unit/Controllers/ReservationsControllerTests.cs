@@ -77,6 +77,18 @@ public sealed class ReservationsControllerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task CreateHold_WhenSessionExceedsStorageLimit_ReturnsBadRequestWithoutCreatingHold()
+    {
+        var service = new Mock<IReservationService>();
+        var controller = new ReservationsController(service.Object);
+
+        var result = await controller.CreateHold(Guid.NewGuid(), new string('s', ReservationHold.SessionIdMaxLength + 1), CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        service.Verify(x => x.CreateHoldAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static CreateReservationRequest CreateValidRequest()
     {
         var pickup = new DateTime(2027, 8, 10, 10, 0, 0, DateTimeKind.Utc);

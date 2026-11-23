@@ -25,8 +25,9 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
         using var scope = Services.CreateScope();
         var holdService = scope.ServiceProvider.GetRequiredService<IReservationHoldService>();
         var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
-        var reservationId = Guid.NewGuid();
-        var vehicleId = await WithDbContextAsync(dbContext => dbContext.Vehicles.Select(vehicle => vehicle.Id).FirstAsync());
+        var reservation = await SeedHoldReservationAsync();
+        var reservationId = reservation.Id;
+        var vehicleId = reservation.VehicleId;
 
         var created = await holdService.CreateHoldAsync(reservationId, vehicleId, "session-a", TimeSpan.FromMinutes(15));
         var ttl = await redis.GetDatabase().KeyTimeToLiveAsync($"hold:{reservationId}");
@@ -42,8 +43,9 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
     {
         using var scope = Services.CreateScope();
         var holdService = scope.ServiceProvider.GetRequiredService<IReservationHoldService>();
-        var reservationId = Guid.NewGuid();
-        var vehicleId = await WithDbContextAsync(dbContext => dbContext.Vehicles.Select(vehicle => vehicle.Id).FirstAsync());
+        var reservation = await SeedHoldReservationAsync();
+        var reservationId = reservation.Id;
+        var vehicleId = reservation.VehicleId;
         await holdService.CreateHoldAsync(reservationId, vehicleId, "session-b", TimeSpan.FromMinutes(5));
 
         var extended = await holdService.ExtendHoldAsync(reservationId, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15));
@@ -104,6 +106,34 @@ public sealed class RedisIntegrationTests(RedisFixture redisFixture) : ApiIntegr
         created.Should().BeTrue();
         fallbackHoldExists.Should().BeTrue();
     }
+
+    private Task<Reservation> SeedHoldReservationAsync() => WithDbContextAsync(async db =>
+    {
+        var vehicle = await db.Vehicles.FirstAsync();
+        var customer = new Customer
+        {
+            FullName = "Guest hold test",
+            Phone = "+90 555 111 22 33",
+            Email = $"hold-{Guid.NewGuid():N}@example.com",
+            IdentityNumber = "12345678901",
+            Nationality = "TR"
+        };
+        var reservation = new Reservation
+        {
+            PublicCode = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            Customer = customer,
+            VehicleId = vehicle.Id,
+            PickupOfficeId = vehicle.OfficeId,
+            ReturnOfficeId = vehicle.OfficeId,
+            PickupDateTime = DateTime.UtcNow.Date.AddDays(30),
+            ReturnDateTime = DateTime.UtcNow.Date.AddDays(32),
+            Status = RentACar.Core.Enums.ReservationStatus.Hold,
+            TotalAmount = 1000m
+        };
+        db.Reservations.Add(reservation);
+        await db.SaveChangesAsync();
+        return reservation;
+    });
 
     [Fact]
     public async Task AvailabilitySearch_PopulatesMemoryCacheWithFiveMinuteEntry()
